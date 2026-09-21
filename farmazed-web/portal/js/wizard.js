@@ -22,19 +22,57 @@ const state = {
 };
 
 // ── FADDI Tramite metadata ─────────────────────────────────────────────────────
+// D15 — ESTRUCTURA DECLARATIVA UNICA.
+//
+//   disponible: false  → el trámite/vía NO se renderiza en el Paso 1.
+//   disponible: true   → se renderiza.
+//
+// Encender o apagar una vía es cambiar UN valor aquí. Ninguna función de
+// render se toca: todas leen de estas dos listas y de los derivados de abajo.
+//
+// `flujoPropio: false` significa "se muestra, pero no avanza: el cliente va a
+// gestión personalizada". Es independiente de `disponible`.
 const TRAMITES = [
-  { id: 'medicamentos', label: 'Medicamentos',                          icon: '💊', desc: 'Síntesis química, biológicos, homeopáticos, huérfanos y demás.' },
-  { id: 'cosmeticos',   label: 'Cosméticos y Similares',               icon: '🧴', desc: 'Cremas, shampoos, maquillaje, protectores solares, etc.' },
-  { id: 'higienicos',   label: 'Higiénicos / Desinfectantes',          icon: '🧼', desc: 'Antisépticos, desinfectantes de uso doméstico u hospitalario.' },
-  { id: 'plaguicidas',  label: 'Plaguicidas',                           icon: '🌿', desc: 'Uso doméstico o profesional (químico, biológico, otro).' },
-  { id: 'excepcion',    label: 'Excepción al Registro Sanitario',      icon: '🚨', desc: 'Calamidad, razón humanitaria, desabasto o investigación.' },
-  { id: 'publicidad',   label: 'Publicidad de Producto Registrado',    icon: '📢', desc: 'Aprobación de material publicitario de un RS vigente.' },
+  { id: 'medicamentos', label: 'Medicamentos',                       icon: '💊', desc: 'Síntesis química, biológicos, homeopáticos, huérfanos y demás.',  disponible: true,  flujoPropio: true },
+  { id: 'cosmeticos',   label: 'Cosméticos y Similares',            icon: '🧴', desc: 'Cremas, shampoos, maquillaje, protectores solares, etc.',          disponible: true,  flujoPropio: true },
+  // ── Decisión F-2 (R1+Z3 / B10) — checklist construido leyendo decretos, SIN
+  // validación del área regulatoria. Rick decidió OCULTARLOS del front end
+  // mientras no haya matriz validada: opción (a). Para revertir, poner estos
+  // cuatro `disponible` en true (solo front end; el backend no se tocó).
+  // Ver organizacion/06_TRAMITES_NO_VALIDADOS_D15.md
+  //   (a) ocultar  → disponible: false   ← ACTIVA
+  //   (b) avisar   → disponible: true,  flujoPropio: false
+  //   (c) como está→ disponible: true,  flujoPropio: true
+  { id: 'higienicos',   label: 'Higiénicos / Desinfectantes',       icon: '🧼', desc: 'Antisépticos, desinfectantes de uso doméstico u hospitalario.',    disponible: false, flujoPropio: true },
+  { id: 'plaguicidas',  label: 'Plaguicidas',                        icon: '🌿', desc: 'Uso doméstico o profesional (químico, biológico, otro).',          disponible: false, flujoPropio: true },
+  { id: 'excepcion',    label: 'Excepción al Registro Sanitario',   icon: '🚨', desc: 'Calamidad, razón humanitaria, desabasto o investigación.',         disponible: false, flujoPropio: true },
+  { id: 'publicidad',   label: 'Publicidad de Producto Registrado', icon: '📢', desc: 'Aprobación de material publicitario de un RS vigente.',            disponible: false, flujoPropio: true },
 ];
 
-const TIPOS_REGISTRO = ['Regular', 'Abreviado', 'Reconocimiento Mutuo', 'Reconocimiento WLA'];
-// These two have no differentiated flow in the wizard yet — the client is
-// directed to contact Farmazed directly instead of continuing.
-const TIPOS_REGISTRO_SIN_FLUJO = ['Reconocimiento Mutuo', 'Reconocimiento WLA'];
+// Vías de registro (solo aplican a `medicamentos`).
+//   paisesARR: muestra el panel informativo de países (D.E. 29/2023).
+const VIAS_REGISTRO = [
+  { id: 'Regular',              label: 'Regular',              disponible: true,  flujoPropio: true,  paisesARR: false },
+  { id: 'Abreviado',            label: 'Abreviado',            disponible: true,  flujoPropio: true,  paisesARR: true  },
+  { id: 'Reconocimiento Mutuo', label: 'Reconocimiento Mutuo', disponible: true,  flujoPropio: false, paisesARR: true  },
+  { id: 'Reconocimiento WLA',   label: 'Reconocimiento WLA',   disponible: true,  flujoPropio: false, paisesARR: false },
+  // 5.ª vía — B01/Z17. La Fase 2 verificó el Drive completo: NO existe matriz,
+  // ni borrador, ni notas de WHO-PQP. Queda declarada y apagada: el día que
+  // Zelky entregue la matriz, esto es `disponible: true` y nada más.
+  { id: 'WHO-PQP',              label: 'Reconocimiento WHO-PQP', disponible: false, flujoPropio: false, paisesARR: false },
+];
+
+// ── Derivados. Nadie más filtra por su cuenta; todo sale de aquí. ─────────────
+const tramitesVisibles = () => TRAMITES.filter(t => t.disponible);
+const viasVisibles     = () => VIAS_REGISTRO.filter(v => v.disponible);
+const getTramite       = id => TRAMITES.find(t => t.id === id) || null;
+const getVia           = id => VIAS_REGISTRO.find(v => v.id === id) || null;
+
+// Compatibilidad con el resto del archivo: mismos nombres, mismo contenido,
+// ahora derivados en vez de escritos a mano en dos sitios.
+const TIPOS_REGISTRO           = viasVisibles().map(v => v.id);
+const TIPOS_REGISTRO_SIN_FLUJO = VIAS_REGISTRO.filter(v => !v.flujoPropio).map(v => v.id);
+const TIPOS_REGISTRO_CON_PAISES = VIAS_REGISTRO.filter(v => v.paisesARR).map(v => v.id);
 const TIPOS_MED = [
   'Síntesis Química', 'Biotecnológicos', 'Homeopáticos', 'Huérfanos',
   'Radiofármacos', 'Biológicos', 'Suplemento Con Propiedad Terapéutica',
@@ -84,7 +122,7 @@ function toast(msg, type = 'success') {
 // ── Step 1: Tipo de trámite ───────────────────────────────────────────────────
 function renderStep1() {
   const grid = $('#tramite-grid');
-  grid.innerHTML = TRAMITES.map(t => `
+  grid.innerHTML = tramitesVisibles().map(t => `
     <div class="col-md-4 col-sm-6">
       <label class="tramite-card ${state.data.tramiteType === t.id ? 'selected' : ''}" data-id="${t.id}">
         <input type="radio" name="tramiteType" value="${t.id}" class="d-none" ${state.data.tramiteType === t.id ? 'checked' : ''}>
@@ -392,6 +430,20 @@ async function nextStep() {
   try {
     if (state.step === 1) {
       if (!state.data.tramiteType) { toast('Selecciona el tipo de trámite.', 'warning'); return; }
+      // Guarda 1 — trámite apagado. Cubre el caso de un ?caseId= antiguo cuyo
+      // trámite ya no está disponible: la tarjeta no se ve, pero el estado
+      // restaurado (init(), resume from URL param) sí la trae.
+      const tramite = getTramite(state.data.tramiteType);
+      if (!tramite || !tramite.disponible) {
+        toast('Este trámite no está disponible en el portal. Contáctanos y un especialista de Farmazed te guiará.', 'warning');
+        return;
+      }
+      // Guarda 2 — trámite visible pero sin flujo propio (opción (b)).
+      if (!tramite.flujoPropio) {
+        toast('Este trámite requiere gestión personalizada. Contáctenos directamente.', 'warning');
+        return;
+      }
+      // Guarda 3 — vía de medicamentos sin flujo propio (comportamiento actual).
       if (state.data.tramiteType === 'medicamentos' && TIPOS_REGISTRO_SIN_FLUJO.includes(state.data.tipoRegistro)) {
         toast('Este tipo de trámite requiere gestión personalizada. Contáctenos directamente.', 'warning');
         return;
