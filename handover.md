@@ -1853,3 +1853,16 @@ Estado: **nada de esto se ejecutó.** Es el plan para discutir esta noche.
 - **Correr contra producción (Q4):** no arrancado. No hay ADC (`gcloud auth application-default print-access-token` falla) ni `node_modules`. Requiere que Rick ejecute el login ADC (ver `.env.example:8-18`).
 - **Push y deploy:** no hechos (orden de Rick: solo commit).
 - `CLAUDE.md` sigue diciendo "no borrar dashboard.html/client-dashboard.html": esos NO se borraron. Docs de onboarding desactualizados quedan para el PM.
+
+---
+
+## Developer — 2026-09-25: clave fuera del código (orden de Argus vía PM)
+
+**Commit `49119a9` (local, sin push/deploy/rotación).**
+- `tracker/index.js:56-57`: `/api/scans` ahora `requireAuth, requireAdmin` (token Firebase con claim admin); se quitó el `?key=`. Import de `middleware/auth` en :10.
+- `farmazed-web/dashboard.html` (~L736-745 y gate ~L401-415): `QR_API` sin clave; `loadQR()` es async y manda `Authorization: Bearer <idToken>`. Como el `loadQR()` inicial del script clásico corre antes de que exista la sesión, ahora retorna si no hay `window.__fzGetToken`, y el gate de auth (módulo) lo expone y llama `loadQR()` una vez confirmado admin. Errores HTTP muestran "Error al cargar".
+- `tracker/.env.example:22-23`: `ADMIN_KEY=change-me`, `MCP_KEY=change-me`.
+- Criterio: `grep 'fz-admin-2026\|fz-mcp-2026'` en `farmazed-web/` y `tracker/` = 0; `node --check tracker/index.js` OK.
+- Punto 4 (`POST /api/admin/set-role`, x-admin-key): NO tiene el mismo problema. Ningún JS lo llama y la clave nunca está embebida (viene de env en el servidor). `admin/precios.html:332,339,463` usa `x-admin-key` pero la clave la teclea el admin en runtime, no está en el código. Sin cambios; sigue siendo secreto compartido, no token por usuario (mejora posible, no pedida).
+- **No probado en vivo:** el flujo dashboard→/api/scans necesita el tracker desplegado con este cambio; hoy producción corre el código viejo. Además depende de que la cuenta admin tenga el claim `admin` (el mismo que ya usa el gate `isAdmin()`).
+- Sigue pendiente: rotar `ADMIN_KEY`/`MCP_KEY` en Cloud Run (bloqueado por permisos gcloud) y push/deploy. Ojo: hasta el deploy, la clave vieja seguirá en el historial git y producción sigue aceptándola.
