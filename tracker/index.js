@@ -76,12 +76,14 @@ app.post('/api/admin/set-role', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// ── Cases & Documents ─────────────────────────────────────────────────────────
+// ── Cases, Documents & Messages ───────────────────────────────────────────────
 const casesRouter     = require('./routes/cases');
 const documentsRouter = require('./routes/documents');
+const messagesRouter  = require('./routes/messages');
 
 app.use('/api/cases', casesRouter);
 app.use('/api/cases/:caseId/documents', documentsRouter);
+app.use('/api/cases/:caseId/messages',  messagesRouter);
 
 // ── MCP Server for Claude Cowork ──────────────────────────────────────────────
 const mcpRouter = require('./routes/mcp');
