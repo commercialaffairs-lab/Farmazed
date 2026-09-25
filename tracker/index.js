@@ -7,6 +7,7 @@ const cors     = require('cors');
 const helmet   = require('helmet');
 const admin    = require('firebase-admin');
 const { Firestore } = require('@google-cloud/firestore');
+const { requireAuth, requireAdmin } = require('./middleware/auth');
 
 // Firebase Admin init — credentials via attached service account (Cloud Run)
 // or GOOGLE_APPLICATION_CREDENTIALS env var (local dev)
@@ -53,8 +54,8 @@ app.get('/qr', async (req, res) => {
   res.redirect(302, REDIRECT_URL);
 });
 
-app.get('/api/scans', async (req, res) => {
-  if (!ADMIN_KEY || req.query.key !== ADMIN_KEY) return res.status(401).json({ error: 'Unauthorized' });
+// Admin only: Firebase ID token (Authorization: Bearer) with the admin claim. No shared key in the URL.
+app.get('/api/scans', requireAuth, requireAdmin, async (req, res) => {
   try {
     const snap  = await db.collection('qr_scans').orderBy('timestamp', 'desc').limit(1000).get();
     const scans = snap.docs.map(d => {

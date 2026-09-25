@@ -399,7 +399,7 @@ tr:hover td { background: #fafcff; }
 
 <!-- ══════════════════ AUTH GATE (real Firebase — the one substitution vs. the prototype) ══════════════════ -->
 <script type="module">
-  import { requireLogin, logout as fbLogout, isAdmin } from './portal/js/auth.js';
+  import { requireLogin, logout as fbLogout, isAdmin, getToken } from './portal/js/auth.js';
 
   const user = await requireLogin('login.html');
   if (!(await isAdmin())) {
@@ -411,6 +411,8 @@ tr:hover td { background: #fafcff; }
     document.getElementById('tb-user-name').textContent = name;
     document.getElementById('tb-user-role').textContent = role;
     window.logout = fbLogout;
+    window.__fzGetToken = getToken;
+    window.loadQR();   // the classic script's first call ran before the session existed
   }
 </script>
 
@@ -733,12 +735,14 @@ document.getElementById('foot-contact').innerHTML =
 
 
 // ── QR Tracker ──
-const QR_API = 'https://farmazed-tracker-267037695065.us-central1.run.app/api/scans?key=fz-admin-2026';
+const QR_API = 'https://farmazed-tracker-267037695065.us-central1.run.app/api/scans';
 
-function loadQR() {
+async function loadQR() {
+  if (!window.__fzGetToken) return;   // session not ready yet; the auth gate calls loadQR() once it is
   document.getElementById('qr-status').textContent = 'Cargando...';
-  fetch(QR_API)
-    .then(r => r.json())
+  const token = await window.__fzGetToken();
+  fetch(QR_API, { headers: { Authorization: 'Bearer ' + token } })
+    .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
     .then(data => {
       const scans = data.scans || [];
       const now = new Date();
