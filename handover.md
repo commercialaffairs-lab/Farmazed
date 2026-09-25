@@ -1836,3 +1836,20 @@ Las preguntas que solo Rick puede decidir están en `PM_COMMENTS.md` → **"Part
 7. **Higiene de documentación:** actualizar `CLAUDE.md`/`PM_INSTRUCTIONS.md` al pivote y mover `repo/` a `_to_delete/` (R15, ya decidido). *Lo hace el PM (docs) y el dev (mover), con OK de Rick.*
 
 Estado: **nada de esto se ejecutó.** Es el plan para discutir esta noche.
+
+---
+
+## Developer — 2026-09-25 (noche): respuestas de Rick a Q1, Q2, Q3, Q4, Q5
+
+**Órdenes de Rick:** Q1 F-6 ratificada. Q2 rotar `ADMIN_KEY`/`MCP_KEY` con gcloud. Q3 un solo frontend (el de git/producción), borrar el otro. Q4 correr contra producción (sin clientes reales). Q5 commitear tras confirmar cuál es el código real; **sin push**.
+
+**Hecho**
+- Verificado contra producción (`curl` a farmazed.com, sha256): `login.html`, `dashboard.html`, `client-dashboard.html` de prod == HEAD anterior (prototipo con auth falsa). `portal/login.html` también == HEAD. El código real es el de la raíz (pivote del 26-ago, ya en el árbol de trabajo). **Producción aún sirve el prototipo con credenciales demo** (`ricardo`/`user` + `admins123`) porque el trabajo del 25-26 ago nunca se desplegó (último deploy web 25-ago 22:19, tracker 25-ago 21:27).
+- Commits locales (sin push): `6ec1c98` frontend raíz + Firebase; `307cb9a` mensajes; `65e3eeb` checklists; `38f792a` cases/mcp/tramites_habilitados (F-6 + Gap1/Gap2 en un solo commit: no se pudo separar hunks); `af3f304` clon portal/ (tal cual); `77c80ff` docs; `ecea3b0` retiro de `portal/login.html`, `portal/dashboard.html`, `portal/js/shell.js`, `portal/css/shell.css` y reapuntado de `auth.js`, `admin/casos.html`, `admin/expediente.html`, `portal/nuevo.html`, `nginx.conf` a `/login.html` y `/client-dashboard.html`. Recuperable desde `af3f304`.
+- Escaneo de secretos previo al commit: sin claves nuevas. `.vscode/` se dejó sin versionar (config personal).
+
+**No hecho, y por qué**
+- **Rotación de claves (Q2): BLOQUEADA.** El clasificador de permisos denegó `gcloud run services describe farmazed-tracker` (lectura de env vars) y `gcloud secrets list`. No intenté rodearlo. Sigue vigente `fz-admin-2026`/`fz-mcp-2026` en `tracker/.env.example` y `dashboard.html:736`; no los limpié porque no tiene sentido quitarlos del código antes de rotar (dashboard.html usa la clave para `/api/scans`).
+- **Correr contra producción (Q4):** no arrancado. No hay ADC (`gcloud auth application-default print-access-token` falla) ni `node_modules`. Requiere que Rick ejecute el login ADC (ver `.env.example:8-18`).
+- **Push y deploy:** no hechos (orden de Rick: solo commit).
+- `CLAUDE.md` sigue diciendo "no borrar dashboard.html/client-dashboard.html": esos NO se borraron. Docs de onboarding desactualizados quedan para el PM.
