@@ -34,6 +34,25 @@
     .wz-step { min-height:400px; }
     .entity-section { border-left:3px solid #dee2e6; padding-left:1rem; margin-bottom:1.5rem; }
     .entity-section h6 { color:var(--fz-blue); font-weight:700; font-size:.8rem; text-transform:uppercase; }
+
+    /* ── Loading modal (upload transitions) ── */
+    .fz-modal-overlay {
+      position: fixed; inset: 0; background: rgba(15,50,96,.55);
+      display: flex; align-items: center; justify-content: center; z-index: 2000;
+      opacity: 0; visibility: hidden;
+      transition: opacity .3s ease, visibility 0s linear .3s;
+    }
+    .fz-modal-overlay.show {
+      opacity: 1; visibility: visible;
+      transition: opacity .3s ease, visibility 0s linear 0s;
+    }
+    .fz-modal-box {
+      background: #fff; border-radius: 12px; padding: 2rem 2.5rem; text-align: center;
+      box-shadow: 0 10px 40px rgba(0,0,0,.25);
+      transform: scale(.92); transition: transform .3s ease;
+    }
+    .fz-modal-overlay.show .fz-modal-box { transform: scale(1); }
+    .fz-modal-box .spinner-border { width: 2.5rem; height: 2.5rem; }
   </style>
 </head>
 <body>
@@ -82,6 +101,27 @@
         </div>
         <div class="alert alert-info d-none mt-3" id="tipo-registro-contactenos">
           📞 Este tipo de trámite requiere gestión personalizada. Contáctenos directamente y un especialista de Farmazed te guiará.
+        </div>
+        <div class="alert alert-light border d-none mt-3" id="abreviado-paises-panel" style="font-size:.8rem;">
+          <p class="fw-semibold mb-2">🌍 Verifica si el país de fabricación califica para procedimiento Abreviado (Decreto 29/2023):</p>
+          <div class="row g-2">
+            <div class="col-md-4">
+              <strong class="small d-block mb-1">Miembros PIC/S</strong>
+              <span class="text-muted small">Síntesis Química, Biológicos y la mayoría de subtipos</span>
+              <div class="small mt-1">Alemania, Argentina, Australia, Austria, Bélgica, Canadá, Chipre, Corea del Sur, Croacia, Dinamarca, Eslovaquia, Eslovenia, España, Estados Unidos, Estonia, Finlandia, Francia, Grecia, Hungría, Indonesia, Irán, Irlanda, Islandia, Israel, Italia, Japón, Letonia, Liechtenstein, Lituania, Malasia, Malta, México, Noruega, Nueva Zelanda, Países Bajos, Polonia, Portugal, Reino Unido, República Checa, Rumania, Singapur, Sudáfrica, Suecia, Suiza, Tailandia, Turquía, Ucrania.</div>
+            </div>
+            <div class="col-md-4">
+              <strong class="small d-block mb-1">OMS Precalificados</strong>
+              <span class="text-muted small">Solo Vacunas</span>
+              <div class="small mt-1">China, Egipto, India, Indonesia, Serbia, Sudáfrica, Tailandia, Vietnam.</div>
+            </div>
+            <div class="col-md-4">
+              <strong class="small d-block mb-1">OPS Reconocidos (ARR Regional)</strong>
+              <span class="text-muted small">Solo Síntesis Química</span>
+              <div class="small mt-1">Argentina (ANMAT), Brasil (ANVISA), Chile (ISP), Colombia (INVIMA), Cuba (CECMED), México (COFEPRIS).</div>
+            </div>
+          </div>
+          <p class="text-muted small mb-0 mt-2">Esta lista es orientativa. Farmazed confirmará la elegibilidad exacta durante el diagnóstico regulatorio.</p>
         </div>
       </div>
 
@@ -314,6 +354,14 @@
   <div class="d-flex justify-content-between mt-3">
     <button class="btn btn-outline-secondary px-4" id="btn-prev">← Anterior</button>
     <button class="btn btn-primary px-5" id="btn-next">Siguiente →</button>
+  </div>
+</div>
+
+<!-- Loading modal — fades in/out around uploads and other short async actions -->
+<div class="fz-modal-overlay" id="fz-loading-modal">
+  <div class="fz-modal-box">
+    <div class="spinner-border text-primary mb-3"></div>
+    <div class="fw-semibold" id="fz-loading-msg">Procesando...</div>
   </div>
 </div>
 

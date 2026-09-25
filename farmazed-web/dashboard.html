@@ -397,25 +397,28 @@ tr:hover td { background: #fafcff; }
 
 </div><!-- /main -->
 
+<!-- ══════════════════ AUTH GATE (real Firebase — the one substitution vs. the prototype) ══════════════════ -->
+<script type="module">
+  import { requireLogin, logout as fbLogout, isAdmin } from './portal/js/auth.js';
+
+  const user = await requireLogin('login.html');
+  if (!(await isAdmin())) {
+    window.location.href = 'client-dashboard.html';
+  } else {
+    var name = user.displayName || user.email;
+    var role = 'Administrador';
+    document.getElementById('tb-username').textContent = name + ' — ' + role;
+    document.getElementById('tb-user-name').textContent = name;
+    document.getElementById('tb-user-role').textContent = role;
+    window.logout = fbLogout;
+  }
+</script>
+
 <script>
 /* ══════════════════════════════════════
-   AUTH
+   AUTH (fallback no-op until the module script above wires the real one)
 ══════════════════════════════════════ */
-(function() {
-  if (!sessionStorage.getItem('fz_user')) {
-    window.location.href = 'login.html';
-  }
-  var name = sessionStorage.getItem('fz_user') || '—';
-  var role = sessionStorage.getItem('fz_role') || '—';
-  document.getElementById('tb-username').textContent = name + ' — ' + role;
-  document.getElementById('tb-user-name').textContent = name;
-  document.getElementById('tb-user-role').textContent = role;
-})();
-
-function logout() {
-  sessionStorage.clear();
-  window.location.href = 'login.html';
-}
+function logout() {}
 
 /* ══════════════════════════════════════
    DATA

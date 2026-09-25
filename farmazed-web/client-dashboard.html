@@ -301,6 +301,46 @@
         z-index: 1050;
       }
     }
+
+    /* ── Wizard real (portado de portal/nuevo.html + wizard.js — Gap 7) ── */
+    .wz-tabs { display:flex; gap:0; border-bottom:2px solid #dee2e6; margin-bottom:2rem; }
+    .wz-tab  { flex:1; padding:.6rem .3rem; text-align:center; font-size:.78rem; font-weight:600;
+               color:#adb5bd; border-bottom:3px solid transparent; transition:.2s; cursor:default; }
+    .wz-tab.active { color:var(--fz-primary); border-bottom-color:var(--fz-primary); }
+    .wz-tab.done   { color:var(--fz-green); border-bottom-color:var(--fz-green); }
+
+    .tramite-card { display:block; border:2px solid #dee2e6; border-radius:12px; padding:1.25rem 1rem;
+                    text-align:center; cursor:pointer; transition:.15s; height:100%; }
+    .tramite-card:hover    { border-color:var(--fz-primary); background:var(--fz-tint); }
+    .tramite-card.selected { border-color:var(--fz-primary); background:var(--fz-tint); }
+    .tramite-icon  { font-size:2rem; margin-bottom:.5rem; }
+    .tramite-label { font-weight:600; font-size:.9rem; }
+    .tramite-desc  { font-size:.75rem; color:#6c757d; margin-top:.25rem; }
+
+    .doc-card { transition:.15s; }
+    .doc-card:hover { background:#f8f9fa !important; }
+
+    .wz-step { min-height:400px; }
+    .entity-section { border-left:3px solid #dee2e6; padding-left:1rem; margin-bottom:1.5rem; }
+    .entity-section h6 { color:var(--fz-primary); font-weight:700; font-size:.8rem; text-transform:uppercase; }
+
+    .fz-modal-overlay {
+      position: fixed; inset: 0; background: rgba(15,50,96,.55);
+      display: flex; align-items: center; justify-content: center; z-index: 2000;
+      opacity: 0; visibility: hidden;
+      transition: opacity .3s ease, visibility 0s linear .3s;
+    }
+    .fz-modal-overlay.show {
+      opacity: 1; visibility: visible;
+      transition: opacity .3s ease, visibility 0s linear 0s;
+    }
+    .fz-modal-box {
+      background: #fff; border-radius: 12px; padding: 2rem 2.5rem; text-align: center;
+      box-shadow: 0 10px 40px rgba(0,0,0,.25);
+      transform: scale(.92); transition: transform .3s ease;
+    }
+    .fz-modal-overlay.show .fz-modal-box { transform: scale(1); }
+    .fz-modal-box .spinner-border { width: 2.5rem; height: 2.5rem; }
   </style>
 </head>
 <body>
@@ -599,126 +639,297 @@
             </div>
             <div class="d-flex gap-2 flex-wrap">
               <button class="btn-fz" onclick="toggleWizard()"><i class="iconoir-add-circle"></i> Iniciar solicitud</button>
-              <button class="btn-fz-outline" onclick="toggleChecklist()">Ver documentos requeridos</button>
             </div>
           </div>
         </div>
 
-        <!-- Wizard -->
+        <!-- Wizard real (portado de portal/nuevo.html + portal/js/wizard.js — Gap 7).
+             Misma estructura/IDs que espera wizard.js, sin modificar esa lógica. -->
         <div class="fz-cta-form" id="wizard-form" style="display:none;">
-          <div class="fz-wiz-bar">
-            <div class="fz-wiz-s active" data-n="1">Tipo</div>
-            <div class="fz-wiz-s" data-n="2">Información</div>
-            <div class="fz-wiz-s" data-n="3">Vía de registro</div>
-            <div class="fz-wiz-s" data-n="4">Confirmación</div>
+
+          <div class="wz-tabs">
+            <div class="wz-tab active" data-step="1">1. Tipo de Trámite</div>
+            <div class="wz-tab"        data-step="2">2. Datos del Producto</div>
+            <div class="wz-tab"        data-step="3">3. Empresas</div>
+            <div class="wz-tab"        data-step="4">4. Documentos</div>
+            <div class="wz-tab"        data-step="5">5. Confirmar</div>
           </div>
 
-          <!-- Step 1 -->
-          <div class="fz-step active" id="step-1">
-            <p style="font-size:.82rem;font-weight:600;color:#374151;margin-bottom:14px;">Selecciona el tipo de producto:</p>
-            <div class="fz-type-grid">
-              <div class="fz-type-card" onclick="selectType(this,'sintesis')"><i class="iconoir-atom"></i><span>Síntesis química</span></div>
-              <div class="fz-type-card" onclick="selectType(this,'natural')"><i class="iconoir-leaf"></i><span>Natural / Fitofármaco</span></div>
-              <div class="fz-type-card" onclick="selectType(this,'biologico')"><i class="iconoir-cell-signal"></i><span>Biológico</span></div>
-              <div class="fz-type-card" onclick="selectType(this,'suplemento')"><i class="iconoir-plus-square-dashed"></i><span>Suplemento</span></div>
-              <div class="fz-type-card" onclick="selectType(this,'homeopatico')"><i class="iconoir-flower"></i><span>Homeopático</span></div>
-              <div class="fz-type-card" onclick="selectType(this,'otro')"><i class="iconoir-more-horiz"></i><span>Otro</span></div>
+          <!-- ── STEP 1 ── -->
+          <div class="wz-step" id="step-1">
+            <h6 style="font-family:var(--fz-head);font-size:.95rem;color:#1e293b;margin-bottom:2px;">¿Qué tipo de registro necesitas?</h6>
+            <p class="text-muted small mb-4">Selecciona el módulo que corresponde a tu producto.</p>
+            <div class="row g-3" id="tramite-grid"></div>
+
+            <div class="mt-4 d-none" id="med-extra">
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <label class="form-label small fw-semibold">Tipo de Solicitud</label>
+                  <select class="form-select" id="tipoSolicitud">
+                    <option>Nuevo Registro</option>
+                    <option>Renovación Sin Cambios</option>
+                    <option>Renovación Con Cambios</option>
+                  </select>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label small fw-semibold">Tipo de Procedimiento</label>
+                  <select class="form-select" id="tipoRegistro"></select>
+                  <div class="form-text">Abreviado requiere aprobación ARR (FDA, EMA, INVIMA, etc.)</div>
+                </div>
+              </div>
+              <div class="alert alert-info d-none mt-3" id="tipo-registro-contactenos">
+                📞 Este tipo de trámite requiere gestión personalizada. Contáctenos directamente y un especialista de Farmazed te guiará.
+              </div>
+              <div class="alert alert-light border d-none mt-3" id="abreviado-paises-panel" style="font-size:.8rem;">
+                <p class="fw-semibold mb-2">🌍 Verifica si el país de fabricación califica para procedimiento Abreviado (Decreto 29/2023):</p>
+                <div class="row g-2">
+                  <div class="col-md-4">
+                    <strong class="small d-block mb-1">Miembros PIC/S</strong>
+                    <span class="text-muted small">Síntesis Química, Biológicos y la mayoría de subtipos</span>
+                    <div class="small mt-1">Alemania, Argentina, Australia, Austria, Bélgica, Canadá, Chipre, Corea del Sur, Croacia, Dinamarca, Eslovaquia, Eslovenia, España, Estados Unidos, Estonia, Finlandia, Francia, Grecia, Hungría, Indonesia, Irán, Irlanda, Islandia, Israel, Italia, Japón, Letonia, Liechtenstein, Lituania, Malasia, Malta, México, Noruega, Nueva Zelanda, Países Bajos, Polonia, Portugal, Reino Unido, República Checa, Rumania, Singapur, Sudáfrica, Suecia, Suiza, Tailandia, Turquía, Ucrania.</div>
+                  </div>
+                  <div class="col-md-4">
+                    <strong class="small d-block mb-1">OMS Precalificados</strong>
+                    <span class="text-muted small">Solo Vacunas</span>
+                    <div class="small mt-1">China, Egipto, India, Indonesia, Serbia, Sudáfrica, Tailandia, Vietnam.</div>
+                  </div>
+                  <div class="col-md-4">
+                    <strong class="small d-block mb-1">OPS Reconocidos (ARR Regional)</strong>
+                    <span class="text-muted small">Solo Síntesis Química</span>
+                    <div class="small mt-1">Argentina (ANMAT), Brasil (ANVISA), Chile (ISP), Colombia (INVIMA), Cuba (CECMED), México (COFEPRIS).</div>
+                  </div>
+                </div>
+                <p class="text-muted small mb-0 mt-2">Esta lista es orientativa. Farmazed confirmará la elegibilidad exacta durante el diagnóstico regulatorio.</p>
+              </div>
             </div>
-            <div class="d-flex justify-content-end mt-4">
-              <button class="btn-fz" onclick="wizNext(1)">Continuar →</button>
+
+            <div class="alert alert-warning d-none mt-4" id="excepcion-disclaimer">
+              ⚠️ <strong>La Excepción de Registro es una autorización temporal para importar un lote específico.</strong>
+              NO otorga Registro Sanitario permanente.
             </div>
           </div>
 
-          <!-- Step 2 -->
-          <div class="fz-step" id="step-2">
+          <!-- ── STEP 2 ── -->
+          <div class="wz-step d-none" id="step-2">
+            <h6 style="font-family:var(--fz-head);font-size:.95rem;color:#1e293b;margin-bottom:2px;">Datos del Producto</h6>
+            <p class="text-muted small mb-4">Estos datos se usarán directamente para llenar el formulario FADDI.</p>
             <div class="row g-3">
               <div class="col-md-6">
-                <div class="fz-form-group"><label class="fz-label">Nombre comercial *</label><input type="text" class="fz-input" id="wiz-nombre" placeholder="Ej. Metformin 500mg"></div>
+                <label class="form-label small fw-semibold">Nombre Comercial <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" id="nombreComercial" placeholder="Ej: Amoxicilina 500mg">
               </div>
-              <div class="col-md-6">
-                <div class="fz-form-group"><label class="fz-label">Nombre genérico / IFA principal</label><input type="text" class="fz-input" id="wiz-generico" placeholder="Ej. Metformina clorhidrato"></div>
+              <div class="col-md-6 d-none" data-tramites="medicamentos,excepcion">
+                <label class="form-label small fw-semibold">Principio Activo (DCI) <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" id="principioActivo" placeholder="Ej: Amoxicilina">
               </div>
-              <div class="col-md-6">
-                <div class="fz-form-group"><label class="fz-label">País de fabricación *</label><input type="text" class="fz-input" id="wiz-pais" placeholder="Ej. Colombia" oninput="updateRoute()"></div>
+              <div class="col-md-4 d-none" data-tramites="medicamentos">
+                <label class="form-label small fw-semibold">Concentración <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" id="concentracion" placeholder="Ej: 500 mg">
               </div>
-              <div class="col-md-6">
-                <div class="fz-form-group"><label class="fz-label">Fabricante *</label><input type="text" class="fz-input" id="wiz-fabricante" placeholder="Ej. Laboratorio XYZ S.A."></div>
+              <div class="col-md-4 d-none" data-tramites="medicamentos">
+                <label class="form-label small fw-semibold">Forma Farmacéutica <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" id="formaFarmaceutica" placeholder="Ej: CÁPSULA">
               </div>
-            </div>
-            <div class="d-flex justify-content-between mt-4">
-              <button class="btn-fz-outline" onclick="wizBack(2)">← Atrás</button>
-              <button class="btn-fz" onclick="wizNext(2)">Continuar →</button>
+              <div class="col-md-4 d-none" data-tramites="medicamentos">
+                <label class="form-label small fw-semibold">Vía de Administración <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" id="viaAdministracion" placeholder="Ej: ORAL">
+              </div>
+              <div class="col-md-6 d-none" data-tramites="medicamentos">
+                <label class="form-label small fw-semibold">Condición de Venta <span class="text-danger">*</span></label>
+                <select class="form-select" id="condicionVenta"></select>
+              </div>
+              <div class="col-md-3 d-none" data-tramites="medicamentos">
+                <label class="form-label small fw-semibold">Código ATC</label>
+                <input type="text" class="form-control" id="codigoATC" placeholder="Ej: J01CA04">
+              </div>
+              <div class="col-md-3 d-none" data-tramites="medicamentos">
+                <label class="form-label small fw-semibold">Vida Útil</label>
+                <input type="text" class="form-control" id="vidaUtil" placeholder="Ej: 36 meses">
+              </div>
+              <div class="col-12 d-none" data-tramites="medicamentos">
+                <label class="form-label small fw-semibold">Condiciones de Almacenamiento</label>
+                <textarea class="form-control" id="condicionesAlmacenamiento" rows="2" placeholder="Ej: Conservar a temperatura no mayor de 30°C en lugar seco."></textarea>
+              </div>
+              <div class="col-md-4 d-none" data-tramites="cosmeticos">
+                <label class="form-label small fw-semibold">Clasificación</label>
+                <input type="text" class="form-control" id="clasificacion" placeholder="Ej: PRODUCTOS PARA EL CABELLO">
+              </div>
+              <div class="col-md-4 d-none" data-tramites="cosmeticos">
+                <label class="form-label small fw-semibold">Forma Cosmética</label>
+                <input type="text" class="form-control" id="formaCosmetica" placeholder="Ej: SHAMPOO / CHAMPÚ">
+              </div>
+              <div class="col-12 d-none" data-tramites="medicamentos,cosmeticos,higienicos,plaguicidas,excepcion">
+                <label class="form-label small fw-semibold">Descripción del Envase</label>
+                <input type="text" class="form-control" id="descripcionEnvase" placeholder="Ej: FRASCO DE 250 ML">
+              </div>
+              <div class="col-12 d-none" data-tramites="medicamentos,cosmeticos,higienicos,plaguicidas,excepcion">
+                <label class="form-label small fw-semibold">Presentación del Producto</label>
+                <input type="text" class="form-control" id="descripcionPresentacion" placeholder="Ej: CAJA CON 30 TABLETAS RECUBIERTAS">
+              </div>
+              <div class="col-12 d-none" data-tramites="medicamentos">
+                <label class="form-label small fw-semibold d-block mb-2">Tipo de Presentación <span class="text-danger">*</span></label>
+                <div class="form-check form-check-inline">
+                  <input class="form-check-input" type="radio" name="tipoPresentacion" value="Comercial" id="tp-comercial" checked>
+                  <label class="form-check-label" for="tp-comercial">Comercial</label>
+                </div>
+                <div class="form-check form-check-inline">
+                  <input class="form-check-input" type="radio" name="tipoPresentacion" value="Muestra Médica" id="tp-muestra">
+                  <label class="form-check-label" for="tp-muestra">Muestra Médica</label>
+                </div>
+                <div class="form-check form-check-inline">
+                  <input class="form-check-input" type="radio" name="tipoPresentacion" value="Hospitalaria" id="tp-hospitalaria">
+                  <label class="form-check-label" for="tp-hospitalaria">Hospitalaria</label>
+                </div>
+              </div>
+              <div class="col-12 d-none" data-tramites="medicamentos">
+                <label class="form-label small fw-semibold d-block mb-2">Tipo de Medicamento <span class="text-danger">*</span></label>
+                <div id="tipo-med-checks"></div>
+              </div>
+              <div class="col-md-6 d-none" data-tramites="publicidad">
+                <label class="form-label small fw-semibold">N° de Registro Sanitario del producto <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" id="numeroRegistroSanitario" placeholder="Ej: RS-12345">
+                <div class="form-text">La publicidad debe corresponder a un producto ya registrado.</div>
+              </div>
+              <div class="col-md-6 d-none" data-tramites="publicidad">
+                <label class="form-label small fw-semibold">Código de la Publicidad</label>
+                <input type="text" class="form-control" id="codigoPublicidad" placeholder="Código interno del material, si aplica">
+              </div>
+              <div class="col-12 d-none" data-tramites="publicidad">
+                <label class="form-label small fw-semibold d-block mb-2">Tipo de Publicidad <span class="text-danger">*</span></label>
+                <div id="tipo-pub-checks"></div>
+              </div>
+              <div class="col-12 d-none" data-tramites="publicidad">
+                <label class="form-label small fw-semibold">Descripción breve del material <span class="text-danger">*</span></label>
+                <textarea class="form-control" id="descripcionMaterial" rows="2" placeholder="Ej: Spot de radio de 30 segundos para campaña de lanzamiento."></textarea>
+              </div>
+              <div class="col-md-4 d-none" data-tramites="excepcion">
+                <label class="form-label small fw-semibold">Lote a Importar <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" id="lote" placeholder="Ej: LT-2026-004">
+              </div>
+              <div class="col-md-4 d-none" data-tramites="excepcion">
+                <label class="form-label small fw-semibold">País de Origen <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" id="paisOrigen" placeholder="Ej: Estados Unidos">
+              </div>
+              <div class="col-md-4 d-none" data-tramites="excepcion">
+                <label class="form-label small fw-semibold">Cantidad a Importar</label>
+                <input type="text" class="form-control" id="cantidadImportar" placeholder="Ej: 500 unidades">
+              </div>
             </div>
           </div>
 
-          <!-- Step 3 -->
-          <div class="fz-step" id="step-3">
-            <p style="font-size:.8rem;color:#6b7280;margin-bottom:10px;">País de fabricación: <strong id="step3-pais" style="color:#1e293b;">—</strong></p>
-            <div id="route-result" class="fz-route-badge regular"><i class="iconoir-info-circle me-2"></i>Ingresa el país en el paso anterior.</div>
-            <div style="margin-top:12px;font-size:.78rem;color:#374151;" id="route-detail"></div>
-            <div class="d-flex justify-content-between mt-4">
-              <button class="btn-fz-outline" onclick="wizBack(3)">← Atrás</button>
-              <button class="btn-fz" onclick="wizNext(3)">Continuar →</button>
-            </div>
-          </div>
+          <!-- ── STEP 3 ── -->
+          <div class="wz-step d-none" id="step-3">
+            <h6 style="font-family:var(--fz-head);font-size:.95rem;color:#1e293b;margin-bottom:2px;">Datos de las Empresas</h6>
+            <p class="text-muted small mb-4">Esta información se usará para los pasos 4–11 de FADDI. Puedes completarla parcialmente ahora y actualizarla después.</p>
 
-          <!-- Step 4 -->
-          <div class="fz-step" id="step-4">
-            <h6 style="font-family:var(--fz-head);font-size:.9rem;color:#1e293b;margin-bottom:12px;">Resumen de la solicitud</h6>
-            <div id="wiz-summary" style="font-size:.78rem;background:#f8f9fa;padding:14px;border-radius:6px;margin-bottom:16px;"></div>
-            <h6 style="font-family:var(--fz-head);font-size:.88rem;color:#1e293b;margin-bottom:8px;">Documentos típicos estimados:</h6>
-            <ul class="fz-doc-checklist" id="wiz-doclist"></ul>
-            <p style="font-size:.7rem;color:#9ca3af;margin-top:8px;">*Lista estimada. Farmazed confirmará los requisitos exactos tras el diagnóstico regulatorio.</p>
-            <div class="d-flex justify-content-between mt-4">
-              <button class="btn-fz-outline" onclick="wizBack(4)">← Atrás</button>
-              <button class="btn-fz" onclick="wizSubmit()"><i class="iconoir-send"></i> Enviar solicitud a Farmazed</button>
-            </div>
-          </div>
-
-          <!-- Success -->
-          <div class="fz-step" id="step-success">
-            <div class="text-center py-4">
-              <div style="width:56px;height:56px;border-radius:50%;background:rgba(58,125,68,.1);display:flex;align-items:center;justify-content:center;margin:0 auto 14px;">
-                <i class="iconoir-check-circle" style="font-size:1.8rem;color:var(--fz-green);"></i>
+            <div class="entity-section">
+              <h6>Empresa Fabricante <span class="text-danger">*</span></h6>
+              <div class="row g-2">
+                <div class="col-md-6"><input class="form-control form-control-sm" id="fab-correo"    placeholder="Correo electrónico"></div>
+                <div class="col-md-6"><input class="form-control form-control-sm" id="fab-nombre"    placeholder="Nombre del fabricante"></div>
+                <div class="col-md-4"><input class="form-control form-control-sm" id="fab-pais"      placeholder="País"></div>
+                <div class="col-md-8"><input class="form-control form-control-sm" id="fab-direccion" placeholder="Dirección"></div>
               </div>
-              <h6 style="font-family:var(--fz-head);color:var(--fz-green);font-size:1.05rem;">¡Solicitud enviada!</h6>
-              <p style="font-size:.78rem;color:#6b7280;max-width:400px;margin:8px auto 18px;">El equipo de Farmazed revisará tu solicitud y te contactará por este portal en los próximos 2 días hábiles.</p>
-              <button class="btn-fz-outline btn-fz-sm" onclick="resetWizard()">Enviar otra solicitud</button>
             </div>
-          </div>
-        </div>
 
-        <!-- Checklist panel -->
-        <div class="fz-checklist-panel" id="checklist-panel">
-          <div class="d-flex justify-content-between align-items-center mb-3">
-            <h6 style="font-family:var(--fz-head);font-size:.9rem;color:#1e293b;margin:0;">Documentos típicos por categoría</h6>
-            <button onclick="toggleChecklist()" style="background:none;border:none;font-size:.75rem;color:var(--fz-primary);cursor:pointer;font-weight:600;">Cerrar ✕</button>
+            <div class="entity-section">
+              <h6>Titular del Producto</h6>
+              <div class="row g-2">
+                <div class="col-md-6"><input class="form-control form-control-sm" id="tit-correo"    placeholder="Correo electrónico"></div>
+                <div class="col-md-6"><input class="form-control form-control-sm" id="tit-nombre"    placeholder="Nombre del titular"></div>
+                <div class="col-md-4"><input class="form-control form-control-sm" id="tit-pais"      placeholder="País"></div>
+                <div class="col-md-8"><input class="form-control form-control-sm" id="tit-direccion" placeholder="Dirección"></div>
+              </div>
+            </div>
+
+            <div class="entity-section">
+              <h6>Empresa Solicitante (en Panamá) <span class="text-danger">*</span></h6>
+              <div class="row g-2">
+                <div class="col-md-4"><input class="form-control form-control-sm" id="sol-ruc"       placeholder="Número de RUC"></div>
+                <div class="col-md-8"><input class="form-control form-control-sm" id="sol-nombre"    placeholder="Nombre de la empresa"></div>
+                <div class="col-md-4"><input class="form-control form-control-sm" id="sol-telefono"  placeholder="Teléfono de contacto"></div>
+                <div class="col-md-4"><input class="form-control form-control-sm" id="sol-correo"    placeholder="Correo electrónico"></div>
+                <div class="col-md-4"><input class="form-control form-control-sm" id="sol-direccion" placeholder="Dirección"></div>
+              </div>
+            </div>
+
+            <div class="entity-section">
+              <h6>Representante Legal</h6>
+              <div class="row g-2">
+                <div class="col-md-3"><input class="form-control form-control-sm" id="rep-cedula"    placeholder="Cédula"></div>
+                <div class="col-md-5"><input class="form-control form-control-sm" id="rep-nombre"    placeholder="Nombre completo"></div>
+                <div class="col-md-4"><input class="form-control form-control-sm" id="rep-telefono"  placeholder="Teléfono"></div>
+                <div class="col-md-6"><input class="form-control form-control-sm" id="rep-correo"    placeholder="Correo"></div>
+                <div class="col-md-6"><input class="form-control form-control-sm" id="rep-direccion" placeholder="Dirección"></div>
+              </div>
+            </div>
+
+            <div class="entity-section">
+              <h6>Farmacéutico Regente</h6>
+              <div class="row g-2">
+                <div class="col-md-3"><input class="form-control form-control-sm" id="far-cedula"    placeholder="Cédula"></div>
+                <div class="col-md-3"><input class="form-control form-control-sm" id="far-idoneidad" placeholder="N° Idoneidad"></div>
+                <div class="col-md-6"><input class="form-control form-control-sm" id="far-nombre"    placeholder="Nombre completo"></div>
+                <div class="col-md-4"><input class="form-control form-control-sm" id="far-telefono"  placeholder="Teléfono"></div>
+                <div class="col-md-4"><input class="form-control form-control-sm" id="far-correo"    placeholder="Correo"></div>
+                <div class="col-md-4"><input class="form-control form-control-sm" id="far-direccion" placeholder="Dirección"></div>
+              </div>
+            </div>
+
+            <div class="entity-section">
+              <h6>Abogado</h6>
+              <div class="row g-2">
+                <div class="col-md-3"><input class="form-control form-control-sm" id="abo-cedula"    placeholder="Cédula"></div>
+                <div class="col-md-3"><input class="form-control form-control-sm" id="abo-idoneidad" placeholder="N° Idoneidad"></div>
+                <div class="col-md-6"><input class="form-control form-control-sm" id="abo-nombre"    placeholder="Nombre completo"></div>
+                <div class="col-md-4"><input class="form-control form-control-sm" id="abo-correo"    placeholder="Correo"></div>
+                <div class="col-md-8"><input class="form-control form-control-sm" id="abo-direccion" placeholder="Dirección"></div>
+              </div>
+            </div>
+
+            <div class="entity-section">
+              <h6>Distribuidores en Panamá</h6>
+              <div id="distribuidores-list">
+                <input class="form-control form-control-sm distribuidor-licencia mb-2" placeholder="Número de Licencia del Distribuidor">
+              </div>
+              <button type="button" class="btn btn-sm btn-outline-secondary" id="btn-add-dist">
+                + Agregar distribuidor
+              </button>
+            </div>
           </div>
-          <div class="row g-3">
-            <div class="col-md-6">
-              <p style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#9ca3af;margin-bottom:8px;">Síntesis química / Biológico</p>
-              <ul class="fz-doc-checklist">
-                <li>Solicitud de registro sanitario (Form. DNFD)</li>
-                <li>Certificado de libre venta del país de origen</li>
-                <li>Protocolo de análisis del fabricante</li>
-                <li>Certificado de análisis del lote (CoA)</li>
-                <li>Monografía / ficha técnica</li>
-                <li>Etiquetado en español (borrador)</li>
-                <li>Estudio de estabilidad</li>
-                <li>Certificado de Buenas Prácticas de Manufactura</li>
-              </ul>
+
+          <!-- ── STEP 4 ── -->
+          <div class="wz-step d-none" id="step-4">
+            <h6 style="font-family:var(--fz-head);font-size:.95rem;color:#1e293b;margin-bottom:2px;">Carga de Documentos</h6>
+            <p class="text-muted small mb-3">Sube cada documento en el slot correspondiente. Formato: PDF, JPG, PNG o DOCX. Máx. 50 MB por archivo.</p>
+            <div id="upload-progress" class="mb-4"></div>
+            <div id="checklist-container"></div>
+          </div>
+
+          <!-- ── STEP 5 ── -->
+          <div class="wz-step d-none" id="step-5">
+            <div class="text-center mb-4">
+              <div style="font-size:3rem">📋</div>
+              <h6 style="font-family:var(--fz-head);font-size:1.05rem;color:#1e293b;margin-top:8px;">Confirmación del Expediente</h6>
+              <p class="text-muted small">Revisa el resumen antes de enviar a Farmazed.</p>
             </div>
-            <div class="col-md-6">
-              <p style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#9ca3af;margin-bottom:8px;">Naturales / Suplementos / Homeopáticos</p>
-              <ul class="fz-doc-checklist">
-                <li>Solicitud de registro sanitario</li>
-                <li>Fórmula cuali-cuantitativa</li>
-                <li>Especificaciones de calidad de materias primas</li>
-                <li>Análisis microbiológico y fisicoquímico</li>
-                <li>Etiquetado en español</li>
-                <li>Certificado de libre venta (si aplica)</li>
-              </ul>
+            <div class="row justify-content-center">
+              <div class="col-md-8">
+                <table class="table table-sm">
+                  <tr><td class="text-muted small fw-semibold">Producto</td><td id="confirm-product-name" class="fw-bold">—</td></tr>
+                  <tr><td class="text-muted small fw-semibold">Tipo de Trámite</td><td id="confirm-tramite">—</td></tr>
+                  <tr><td class="text-muted small fw-semibold">Documentos</td><td id="confirm-progress">—</td></tr>
+                </table>
+                <div id="confirm-missing"></div>
+                <p class="text-muted small mt-3">Al enviar, el equipo de Farmazed recibirá una notificación y revisará tu expediente. Te contactarán si necesitan documentos adicionales.</p>
+              </div>
             </div>
+          </div>
+
+          <!-- Navigation -->
+          <div class="d-flex justify-content-between mt-3">
+            <button class="btn btn-outline-secondary px-4" id="btn-prev">← Anterior</button>
+            <button class="btn-fz px-4" id="btn-next">Siguiente →</button>
           </div>
         </div>
       </div>
@@ -727,158 +938,220 @@
   </div><!-- page-content -->
 </div><!-- page-wrapper -->
 
+<!-- ══════════════════ AUTH GATE + REAL DATA (module script — runs after the -->
+<!-- classic script below has already defined DATA/window.DATA and every    -->
+<!-- render function, since type="module" is deferred regardless of source -->
+<!-- position). Fills window.DATA with real data, then calls window.renderAll(). -->
+<script type="module">
+  import { requireLogin, logout } from './portal/js/auth.js';
+  import api from './portal/js/api.js';
+
+  // El módulo Mensajes (classic script) llama sendMessage() del chat en vivo,
+  // fuera de este script — expuesto en window para que pueda llegar al API.
+  window.__fzApi = api;
+
+  const user = await requireLogin('login.html');
+
+  window.DATA.cliente = {
+    empresa: 'Mi Empresa', // TODO: no company field on the user/case model yet
+    contacto: user.displayName || user.email,
+    correo: user.email,
+  };
+
+  // Nombre legible del trámite para mostrar junto a cada documento (reemplaza
+  // el agrupamiento por fase del prototipo — descartado, ver Gap 4 en handover.md).
+  const TRAMITE_LABEL = {
+    medicamentos: 'Medicamentos', cosmeticos: 'Cosméticos', higienicos: 'Higiénicos',
+    plaguicidas: 'Plaguicidas', excepcion: 'Excepción de Registro', publicidad: 'Publicidad',
+  };
+  // status real (documents.js) -> badge/tab del prototipo (docBadge/filterDocs sin tocar)
+  const ESTADO_MAP = { requested: 'pendiente', uploaded: 'en_revision', reviewing: 'en_revision', approved: 'aprobado', rejected: 'rechazado' };
+
+  // Tabla status(caso real, cases.js) -> fase visual (1-4) del pipeline,
+  // aprobada antes en esta sesión: draft->Diagnóstico; submitted/in_review->
+  // Revisión (pending_docs=bloqueada); faddi_ready->Elaboración; faddi_submitted/
+  // approved->Obtención (observed=bloqueada); denied=badge propio fuera del flujo.
+  const STATUS_PHASE = {
+    draft:           { fase: 1, bloqueado: false },
+    submitted:       { fase: 2, bloqueado: false },
+    in_review:       { fase: 2, bloqueado: false },
+    pending_docs:    { fase: 2, bloqueado: true  },
+    faddi_ready:     { fase: 3, bloqueado: false },
+    faddi_submitted: { fase: 4, bloqueado: false },
+    approved:        { fase: 4, bloqueado: false },
+    observed:        { fase: 4, bloqueado: true  },
+    denied:          { fase: 4, bloqueado: false },
+  };
+
+  function tsToISODate(ts) {
+    if (!ts) return null;
+    if (typeof ts === 'string') return ts;
+    if (ts._seconds) return new Date(ts._seconds * 1000).toISOString();
+    return null;
+  }
+
+  function estadoFromStatus(status, vencimientoISO) {
+    if (status === 'denied') return 'denegado';
+    if (status === 'pending_docs' || status === 'observed') return 'bloqueado';
+    if (status === 'approved') {
+      if (vencimientoISO) {
+        const days = Math.round((new Date(vencimientoISO) - new Date()) / 86400000);
+        if (days <= 90) return 'por_vencer';
+      }
+      return 'activo';
+    }
+    return 'en_tramite';
+  }
+
+  try {
+    const { cases } = await api.listCases();
+    const activeCases = cases.filter(c => c.status !== 'deleted');
+
+    const docLists = await Promise.all(activeCases.map(c => api.listDocuments(c.id).catch(() => ({ documents: [] }))));
+
+    // ── Documentos (flat, todos los expedientes) ──
+    const documentos = [];
+    activeCases.forEach((c, i) => {
+      for (const doc of docLists[i].documents) {
+        documentos.push({
+          nombre:   doc.faddiDocName || doc.fileName || '(documento)',
+          producto: c.caseCode || c.productName || c.id,
+          fase:     TRAMITE_LABEL[c.tramiteType] || c.tramiteType,
+          fecha:    tsToISODate(doc.uploadedAt) || doc.uploadedAt,
+          estado:   ESTADO_MAP[doc.status] || 'pendiente',
+          nota:     doc.reviewNotes || null,
+        });
+      }
+    });
+    documentos.sort((a, b) => (b.fecha || '').localeCompare(a.fecha || ''));
+    window.DATA.documentos = documentos;
+
+    // ── Productos (un producto = un expediente/caso) ──
+    const productos = activeCases.map((c, i) => {
+      const phaseInfo   = STATUS_PHASE[c.status] || { fase: 1, bloqueado: false };
+      const vencimiento = tsToISODate(c.vencimiento);
+      const docsDelCaso = docLists[i].documents || [];
+
+      const actividad = [];
+      if (c.createdAt) actividad.push({ fecha: tsToISODate(c.createdAt), descripcion: 'Expediente creado' });
+      docsDelCaso.forEach(doc => {
+        if (doc.uploadedAt) actividad.push({ fecha: tsToISODate(doc.uploadedAt), descripcion: `Documento subido: ${doc.faddiDocName || doc.fileName}` });
+      });
+      const updatedISO = tsToISODate(c.updatedAt);
+      if (updatedISO && updatedISO !== tsToISODate(c.createdAt)) {
+        actividad.push({ fecha: updatedISO, descripcion: 'Última actualización del expediente' });
+      }
+      actividad.sort((a, b) => (b.fecha || '').localeCompare(a.fecha || ''));
+
+      return {
+        codigo:             c.caseCode || c.id,
+        nombre_comercial:   c.productName || c.product?.nombreComercial || '(sin nombre)',
+        categoria:          c.tramiteType,
+        fase_actual:        phaseInfo.fase,
+        fases_completadas:  c.status === 'approved' || c.status === 'denied'
+                               ? [1,2,3,4]
+                               : Array.from({ length: Math.max(0, phaseInfo.fase - 1) }, (_, idx) => idx + 1),
+        estado:             estadoFromStatus(c.status, vencimiento),
+        vencimiento,
+        bloqueado:          phaseInfo.bloqueado,
+        documentos:         docsDelCaso.map(doc => ({
+                               nombre: doc.faddiDocName || doc.fileName || '(documento)',
+                               estado: ESTADO_MAP[doc.status] || 'pendiente',
+                               nota:   doc.reviewNotes || null,
+                             })),
+        actividad,
+      };
+    });
+    window.DATA.productos = productos;
+
+    // ── Pendientes (documentos con status:'requested' en casos pending_docs) ──
+    const pendientes = [];
+    activeCases.forEach((c, i) => {
+      if (c.status !== 'pending_docs') return;
+      (docLists[i].documents || []).filter(d => d.status === 'requested').forEach(d => {
+        pendientes.push({
+          id:               d.id,
+          producto_codigo:  c.caseCode || c.id,
+          producto_nombre:  c.productName || c.product?.nombreComercial || '(sin nombre)',
+          tipo_accion:      'subir',
+          descripcion:      d.reviewNotes || `Farmazed solicita: ${d.faddiDocName || d.faddiDocId}`,
+          fase:             TRAMITE_LABEL[c.tramiteType] || c.tramiteType,
+          fecha_limite:     null,
+        });
+      });
+    });
+    window.DATA.pendientes = pendientes;
+
+    // ── Mensajes (un hilo por expediente activo, aunque todavía no tenga mensajes) ──
+    const msgLists = await Promise.all(activeCases.map(c => api.listMessages(c.id).catch(() => ({ messages: [] }))));
+    window.DATA.mensajes = activeCases.map((c, i) => ({
+      caseId:           c.id,
+      producto_codigo:  c.caseCode || c.id,
+      producto_nombre:  c.productName || c.product?.nombreComercial || '(sin nombre)',
+      mensajes: (msgLists[i].messages || []).map(m => ({
+        remitente:  m.senderRole,
+        nombre:     m.senderName,
+        texto:      m.text,
+        fecha_hora: m.createdAt,
+      })),
+    }));
+
+    // ── Métricas ──
+    window.DATA.metricas = {
+      activos:    productos.filter(p => p.estado === 'activo').length,
+      en_proceso: productos.filter(p => p.estado === 'en_tramite' || p.estado === 'bloqueado').length,
+      pendientes: pendientes.length,
+      por_vencer: productos.filter(p => p.estado === 'por_vencer').length,
+    };
+  } catch (err) {
+    console.error('Error cargando datos reales:', err);
+  }
+
+  window.renderAll();
+
+  document.getElementById('btn-logout').addEventListener('click', (e) => {
+    e.preventDefault();
+    logout();
+  });
+</script>
+
 <!-- ══════════════════ SCRIPTS ══════════════════ -->
 <script src="src/approx/libs/bootstrap/js/bootstrap.bundle.min.js"></script>
 <script src="src/approx/js/app.js"></script>
 <script>
-// ── Auth guard ──
-(function() {
-  if (!sessionStorage.getItem('fz_client')) window.location.href = 'login.html';
-})();
-
-document.getElementById('btn-logout').addEventListener('click', function(e) {
-  e.preventDefault();
-  sessionStorage.removeItem('fz_client');
-  sessionStorage.removeItem('fz_client_empresa');
-  window.location.href = 'login.html';
-});
-
 // ── Data ──
 const DATA = {
   cliente: {
-    empresa: sessionStorage.getItem('fz_client_empresa') || 'Laboratorios Centroamérica S.A.',
-    contacto: sessionStorage.getItem('fz_client') || 'Carlos Méndez',
+    empresa: (window.__fzUser && window.__fzUser.empresa) || 'Laboratorios Centroamérica S.A.',
+    contacto: (window.__fzUser && window.__fzUser.contacto) || 'Carlos Méndez',
     correo: 'carlos.mendez@labca.com'
   },
-  metricas: { activos: 2, en_proceso: 3, pendientes: 2, por_vencer: 1 },
-  pendientes: [
-    { id:'P001', producto_codigo:'FZ-0234', producto_nombre:'Metformin 500mg', tipo_accion:'subir',
-      descripcion:'Subir certificado de análisis del lote de producción (CoA) actualizado', fase:'Elaboración', fecha_limite:'2026-04-28' },
-    { id:'P002', producto_codigo:'FZ-0178', producto_nombre:'Vitamina C Complex 1000mg', tipo_accion:'revisar',
-      descripcion:'Revisar y aprobar borrador de etiquetado para presentación ante MINSA', fase:'Revisión', fecha_limite:'2026-05-10' }
-  ],
-  productos: [
-    { codigo:'FZ-0234', nombre_comercial:'Metformin 500mg', categoria:'sintesis',
-      fase_actual:3, fases_completadas:[1,2], estado:'bloqueado', vencimiento:null, bloqueado:true,
-      documentos:[
-        {nombre:'Solicitud de registro sanitario',fase:1,estado:'aprobado',nota:null},
-        {nombre:'Certificado de libre venta',fase:1,estado:'aprobado',nota:null},
-        {nombre:'Protocolo de análisis del fabricante',fase:2,estado:'aprobado',nota:null},
-        {nombre:'Ficha técnica del producto',fase:2,estado:'en_revision',nota:null},
-        {nombre:'Certificado de análisis del lote (CoA)',fase:3,estado:'pendiente',nota:null},
-        {nombre:'Monografía del producto',fase:3,estado:'rechazado',nota:'No indica la dosis máxima diaria recomendada. Favor actualizar y resubir.'}
-      ],
-      actividad:[
-        {fecha:'2026-04-18',descripcion:'Farmazed solicitó CoA actualizado'},
-        {fecha:'2026-04-10',descripcion:'Ficha técnica enviada para revisión'},
-        {fecha:'2026-03-28',descripcion:'Fase de Revisión Documental completada'}
-      ]
-    },
-    { codigo:'FZ-0178', nombre_comercial:'Vitamina C Complex 1000mg', categoria:'suplemento',
-      fase_actual:2, fases_completadas:[1], estado:'en_tramite', vencimiento:null, bloqueado:false,
-      documentos:[
-        {nombre:'Solicitud de registro sanitario',fase:1,estado:'aprobado',nota:null},
-        {nombre:'Certificado de libre venta',fase:1,estado:'aprobado',nota:null},
-        {nombre:'Análisis microbiológico',fase:2,estado:'en_revision',nota:null},
-        {nombre:'Borrador de etiquetado',fase:2,estado:'pendiente',nota:null}
-      ],
-      actividad:[
-        {fecha:'2026-04-20',descripcion:'Análisis microbiológico en revisión por Farmazed'},
-        {fecha:'2026-04-05',descripcion:'Diagnóstico regulatorio completado'},
-        {fecha:'2026-03-20',descripcion:'Producto ingresado al sistema'}
-      ]
-    },
-    { codigo:'FZ-0312', nombre_comercial:'Arnica Montana Gel', categoria:'natural',
-      fase_actual:4, fases_completadas:[1,2,3,4], estado:'activo', vencimiento:'2027-03-10', bloqueado:false,
-      documentos:[
-        {nombre:'Solicitud de registro sanitario',fase:1,estado:'aprobado',nota:null},
-        {nombre:'Estudio de estabilidad',fase:2,estado:'aprobado',nota:null},
-        {nombre:'Expediente completo MINSA',fase:3,estado:'aprobado',nota:null},
-        {nombre:'Resolución de registro sanitario',fase:4,estado:'aprobado',nota:null}
-      ],
-      actividad:[
-        {fecha:'2026-01-15',descripcion:'Registro sanitario obtenido ante MINSA'},
-        {fecha:'2025-12-10',descripcion:'Expediente presentado ante DNFD'},
-        {fecha:'2025-11-05',descripcion:'Elaboración del expediente completada'}
-      ]
-    },
-    { codigo:'FZ-0089', nombre_comercial:'Calcio + D3 Forte', categoria:'suplemento',
-      fase_actual:4, fases_completadas:[1,2,3,4], estado:'por_vencer', vencimiento:'2026-06-10', bloqueado:false,
-      documentos:[
-        {nombre:'Resolución de registro original',fase:4,estado:'aprobado',nota:null},
-        {nombre:'Solicitud de renovación',fase:1,estado:'pendiente',nota:null}
-      ],
-      actividad:[
-        {fecha:'2026-04-01',descripcion:'Alerta de vencimiento enviada al cliente'},
-        {fecha:'2024-06-10',descripcion:'Registro sanitario obtenido'}
-      ]
-    },
-    { codigo:'FZ-0401', nombre_comercial:'Probiowel Complex', categoria:'biologico',
-      fase_actual:1, fases_completadas:[], estado:'en_tramite', vencimiento:null, bloqueado:false,
-      documentos:[{nombre:'Solicitud de ingreso',fase:1,estado:'en_revision',nota:null}],
-      actividad:[
-        {fecha:'2026-04-22',descripcion:'Diagnóstico regulatorio iniciado'},
-        {fecha:'2026-04-22',descripcion:'Producto ingresado al portal'}
-      ]
-    }
-  ],
-  documentos: [
-    {nombre:'Certificado de análisis del lote (CoA)',producto:'FZ-0234',fase:'Elaboración',fecha:'2026-04-18',estado:'pendiente',nota:null},
-    {nombre:'Monografía del producto',producto:'FZ-0234',fase:'Elaboración',fecha:'2026-04-10',estado:'rechazado',nota:'No indica la dosis máxima diaria. Favor actualizar.'},
-    {nombre:'Borrador de etiquetado',producto:'FZ-0178',fase:'Revisión',fecha:'2026-04-20',estado:'pendiente',nota:null},
-    {nombre:'Análisis microbiológico',producto:'FZ-0178',fase:'Revisión',fecha:'2026-04-20',estado:'en_revision',nota:null},
-    {nombre:'Ficha técnica del producto',producto:'FZ-0234',fase:'Elaboración',fecha:'2026-04-10',estado:'en_revision',nota:null},
-    {nombre:'Solicitud de ingreso',producto:'FZ-0401',fase:'Diagnóstico',fecha:'2026-04-22',estado:'en_revision',nota:null},
-    {nombre:'Solicitud de renovación',producto:'FZ-0089',fase:'Diagnóstico',fecha:'2026-04-01',estado:'pendiente',nota:null},
-    {nombre:'Solicitud de registro sanitario',producto:'FZ-0234',fase:'Diagnóstico',fecha:'2026-03-01',estado:'aprobado',nota:null},
-    {nombre:'Protocolo de análisis del fabricante',producto:'FZ-0234',fase:'Revisión',fecha:'2026-03-15',estado:'aprobado',nota:null},
-    {nombre:'Resolución de registro sanitario',producto:'FZ-0312',fase:'Obtención',fecha:'2026-01-15',estado:'aprobado',nota:null}
-  ],
-  mensajes: [
-    { producto_codigo:'FZ-0234', producto_nombre:'Metformin 500mg',
-      mensajes:[
-        {remitente:'fz',nombre:'Equipo Farmazed',texto:'Buenos días Carlos. Hemos revisado el expediente de Metformin 500mg. Necesitamos el certificado de análisis (CoA) del lote más reciente para continuar con la elaboración del expediente.',fecha_hora:'2026-04-18 09:15'},
-        {remitente:'cliente',nombre:'Carlos Méndez',texto:'Entendido. Lo solicito al área de producción hoy mismo y lo subiré esta semana.',fecha_hora:'2026-04-18 10:42'},
-        {remitente:'fz',nombre:'Equipo Farmazed',texto:'Perfecto. También te informamos que la monografía fue devuelta porque no especifica la dosis máxima diaria. Favor revisar las observaciones y resubir el documento.',fecha_hora:'2026-04-20 14:00'},
-        {remitente:'cliente',nombre:'Carlos Méndez',texto:'¿La monografía corregida la envío por aquí o por correo?',fecha_hora:'2026-04-21 08:30'},
-        {remitente:'fz',nombre:'Equipo Farmazed',texto:'Directamente desde el portal usando el botón "Resubir" en Mis Documentos. Así queda registrado en el expediente.',fecha_hora:'2026-04-21 09:05'}
-      ]
-    },
-    { producto_codigo:'FZ-0178', producto_nombre:'Vitamina C Complex 1000mg',
-      mensajes:[
-        {remitente:'fz',nombre:'Equipo Farmazed',texto:'Carlos, el análisis microbiológico de Vitamina C Complex ya está en revisión. En paralelo, te enviamos el borrador de etiquetado para tu aprobación antes del 10 de mayo.',fecha_hora:'2026-04-20 11:00'},
-        {remitente:'cliente',nombre:'Carlos Méndez',texto:'¿Cuánto tiempo tarda la revisión del análisis microbiológico?',fecha_hora:'2026-04-20 15:20'},
-        {remitente:'fz',nombre:'Equipo Farmazed',texto:'Aproximadamente 5 días hábiles. El borrador de etiquetado necesita tu aprobación antes del 10 de mayo para no retrasar el trámite.',fecha_hora:'2026-04-21 09:30'}
-      ]
-    },
-    { producto_codigo:'FZ-0089', producto_nombre:'Calcio + D3 Forte',
-      mensajes:[
-        {remitente:'fz',nombre:'Equipo Farmazed',texto:'Estimado Carlos, el registro de Calcio + D3 Forte vence el 10 de junio de 2026. Recomendamos iniciar el proceso de renovación a la brevedad.',fecha_hora:'2026-04-01 10:00'},
-        {remitente:'cliente',nombre:'Carlos Méndez',texto:'¿Qué documentos necesito para la renovación?',fecha_hora:'2026-04-02 09:00'},
-        {remitente:'fz',nombre:'Equipo Farmazed',texto:'Principalmente la solicitud formal de renovación y el CoA del lote vigente. También se requiere el pago de la tasa MINSA actualizada. Te enviamos el checklist completo.',fecha_hora:'2026-04-02 10:15'}
-      ]
-    }
-  ]
+  metricas: { activos: 0, en_proceso: 0, pendientes: 0, por_vencer: 0 },
+  pendientes: [],
+  productos: [],
+  documentos: [],
+  mensajes: []
 };
+// Classic <script> runs synchronously during parse — BEFORE the deferred
+// type="module" auth script above (module scripts always run after parsing
+// completes, regardless of source order). Exposing DATA on window lets that
+// module script overwrite it with real data and re-render once auth + the
+// API calls resolve, instead of racing to read/set it in time for this pass.
+window.DATA = DATA;
 
 // ── Constants ──
 const FASES_FULL  = ['Diagnóstico Regulatorio','Revisión Documental','Elaboración del Expediente','Obtención del Registro'];
 const FASES_SHORT = ['Diagnóstico','Revisión','Elaboración','Obtención'];
-const TIPOS_NOMBRES = {sintesis:'Síntesis química',natural:'Natural/Fitofármaco',biologico:'Biológico',suplemento:'Suplemento',homeopatico:'Homeopático',otro:'Otro'};
-const DOCS_POR_TIPO = {
-  sintesis:   ['Solicitud de registro sanitario','Certificado de libre venta','Protocolo de análisis del fabricante','Certificado de análisis del lote (CoA)','Monografía / ficha técnica','Borrador de etiquetado en español','Estudio de estabilidad','Certificado BPM'],
-  biologico:  ['Solicitud de registro sanitario','Certificado de libre venta','Protocolo de análisis','CoA del lote','Monografía / ficha técnica','Borrador de etiquetado','Estudio de estabilidad','Certificado BPM','Documentación de origen biológico'],
-  natural:    ['Solicitud de registro sanitario','Fórmula cuali-cuantitativa','Especificaciones de calidad de materias primas','Análisis microbiológico y fisicoquímico','Borrador de etiquetado en español','Certificado de libre venta (si aplica)'],
-  suplemento: ['Solicitud de registro sanitario','Fórmula cuali-cuantitativa','Análisis microbiológico y fisicoquímico','Borrador de etiquetado en español','Certificado de libre venta (si aplica)'],
-  homeopatico:['Solicitud de registro sanitario','Monografía del preparado','Fórmula y diluciones','Borrador de etiquetado en español'],
-  otro:       ['Solicitud de registro sanitario','Documentación técnica del producto','Etiquetado en español','Información del fabricante']
-};
-const PAISES_ABREVIADO = ['Colombia','Ecuador','Perú','Bolivia','Venezuela','Chile','Argentina','Brasil','México','Guatemala','Honduras','El Salvador','Nicaragua','Costa Rica','República Dominicana','Cuba','Paraguay','Uruguay','España','Estados Unidos','Alemania','Francia','Italia','Reino Unido','Suiza','Japón','Corea del Sur','Canada','Australia'];
+// TIPOS_NOMBRES/DOCS_POR_TIPO/PAISES_ABREVIADO (categorías y checklist falsos del
+// wizard de maqueta, países incompletos) eliminados junto con el wizard falso —
+// ver el wizard real portado más abajo (Gap 7) y portal/js/wizard.js.
 
 // ── Helpers ──
 function daysUntil(d) {
   if (!d) return null;
-  return Math.round((new Date(d) - new Date('2026-04-24')) / 86400000);
+  // Prototipo original usaba una fecha "hoy" fija (2026-04-24) para su demo
+  // hardcodeada — con datos reales, "hoy" es la fecha real.
+  return Math.round((new Date(d) - new Date()) / 86400000);
 }
 function formatDate(d) {
   if (!d) return '—';
@@ -886,7 +1159,7 @@ function formatDate(d) {
   return `${parseInt(day)} ${'ene feb mar abr may jun jul ago sep oct nov dic'.split(' ')[parseInt(m)-1]} ${y}`;
 }
 function estadoBadge(e) {
-  const m = {activo:['fz-badge-green','Activo'],en_tramite:['fz-badge-blue','En trámite'],bloqueado:['fz-badge-amber','Bloqueado'],vencido:['fz-badge-red','Vencido'],por_vencer:['fz-badge-amber','Por renovar']};
+  const m = {activo:['fz-badge-green','Activo'],en_tramite:['fz-badge-blue','En trámite'],bloqueado:['fz-badge-amber','Bloqueado'],vencido:['fz-badge-red','Vencido'],por_vencer:['fz-badge-amber','Por renovar'],denegado:['fz-badge-red','Denegado']};
   const [c,l] = m[e]||['fz-badge-gray',e];
   return `<span class="fz-badge ${c}">${l}</span>`;
 }
@@ -895,9 +1168,18 @@ function docBadge(e) {
   const [c,l] = m[e]||['fz-badge-gray',e];
   return `<span class="fz-badge ${c}">${l}</span>`;
 }
-function catBadge(c) {
-  const m = {sintesis:['fz-badge-blue','Síntesis química'],natural:['fz-badge-green','Natural / Fitofármaco'],biologico:['fz-badge-navy','Biológico'],suplemento:['fz-badge-amber','Suplemento'],homeopatico:['fz-badge-gray','Homeopático']};
-  const [cls,l] = m[c]||['fz-badge-gray',c];
+// Gap 3: las categorías del prototipo (síntesis/natural/biológico/...) no
+// existen en el backend real — remapeado a los 6 trámites reales.
+function catBadge(tramiteType) {
+  const m = {
+    medicamentos: ['fz-badge-blue',  'Medicamentos'],
+    cosmeticos:   ['fz-badge-green', 'Cosméticos'],
+    higienicos:   ['fz-badge-navy',  'Higiénicos'],
+    plaguicidas:  ['fz-badge-amber', 'Plaguicidas'],
+    excepcion:    ['fz-badge-red',   'Excepción de Registro'],
+    publicidad:   ['fz-badge-gray',  'Publicidad'],
+  };
+  const [cls,l] = m[tramiteType]||['fz-badge-gray',tramiteType];
   return `<span class="fz-badge ${cls}">${l}</span>`;
 }
 function docActionBtn(e) {
@@ -956,8 +1238,7 @@ function initTopbar() {
   document.getElementById('notif-list').innerHTML = nl;
 
   const mb = document.getElementById('msg-badge');
-  mb.style.display = '';
-  mb.textContent = DATA.mensajes.length;
+  if (DATA.mensajes.length) { mb.style.display = ''; mb.textContent = DATA.mensajes.length; }
 }
 
 // ── Metrics ──
@@ -1019,14 +1300,23 @@ function pipelineHTML(p) {
 }
 
 // ── Expanded product ──
+// Gap 4/F: el prototipo agrupaba documentos por 4 fases visuales que no
+// existen en el checklist real (solo trae faddiStep, un número de paso interno
+// de FADDI). Resolución del PM: sin agrupar por fase — se agrupa por estado.
+const DOC_GROUP_ORDER = [
+  ['pendiente',   'Pendientes de tu parte'],
+  ['en_revision', 'En revisión por Farmazed'],
+  ['aprobado',    'Aprobados'],
+  ['rechazado',   'Rechazados'],
+];
 function expandedHTML(p) {
-  const byF = {1:[],2:[],3:[],4:[]};
-  p.documentos.forEach(d => { if(byF[d.fase]) byF[d.fase].push(d); });
+  const byEstado = {pendiente:[],en_revision:[],aprobado:[],rechazado:[]};
+  p.documentos.forEach(d => { if (byEstado[d.estado]) byEstado[d.estado].push(d); });
   let docs = '';
-  for (let f=1;f<=4;f++) {
-    if (!byF[f].length) continue;
-    docs += `<div class="fz-doc-phase-label">${FASES_FULL[f-1]}</div>`;
-    byF[f].forEach(d => {
+  DOC_GROUP_ORDER.forEach(([key, label]) => {
+    if (!byEstado[key].length) return;
+    docs += `<div class="fz-doc-phase-label">${label}</div>`;
+    byEstado[key].forEach(d => {
       docs += `<div class="fz-doc-row">
         <div style="flex:1;">
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
@@ -1037,7 +1327,8 @@ function expandedHTML(p) {
         <div style="flex-shrink:0;">${docActionBtn(d.estado)}</div>
       </div>`;
     });
-  }
+  });
+  if (!docs) docs = `<p style="font-size:.78rem;color:#9ca3af;">Aún no se han subido documentos para este expediente.</p>`;
   const act = p.actividad.map(a => `
     <div class="fz-activity-item">
       <span class="fz-activity-date">${formatDate(a.fecha)}</span>
@@ -1051,6 +1342,15 @@ function expandedHTML(p) {
 
 // ── Render products ──
 function renderProductos() {
+  if (!DATA.productos.length) {
+    document.getElementById('productos-list').innerHTML = `
+      <div style="text-align:center;padding:48px 24px;color:#9ca3af;">
+        <i class="iconoir-package" style="font-size:2rem;display:block;margin-bottom:10px;"></i>
+        <p style="font-size:.85rem;margin-bottom:14px;">Aún no tienes productos registrados.</p>
+        <button class="btn-fz btn-fz-sm" onclick="showModule('solicitar')"><i class="iconoir-add-circle"></i> Solicitar Registro</button>
+      </div>`;
+    return;
+  }
   document.getElementById('productos-list').innerHTML = DATA.productos.map((p, i) => {
     const d = daysUntil(p.vencimiento);
     const vw = d !== null && d <= 90;
@@ -1093,7 +1393,10 @@ function filterDocs(btn, f) {
 function renderDocs() {
   const list = docFilter === 'todos' ? DATA.documentos : DATA.documentos.filter(d => d.estado === docFilter);
   if (!list.length) {
-    document.getElementById('docs-list').innerHTML = '<p style="font-size:.78rem;color:#9ca3af;text-align:center;padding:24px 0;">No hay documentos en esta categoría.</p>';
+    const msg = DATA.documentos.length
+      ? 'No hay documentos en esta categoría.'
+      : 'Aún no tienes documentos. Aparecerán aquí cuando inicies un trámite.';
+    document.getElementById('docs-list').innerHTML = `<p style="font-size:.78rem;color:#9ca3af;text-align:center;padding:24px 0;">${msg}</p>`;
     return;
   }
   document.getElementById('docs-list').innerHTML = list.map(d => `
@@ -1111,15 +1414,34 @@ function renderDocs() {
     </div>`).join('');
 }
 
-// ── Chat ──
-let activeThread = 0;
+// ── Chat (real — módulo Mensajes, tracker/routes/messages.js) ──
+// remitente 'client'/'fz' coincide con las clases CSS .fz-chat-msg.client /
+// .fz-chat-msg.fz (senderRole real del API: 'client'|'admin' -> 'client'|'fz').
+const REMITENTE_MAP = { client: 'client', admin: 'fz' };
+function formatDateTime(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  const meses = 'ene feb mar abr may jun jul ago sep oct nov dic'.split(' ');
+  const hh = String(d.getHours()).padStart(2,'0');
+  const mm = String(d.getMinutes()).padStart(2,'0');
+  return `${d.getDate()} ${meses[d.getMonth()]} ${d.getFullYear()}, ${hh}:${mm}`;
+}
+
+let activeThread = DATA.mensajes.length ? 0 : null;
 function renderThreadList() {
+  if (!DATA.mensajes.length) {
+    document.getElementById('threads-list').innerHTML = `
+      <div style="text-align:center;padding:32px 16px;color:#9ca3af;font-size:.78rem;">
+        Aún no tienes conversaciones. Cuando inicies un trámite podrás escribirle aquí a tu equipo de Farmazed.
+      </div>`;
+    return;
+  }
   document.getElementById('threads-list').innerHTML = DATA.mensajes.map((h, i) => {
     const last = h.mensajes[h.mensajes.length-1];
     return `<div class="fz-thread-item${i===activeThread?' active':''}" onclick="selectThread(${i})">
       <div class="code">${h.producto_codigo}</div>
       <div class="name">${h.producto_nombre}</div>
-      <div class="preview">${last.texto}</div>
+      <div class="preview">${last ? last.texto : 'Sin mensajes todavía — escribe el primero.'}</div>
     </div>`;
   }).join('');
 }
@@ -1129,142 +1451,113 @@ function selectThread(i) {
   renderChatMessages();
 }
 function renderChatMessages() {
+  const container = document.getElementById('chat-messages');
+  if (activeThread === null) {
+    document.getElementById('chat-thread-name').textContent = 'Selecciona una conversación';
+    document.getElementById('chat-thread-code').textContent = '';
+    container.innerHTML = `
+      <div style="display:flex;align-items:center;justify-content:center;height:100%;color:#9ca3af;font-size:.78rem;">
+        Sin conversaciones todavía.
+      </div>`;
+    return;
+  }
   const h = DATA.mensajes[activeThread];
   document.getElementById('chat-thread-name').textContent = h.producto_nombre;
   document.getElementById('chat-thread-code').textContent = h.producto_codigo;
-  const container = document.getElementById('chat-messages');
+  if (!h.mensajes.length) {
+    container.innerHTML = `
+      <div style="display:flex;align-items:center;justify-content:center;height:100%;color:#9ca3af;font-size:.78rem;text-align:center;padding:0 24px;">
+        Aún no hay mensajes en este expediente. Escribe abajo para contactar a tu equipo de Farmazed.
+      </div>`;
+    return;
+  }
   container.innerHTML = h.mensajes.map(msg => {
-    const fz = msg.remitente === 'fz';
-    const ini = fz ? 'FZ' : msg.nombre.split(' ').map(n=>n[0]).slice(0,2).join('').toUpperCase();
-    return `<div class="fz-chat-msg ${msg.remitente}">
-      <div class="fz-chat-av ${msg.remitente}">${ini}</div>
+    const remitente = REMITENTE_MAP[msg.remitente] || 'client';
+    const fz = remitente === 'fz';
+    const ini = fz ? 'FZ' : (msg.nombre || '?').split(' ').map(n=>n[0]).slice(0,2).join('').toUpperCase();
+    return `<div class="fz-chat-msg ${remitente}">
+      <div class="fz-chat-av ${remitente}">${ini}</div>
       <div>
         <div style="font-size:.63rem;color:#9ca3af;margin-bottom:3px;${fz?'':'text-align:right;'}">${msg.nombre}</div>
         <div class="fz-bubble">${msg.texto}</div>
-        <div class="fz-chat-time">${msg.fecha_hora}</div>
+        <div class="fz-chat-time">${formatDateTime(msg.fecha_hora)}</div>
       </div>
     </div>`;
   }).join('');
   container.scrollTop = container.scrollHeight;
 }
-function sendMessage() {
+async function sendMessage() {
+  if (activeThread === null) return;
   const inp = document.getElementById('chat-input');
   const txt = inp.value.trim();
   if (!txt) return;
-  DATA.mensajes[activeThread].mensajes.push({
-    remitente: 'cliente', nombre: DATA.cliente.contacto,
-    texto: txt, fecha_hora: '2026-04-24 ' + new Date().toTimeString().slice(0,5)
-  });
-  inp.value = '';
-  renderChatMessages();
+  const h = DATA.mensajes[activeThread];
+  const btn = document.querySelector('.fz-chat-footer button');
+  inp.disabled = true;
+  if (btn) btn.disabled = true;
+  try {
+    const sent = await window.__fzApi.sendMessage(h.caseId, txt);
+    h.mensajes.push({
+      remitente: sent.senderRole, nombre: sent.senderName,
+      texto: sent.text, fecha_hora: sent.createdAt,
+    });
+    inp.value = '';
+    renderChatMessages();
+    renderThreadList();
+  } catch (err) {
+    alert('No se pudo enviar el mensaje: ' + err.message);
+  } finally {
+    inp.disabled = false;
+    if (btn) btn.disabled = false;
+    inp.focus();
+  }
 }
 document.getElementById('chat-input').addEventListener('keydown', e => {
   if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
 });
 
 // ── Wizard ──
-let wizState = { step: 1, tipo: null };
+// El wizard real (5 pasos, portal/js/wizard.js) maneja su propio estado y
+// navegación de forma independiente — ver el <script type="module"> al final
+// del body. Lo único que este script clásico necesita es mostrar/ocultar su
+// contenedor desde el botón "Iniciar solicitud" del banner de arriba.
 function toggleWizard() {
   const w = document.getElementById('wizard-form');
   w.style.display = w.style.display === 'none' ? 'block' : 'none';
 }
-function toggleChecklist() {
-  document.getElementById('checklist-panel').classList.toggle('open');
-}
-function selectType(el, t) {
-  document.querySelectorAll('.fz-type-card').forEach(c => c.classList.remove('selected'));
-  el.classList.add('selected');
-  wizState.tipo = t;
-}
-function updateWizProgress(step) {
-  document.querySelectorAll('.fz-wiz-s').forEach((s,i) => {
-    s.classList.remove('active','done');
-    if (i+1 < step) s.classList.add('done');
-    else if (i+1 === step) s.classList.add('active');
-  });
-}
-function updateRoute() {
-  const pais = document.getElementById('wiz-pais').value.trim();
-  document.getElementById('step3-pais').textContent = pais || '—';
-  const el = document.getElementById('route-result');
-  const det = document.getElementById('route-detail');
-  if (!pais) return;
-  const ok = PAISES_ABREVIADO.some(p => p.toLowerCase() === pais.toLowerCase());
-  if (ok) {
-    el.className = 'fz-route-badge abreviado';
-    el.innerHTML = '<i class="iconoir-check-circle me-2"></i>Aplica procedimiento abreviado — proceso más rápido';
-    det.textContent = 'El país está incluido en el D.E. 29/2023, lo que permite un trámite simplificado ante DNFD/MINSA con menores requisitos y tiempos reducidos.';
-  } else {
-    el.className = 'fz-route-badge regular';
-    el.innerHTML = '<i class="iconoir-info-circle me-2"></i>Aplica procedimiento regular';
-    det.textContent = 'El país de fabricación no está en la lista de procedimiento abreviado. El trámite seguirá el proceso regular con los requisitos y tiempos estándar de DNFD/MINSA.';
-  }
-}
-function wizNext(from) {
-  if (from === 1 && !wizState.tipo) { alert('Selecciona el tipo de producto.'); return; }
-  if (from === 2) {
-    if (!document.getElementById('wiz-nombre').value.trim() ||
-        !document.getElementById('wiz-pais').value.trim() ||
-        !document.getElementById('wiz-fabricante').value.trim()) {
-      alert('Completa todos los campos obligatorios (*).');
-      return;
-    }
-    updateRoute();
-  }
-  if (from === 3) {
-    const n = document.getElementById('wiz-nombre').value;
-    const g = document.getElementById('wiz-generico').value;
-    const p = document.getElementById('wiz-pais').value;
-    const f = document.getElementById('wiz-fabricante').value;
-    document.getElementById('wiz-summary').innerHTML = `
-      <div style="display:grid;grid-template-columns:auto 1fr;gap:4px 18px;">
-        <span style="color:#9ca3af;">Tipo:</span><span>${TIPOS_NOMBRES[wizState.tipo]||wizState.tipo}</span>
-        <span style="color:#9ca3af;">Nombre comercial:</span><span>${n}</span>
-        <span style="color:#9ca3af;">Nombre genérico / IFA:</span><span>${g||'—'}</span>
-        <span style="color:#9ca3af;">País de fabricación:</span><span>${p}</span>
-        <span style="color:#9ca3af;">Fabricante:</span><span>${f}</span>
-      </div>`;
-    document.getElementById('wiz-doclist').innerHTML = (DOCS_POR_TIPO[wizState.tipo]||DOCS_POR_TIPO.otro).map(d=>`<li>${d}</li>`).join('');
-  }
-  document.getElementById(`step-${from}`).classList.remove('active');
-  document.getElementById(`step-${from+1}`).classList.add('active');
-  wizState.step = from + 1;
-  updateWizProgress(from + 1);
-}
-function wizBack(from) {
-  document.getElementById(`step-${from}`).classList.remove('active');
-  document.getElementById(`step-${from-1}`).classList.add('active');
-  wizState.step = from - 1;
-  updateWizProgress(from - 1);
-}
-function wizSubmit() {
-  document.getElementById('step-4').classList.remove('active');
-  document.getElementById('step-success').classList.add('active');
-  updateWizProgress(5);
-}
-function resetWizard() {
-  ['1','2','3','4','success'].forEach(s => {
-    const el = document.getElementById(`step-${s}`);
-    if (el) el.classList.remove('active');
-  });
-  document.getElementById('step-1').classList.add('active');
-  wizState = {step:1,tipo:null};
-  document.querySelectorAll('.fz-type-card').forEach(c => c.classList.remove('selected'));
-  ['wiz-nombre','wiz-generico','wiz-pais','wiz-fabricante'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.value = '';
-  });
-  updateWizProgress(1);
-}
 
-// ── Bootstrap ──
-initTopbar();
-renderMetrics();
-renderPendientes();
-renderProductos();
-renderDocs();
-renderThreadList();
-renderChatMessages();
+// ── Bootstrap ── (triggered by the auth module script above, once real data is loaded)
+window.renderAll = function renderAll() {
+  // activeThread se fijó en null/0 cuando este script corrió (DATA.mensajes
+  // todavía vacío) — para cuando renderAll() se llama, ya hay datos reales.
+  if (activeThread === null && DATA.mensajes.length) activeThread = 0;
+  initTopbar();
+  renderMetrics();
+  renderPendientes();
+  renderProductos();
+  renderDocs();
+  renderThreadList();
+  renderChatMessages();
+};
+</script>
+
+<!-- Loading modal (portado de portal/nuevo.html) — usado por wizard.js durante uploads -->
+<div class="fz-modal-overlay" id="fz-loading-modal">
+  <div class="fz-modal-box">
+    <div class="spinner-border text-primary mb-3"></div>
+    <div class="fw-semibold" id="fz-loading-msg">Procesando...</div>
+  </div>
+</div>
+
+<!-- Wizard real (Gap 7) — misma lógica que portal/nuevo.html usaba de forma standalone -->
+<script type="module" src="portal/js/wizard.js"></script>
+<script>
+  document.getElementById('btn-add-dist')?.addEventListener('click', () => {
+    const el = document.createElement('input');
+    el.className = 'form-control form-control-sm distribuidor-licencia mb-2';
+    el.placeholder = 'Número de Licencia del Distribuidor';
+    document.getElementById('distribuidores-list').appendChild(el);
+  });
 </script>
 </body>
 </html>

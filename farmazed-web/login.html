@@ -259,8 +259,16 @@
 
     <div class="fz-login-copy">&copy; 2026 Farmazed &middot; Panamá</div>
 
-    <script>
-        document.getElementById('login-form').addEventListener('submit', function(e) {
+    <script type="module">
+        import { login, auth, isAdmin } from './portal/js/auth.js';
+        import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js';
+
+        // Already logged in? Skip straight to the right dashboard.
+        onAuthStateChanged(auth, async (user) => {
+            if (user) window.location.href = (await isAdmin()) ? 'dashboard.html' : 'client-dashboard.html';
+        });
+
+        document.getElementById('login-form').addEventListener('submit', async function(e) {
             e.preventDefault();
             var msg = document.getElementById('login-msg');
             var user = document.getElementById('usuario').value.trim();
@@ -271,20 +279,13 @@
             }
             msg.style.color = '#2190d7';
             msg.textContent = 'Verificando credenciales…';
-            setTimeout(function() {
-                if (user === 'ricardo' && pass === 'admins123') {
-                    sessionStorage.setItem('fz_user', 'Ricardo Pimentel');
-                    sessionStorage.setItem('fz_role', 'Administrador');
-                    window.location.href = 'dashboard.html';
-                } else if (user === 'user' && pass === 'admins123') {
-                    sessionStorage.setItem('fz_client', 'Carlos Méndez');
-                    sessionStorage.setItem('fz_client_empresa', 'Laboratorios Centroamérica S.A.');
-                    window.location.href = 'client-dashboard.html';
-                } else {
-                    msg.style.color = '#c0392b';
-                    msg.textContent = 'Usuario o contraseña incorrectos.';
-                }
-            }, 800);
+            try {
+                await login(user, pass);
+                window.location.href = (await isAdmin()) ? 'dashboard.html' : 'client-dashboard.html';
+            } catch (err) {
+                msg.style.color = '#c0392b';
+                msg.textContent = 'Usuario o contraseña incorrectos.';
+            }
         });
     </script>
 

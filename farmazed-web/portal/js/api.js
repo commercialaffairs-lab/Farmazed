@@ -91,6 +91,15 @@ const api = {
     }
     return res.json();
   },
+
+  // ── Messages ────────────────────────────────────────────────────────────────
+
+  listMessages: (caseId) => apiFetch(`/api/cases/${caseId}/messages`),
+
+  sendMessage: (caseId, text) => apiFetch(`/api/cases/${caseId}/messages`, {
+    method: 'POST',
+    body: JSON.stringify({ text }),
+  }),
 };
 
 export default api;

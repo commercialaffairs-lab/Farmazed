@@ -73,11 +73,16 @@ const getVia           = id => VIAS_REGISTRO.find(v => v.id === id) || null;
 const TIPOS_REGISTRO           = viasVisibles().map(v => v.id);
 const TIPOS_REGISTRO_SIN_FLUJO = VIAS_REGISTRO.filter(v => !v.flujoPropio).map(v => v.id);
 const TIPOS_REGISTRO_CON_PAISES = VIAS_REGISTRO.filter(v => v.paisesARR).map(v => v.id);
+// Debe coincidir EXACTO con las keys de MED_VARIABLE_BY_SUBTYPE en
+// tracker/data/faddi_checklists.js — un nombre distinto hace que getChecklist()
+// devuelva [] en silencio para ese subtipo (bug encontrado por el PM 2026-08-26).
+// 'Producto Hemoderivado', 'Alérgeno' y 'Cannabis' se quitaron: no tienen
+// entrada en faddi_checklists.js todavía — agregar ambos lados a la vez si
+// Farmazed confirma que gestiona esos trámites.
 const TIPOS_MED = [
-  'Síntesis Química', 'Biotecnológicos', 'Homeopáticos', 'Huérfanos',
-  'Radiofármacos', 'Biológicos', 'Suplemento Con Propiedad Terapéutica',
-  'Producto Natural Medicinal', 'Producto Hemoderivado', 'Vacuna',
-  'Alérgeno', 'Medio de Contraste', 'Cannabis',
+  'Síntesis Química', 'Biológicos', 'Biotecnológicos', 'Homeopático',
+  'Huérfanos', 'Radiofármaco', 'Vacuna', 'Medio de Contraste',
+  'Gas Medicinal', 'Suplementos', 'Productos Naturales',
 ];
 const CONDICION_VENTA = [
   'Con Prescripción Médica', 'Sin Prescripción Médica',
@@ -107,6 +112,18 @@ function setLoading(btn, loading) {
   btn.innerHTML = loading
     ? '<span class="spinner-border spinner-border-sm me-2"></span>Guardando...'
     : btn.dataset.orig;
+}
+
+function showLoadingModal(msg = 'Procesando...') {
+  const modal = $('#fz-loading-modal');
+  if (!modal) return;
+  const msgEl = $('#fz-loading-msg');
+  if (msgEl) msgEl.textContent = msg;
+  modal.classList.add('show');
+}
+
+function hideLoadingModal() {
+  $('#fz-loading-modal')?.classList.remove('show');
 }
 
 function toast(msg, type = 'success') {
@@ -155,8 +172,11 @@ function renderStep1() {
   if (tipoRegSelect) {
     tipoRegSelect.innerHTML = TIPOS_REGISTRO.map(t => `<option value="${t}">${t}</option>`).join('');
     tipoRegSelect.value = state.data.tipoRegistro;
+    // Gap E (auditoría regulatoria PM 2026-08-26): panel informativo de países
+    // habilitados (D.E. 29/2023). Ahora sale del flag `paisesARR` de VIAS_REGISTRO.
     const syncContactenos = () => {
       $('#tipo-registro-contactenos')?.classList.toggle('d-none', !TIPOS_REGISTRO_SIN_FLUJO.includes(tipoRegSelect.value));
+      $('#abreviado-paises-panel')?.classList.toggle('d-none', !TIPOS_REGISTRO_CON_PAISES.includes(tipoRegSelect.value));
     };
     syncContactenos();
     tipoRegSelect.addEventListener('change', () => {
@@ -378,6 +398,7 @@ function renderDocCard(doc) {
 async function uploadDoc(faddiDocId, file, docMeta) {
   const card = $(`#doc-${faddiDocId}`);
   if (card) card.querySelector('.doc-upload-action').innerHTML = '<span class="spinner-border spinner-border-sm text-primary"></span>';
+  showLoadingModal('Subiendo documento...');
 
   try {
     await api.uploadDocument(state.caseId, file, {
@@ -387,8 +408,11 @@ async function uploadDoc(faddiDocId, file, docMeta) {
       faddiStep:    docMeta?.faddiStep    || 0,
     });
     state.uploads[faddiDocId] = { file, status: 'uploaded' };
+    // Await the refresh so the checklist's own spinner-then-render swap
+    // happens behind the modal instead of flashing in front of the user —
+    // the modal fade-out is what reveals the already-updated list.
+    await renderChecklist();
     toast(`✅ ${docMeta?.name || faddiDocId} subido correctamente.`);
-    renderChecklist(); // refresh
   } catch (err) {
     state.uploads[faddiDocId] = { file, status: 'error' };
     toast(`❌ Error al subir ${docMeta?.name}: ${err.message}`, 'danger');
@@ -397,6 +421,8 @@ async function uploadDoc(faddiDocId, file, docMeta) {
          <input type="file" class="d-none" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" data-docid="${faddiDocId}">
          Reintentar
        </label>`;
+  } finally {
+    hideLoadingModal();
   }
 }
 
@@ -485,7 +511,17 @@ async function nextStep() {
     if (state.step === 5) {
       await api.updateCase(state.caseId, { status: 'submitted' });
       toast('🎉 Expediente enviado a Farmazed para revisión.');
-      setTimeout(() => window.location.href = '/portal/dashboard.html', 2000);
+      // Embedded in client-dashboard.html: switch modules in place instead of
+      // a hard page navigation. Standalone (nuevo.html): fall back to the
+      // real single frontend at the repo root.
+      setTimeout(() => {
+        if (typeof window.showModule === 'function') {
+          document.getElementById('wizard-form')?.style && (document.getElementById('wizard-form').style.display = 'none');
+          window.showModule('productos');
+        } else {
+          window.location.href = '/client-dashboard.html';
+        }
+      }, 2000);
       return;
     }
 
