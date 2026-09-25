@@ -20,6 +20,7 @@ const { Router } = require('express');
 const admin       = require('firebase-admin');
 const { requireMcpKey } = require('../middleware/auth');
 const { getChecklist }  = require('../data/faddi_checklists');
+const { rechazoTramite } = require('../data/tramites_habilitados');
 const { getSignedUrl }  = require('../services/storage');
 
 const router = Router();
@@ -418,7 +419,16 @@ async function handleGetFaddiContext({ caseId }) {
   return context;
 }
 
-async function handleUpdateCase({ caseId, status, notes, assignedTo, faddi }) {
+async function handleUpdateCase({ caseId, status, notes, assignedTo, faddi, tramiteType }) {
+  // F-6: tramiteType no es un campo actualizable de esta herramienta; si un
+  // cliente MCP lo manda, debe ser un trámite habilitado (antes se ignoraba).
+  if (tramiteType !== undefined) {
+    const rechazo = rechazoTramite(tramiteType);
+    if (rechazo) {
+      throw Object.assign(new Error(rechazo.body.error), { rpcCode: -32602, rpcData: rechazo.body });
+    }
+  }
+
   const update = { updatedAt: admin.firestore.Timestamp.now() };
   if (status     !== undefined) update.status     = status;
   if (notes      !== undefined) update.notes      = notes;
@@ -483,8 +493,8 @@ const HANDLERS = {
 function mcpSuccess(id, result) {
   return { jsonrpc: '2.0', result, id };
 }
-function mcpError(id, code, message) {
-  return { jsonrpc: '2.0', error: { code, message }, id };
+function mcpError(id, code, message, data) {
+  return { jsonrpc: '2.0', error: { code, message, ...(data !== undefined && { data }) }, id };
 }
 
 router.post('/', requireMcpKey, async (req, res) => {
@@ -530,7 +540,7 @@ router.post('/', requireMcpKey, async (req, res) => {
         content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
       }));
     } catch (e) {
-      return res.json(mcpError(id, -32000, e.message));
+      return res.json(mcpError(id, e.rpcCode || -32000, e.message, e.rpcData));
     }
   }
 

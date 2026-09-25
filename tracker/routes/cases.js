@@ -2,10 +2,42 @@ const { Router }  = require('express');
 const { v4: uuid } = require('uuid');
 const admin         = require('firebase-admin');
 const { requireAuth, requireAdmin } = require('../middleware/auth');
-const { getChecklist, TRAMITE_TYPES } = require('../data/faddi_checklists');
+const { getChecklist } = require('../data/faddi_checklists');
+const { rechazoTramite } = require('../data/tramites_habilitados');
 
 const router = Router();
 const db     = () => admin.firestore();
+
+// ─── Case codes (Gap 2, PM decision 2026-08-26) ──────────────────────────────
+// Scheme: FZ-{TIPO}-{SUBTIPO}-{AÑO}-{SECUENCIA}. SUBTIPO only for medicamentos.
+// SECUENCIA is a global consecutive, 4 digits, incremented atomically via a
+// Firestore transaction on meta/counters.caseSequence. Immutable once assigned.
+const TIPO_ABBR = {
+  medicamentos: 'MED', cosmeticos: 'COS', higienicos: 'HIG',
+  plaguicidas: 'PLAG', excepcion: 'EXC', publicidad: 'PUB',
+};
+const SUBTIPO_ABBR = {
+  'Regular': 'REG', 'Abreviado': 'ABR',
+  'Reconocimiento Mutuo': 'REC', 'Reconocimiento WLA': 'WLA',
+};
+
+async function generateCaseCode(tramiteType, tipoRegistro) {
+  const counterRef = db().collection('meta').doc('counters');
+  const seq = await db().runTransaction(async (tx) => {
+    const snap    = await tx.get(counterRef);
+    const current = snap.exists ? (snap.data().caseSequence || 0) : 0;
+    const next    = current + 1;
+    tx.set(counterRef, { caseSequence: next }, { merge: true });
+    return next;
+  });
+
+  const tipo    = TIPO_ABBR[tramiteType] || tramiteType.toUpperCase().slice(0, 3);
+  const subtipo = tramiteType === 'medicamentos' ? (SUBTIPO_ABBR[tipoRegistro] || null) : null;
+  const year    = new Date().getFullYear();
+  const seqStr  = String(seq).padStart(4, '0');
+
+  return `FZ-${tipo}${subtipo ? '-' + subtipo : ''}-${year}-${seqStr}`;
+}
 
 // ─── GET /api/cases ─────────────────────────────────────────────────────────
 // Admin: all cases. Client: own cases only.
@@ -40,15 +72,18 @@ router.post('/', requireAuth, async (req, res) => {
     const { tramiteType, tipoSolicitud, tipoRegistro, tipoMedicamento, product, entities } = req.body;
 
     if (!tramiteType) return res.status(400).json({ error: 'tramiteType is required' });
-    if (!TRAMITE_TYPES.includes(tramiteType)) {
-      return res.status(400).json({ error: `tramiteType must be one of: ${TRAMITE_TYPES.join(', ')}` });
-    }
+    // F-6: rechazar antes de generateCaseCode, que consume el contador global.
+    const rechazo = rechazoTramite(tramiteType);
+    if (rechazo) return res.status(rechazo.status).json(rechazo.body);
 
     const now      = admin.firestore.Timestamp.now();
+    const caseCode = await generateCaseCode(tramiteType, tipoRegistro || 'Regular');
     const caseData = {
       createdAt:      now,
       updatedAt:      now,
       status:         'draft',
+      caseCode,
+      vencimiento:    null,
       tramiteType,
       tipoSolicitud:  tipoSolicitud  || 'Nuevo Registro',
       tipoRegistro:   tipoRegistro   || 'Regular',
@@ -101,6 +136,13 @@ router.get('/:id', requireAuth, async (req, res) => {
 // Admin can update any field including status.
 router.patch('/:id', requireAuth, async (req, res) => {
   try {
+    // F-6: tramiteType no es editable aquí; si viene, debe ser uno habilitado
+    // (antes se ignoraba en silencio).
+    if (req.body.tramiteType !== undefined) {
+      const rechazo = rechazoTramite(req.body.tramiteType);
+      if (rechazo) return res.status(rechazo.status).json(rechazo.body);
+    }
+
     const snap = await db().collection('cases').doc(req.params.id).get();
     if (!snap.exists) return res.status(404).json({ error: 'Case not found' });
 
@@ -115,7 +157,9 @@ router.patch('/:id', requireAuth, async (req, res) => {
     }
 
     // Allowed fields per role
-    const ADMIN_FIELDS  = ['status', 'assignedTo', 'priority', 'notes', 'faddi', 'product', 'entities', 'monografia', 'tipoSolicitud', 'tipoRegistro', 'tipoMedicamento'];
+    // vencimiento (Gap 1, PM decision 2026-08-26): admin-only — Farmazed fills it
+    // manually on FADDI approval notification, there's no automated source for it.
+    const ADMIN_FIELDS  = ['status', 'assignedTo', 'priority', 'notes', 'faddi', 'product', 'entities', 'monografia', 'tipoSolicitud', 'tipoRegistro', 'tipoMedicamento', 'vencimiento'];
     const CLIENT_FIELDS = ['product', 'entities', 'monografia', 'tipoSolicitud', 'tipoRegistro', 'tipoMedicamento'];
     const allowed       = req.user.admin ? ADMIN_FIELDS : CLIENT_FIELDS;
 
@@ -130,6 +174,14 @@ router.patch('/:id', requireAuth, async (req, res) => {
         return res.status(400).json({ error: 'Clients may only set status to "submitted"' });
       }
       update.status = 'submitted';
+    }
+
+    // vencimiento arrives as an ISO date string from the client JSON body —
+    // store it as a proper Firestore Timestamp (or null to clear it).
+    if (update.vencimiento !== undefined) {
+      update.vencimiento = update.vencimiento === null
+        ? null
+        : admin.firestore.Timestamp.fromDate(new Date(update.vencimiento));
     }
 
     await db().collection('cases').doc(req.params.id).update(update);
