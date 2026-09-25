@@ -41,7 +41,7 @@ async function logout() {
   await signOut(auth);
   _currentToken = null;
   _currentUser  = null;
-  window.location.href = '/portal/login.html';
+  window.location.href = '/login.html';
 }
 
 /** Get fresh token (auto-refresh) */
@@ -55,7 +55,7 @@ async function getToken() {
  * Guard: if user is not logged in, redirect to login.
  * Call at the top of every protected page.
  */
-function requireLogin(redirectTo = '/portal/login.html') {
+function requireLogin(redirectTo = '/login.html') {
   return new Promise((resolve) => {
     const unsub = onAuthStateChanged(auth, async (user) => {
       unsub();

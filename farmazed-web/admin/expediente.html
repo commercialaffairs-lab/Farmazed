@@ -179,8 +179,8 @@
   }
 
   async function init() {
-    await requireLogin('/portal/login.html');
-    if (!(await isAdmin())) { window.location.href = '/portal/dashboard.html'; return; }
+    await requireLogin('/login.html');
+    if (!(await isAdmin())) { window.location.href = '/client-dashboard.html'; return; }
     if (!caseId) { window.location.href = '/admin/casos.html'; return; }
 
     try {

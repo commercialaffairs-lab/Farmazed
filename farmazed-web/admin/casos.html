@@ -120,9 +120,9 @@
   let searchTerm   = '';
 
   async function init() {
-    const user = await requireLogin('/portal/login.html');
+    const user = await requireLogin('/login.html');
     const admin = await isAdmin();
-    if (!admin) { window.location.href = '/portal/dashboard.html'; return; }
+    if (!admin) { window.location.href = '/client-dashboard.html'; return; }
     document.getElementById('admin-name').textContent = user.displayName || user.email;
     document.getElementById('sidebar-logout').addEventListener('click', logout);
     await loadCases();
