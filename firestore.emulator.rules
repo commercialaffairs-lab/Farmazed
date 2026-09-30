@@ -1,0 +1,13 @@
+// Reglas SOLO para el emulador local (proyecto "demo-farmazed").
+// NUNCA renombrar a "firestore.rules" ni correr "firebase deploy" con este
+// archivo — es intencionalmente abierto (allow if true) y abriría producción.
+// El proyecto real usa Production mode bloqueado (ver handover.md, Fase 3
+// pendiente: reglas reales por cliente).
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if true;
+    }
+  }
+}

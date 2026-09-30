@@ -22,3 +22,17 @@ FADDI CREDENTIALS.txt
 # ── Misc ──
 Prompt*.txt
 Untitled-*.psd
+
+# ── Emuladores Firebase (dev local, ver DEV_LOCAL.md) ──
+firestore-debug.log
+ui-debug.log
+firebase-debug.log
+.firebase/
+
+# ── E2E / Playwright (dev local, ver DEV_LOCAL.md y e2e/run.sh) ──
+e2e/node_modules/
+e2e/test-results/
+e2e/playwright-report/
+
+# ── Editor (config local de cada máquina, no del proyecto) ──
+.vscode/
