@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Aceptar invitación | Farmazed</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body {
+      min-height: 100vh; display:flex; align-items:center; justify-content:center;
+      background: linear-gradient(160deg, #0d4f80 0%, #2190d7 55%, #1572b0 100%);
+      font-family: 'Segoe UI', -apple-system, sans-serif;
+    }
+    .fz-card { background:#fff; border-radius:8px; box-shadow:0 12px 48px rgba(0,0,0,.28); width:100%; max-width:420px; margin:24px 16px; overflow:hidden; }
+    .fz-card-top { background:linear-gradient(135deg,#0d4f80,#2190d7); padding:28px 32px; text-align:center; color:#fff; }
+    .fz-card-body { padding:32px; }
+  </style>
+</head>
+<body>
+
+<div class="fz-card">
+  <div class="fz-card-top">
+    <div style="font-size:1.4rem;font-weight:700">Farmazed</div>
+    <div style="font-size:.8rem;opacity:.8;text-transform:uppercase;letter-spacing:.08em;margin-top:4px">Aceptar invitación</div>
+  </div>
+  <div class="fz-card-body">
+    <div id="loading" class="text-center text-muted py-3">Verificando invitación…</div>
+
+    <div id="used-msg" class="alert alert-warning d-none">
+      Esta invitación ya fue usada. Si crees que es un error, contacta a Farmazed.
+    </div>
+    <div id="error-msg" class="alert alert-danger d-none"></div>
+
+    <form id="accept-form" class="d-none">
+      <p class="text-muted small mb-3">
+        Fuiste invitado como <strong id="invite-role-label"></strong>
+        <span id="invite-org-wrap" class="d-none">de <strong id="invite-org-label"></strong></span>.
+        Crea tu contraseña para activar la cuenta.
+      </p>
+      <div class="mb-3">
+        <label class="form-label small">Correo</label>
+        <input type="email" class="form-control" id="invite-email" disabled>
+      </div>
+      <div class="mb-3">
+        <label class="form-label small">Tu nombre</label>
+        <input type="text" class="form-control" id="display-name" required>
+      </div>
+      <div class="mb-3">
+        <label class="form-label small">Contraseña</label>
+        <input type="password" class="form-control" id="password" minlength="6" required>
+      </div>
+      <div class="mb-3">
+        <label class="form-label small">Confirmar contraseña</label>
+        <input type="password" class="form-control" id="password-confirm" minlength="6" required>
+      </div>
+      <div class="alert alert-danger d-none" id="form-error"></div>
+      <button type="submit" class="btn btn-primary w-100" id="btn-submit">Crear cuenta y entrar</button>
+    </form>
+  </div>
+</div>
+
+<script type="module">
+  import { register, auth } from './portal/js/auth.js';
+  import api from './portal/js/api.js';
+
+  const token = new URLSearchParams(window.location.search).get('token');
+  let invite;
+
+  const ROLE_LABEL = {
+    cliente_titular: 'titular de empresa',
+    cliente_miembro: 'miembro de empresa',
+    analista: 'analista',
+    abogado: 'abogado',
+    regente: 'regente farmacéutico',
+    admin: 'administrador',
+  };
+
+  function show(id) { document.getElementById(id).classList.remove('d-none'); }
+  function hide(id) { document.getElementById(id).classList.add('d-none'); }
+
+  async function init() {
+    if (!token) {
+      hide('loading');
+      document.getElementById('error-msg').textContent = 'Falta el token de invitación en el link.';
+      show('error-msg');
+      return;
+    }
+    try {
+      invite = await api.getInvitation(token);
+      hide('loading');
+      if (invite.used) { show('used-msg'); return; }
+
+      document.getElementById('invite-email').value = invite.email;
+      document.getElementById('invite-role-label').textContent = ROLE_LABEL[invite.role] || invite.role;
+      if (invite.orgId) {
+        // El nombre de la empresa no es sensible y esta ruta es pública a
+        // propósito (ver GET /api/invitations/:token) — pero no expone el
+        // orgId crudo al texto, solo confirma que hay una empresa asociada.
+        show('invite-org-wrap');
+        document.getElementById('invite-org-label').textContent = 'tu empresa';
+      }
+      show('accept-form');
+    } catch (e) {
+      hide('loading');
+      document.getElementById('error-msg').textContent = e.message;
+      show('error-msg');
+    }
+  }
+
+  document.getElementById('accept-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const displayName = document.getElementById('display-name').value.trim();
+    const password     = document.getElementById('password').value;
+    const passwordConf = document.getElementById('password-confirm').value;
+    const formError     = document.getElementById('form-error');
+    const btn           = document.getElementById('btn-submit');
+
+    hide('form-error');
+    if (password !== passwordConf) {
+      formError.textContent = 'Las contraseñas no coinciden.';
+      show('form-error');
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Creando cuenta…';
+    try {
+      const user = await register(invite.email, password, displayName);
+      await api.acceptInvitation(token, user.uid);
+      // Los custom claims (role/orgId) se asignaron DESPUÉS de crear el
+      // token de la sesión — hay que forzar un refresh para que el resto
+      // del sitio (requireLogin/isAdmin/hasBackofficeAccess) los vea ya.
+      const result = await auth.currentUser.getIdTokenResult(true);
+      const role   = result.claims.role;
+      const esCliente = role === 'cliente_titular' || role === 'cliente_miembro';
+      window.location.href = esCliente ? '/client-dashboard.html' : '/admin/bandeja.html';
+    } catch (err) {
+      formError.textContent = err.message;
+      show('form-error');
+      btn.disabled = false;
+      btn.textContent = 'Crear cuenta y entrar';
+    }
+  });
+
+  init();
+</script>
+</body>
+</html>
