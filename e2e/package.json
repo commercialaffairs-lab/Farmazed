@@ -1,0 +1,14 @@
+{
+  "name": "farmazed-e2e",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Pruebas E2E con Playwright contra el emulador Firebase (dev local, ver DEV_LOCAL.md). No se despliega.",
+  "scripts": {
+    "test": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.48.0",
+    "firebase-admin": "^12.1.0",
+    "pdf-lib": "^1.17.1"
+  }
+}
