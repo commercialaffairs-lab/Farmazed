@@ -127,6 +127,24 @@
     }
     .total-display span { font-size: 12px; font-weight: 400; color: var(--muted); }
 
+    /* ── D13: desglose honorarios/tasas ── */
+    .desglose-row {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+      margin-bottom: 14px;
+      padding: 8px 12px;
+      background: var(--bg);
+      border-radius: 6px;
+      font-size: 13px;
+    }
+    .desglose-row .item { display: flex; flex-direction: column; }
+    .desglose-row .item .label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .3px; }
+    .desglose-row .item .amount { font-weight: 700; font-size: 15px; }
+    .desglose-row .item.honorarios .amount { color: var(--success); }
+    .desglose-row .item.tasas .amount { color: var(--accent); }
+    .desglose-row .item.no-cuadra .amount { color: var(--danger); }
+
     /* ── Component grid ── */
     .components-grid {
       display: grid;
@@ -213,36 +231,6 @@
     .feedback.success { display: inline-block; background: #d1e7dd; color: var(--success); }
     .feedback.error   { display: inline-block; background: #f8d7da; color: var(--danger); }
 
-    /* ── Auth overlay ── */
-    #auth-overlay {
-      position: fixed; inset: 0;
-      background: rgba(0,0,0,.5);
-      display: flex; align-items: center; justify-content: center;
-      z-index: 999;
-    }
-    .auth-box {
-      background: #fff;
-      border-radius: 10px;
-      padding: 32px;
-      width: 340px;
-      text-align: center;
-    }
-    .auth-box h2 { font-size: 18px; margin-bottom: 8px; }
-    .auth-box p { color: var(--muted); font-size: 13px; margin-bottom: 20px; }
-    .auth-box input {
-      width: 100%; padding: 10px 14px;
-      border: 1px solid var(--input-border); border-radius: 6px;
-      font-size: 14px; margin-bottom: 12px; outline: none;
-    }
-    .auth-box input:focus { border-color: var(--accent); }
-    .auth-box button {
-      width: 100%; background: var(--accent); color: #fff;
-      border: none; border-radius: 6px; padding: 10px;
-      font-size: 14px; font-weight: 600; cursor: pointer;
-    }
-    .auth-box button:hover { background: var(--accent-hover); }
-    .auth-error { color: var(--danger); font-size: 12px; margin-top: 8px; display: none; }
-
     /* ── Loading ── */
     #loading { text-align: center; padding: 60px; color: var(--muted); }
     .spinner {
@@ -262,17 +250,6 @@
   </style>
 </head>
 <body>
-
-<!-- Auth key overlay -->
-<div id="auth-overlay">
-  <div class="auth-box">
-    <h2>Farmazed Admin</h2>
-    <p>Ingresa tu clave de administrador para acceder a la gestión de precios.</p>
-    <input type="password" id="admin-key-input" placeholder="Admin key" autocomplete="current-password" />
-    <button onclick="submitAdminKey()">Acceder</button>
-    <div class="auth-error" id="auth-error">Clave incorrecta. Intenta nuevamente.</div>
-  </div>
-</div>
 
 <!-- Navbar -->
 <nav>
@@ -301,11 +278,12 @@
   <div id="content" style="display:none"></div>
 </div>
 
-<script>
-  // ── Config ──────────────────────────────────────────────────────────────────
-  const API_BASE = window.location.hostname === 'localhost'
-    ? 'http://localhost:8080'
-    : 'https://api.farmazed.com';
+<script type="module">
+  // TAREA 15/E3 parte 2: migrado de `x-admin-key` (login propio, un solo
+  // valor compartido) a la sesión real de Firebase con rol admin — mismo
+  // patrón que casos.html/expediente.html. API_BASE ya no se repite a mano
+  // aquí, sale de auth.js.
+  import { requireLogin, isAdmin, logout, getToken, API_BASE } from '../portal/js/auth.js';
 
   const COMPONENT_LABELS = {
     honorarios_farmazed:   'Honorarios Farmazed',
@@ -319,44 +297,21 @@
   };
   const COMPONENT_KEYS = Object.keys(COMPONENT_LABELS);
 
-  let adminKey = '';
+  // D13 (organizacion/03_INSTRUCCIONES_DEV.md fila D13) — mismo agrupamiento
+  // que tracker/routes/pricing.js:withDesglose(). El backend ya manda
+  // honorariosFarmazed/tasasOficiales calculados; esto solo se usa para
+  // recalcular en vivo mientras el admin edita, antes de guardar.
+  const HONORARIOS_KEYS = ['honorarios_farmazed', 'honorarios_abogado', 'gastos_adicionales'];
+  const TASAS_KEYS       = ['refrendo_cnf', 'tasa_dnfd_servicio', 'tasa_dnfd_tramite', 'iea', 'tasa_mef'];
+
   let allPricing = [];
 
-  // ── Auth ────────────────────────────────────────────────────────────────────
-  async function submitAdminKey() {
-    const val = document.getElementById('admin-key-input').value.trim();
-    if (!val) return;
-
-    // Validate key against a safe endpoint
-    const res = await fetch(`${API_BASE}/api/admin/pricing`, {
-      headers: { 'x-admin-key': val }
-    });
-
-    // GET /api/admin/pricing is public — any success means server is up.
-    // Then do a dry PATCH with an empty body to confirm key validity.
-    const check = await fetch(`${API_BASE}/api/admin/pricing/_key_check`, {
-      method: 'PATCH',
-      headers: { 'x-admin-key': val, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ components: {} })
-    });
-    // 404 (category not found) = key accepted; 401 = key rejected.
-    if (check.status === 401) {
-      document.getElementById('auth-error').style.display = 'block';
-      return;
-    }
-
-    adminKey = val;
-    document.getElementById('auth-overlay').style.display = 'none';
+  // ── Auth + init ─────────────────────────────────────────────────────────────
+  async function init() {
+    const user = await requireLogin('/login.html');
+    if (!(await isAdmin())) { window.location.href = '/client-dashboard.html'; return; }
+    document.getElementById('nav-user').textContent = user.displayName || user.email;
     loadPricing();
-  }
-
-  document.getElementById('admin-key-input').addEventListener('keydown', e => {
-    if (e.key === 'Enter') submitAdminKey();
-  });
-
-  function logout() {
-    adminKey = '';
-    location.reload();
   }
 
   // ── Load ────────────────────────────────────────────────────────────────────
@@ -421,6 +376,16 @@
             <span>total</span>
           </div>
         </div>
+        <div class="desglose-row" id="desglose-${item.id}">
+          <div class="item honorarios">
+            <span class="label">Honorarios Farmazed</span>
+            <span class="amount" id="desglose-honorarios-${item.id}">B/. ${(item.honorariosFarmazed || 0).toLocaleString('es-PA')}</span>
+          </div>
+          <div class="item tasas">
+            <span class="label">Tasas oficiales</span>
+            <span class="amount" id="desglose-tasas-${item.id}">B/. ${(item.tasasOficiales || 0).toLocaleString('es-PA')}</span>
+          </div>
+        </div>
         <div class="components-grid">${fieldsHtml}</div>
         <div class="card-footer">
           <input class="notes-input" placeholder="Notas internas (opcional)"
@@ -431,13 +396,23 @@
       </div>`;
   }
 
-  // ── Compute total live ───────────────────────────────────────────────────────
+  // ── Compute total + desglose live ───────────────────────────────────────────
   function recomputeTotal(categoryId) {
-    const inputs = document.querySelectorAll(`[data-id="${categoryId}"]`);
-    let total = 0;
-    inputs.forEach(inp => { total += parseFloat(inp.value) || 0; });
-    const el = document.getElementById(`total-${categoryId}`);
-    el.innerHTML = `B/. ${total.toLocaleString('es-PA')} <span>total</span>`;
+    const values = {};
+    document.querySelectorAll(`[data-id="${categoryId}"]`).forEach(inp => {
+      values[inp.dataset.key] = parseFloat(inp.value) || 0;
+    });
+    const sum = (keys) => keys.reduce((s, k) => s + (values[k] || 0), 0);
+    const honorarios = sum(HONORARIOS_KEYS);
+    const tasas       = sum(TASAS_KEYS);
+    const total       = honorarios + tasas;
+
+    document.getElementById(`total-${categoryId}`).innerHTML =
+      `B/. ${total.toLocaleString('es-PA')} <span>total</span>`;
+    document.getElementById(`desglose-honorarios-${categoryId}`).textContent =
+      `B/. ${honorarios.toLocaleString('es-PA')}`;
+    document.getElementById(`desglose-tasas-${categoryId}`).textContent =
+      `B/. ${tasas.toLocaleString('es-PA')}`;
   }
 
   // ── Save ─────────────────────────────────────────────────────────────────────
@@ -456,12 +431,12 @@
     fb.style.display = 'none';
 
     try {
+      const token = await getToken();
       const res = await fetch(`${API_BASE}/api/admin/pricing/${categoryId}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          'x-admin-key': adminKey,
-          'x-updated-by': 'admin-ui'
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ components, notes })
       });
@@ -487,6 +462,16 @@
     header.classList.toggle('collapsed');
     header.nextElementSibling.classList.toggle('collapsed');
   }
+
+  // Los onclick/oninput inline del HTML generado por renderCard() necesitan
+  // estas funciones en window — un <script type="module"> no las expone por
+  // sí solo (mismo patrón que admin/expediente.html).
+  window.logout         = logout;
+  window.recomputeTotal = recomputeTotal;
+  window.saveCategory   = saveCategory;
+  window.toggleGrupo    = toggleGrupo;
+
+  init();
 </script>
 </body>
 </html>

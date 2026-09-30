@@ -17,14 +17,6 @@
     .topbar { background:#fff; border-bottom:1px solid #dee2e6; padding:.75rem 1.5rem; }
     .case-row { cursor:pointer; transition:.1s; }
     .case-row:hover { background:#f0f4fa !important; }
-    .badge-draft       { background:#e9ecef; color:#495057; }
-    .badge-submitted   { background:#cfe2ff; color:#084298; }
-    .badge-in_review   { background:#fff3cd; color:#664d03; }
-    .badge-pending_docs{ background:#f8d7da; color:#842029; }
-    .badge-faddi_ready { background:#d1e7dd; color:#0a3622; }
-    .badge-faddi_submitted{ background:#0dcaf0; color:#000; }
-    .badge-approved    { background:#198754; color:#fff; }
-    .badge-observed    { background:#dc3545; color:#fff; }
     .filter-chip { border-radius:20px; font-size:.78rem; padding:.25rem .75rem; cursor:pointer; }
     .filter-chip.active { background:var(--fz-blue); color:#fff; border-color:var(--fz-blue); }
   </style>
@@ -39,6 +31,10 @@
   </div>
   <div class="section-label">Gestión</div>
   <a href="/admin/casos.html" class="active"><i class="bi bi-folder2-open me-2"></i>Expedientes</a>
+  <a href="/admin/bandeja.html"><i class="bi bi-inbox me-2"></i>Mi Bandeja</a>
+  <a href="/admin/cotizaciones.html"><i class="bi bi-receipt me-2"></i>Cotizaciones</a>
+  <a href="/admin/formularios.html"><i class="bi bi-file-earmark-text me-2"></i>Formularios</a>
+  <a href="/admin/empresas.html" id="nav-empresas" style="display:none"><i class="bi bi-building me-2"></i>Empresas</a>
   <a href="#"><i class="bi bi-qr-code me-2"></i>QR Scans</a>
   <div class="section-label">Sistema</div>
   <a href="#" id="sidebar-logout"><i class="bi bi-box-arrow-left me-2"></i>Cerrar Sesión</a>
@@ -58,21 +54,15 @@
     <!-- Stats -->
     <div class="row g-3 mb-4" id="stats-row">
       <div class="col"><div class="card border-0 shadow-sm text-center p-3"><div class="fw-bold fs-4" id="s-total">—</div><div class="small text-muted">Total</div></div></div>
-      <div class="col"><div class="card border-0 shadow-sm text-center p-3"><div class="fw-bold fs-4 text-warning" id="s-review">—</div><div class="small text-muted">En Revisión</div></div></div>
-      <div class="col"><div class="card border-0 shadow-sm text-center p-3"><div class="fw-bold fs-4 text-success" id="s-ready">—</div><div class="small text-muted">Listos FADDI</div></div></div>
-      <div class="col"><div class="card border-0 shadow-sm text-center p-3"><div class="fw-bold fs-4 text-info" id="s-faddi">—</div><div class="small text-muted">En FADDI</div></div></div>
+      <div class="col"><div class="card border-0 shadow-sm text-center p-3"><div class="fw-bold fs-4 text-warning" id="s-manual">—</div><div class="small text-muted">Control manual</div></div></div>
+      <div class="col"><div class="card border-0 shadow-sm text-center p-3"><div class="fw-bold fs-4 text-danger" id="s-pending-docs">—</div><div class="small text-muted">Docs Pendientes</div></div></div>
+      <div class="col"><div class="card border-0 shadow-sm text-center p-3"><div class="fw-bold fs-4 text-info" id="s-post">—</div><div class="small text-muted">Post-presentación</div></div></div>
       <div class="col"><div class="card border-0 shadow-sm text-center p-3"><div class="fw-bold fs-4 text-success" id="s-approved">—</div><div class="small text-muted">Aprobados</div></div></div>
     </div>
 
-    <!-- Filters -->
-    <div class="d-flex gap-2 flex-wrap mb-3">
+    <!-- Filters (generados desde los estados presentes en los casos cargados) -->
+    <div class="d-flex gap-2 flex-wrap mb-3" id="filter-chips">
       <button class="btn btn-outline-secondary filter-chip active" data-status="">Todos</button>
-      <button class="btn btn-outline-secondary filter-chip" data-status="submitted">Enviados</button>
-      <button class="btn btn-outline-secondary filter-chip" data-status="in_review">En Revisión</button>
-      <button class="btn btn-outline-secondary filter-chip" data-status="pending_docs">Docs Pendientes</button>
-      <button class="btn btn-outline-secondary filter-chip" data-status="faddi_ready">Listos FADDI</button>
-      <button class="btn btn-outline-secondary filter-chip" data-status="faddi_submitted">En FADDI</button>
-      <button class="btn btn-outline-secondary filter-chip" data-status="approved">Aprobados</button>
     </div>
 
     <!-- Table -->
@@ -101,30 +91,28 @@
 </div>
 
 <script type="module">
-  import { requireLogin, isAdmin, logout } from '../portal/js/auth.js';
+  import { requireLogin, isAdmin, hasBackofficeAccess, logout } from '../portal/js/auth.js';
   import api from '../portal/js/api.js';
+  import { getFullMeta, colorForCaseStatus } from '../portal/js/status_ui.js';
 
-  const BADGE = {
-    draft:'badge-draft', submitted:'badge-submitted', in_review:'badge-in_review',
-    pending_docs:'badge-pending_docs', faddi_ready:'badge-faddi_ready',
-    faddi_submitted:'badge-faddi_submitted', approved:'badge-approved', observed:'badge-observed',
-  };
-  const LABEL = {
-    draft:'Borrador', submitted:'Enviado', in_review:'En Revisión', pending_docs:'Docs Pendientes',
-    faddi_ready:'Listo FADDI', faddi_submitted:'En FADDI', approved:'Aprobado', observed:'Observado',
-  };
   const ICON = { medicamentos:'💊', cosmeticos:'🧴', higienicos:'🧼', plaguicidas:'🌿', excepcion:'🚨', publicidad:'📢' };
 
   let allCases = [];
+  let statusMeta   = null; // GET /api/meta/statuses — labels/manual/terminal
   let activeFilter = '';
   let searchTerm   = '';
 
   async function init() {
     const user = await requireLogin('/login.html');
-    const admin = await isAdmin();
-    if (!admin) { window.location.href = '/client-dashboard.html'; return; }
+    // TAREA 15/E3 parte 2: esta pantalla ya no es solo del admin — el
+    // staff (analista/abogado/regente) también entra aquí (el backend ya
+    // filtra la lista a solo sus casos asignados); "Mi bandeja" es su vista
+    // recomendada, pero no se les bloquea esta.
+    if (!(await hasBackofficeAccess())) { window.location.href = '/client-dashboard.html'; return; }
     document.getElementById('admin-name').textContent = user.displayName || user.email;
     document.getElementById('sidebar-logout').addEventListener('click', logout);
+    if (await isAdmin()) document.getElementById('nav-empresas').style.display = '';
+    statusMeta = await getFullMeta();
     await loadCases();
   }
 
@@ -132,15 +120,39 @@
     try {
       const { cases } = await api.listCases();
       allCases = cases;
-      document.getElementById('s-total').textContent    = cases.length;
-      document.getElementById('s-review').textContent   = cases.filter(c => c.status === 'in_review').length;
-      document.getElementById('s-ready').textContent    = cases.filter(c => c.status === 'faddi_ready').length;
-      document.getElementById('s-faddi').textContent    = cases.filter(c => c.status === 'faddi_submitted').length;
-      document.getElementById('s-approved').textContent = cases.filter(c => c.status === 'approved').length;
+
+      document.getElementById('s-total').textContent        = cases.length;
+      document.getElementById('s-manual').textContent       = cases.filter(c => statusMeta.manual.includes(c.status)).length;
+      document.getElementById('s-pending-docs').textContent = cases.filter(c => c.status === 'pending_docs').length;
+      document.getElementById('s-post').textContent         = cases.filter(c => statusMeta.postPresentacion.includes(c.status)).length;
+      document.getElementById('s-approved').textContent     = cases.filter(c => c.status === 'aprobado').length;
+
+      renderFilterChips();
       renderTable();
     } catch (e) {
       document.getElementById('cases-tbody').innerHTML = `<tr><td colspan="8" class="text-danger text-center">${e.message}</td></tr>`;
     }
+  }
+
+  // Un chip por cada estado que efectivamente tiene casos cargados — con 21
+  // estados posibles, mostrar los 21 vacíos sería ruido, no ayuda al admin.
+  function renderFilterChips() {
+    const container = document.getElementById('filter-chips');
+    const present = [...new Set(allCases.map(c => c.status))];
+    const chips = present.map(s => {
+      const label = statusMeta.statuses.includes(s) ? (statusMeta.meta[s]?.label || s) : `${s} (sin migrar)`;
+      const count = allCases.filter(c => c.status === s).length;
+      return `<button class="btn btn-outline-secondary filter-chip" data-status="${s}">${label} (${count})</button>`;
+    }).join('');
+    container.innerHTML = `<button class="btn btn-outline-secondary filter-chip active" data-status="">Todos</button>${chips}`;
+    container.querySelectorAll('.filter-chip').forEach(btn => {
+      btn.addEventListener('click', () => {
+        container.querySelectorAll('.filter-chip').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        activeFilter = btn.dataset.status;
+        renderTable();
+      });
+    });
   }
 
   function renderTable() {
@@ -154,6 +166,17 @@
     if (!filtered.length) { tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-4">Sin expedientes</td></tr>'; return; }
     tbody.innerHTML = filtered.map(c => {
       const date = c.updatedAt ? new Date(c.updatedAt).toLocaleDateString('es-PA',{day:'2-digit',month:'short'}) : '—';
+      // Ajuste TAREA 8 (Rick, 29-sep): un status fuera del enum de 21 (caso
+      // legacy sin migrar, D07) es gris + "(sin migrar)" explícito — antes
+      // se mostraba el string crudo sin distinguirlo de una fase real.
+      let label;
+      if (statusMeta.statuses.includes(c.status)) {
+        label = statusMeta.meta[c.status]?.label || c.status;
+      } else {
+        console.warn(`[casos.html] caso ${c.id}: status "${c.status}" no está en el enum de 21 (sin migrar).`);
+        label = `${c.status} (sin migrar)`;
+      }
+      const badgeClass = `bg-${colorForCaseStatus(c.status, statusMeta)}`;
       return `<tr class="case-row" onclick="window.location.href='/admin/expediente.html?id=${c.id}'">
         <td class="ps-4 py-3">
           <div class="fw-semibold small">${ICON[c.tramiteType]||'📋'} ${c.productName || '(sin nombre)'}</div>
@@ -162,7 +185,7 @@
         <td class="small">${c.tramiteType}</td>
         <td class="small">${c.tipoRegistro||'—'}</td>
         <td class="small text-muted">${c.clientEmail}</td>
-        <td><span class="badge ${BADGE[c.status]||'badge-draft'} rounded-pill">${LABEL[c.status]||c.status}</span></td>
+        <td><span class="badge ${badgeClass} rounded-pill">${label}</span></td>
         <td class="small">—</td>
         <td class="small text-muted">${date}</td>
         <td><i class="bi bi-chevron-right text-muted"></i></td>
@@ -170,15 +193,6 @@
     }).join('');
   }
 
-  // Filters
-  document.querySelectorAll('.filter-chip').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('.filter-chip').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      activeFilter = btn.dataset.status;
-      renderTable();
-    });
-  });
   document.getElementById('search-input').addEventListener('input', e => { searchTerm = e.target.value; renderTable(); });
 
   init();

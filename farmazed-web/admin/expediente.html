@@ -33,18 +33,17 @@
   <a href="/admin/casos.html" class="text-white-50 text-decoration-none small">← Expedientes</a>
   <span class="text-white fw-semibold" id="top-title">Cargando...</span>
   <div class="ms-auto d-flex gap-2 align-items-center">
-    <select class="form-select form-select-sm status-select" id="status-select" style="width:auto">
-      <option value="submitted">Enviado</option>
-      <option value="in_review">En Revisión</option>
-      <option value="pending_docs">Docs Pendientes</option>
-      <option value="faddi_ready">Listo para FADDI</option>
-      <option value="faddi_submitted">En FADDI</option>
-      <option value="approved">Aprobado ✅</option>
-      <option value="observed">Observado ⚠️</option>
-    </select>
+    <select class="form-select form-select-sm status-select" id="status-select" style="width:auto"></select>
+    <div class="form-check form-check-inline m-0" id="override-wrap">
+      <input class="form-check-input" type="checkbox" id="override-check">
+      <label class="form-check-label small text-white-50" for="override-check">Forzar (override)</label>
+    </div>
     <button class="btn btn-sm btn-outline-light" id="btn-save-status">Guardar estado</button>
     <button class="cowork-btn btn btn-sm" id="btn-cowork">⚡ Abrir en Cowork</button>
   </div>
+</div>
+<div class="topbar d-flex align-items-center gap-2 d-none" id="override-reason-row" style="padding-top:0">
+  <input type="text" class="form-control form-control-sm" id="override-reason" placeholder="Motivo del override (obligatorio)" style="max-width:420px">
 </div>
 
 <div class="container-fluid p-4">
@@ -65,6 +64,18 @@
         <div class="card border-0 shadow-sm mb-4">
           <div class="step-header">Empresas y Personas — Pasos 4–11 FADDI</div>
           <div class="card-body py-2" id="entities-fields"></div>
+        </div>
+
+        <!-- R13 (TAREA 19): conteo de páginas del paquete IEA — solo advierte, nunca bloquea -->
+        <div id="iea-banner" class="mb-3"></div>
+
+        <!-- §H.8 (TAREA 21): fecha límite de subsanación al entrar a observado_dnfd -->
+        <div id="plazo-subsanacion-banner" class="mb-3"></div>
+
+        <!-- §H.8 (TAREA 21): las dos confirmaciones de fase 8 (legal=abogado, técnica/matrices=regente) -->
+        <div class="card border-0 shadow-sm mb-4 d-none" id="fase8-card">
+          <div class="step-header">Fase 8 — Confirmaciones</div>
+          <div class="card-body py-2" id="fase8-confirmaciones"></div>
         </div>
 
         <!-- Documentos organizados por paso FADDI -->
@@ -103,14 +114,133 @@
           <button class="btn btn-sm btn-outline-primary w-100" id="btn-save-faddi">Guardar FADDI info</button>
         </div>
 
-        <div class="card border-0 shadow-sm p-3">
+        <!-- TAREA 26 (§H.8, fase 3 "Tipo de registro sanitario y ruta de
+        registro" — responsabilidad de Farmazed, no del cliente): vía,
+        categoría y si el producto es innovador, todo junto
+        (cases.edit_via_categoria). El cliente propone en el wizard; el staff
+        lo CONFIRMA acá. -->
+        <div class="card border-0 shadow-sm mb-3 p-3 d-none" id="via-categoria-card">
+          <div class="small fw-bold text-muted mb-2 text-uppercase">Vía y Categoría — Fase 3</div>
+          <div class="mb-2">
+            <label class="form-label small">Tipo de registro (vía)</label>
+            <select class="form-select form-select-sm" id="via-tipo-registro">
+              <option value="Regular">Regular</option>
+              <option value="Abreviado">Abreviado</option>
+              <option value="Reconocimiento Mutuo">Reconocimiento Mutuo</option>
+              <option value="Reconocimiento WLA">Reconocimiento WLA</option>
+            </select>
+          </div>
+          <div class="mb-2">
+            <label class="form-label small">Tipo de medicamento (categoría)</label>
+            <div id="via-tipo-med-checks" class="small"></div>
+          </div>
+          <div class="mb-2">
+            <label class="form-label small">¿Es innovador?</label>
+            <select class="form-select form-select-sm" id="via-es-innovador">
+              <option value="">Por confirmar</option>
+              <option value="true">Sí</option>
+              <option value="false">No</option>
+            </select>
+            <div class="text-muted mt-1" style="font-size:.7rem">Afecta el checklist (estudios clínicos / resumen de seguridad, Síntesis Química) y el tarifario ("Prioridad ... innovadores").</div>
+          </div>
+          <button class="btn btn-sm btn-outline-primary w-100" id="btn-save-via-categoria">Guardar vía y categoría</button>
+        </div>
+
+        <div class="card border-0 shadow-sm mb-3 p-3 d-none" id="assign-card">
+          <div class="small fw-bold text-muted mb-2 text-uppercase">Equipo Asignado</div>
+          <div class="mb-2">
+            <label class="form-label small">Analista</label>
+            <select class="form-select form-select-sm" id="assign-analista"></select>
+          </div>
+          <div class="mb-2">
+            <label class="form-label small">Abogado</label>
+            <select class="form-select form-select-sm" id="assign-abogado"></select>
+          </div>
+          <div class="mb-2">
+            <label class="form-label small">Regente</label>
+            <select class="form-select form-select-sm" id="assign-regente"></select>
+          </div>
+          <button class="btn btn-sm btn-outline-primary w-100" id="btn-save-assign">Guardar equipo</button>
+        </div>
+
+        <div class="card border-0 shadow-sm mb-3 p-3">
           <div class="small fw-bold text-muted mb-2 text-uppercase">Notas Internas</div>
           <textarea class="form-control form-control-sm" id="admin-notes" rows="4" placeholder="Notas visibles solo para el equipo Farmazed..."></textarea>
           <button class="btn btn-sm btn-outline-secondary w-100 mt-2" id="btn-save-notes">Guardar notas</button>
         </div>
+
+        <div class="card border-0 shadow-sm mb-3 p-3">
+          <div class="small fw-bold text-muted mb-2 text-uppercase">Pagos (D12)</div>
+          <div id="payments-resumen"></div>
+          <div id="payments-list" class="small mb-2"><div class="text-muted">Cargando…</div></div>
+          <form id="payment-form" class="border-top pt-2">
+            <div class="mb-2">
+              <label class="form-label small">Tipo de pago</label>
+              <select class="form-select form-select-sm" id="pay-tipo">
+                <option value="cliente_a_farmazed">Cliente → Farmazed (honorarios)</option>
+                <option value="farmazed_a_autoridad">Farmazed → Autoridad (tasas DNFD/IEA/CNF/MEF)</option>
+              </select>
+            </div>
+            <div class="mb-2" id="pay-concepto-row">
+              <label class="form-label small">Concepto</label>
+              <select class="form-select form-select-sm" id="pay-concepto">
+                <option value="honorarios">Honorarios (anticipo)</option>
+                <option value="tasa_dnfd">Tasa por servicio DNFD (B/.200)</option>
+                <option value="mef">MEF — solo producto extranjero (B/.25)</option>
+                <option value="iea">IEA — solo si aplica (B/.1500 regular / B/.2250 expedita)</option>
+                <option value="honorarios_saldo">Saldo de honorarios (no bloquea)</option>
+              </select>
+            </div>
+            <div class="mb-2 d-none" id="pay-autoridad-row">
+              <label class="form-label small">Autoridad</label>
+              <select class="form-select form-select-sm" id="pay-autoridad">
+                <option value="DNFD">DNFD</option>
+                <option value="IEA">IEA</option>
+                <option value="CNF">CNF</option>
+                <option value="MEF">MEF</option>
+              </select>
+            </div>
+            <div class="mb-2">
+              <label class="form-label small">Monto (B/.)</label>
+              <input type="number" step="0.01" min="0.01" class="form-control form-control-sm" id="pay-monto" required>
+            </div>
+            <div class="mb-2">
+              <label class="form-label small">Fecha del pago</label>
+              <input type="date" class="form-control form-control-sm" id="pay-fecha">
+            </div>
+            <div class="mb-2">
+              <label class="form-label small">Comprobante (archivo)</label>
+              <input type="file" class="form-control form-control-sm" id="pay-comprobante" required>
+            </div>
+            <button type="submit" class="btn btn-sm btn-outline-success w-100">Registrar pago</button>
+          </form>
+        </div>
+
+        <div class="card border-0 shadow-sm p-3">
+          <div class="small fw-bold text-muted mb-2 text-uppercase">Historial de Estado</div>
+          <div id="status-history" class="small"><div class="text-muted">Cargando…</div></div>
+        </div>
       </div>
     </div>
 
+  </div>
+</div>
+
+<!-- Versiones anteriores de un documento (TAREA 13, ajuste de cumplimiento) -->
+<div class="modal fade" id="versionsModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h6 class="modal-title mb-0">Versiones anteriores — <span id="versions-doc-name"></span></h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div id="versions-list" class="small"><div class="text-muted">Cargando…</div></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cerrar</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -144,11 +274,20 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script type="module">
-  import { requireLogin, isAdmin } from '../portal/js/auth.js';
+  import { requireLogin, hasBackofficeAccess } from '../portal/js/auth.js';
   import api from '../portal/js/api.js';
+  import { getFullMeta, getDocStatusIcon, getDocStatusColor } from '../portal/js/status_ui.js';
 
   const caseId = new URLSearchParams(window.location.search).get('id');
-  let caseData, checklistData, docsData;
+  let caseData, checklistData, docsData, statusMeta, myPerms;
+
+  // TAREA 15/E3 parte 2: qué documentos resaltar según el rol de quien mira
+  // — es una convención de UI (qué destacar), no una regla de permisos; el
+  // backend nunca distingue "legal" de "técnico", solo exige
+  // `documents.review` (igual para los tres roles de staff).
+  const LEGAL_DOC_IDS = new Set(['poder', 'clv']); // poder notarial + certificado de libre venta
+
+  function has(perm) { return myPerms?.permissions?.includes(perm); }
 
   const FADDI_URL = { medicamentos:'https://sisregsan.minsa.gob.pa/forms/user/medicamentos/registrar.aspx',
     cosmeticos:'https://sisregsan.minsa.gob.pa/forms/user/cosmeticos/registrar.aspx',
@@ -180,18 +319,85 @@
 
   async function init() {
     await requireLogin('/login.html');
-    if (!(await isAdmin())) { window.location.href = '/client-dashboard.html'; return; }
+    // TAREA 15/E3 parte 2: staff (analista/abogado/regente) también entra —
+    // qué botones ve dentro de la página sale de GET /api/me/permissions,
+    // no de este gate (que solo decide "back-office sí/no").
+    if (!(await hasBackofficeAccess())) { window.location.href = '/client-dashboard.html'; return; }
     if (!caseId) { window.location.href = '/admin/casos.html'; return; }
 
     try {
+      statusMeta = await getFullMeta();
+      myPerms    = await api.getMyPermissions();
+      applyPermissionGates();
       [caseData, checklistData, docsData] = await Promise.all([
         api.getCase(caseId),
         api.getChecklist(caseId),
         api.listDocuments(caseId),
       ]);
       render();
+      renderStatusHistory();
+      renderPayments();
+      renderPaymentsResumen();
+      renderPaqueteIEA();
+      renderPlazoSubsanacion();
+      renderFase8Confirmaciones();
+      renderViaCategoria();
+      if (has('cases.assign')) await loadAssignCard();
     } catch (e) {
       document.getElementById('loading').innerHTML = `<div class="alert alert-danger m-4">${e.message}</div>`;
+    }
+  }
+
+  // TAREA 15/E3 parte 2: "SOLO los botones que su rol permite" — se leen de
+  // GET /api/me/permissions, nunca de un if de rol hardcodeado aquí.
+  function applyPermissionGates() {
+    document.getElementById('override-wrap').classList.toggle('d-none', !has('cases.override'));
+    document.getElementById('payment-form').classList.toggle('d-none', !has('payments.create'));
+    document.getElementById('assign-card').classList.toggle('d-none', !has('cases.assign'));
+    document.getElementById('via-categoria-card').classList.toggle('d-none', !has('cases.edit_via_categoria'));
+  }
+
+  // TAREA 26 (§H.8, fase 3): vía + categoría + esInnovador, lo confirma
+  // Farmazed junto (cases.edit_via_categoria) — mismo listado de subtipos
+  // que portal/js/wizard.js (TIPOS_MED) para no divergir entre lo que
+  // propone el cliente y lo que confirma el staff.
+  const TIPOS_MED_VIA = [
+    'Síntesis Química', 'Biológicos', 'Biotecnológicos', 'Homeopático',
+    'Huérfanos', 'Radiofármaco', 'Vacuna', 'Medio de Contraste',
+    'Gas Medicinal', 'Suplementos', 'Productos Naturales',
+  ];
+
+  function renderViaCategoria() {
+    if (!has('cases.edit_via_categoria')) return;
+    // Vía/categoría de medicamentos no aplica a otros trámites (cosméticos,
+    // higiénicos, etc.) — la auditoría de esta tarea es específica de
+    // medicamentos (SQ/BIO).
+    document.getElementById('via-categoria-card').classList.toggle('d-none', caseData.tramiteType !== 'medicamentos');
+    if (caseData.tramiteType !== 'medicamentos') return;
+    document.getElementById('via-tipo-registro').value = caseData.tipoRegistro || 'Regular';
+    const seleccionados = new Set(caseData.tipoMedicamento || []);
+    document.getElementById('via-tipo-med-checks').innerHTML = TIPOS_MED_VIA.map(t => `
+      <div class="form-check">
+        <input class="form-check-input via-tipo-med" type="checkbox" value="${t}" id="via-med-${t}" ${seleccionados.has(t) ? 'checked' : ''}>
+        <label class="form-check-label" for="via-med-${t}">${t}</label>
+      </div>`).join('');
+    document.getElementById('via-es-innovador').value =
+      caseData.esInnovador === true ? 'true' : caseData.esInnovador === false ? 'false' : '';
+  }
+
+  async function loadAssignCard() {
+    try {
+      const { employees } = await api.getEmployees();
+      const byRole = (role) => employees.filter(e => e.role === role);
+      const options = (list, selectedUid) => `<option value="">— sin asignar —</option>` +
+        list.map(e => `<option value="${e.uid}" ${e.uid === selectedUid ? 'selected' : ''}>${e.email}</option>`).join('');
+
+      const asignados = caseData.asignados || {};
+      document.getElementById('assign-analista').innerHTML = options(byRole('analista'), asignados.analista);
+      document.getElementById('assign-abogado').innerHTML  = options(byRole('abogado'),  asignados.abogado);
+      document.getElementById('assign-regente').innerHTML  = options(byRole('regente'),  asignados.regente);
+    } catch (e) {
+      document.getElementById('assign-card').innerHTML = `<div class="text-danger small">${e.message}</div>`;
     }
   }
 
@@ -203,7 +409,7 @@
 
     // Topbar title
     document.getElementById('top-title').textContent = `${p.nombreComercial || '(sin nombre)'} — ${caseData.tramiteType}`;
-    document.getElementById('status-select').value = caseData.status;
+    buildStatusOptions();
 
     // Product fields
     document.getElementById('product-fields').innerHTML = [
@@ -245,16 +451,44 @@
 
     const checklist = checklistData.checklist || [];
     document.getElementById('docs-list').innerHTML = checklist.map(item => {
-      const doc    = docsById[item.id];
-      const status = doc ? doc.status : 'missing';
-      const icons  = { uploaded:'✅', approved:'✅', rejected:'❌', requested:'🔔', missing:'⬜', reviewing:'🔍' };
-      const color  = { uploaded:'text-success', approved:'text-success', rejected:'text-danger', missing:'text-muted', requested:'text-warning' };
-      return `<div class="doc-item">
+      const doc         = docsById[item.id];
+      const status      = doc ? doc.status : 'missing';
+      // D11 (03_INSTRUCCIONES_DEV.md fila D11): un doc a cargo de Farmazed no
+      // tiene sentido "Solicitarlo" al cliente — es tarea interna del equipo.
+      const isFarmazedDoc = item.responsable === 'farmazed';
+      // Ajuste de cumplimiento TAREA 13: un reemplazo de documento no borra
+      // el anterior — queda archivado en versions/. "v{N}" solo aparece
+      // cuando hay más de 1 (v1 es el caso normal, no vale la pena mostrarlo).
+      const versionBadge = doc && doc.version > 1
+        ? ` <span class="badge bg-info-subtle text-info border border-info-subtle small" style="cursor:pointer"
+                  onclick="verVersiones('${caseId}','${doc.id}','${item.name.replace(/'/g,"\\'")}')"
+                  title="Ver versiones anteriores">v${doc.version} · ver versiones anteriores</span>`
+        : '';
+
+      // TAREA 15/E3 parte 2: abogado ve resaltados los docs legales, regente
+      // los técnicos — solo estilo, el permiso real (`documents.review`) es
+      // el mismo para los tres roles de staff.
+      const esLegal = LEGAL_DOC_IDS.has(item.id);
+      const role = myPerms?.role;
+      const destacar = (role === 'abogado' && esLegal) || (role === 'regente' && !esLegal && !isFarmazedDoc);
+      const rowStyle = destacar ? 'style="background:#fff8e1"' : '';
+
+      // Botones de revisión (aprobar/rechazar) — solo si el doc ya se subió
+      // y el rol puede revisar documentos (documents.review).
+      const puedeRevisar = has('documents.review') && doc && ['uploaded', 'reviewing'].includes(doc.status);
+      const reviewButtons = puedeRevisar ? `
+        <button class="btn btn-xs btn-outline-success btn-sm py-0 px-2 small ms-1"
+                onclick="revisarDoc('${doc.id}','approved')" title="Aprobar">✓</button>
+        <button class="btn btn-xs btn-outline-danger btn-sm py-0 px-2 small ms-1"
+                onclick="revisarDoc('${doc.id}','rejected')" title="Rechazar">✗</button>` : '';
+
+      return `<div class="doc-item" ${rowStyle}>
         <span class="doc-code">${item.faddiCode}</span>
-        <span class="${color[status]||''}">${icons[status]||'⬜'}</span>
-        <span class="doc-name">${item.name}${!item.required ? ' <span class="text-muted" style="font-size:.7rem">(opcional)</span>' : ''}</span>
-        ${doc ? `<a href="#" class="btn btn-xs btn-outline-primary btn-sm py-0 px-2 small" 
-                    onclick="openDoc('${caseId}','${doc.id}');return false">Ver</a>` : 
+        <span class="${getDocStatusColor(status)}">${getDocStatusIcon(status)}</span>
+        <span class="doc-name">${item.name}${!item.required ? ' <span class="text-muted" style="font-size:.7rem">(opcional)</span>' : ''}${isFarmazedDoc ? ' <span class="badge bg-primary-subtle text-primary border border-primary-subtle" style="font-size:.65rem">Tarea interna Farmazed</span>' : ''}${versionBadge}</span>
+        ${doc ? `<a href="#" class="btn btn-xs btn-outline-primary btn-sm py-0 px-2 small"
+                    onclick="openDoc('${caseId}','${doc.id}');return false">Ver</a>${reviewButtons}` :
+          isFarmazedDoc ? `<span class="badge bg-secondary-subtle text-secondary border small">Pendiente (interno)</span>` :
                  `<button class="btn btn-xs btn-outline-warning btn-sm py-0 px-2 small"
                     onclick="requestDoc('${item.id}','${item.name}')">Solicitar</button>`}
       </div>`;
@@ -314,12 +548,286 @@
     document.getElementById('cowork-context').value = ctx;
   }
 
+  // ─── Status select — solo transiciones validas desde el estado actual,
+  // salvo que el override este marcado (D18, §H.1) ────────────────────────
+  function buildStatusOptions() {
+    const select  = document.getElementById('status-select');
+    const current = caseData.status;
+    const override = document.getElementById('override-check').checked;
+
+    // Bug encontrado en TAREA 12/D16: `pending_docs` es un comodín en
+    // isValidTransition() (case_status.js, D07) — se puede salir hacia
+    // CUALQUIER estado sin override, porque no hay forma de saber a qué fase
+    // volver. Pero el mapa estático `statusMeta.transitions` no tiene
+    // entrada para `pending_docs` (a propósito, ver case_status.js), así que
+    // sin este caso especial el select solo ofrecía "pending_docs" y
+    // obligaba al admin a marcar Forzar (override) y escribir un motivo que
+    // el backend después descartaba en silencio (isValidTransition ya daba
+    // true, así que el override nunca se registraba como tal).
+    const options = override || current === 'pending_docs'
+      ? statusMeta.statuses
+      : [current, ...(statusMeta.transitions[current] || [])];
+
+    select.innerHTML = options.map(s => {
+      const label = statusMeta.meta[s]?.label || s;
+      const tag   = s === current ? ' (actual)' : '';
+      return `<option value="${s}" ${s === current ? 'selected' : ''}>${label}${tag}</option>`;
+    }).join('');
+  }
+
+  document.getElementById('override-check').addEventListener('change', (e) => {
+    document.getElementById('override-reason-row').classList.toggle('d-none', !e.target.checked);
+    buildStatusOptions();
+  });
+
+  async function renderStatusHistory() {
+    const box = document.getElementById('status-history');
+    try {
+      const { history } = await api.getCaseHistory(caseId);
+      if (!history.length) { box.innerHTML = '<div class="text-muted">Sin cambios de estado todavía.</div>'; return; }
+      box.innerHTML = history.map(h => {
+        const fromLabel = statusMeta.meta[h.from]?.label || h.from;
+        const toLabel   = statusMeta.meta[h.to]?.label   || h.to;
+        const date = h.at ? new Date(h.at).toLocaleString('es-PA', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' }) : '—';
+        return `<div class="field-row">
+          <div class="field-value">
+            ${fromLabel} → <strong>${toLabel}</strong>${h.override ? ' <span class="badge bg-warning text-dark">override</span>' : ''}
+            ${h.reason ? `<div class="text-muted" style="font-size:.72rem">Motivo: ${h.reason}</div>` : ''}
+            <div class="text-muted" style="font-size:.7rem">${date} — ${h.byEmail || h.by || '—'}</div>
+          </div>
+        </div>`;
+      }).join('');
+    } catch (e) {
+      box.innerHTML = `<div class="text-danger">${e.message}</div>`;
+    }
+  }
+
+  // ─── Pagos (D12, §H.3) ────────────────────────────────────────────────────
+  const TIPO_LABEL = {
+    cliente_a_farmazed:  'Cliente → Farmazed',
+    farmazed_a_autoridad: 'Farmazed → Autoridad',
+  };
+  // TAREA 23 (§H.8, Pagos): cada pago cliente_a_farmazed lleva un `concepto`
+  // — reemplaza el `fase` de TAREA 21/22 (fase_05/fase_13 ya no describían
+  // nada real en el modelo de 13 fases).
+  const CONCEPTO_LABEL = {
+    honorarios: 'Honorarios', tasa_dnfd: 'Tasa DNFD', mef: 'MEF',
+    iea: 'IEA', honorarios_saldo: 'Saldo de honorarios',
+  };
+
+  async function renderPayments() {
+    const box = document.getElementById('payments-list');
+    try {
+      const { payments } = await api.getPayments(caseId);
+      if (!payments.length) { box.innerHTML = '<div class="text-muted">Sin pagos registrados todavía.</div>'; return; }
+      box.innerHTML = payments.map(p => {
+        const date = p.fecha ? new Date(p.fecha).toLocaleDateString('es-PA', { day:'2-digit', month:'short', year:'numeric' }) : '—';
+        const detalle = p.concepto ? (CONCEPTO_LABEL[p.concepto] || p.concepto) : (p.autoridad || '');
+        return `<div class="field-row">
+          <div class="field-value">
+            <strong>${TIPO_LABEL[p.tipo] || p.tipo}</strong>${detalle ? ` — ${detalle}` : ''} — B/. ${Number(p.monto).toFixed(2)}
+            <div class="text-muted" style="font-size:.72rem">${date} — registrado por ${p.registradoPorEmail || p.registradoPor}</div>
+            <button class="btn btn-xs btn-link p-0 small" onclick="verComprobante('${p.id}')">Ver comprobante</button>
+          </div>
+        </div>`;
+      }).join('');
+    } catch (e) {
+      box.innerHTML = `<div class="text-danger">${e.message}</div>`;
+    }
+  }
+
+  // Resumen de conceptos requeridos para el gate de fase_05 (honorarios +
+  // tasa_dnfd siempre; mef si es extranjero; iea si aplica — según la línea
+  // de la cotización ACEPTADA de este caso). Solo admin ve esto (staff no
+  // tiene quotes.read — TAREA 18, "el staff no participa de la cotización").
+  async function renderPaymentsResumen() {
+    const box = document.getElementById('payments-resumen');
+    if (!has('quotes.read')) { box.innerHTML = ''; return; }
+    try {
+      const [{ quotes }, { payments }] = await Promise.all([api.getQuotes(), api.getPayments(caseId)]);
+      const quote = quotes.find(q => q.estado === 'aceptada' && q.caseIds.includes(caseId));
+      const linea = quote?.lineas.find(l => l.caseId === caseId);
+      const requeridos = ['honorarios', 'tasa_dnfd'];
+      if (linea?.esExtranjero) requeridos.push('mef');
+      if (linea?.aplicaIEA) requeridos.push('iea');
+      const pagados = new Set(payments.filter(p => p.tipo === 'cliente_a_farmazed').map(p => p.concepto));
+      box.innerHTML = `<div class="small mb-2">
+        <div class="text-muted" style="font-size:.72rem">Conceptos requeridos para salir de fase 5:</div>
+        ${requeridos.map(c => `<span class="badge ${pagados.has(c) ? 'bg-success-subtle text-success border-success-subtle' : 'bg-warning-subtle text-warning border-warning-subtle'} border me-1">${CONCEPTO_LABEL[c]}${pagados.has(c) ? ' ✓' : ' pendiente'}</span>`).join('')}
+        ${pagados.has('honorarios_saldo') ? '' : '<span class="badge bg-light text-muted border me-1">Saldo pendiente (no bloquea)</span>'}
+      </div>`;
+    } catch (e) {
+      box.innerHTML = '';
+    }
+  }
+
+  window.verComprobante = async (paymentId) => {
+    try {
+      const { payments } = await api.getPayments(caseId);
+      const p = payments.find(x => x.id === paymentId);
+      if (p?.comprobanteUrl) { window.open(p.comprobanteUrl, '_blank'); return; }
+      alert('No se pudo obtener el comprobante.');
+    } catch (e) { alert('Error: ' + e.message); }
+  };
+
+  // R13 (TAREA 19): conteo de páginas del paquete IEA — advierte, nunca
+  // bloquea. Visible para todo el staff que abre el expediente (admin,
+  // analista, abogado, regente) — es informativo, no una acción con permiso.
+  async function renderPaqueteIEA() {
+    const box = document.getElementById('iea-banner');
+    try {
+      const { limite, totalPaginas, excedido, documentos } = await api.getPaqueteIEA(caseId);
+      if (!documentos.length) { box.innerHTML = ''; return; }
+      const cls = excedido ? 'alert-warning' : 'alert-light border';
+      box.innerHTML = `<div class="alert ${cls} py-2 px-3 mb-0 small">
+        <strong>Paquete IEA: ${totalPaginas} / ${limite} páginas</strong>
+        ${excedido ? ' — supera el límite orientativo de IEA (no bloquea; contactar al IEA si hace falta consolidar/recortar).' : ''}
+      </div>`;
+    } catch (e) {
+      box.innerHTML = '';
+    }
+  }
+
+  // §H.8 (TAREA 21): al entrar a observado_dnfd se calcula y muestra la
+  // fecha límite de subsanación (Art. 22 D.E. 27/2024) — Regular 3 meses,
+  // Abreviado 8 días hábiles; otras vías quedan con una nota en vez de una
+  // fecha inventada (ver tracker/utils/plazo_subsanacion.js).
+  function renderPlazoSubsanacion() {
+    const box = document.getElementById('plazo-subsanacion-banner');
+    if (caseData.status !== 'observado_dnfd') { box.innerHTML = ''; return; }
+    if (caseData.fechaLimiteSubsanacionNota) {
+      box.innerHTML = `<div class="alert alert-secondary py-2 px-3 mb-0 small">
+        <strong>Observado por DNFD.</strong> ${caseData.fechaLimiteSubsanacionNota}
+      </div>`;
+      return;
+    }
+    if (!caseData.fechaLimiteSubsanacion) { box.innerHTML = ''; return; }
+    const fecha = new Date(caseData.fechaLimiteSubsanacion);
+    const dias  = Math.ceil((fecha - new Date()) / 86400000);
+    const cls   = dias <= 15 ? 'alert-danger' : 'alert-warning';
+    box.innerHTML = `<div class="alert ${cls} py-2 px-3 mb-0 small">
+      <strong>Observado por DNFD — plazo de subsanación (Art. 22 D.E. 27/2024):</strong>
+      vence el ${fecha.toLocaleDateString('es-PA', { day: '2-digit', month: 'long', year: 'numeric' })}
+      (${dias >= 0 ? `${dias} días restantes` : 'VENCIDO'}).
+    </div>`;
+  }
+
+  // §H.8 (TAREA 21): fase_08 exige DOS confirmaciones antes de avanzar a
+  // fase_09 — legal (abogado) y técnica/matrices (regente). Cada quien solo
+  // ve el botón de confirmar la SUYA (has() lee /api/me/permissions, nunca
+  // un if de rol hardcodeado aquí).
+  async function renderFase8Confirmaciones() {
+    const card = document.getElementById('fase8-card');
+    const box  = document.getElementById('fase8-confirmaciones');
+    if (caseData.status !== 'fase_08') { card.classList.add('d-none'); return; }
+    card.classList.remove('d-none');
+
+    const conf = caseData.confirmacionesFase8 || {};
+
+    function fila(tipo, label, dato, puede) {
+      const hecha  = !!dato;
+      const estado = hecha
+        ? `<span class="badge bg-success-subtle text-success border border-success-subtle">Confirmada — ${dato.byEmail || dato.by} (${new Date(dato.at).toLocaleString('es-PA', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })})</span>`
+        : `<span class="badge bg-warning-subtle text-warning border border-warning-subtle">Pendiente</span>`;
+      const boton = (!hecha && puede) ? `<button class="btn btn-sm btn-outline-primary btn-confirmar-fase8" data-tipo="${tipo}">Confirmar</button>` : '';
+      return `<div class="field-row">
+        <div class="field-label">${label}</div>
+        <div class="field-value d-flex justify-content-between align-items-center">${estado}${boton}</div>
+      </div>`;
+    }
+
+    box.innerHTML =
+      fila('legal', 'Legal (poderes/declaraciones)', conf.legal, has('cases.confirm_8_legal')) +
+      fila('tecnica', 'Técnica/matrices', conf.tecnica, has('cases.confirm_8_tecnica'));
+
+    box.querySelectorAll('.btn-confirmar-fase8').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        try {
+          await api.confirmarFase8(caseId, btn.dataset.tipo);
+          caseData = await api.getCase(caseId);
+          await renderFase8Confirmaciones();
+          alert('Confirmación registrada.');
+        } catch (e) { alert('Error: ' + e.message); }
+      });
+    });
+  }
+
+  document.getElementById('pay-tipo').addEventListener('change', (e) => {
+    const esCliente = e.target.value === 'cliente_a_farmazed';
+    document.getElementById('pay-concepto-row').classList.toggle('d-none', !esCliente);
+    document.getElementById('pay-autoridad-row').classList.toggle('d-none', esCliente);
+  });
+
+  document.getElementById('payment-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const tipo        = document.getElementById('pay-tipo').value;
+    const autoridad    = document.getElementById('pay-autoridad').value;
+    const concepto     = document.getElementById('pay-concepto').value;
+    const monto        = document.getElementById('pay-monto').value;
+    const fecha        = document.getElementById('pay-fecha').value;
+    const comprobante  = document.getElementById('pay-comprobante').files[0];
+
+    try {
+      await api.registerPayment(caseId, {
+        tipo,
+        autoridad: tipo === 'farmazed_a_autoridad' ? autoridad : undefined,
+        concepto:  tipo === 'cliente_a_farmazed'   ? concepto  : undefined,
+        monto, fecha, comprobante,
+      });
+      alert('Pago registrado.');
+      e.target.reset();
+      document.getElementById('pay-concepto-row').classList.remove('d-none');
+      document.getElementById('pay-autoridad-row').classList.add('d-none');
+      renderPayments();
+      renderPaymentsResumen();
+    } catch (err) {
+      alert('Error: ' + err.message);
+    }
+  });
+
   // Global helpers for onclick
   window.openDoc = async (caseId, docId) => {
     try {
       const doc = await api.getDocument(caseId, docId);
       window.open(doc.signedUrl, '_blank');
     } catch(e) { alert('Error: ' + e.message); }
+  };
+  window.verVersiones = async (caseId, docId, name) => {
+    document.getElementById('versions-doc-name').textContent = name;
+    const box = document.getElementById('versions-list');
+    box.innerHTML = '<div class="text-muted">Cargando…</div>';
+    new bootstrap.Modal(document.getElementById('versionsModal')).show();
+    try {
+      const { versions } = await api.getDocumentVersions(caseId, docId);
+      if (!versions.length) { box.innerHTML = '<div class="text-muted">Sin versiones anteriores.</div>'; return; }
+      box.innerHTML = versions.map(v => {
+        const date = v.archivedAt ? new Date(v.archivedAt).toLocaleString('es-PA', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' }) : '—';
+        return `<div class="field-row">
+          <div class="field-value">
+            <strong>v${v.version}</strong> — ${v.fileName} — <span class="badge bg-${getDocStatusColor(v.status).replace('text-','')}-subtle">${v.status}</span>
+            ${v.reviewNotes ? `<div class="text-muted" style="font-size:.72rem">Motivo: ${v.reviewNotes}</div>` : ''}
+            <div class="text-muted" style="font-size:.7rem">Reemplazada el ${date} — subida por ${v.uploadedBy}</div>
+            ${v.signedUrl ? `<a href="${v.signedUrl}" target="_blank" class="small">Ver archivo</a>` : ''}
+          </div>
+        </div>`;
+      }).join('');
+    } catch (e) {
+      box.innerHTML = `<div class="text-danger">${e.message}</div>`;
+    }
+  };
+  window.revisarDoc = async (docId, status) => {
+    let reviewNotes = '';
+    if (status === 'rejected') {
+      reviewNotes = prompt('Motivo del rechazo (el cliente lo verá):');
+      if (!reviewNotes) return;
+    }
+    try {
+      await api.updateDocument(caseId, docId, { status, reviewNotes });
+      docsData = await api.listDocuments(caseId);
+      render();
+    } catch (e) {
+      alert('Error: ' + e.message);
+    }
   };
   window.requestDoc = async (faddiDocId, name) => {
     const msg = prompt(`Instrucciones para el cliente sobre "${name}":`);
@@ -336,8 +844,76 @@
 
   // Actions
   document.getElementById('btn-save-status').addEventListener('click', async () => {
-    await api.updateCase(caseId, { status: document.getElementById('status-select').value });
-    alert('Estado actualizado.');
+    const newStatus = document.getElementById('status-select').value;
+    const override  = document.getElementById('override-check').checked;
+    const reason    = document.getElementById('override-reason').value.trim();
+
+    // §H.8 (TAREA 21): fase_08 -> fase_08 es un salto real (nuevo ciclo de
+    // subsanación, se registra) — la única excepción al "no cambió".
+    const isFase8Recycle = newStatus === 'fase_08' && caseData.status === 'fase_08';
+    if (newStatus === caseData.status && !isFase8Recycle) { alert('El estado no cambió.'); return; }
+    if (override && !reason) { alert('El override necesita un motivo.'); return; }
+
+    // §H.8 / TAREA 21: fase_08/10 son control de calidad — no avanzan
+    // solas, piden confirmacion explicita antes de salir de ellas.
+    if (statusMeta.manual.includes(caseData.status)) {
+      const label = statusMeta.meta[caseData.status]?.label || caseData.status;
+      if (!confirm(`Verifique: ${label}. ¿Confirma el avance a "${statusMeta.meta[newStatus]?.label || newStatus}"?`)) return;
+    }
+
+    try {
+      const body = { status: newStatus };
+      if (override) { body.override = true; body.reason = reason; }
+      await api.updateCase(caseId, body);
+      alert('Estado actualizado.');
+      caseData = await api.getCase(caseId);
+      document.getElementById('override-check').checked = false;
+      document.getElementById('override-reason').value = '';
+      document.getElementById('override-reason-row').classList.add('d-none');
+      render();
+      renderStatusHistory();
+      renderPaqueteIEA();
+      renderPlazoSubsanacion();
+      renderFase8Confirmaciones();
+      renderPaymentsResumen();
+    } catch (e) {
+      alert('Error: ' + e.message);
+    }
+  });
+
+  document.getElementById('btn-save-assign').addEventListener('click', async () => {
+    const asignados = {
+      analista: document.getElementById('assign-analista').value || null,
+      abogado:  document.getElementById('assign-abogado').value  || null,
+      regente:  document.getElementById('assign-regente').value  || null,
+    };
+    try {
+      await api.updateCase(caseId, { asignados });
+      caseData.asignados = asignados;
+      alert('Equipo actualizado.');
+    } catch (e) {
+      alert('Error: ' + e.message);
+    }
+  });
+
+  document.getElementById('btn-save-via-categoria').addEventListener('click', async () => {
+    const tipoRegistro = document.getElementById('via-tipo-registro').value;
+    const tipoMedicamento = Array.from(document.querySelectorAll('.via-tipo-med:checked')).map(el => el.value);
+    const esInnovadorRaw = document.getElementById('via-es-innovador').value;
+    const esInnovador = esInnovadorRaw === '' ? null : esInnovadorRaw === 'true';
+    try {
+      // El PATCH devuelve solo los campos actualizados (id + update), no el
+      // caso completo — se mezcla en caseData en vez de reemplazarlo (si no,
+      // se pierden tramiteType/status/product/etc. y render() se rompe).
+      const updated = await api.updateCase(caseId, { tipoRegistro, tipoMedicamento, esInnovador });
+      Object.assign(caseData, updated);
+      render();
+      renderViaCategoria();
+      checklistData = await api.getChecklist(caseId);
+      alert('Vía y categoría actualizadas.');
+    } catch (e) {
+      alert('Error: ' + e.message);
+    }
   });
 
   document.getElementById('btn-save-faddi').addEventListener('click', async () => {
