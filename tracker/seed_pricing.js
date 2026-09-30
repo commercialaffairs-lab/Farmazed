@@ -14,10 +14,12 @@
 const admin = require('firebase-admin');
 
 // ─── Init (same pattern as index.js) ────────────────────────────────────────
+// FIREBASE_PROJECT_ID solo se usa en dev local contra el emulador (ver
+// DEV_LOCAL.md) — sin la env var, mismo comportamiento de siempre en prod.
 if (!admin.apps.length) {
   admin.initializeApp({
     credential: admin.credential.applicationDefault(),
-    projectId: 'farmazed'
+    projectId: process.env.FIREBASE_PROJECT_ID || 'farmazed'
   });
 }
 const db = admin.firestore();

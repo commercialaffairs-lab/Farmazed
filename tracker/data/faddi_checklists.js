@@ -52,7 +52,7 @@ const MED_BASE_SHARED = [
   // exige (X) para los 9 subtipos.
   { id: 'disposicion',     faddiCode: '15.13', name: 'Información sobre disposición de desecho',             required: true,  condition: null, faddiStep: 15, description: 'Información sobre manejo y disposición de residuos/muestras.' },
   { id: 'almacenamiento',  faddiCode: '15.21', name: 'Condiciones de Almacenamiento, distribución y transporte', required: false, condition: 'Cuando aplica (cadena de frío, etc.)',         faddiStep: 15, description: 'Condiciones especiales de cadena de frío u otras.' },
-  { id: 'otros_docs',      faddiCode: '15.14', name: 'Otros Documentos Aclaratorios',                        required: false, condition: 'Cuando existan observaciones previas o documentos adicionales', faddiStep: 15, description: 'Cualquier documento adicional que sustente la solicitud.' },
+  { id: 'otros_docs',      faddiCode: 'PENDIENTE_VERIFICAR', name: 'Otros Documentos Aclaratorios',                        required: false, condition: 'Cuando existan observaciones previas o documentos adicionales', faddiStep: 15, description: 'Cualquier documento adicional que sustente la solicitud. faddiCode pendiente de confirmar en FADDI (antes 15.14, colisión con "declaracion_paises"/"aprobacion_arr" — TAREA 25, §H.9-2).' },
   { id: 'patrones',        faddiCode: '15.16', name: 'Patrones Analíticos',                                  required: true,  condition: null, faddiStep: 15, description: 'Patrones de referencia del principio activo para análisis.' },
   { id: 'recibo_cnf',      faddiCode: '16.1.1',name: 'Recibo de pago del Colegio Nacional de Farmacéuticos', required: true,  condition: null, faddiStep: 16, description: 'Comprobante de pago del refrendo del farmacéutico regente.' },
   // Bug PM 2026-08-26 (Bug 7): documento ausente por completo. Obligatorio
@@ -67,7 +67,51 @@ const MED_BASE_SHARED = [
 // Documentos "variables" — su aplicabilidad depende del subtipo (tipoMedicamento).
 // Definidos una sola vez y referenciados desde MED_VARIABLE_BY_SUBTYPE para evitar
 // duplicar id/label/descripción por cada subtipo que los requiere.
-const DOC_RECIBO_IEA      = { id: 'recibo_iea',      faddiCode: '15.1', name: 'Recibo del pago de la I.E.A.', required: true, condition: null, faddiStep: 15, description: 'Comprobante de pago de honorarios de análisis al Instituto Especializado de Análisis (Universidad de Panamá). No aplica a Suplementos, Productos Naturales, Huérfanos ni Radiofármacos.' };
+//
+// TAREA 25 (PM_COMMENTS §H.9, decisión 1, sobre organizacion/
+// 11_AUDITORIA_CHECKLIST_MATRICES.md): recibo_iea DEJA de depender del
+// subtipo — la matriz BIO-03 dice explícito que en Abreviado no aplica
+// (D.E. 29/2023 Art. 6), y el checklist lo exigía igual para varios subtipos
+// sin mirar la vía. Ahora depende de `aplicaIEA` de la línea de cotización
+// ACEPTADA del caso (la decide Zelky/staff en la cotización, fase 3-4): con
+// cotización y aplicaIEA=true, obligatorio; con aplicaIEA=false, no aplica;
+// sin cotización aceptada todavía, "por confirmar" (no bloquea) — ver
+// getChecklist(), que ahora lo agrega UNA vez para cualquier subtipo de
+// medicamentos, ya no está en las listas de abajo.
+function docReciboIea(aplicaIEA) {
+  if (aplicaIEA === true) {
+    return { id: 'recibo_iea', faddiCode: '15.1', name: 'Recibo del pago de la I.E.A.', required: true, condition: null, faddiStep: 15, description: 'Comprobante de pago de honorarios de análisis al Instituto Especializado de Análisis (Universidad de Panamá). La cotización aceptada de este caso marcó que el IEA sí aplica.' };
+  }
+  if (aplicaIEA === false) {
+    return { id: 'recibo_iea', faddiCode: '15.1', name: 'Recibo del pago de la I.E.A.', required: false, condition: 'No aplica a este caso — la cotización aceptada no marcó IEA.', faddiStep: 15, description: 'Comprobante de pago de honorarios de análisis al Instituto Especializado de Análisis (Universidad de Panamá). No aplica: la cotización aceptada de este caso no lo requiere.' };
+  }
+  // aplicaIEA === undefined: todavía no hay cotización aceptada con ese dato.
+  return { id: 'recibo_iea', faddiCode: '15.1', name: 'Recibo del pago de la I.E.A.', required: false, condition: 'Por confirmar: depende de si la cotización marca IEA como aplicable (se define en la fase de cotización).', faddiStep: 15, description: 'Comprobante de pago de honorarios de análisis al Instituto Especializado de Análisis (Universidad de Panamá) — aplica solo si la cotización del caso lo marca. Todavía no hay cotización aceptada para este caso.' };
+}
+// TAREA 26 (§H.9-2, sobre los 2 FALTA de SQ que dependían de un campo
+// "innovador" que el caso no tenía): mismo patrón tri-estado que
+// docReciboIea — `esInnovador` lo confirma el staff en fase_03
+// (cases.edit_via_categoria), junto con vía y categoría. Solo aplica a
+// Síntesis Química (matriz SQ ítems 33 y 34) — no se agregó a BIO ni a
+// ningún otro subtipo porque la auditoría no encontró ese gap ahí.
+function docEstudiosClinicosSQ(esInnovador) {
+  if (esInnovador === true) {
+    return { id: 'estudios_clinicos_sq', faddiCode: '15.22', name: 'Estudios clínicos / referencias bibliográficas', required: true, condition: null, faddiStep: 15, description: 'Estudios clínicos publicados o aprobados por ARN de alto estándar — obligatorio por ser un producto innovador (D.E. 27/2024 Arts. 80-85 — matriz SQ ítem 33). El staff confirmó "innovador: sí" en fase 3.' };
+  }
+  if (esInnovador === false) {
+    return { id: 'estudios_clinicos_sq', faddiCode: '15.22', name: 'Estudios clínicos / referencias bibliográficas', required: false, condition: 'No aplica — el staff confirmó que este producto no es innovador.', faddiStep: 15, description: 'Solo aplica a medicamentos innovadores (D.E. 27/2024 Arts. 80-85 — matriz SQ ítem 33). Los genéricos/abreviado cubren su propio requisito con `bioequivalencia`.' };
+  }
+  return { id: 'estudios_clinicos_sq', faddiCode: '15.22', name: 'Estudios clínicos / referencias bibliográficas', required: false, condition: 'Por confirmar: depende de si el staff marca el producto como innovador (fase 3).', faddiStep: 15, description: 'Solo aplica a medicamentos innovadores (D.E. 27/2024 Arts. 80-85 — matriz SQ ítem 33). Todavía no hay confirmación de "innovador" para este caso.' };
+}
+function docResumenSeguridadSQ(esInnovador) {
+  if (esInnovador === true) {
+    return { id: 'resumen_seguridad_sq', faddiCode: 'PENDIENTE_VERIFICAR', name: 'Resumen de Información de Seguridad / Plan de Gestión de Riesgo', required: true, condition: null, faddiStep: 15, description: 'Resumen de farmacovigilancia, reacciones adversas y contraindicaciones, más Plan de Gestión de Riesgo si lo exige la DNFD — obligatorio por ser un producto innovador (D.E. 27/2024 Arts. 86-88 — matriz SQ ítem 34). El staff confirmó "innovador: sí" en fase 3.' };
+  }
+  if (esInnovador === false) {
+    return { id: 'resumen_seguridad_sq', faddiCode: 'PENDIENTE_VERIFICAR', name: 'Resumen de Información de Seguridad / Plan de Gestión de Riesgo', required: false, condition: 'No aplica — el staff confirmó que este producto no es innovador.', faddiStep: 15, description: 'Matriz SQ ítem 34 (D.E. 27/2024 Arts. 86-88) — el Plan de Gestión de Riesgo es solo para productos nuevos/innovadores.' };
+  }
+  return { id: 'resumen_seguridad_sq', faddiCode: 'PENDIENTE_VERIFICAR', name: 'Resumen de Información de Seguridad / Plan de Gestión de Riesgo', required: false, condition: 'Por confirmar: depende de si el staff marca el producto como innovador (fase 3).', faddiStep: 15, description: 'Matriz SQ ítem 34 (D.E. 27/2024 Arts. 86-88). Todavía no hay confirmación de "innovador" para este caso.' };
+}
 const DOC_CERT_ANALISIS   = { id: 'cert_analisis',   faddiCode: '15.7', name: 'Certificado de Análisis',      required: true, condition: null, faddiStep: 15, description: 'Certificado de análisis del lote que se enviará como muestra al IEA.' };
 const DOC_MUESTRA         = { id: 'muestra',         faddiCode: '15.15', name: 'Muestra Física',              required: true, condition: null, faddiStep: 15, description: 'Muestra del producto en su envase comercial para análisis IEA.' };
 const DOC_MUESTRA_RADIOFARMACO = { id: 'muestra',    faddiCode: '15.15', name: 'Muestra Física',              required: false, condition: 'Condicional para Radiofármacos según matriz maestra MINSA', faddiStep: 15, description: 'Muestra del producto en su envase comercial para análisis IEA — condicional para radiofármacos.' };
@@ -82,71 +126,113 @@ const DOC_CONTRATO_FAB    = { id: 'contrato_fabricacion', faddiCode: 'PENDIENTE_
 const DOC_ESTABILIDAD_SUPLEMENTOS = { id: 'estabilidad', faddiCode: '15.12', name: 'Estudios de Estabilidad', required: false, condition: 'Requerido solo si la vida útil declarada del producto es mayor a 24 meses', faddiStep: 15, description: 'Estudio de estabilidad — obligatorio únicamente cuando la vida útil declarada supera los 24 meses.' };
 const DOC_ESTABILIDAD_NATURALES   = { id: 'estabilidad', faddiCode: '15.12', name: 'Estudios de Estabilidad', required: false, condition: 'Si vida útil ≤ 24 meses: informe de análisis + Declaración Jurada. Si > 24 meses: estudio de estabilidad completo.', faddiStep: 15, description: 'Estudio de estabilidad — el tipo de evidencia requerida depende de la vida útil declarada del producto.' };
 
+// TAREA 25 (§H.9, decisiones 4 y 5): documentos que la auditoría
+// (organizacion/11_AUDITORIA_CHECKLIST_MATRICES.md) marcó FALTA para SQ y
+// BIO, y las 2 preguntas "⚠ VERIFICAR" que Zelky dejó pendientes en sus
+// propias matrices (entran como opcionales, sin bloquear, con nota
+// "Farmazed confirma si aplica" — no se resuelven aquí, son preguntas de
+// Zelky, no nuestras). `faddiCode: 'PENDIENTE_VERIFICAR'` porque ninguna de
+// las dos matrices trae un código FADDI explícito para estos.
+const DOC_PROTECCION_DATOS = { id: 'proteccion_datos', faddiCode: 'PENDIENTE_VERIFICAR', name: 'Declaración Jurada de Protección de Datos de Prueba', required: false, condition: 'Solo si el titular solicita protección de datos de prueba', faddiStep: 15, description: 'Declaración jurada de que el producto es una nueva entidad química y que la información se entrega bajo reserva de confidencialidad (Dec. Ejecutivo 1389/2012, Art. 5 — matriz SQ ítems 05-06, matriz BIO ítem BIO-05-06). Solo aplica si se solicita protección de datos.' };
+const DOC_ESPECIF_PA_SQ = { id: 'especificaciones_pa', faddiCode: 'PENDIENTE_VERIFICAR', name: 'Especificaciones del Principio Activo y Materias Primas', required: true, condition: null, faddiStep: 15, description: 'Especificaciones farmacopeicas o no farmacopeicas del principio activo y excipientes críticos; si no son farmacopeicas, incluir metodología analítica validada (Res. 126/2021, núm. 7.6; D.E. 27/2024, Art. 78 — matriz SQ ítem 12). Distinto de las especificaciones del producto terminado.' };
+const DOC_DECLARACION_IDENTIDAD_ABREVIADO = { id: 'declaracion_identidad_abreviado', faddiCode: 'PENDIENTE_VERIFICAR', name: 'Declaración Jurada de Identidad de Fabricación y Formulación (Abreviado)', required: true, condition: null, faddiStep: 15, description: 'Declaración jurada del titular, fabricante o representante legal de que el producto es el mismo en fabricación y formulación que el certificado/CLV de la autoridad de referencia (D.E. 27/2024, Art. 24 núm. 2; D.E. 29/2023 — matriz BIO ítem BIO-07, sección Abreviado). Distinta del expediente aprobado por la ARR (ver `aprobacion_arr`).' };
+const DOC_ESPECIF_FUENTES_PA = { id: 'especificaciones_fuentes_pa', faddiCode: 'PENDIENTE_VERIFICAR', name: 'Especificaciones de las Fuentes y Técnicas de Obtención del Principio Activo', required: true, condition: null, faddiStep: 15, description: 'Fuentes (líneas celulares, sistemas biológicos) y técnicas de obtención del principio activo; para biotecnológicos incluye además los procedimientos del banco de células maestro y de trabajo (D.E. 27/2024, Art. 102 núm. 1 — matriz BIO ítem BIO-25).' };
+const DOC_ESPECIF_EXCIPIENTES = { id: 'especificaciones_excipientes', faddiCode: 'PENDIENTE_VERIFICAR', name: 'Especificación de Calidad y Pureza de los Excipientes', required: true, condition: null, faddiStep: 15, description: 'Especificaciones de calidad y pureza, y métodos de control, de cada excipiente usado en la formulación (D.E. 27/2024, Art. 102 núm. 14 — matriz BIO ítem BIO-S/N-2).' };
+const DOC_AUSENCIA_PATOGENOS = { id: 'ausencia_agentes_patogenos', faddiCode: 'PENDIENTE_VERIFICAR', name: 'Procedimientos para Comprobar Ausencia de Agentes Potencialmente Patógenos', required: true, condition: null, faddiStep: 15, description: 'Documentación de los procedimientos usados para comprobar la ausencia de agentes patógenos (agentes adventicios): fuentes, especificaciones, pruebas y datos de seguridad viral (D.E. 27/2024, Art. 102 núm. 3 — matriz BIO ítem BIO-27).' };
+const DOC_AUSENCIA_EET = { id: 'ausencia_materias_primas_eet', faddiCode: 'PENDIENTE_VERIFICAR', name: 'Acreditación de Ausencia de Materias Primas de Especies Afectadas por EET', required: false, condition: 'Solo si el producto o su proceso usa materias primas de origen animal', faddiStep: 15, description: 'Acreditación de que no se usan materias primas de especies animales afectadas por Encefalopatías Espongiformes Transmisibles u otras enfermedades transmisibles (D.E. 27/2024, Art. 102 núm. 15 — matriz BIO ítem BIO-28).' };
+const DOC_PROGRAMA_GESTION_RIESGO = { id: 'programa_gestion_riesgo', faddiCode: 'PENDIENTE_VERIFICAR', name: 'Programa de Gestión de Riesgo', required: true, condition: null, faddiStep: 15, description: 'Programa de gestión de riesgo con las medidas de minimización propuestas para garantizar que los beneficios superen los riesgos identificados durante la autorización de comercialización (D.E. 27/2024, Art. 102 núm. 7 — matriz BIO ítem BIO-30).' };
+const DOC_BIOEQUIVALENCIA = { id: 'bioequivalencia', faddiCode: 'PENDIENTE_VERIFICAR', name: 'Estudios de Bioequivalencia / Biodisponibilidad', required: false, condition: 'Farmazed confirma si aplica', faddiStep: 15, description: 'Para medicamentos de síntesis química que lo requieran según las listas de la DNFD o el D.E. 95 (D.E. 27/2024, Arts. 80-85 — matriz SQ ítem 15, que Zelky dejó marcado "⚠ VERIFICAR: confirmar con la DNFD la lista actualizada de principios activos que requieren estudios de BE").' };
+const DOC_ESPECIF_CALIDAD_PUREZA_PA = { id: 'especificacion_calidad_pureza_pa', faddiCode: 'PENDIENTE_VERIFICAR', name: 'Especificación de Calidad y Pureza del Principio Activo', required: false, condition: 'Farmazed confirma si aplica', faddiStep: 15, description: 'Requisitos del principio activo: especificación de calidad y pureza, métodos de control, fabricante/proveedor, condiciones de almacenamiento; para hemoderivados, Archivo Maestro del Plasma (D.E. 27/2024, Art. 102 núm. 16 — matriz BIO ítem BIO-S/N-1, que Zelky dejó marcado "⚠ VERIFICAR: tomado de la Matriz Legal, no está en la hoja de chequeo de la Guía, confirmar si va").' };
+
+// TAREA 25 (§H.9, decisión 3): Biológicos y Biotecnológicos siguen como dos
+// opciones del wizard (la plataforma FADDI las pide separadas), pero la
+// matriz de Zelky es UNA sola matriz unificada — así que llevan exactamente
+// los MISMOS documentos extra (antes `farmacovigilancia_bio` solo estaba en
+// Biotecnológicos; ahora aplica a ambos, igual que el resto).
+const MED_BIO_DOCS = [
+  DOC_CERT_ANALISIS, DOC_MUESTRA, DOC_METODO_ANALISIS, DOC_CONTRATO_FAB,
+  { id: 'farmacovigilancia_bio', faddiCode: '15.20', name: 'Plan de Farmacovigilancia (biológicos/biotecnológicos)', required: true, condition: null, faddiStep: 15, description: 'Plan de farmacovigilancia (Art. 102 núm. 6, D.E. 27/2024 — matriz BIO ítem BIO-29). Aplica igual a biológicos y biotecnológicos.' },
+  { id: 'estudios_clinicos',   faddiCode: '15.22', name: 'Estudios clínicos',    required: true, condition: null, faddiStep: 15, description: 'Módulo 5 del CTD — estudios clínicos completos (matriz BIO ítem BIO-22, innovadores/biosimilares comparativos).' },
+  { id: 'estudios_noclinicos', faddiCode: '15.23', name: 'Estudios No clínicos', required: true, condition: null, faddiStep: 15, description: 'Módulo 4 del CTD — estudios preclínicos (matriz BIO ítem BIO-32).' },
+  DOC_PROTECCION_DATOS,
+  DOC_ESPECIF_FUENTES_PA,
+  DOC_ESPECIF_EXCIPIENTES,
+  DOC_AUSENCIA_PATOGENOS,
+  DOC_AUSENCIA_EET,
+  DOC_PROGRAMA_GESTION_RIESGO,
+  DOC_ESPECIF_CALIDAD_PUREZA_PA,
+  // declaracion_identidad_abreviado NO va aquí — solo aplica en Abreviado,
+  // se agrega aparte en getChecklist() (mismo patrón que cert_analisis/SQ y
+  // aprobacion_arr/MED_ABREVIADO_EXTRA).
+];
+
 // Docs propios de cada subtipo de medicamento (tipoMedicamento), incluyendo los
 // documentos "variables" de arriba cuando el subtipo los requiere.
 const MED_VARIABLE_BY_SUBTYPE = {
   'Síntesis Química': [
-    DOC_RECIBO_IEA, DOC_MUESTRA, DOC_METODO_ANALISIS, DOC_CONTRATO_FAB,
+    DOC_MUESTRA, DOC_METODO_ANALISIS, DOC_CONTRATO_FAB,
+    DOC_PROTECCION_DATOS, DOC_ESPECIF_PA_SQ, DOC_BIOEQUIVALENCIA,
     // cert_analisis para Síntesis Química solo aplica en trámite Abreviado —
     // manejado aparte en getChecklist, no incluido aquí.
   ],
-  'Biotecnológicos': [
-    DOC_RECIBO_IEA, DOC_CERT_ANALISIS, DOC_MUESTRA, DOC_METODO_ANALISIS, DOC_CONTRATO_FAB,
-    { id: 'farmacovigilancia_bio', faddiCode: '15.20', name: 'Programa de Manejo de Riesgo y plan de Farmacovigilancia (biotecnológicos)', required: true, condition: 'Obligatorio para biotecnológicos (Art. 102 D.E. 27/2024)', faddiStep: 15, description: 'Plan de gestión de riesgos y farmacovigilancia específico para biotecnológicos.' },
-    { id: 'estudios_clinicos',     faddiCode: '15.22', name: 'Estudios clínicos',    required: true, condition: 'Obligatorio para biotecnológicos', faddiStep: 15, description: 'Módulo 5 del CTD — estudios clínicos completos.' },
-    { id: 'estudios_noclinicos',   faddiCode: '15.23', name: 'Estudios No clínicos', required: true, condition: 'Obligatorio para biotecnológicos', faddiStep: 15, description: 'Módulo 4 del CTD — estudios preclínicos.' },
-  ],
-  'Biológicos': [
-    DOC_RECIBO_IEA, DOC_CERT_ANALISIS, DOC_MUESTRA, DOC_METODO_ANALISIS, DOC_CONTRATO_FAB,
-    { id: 'estudios_clinicos_bio', faddiCode: '15.22', name: 'Estudios clínicos',    required: true, condition: 'Obligatorio para biológicos', faddiStep: 15, description: 'Módulo 5 del CTD.' },
-    { id: 'estudios_noclinicos_bio',faddiCode: '15.23', name: 'Estudios No clínicos',required: true, condition: 'Obligatorio para biológicos', faddiStep: 15, description: 'Módulo 4 del CTD.' },
-  ],
+  'Biotecnológicos': MED_BIO_DOCS,
+  'Biológicos':       MED_BIO_DOCS,
   'Huérfanos': [
-    // recibo_iea y muestra NO aplican a Huérfanos (Bug 1 / Bug 3).
+    // muestra NO aplica a Huérfanos (Bug 3) — recibo_iea ya no depende del
+    // subtipo (ver docReciboIea), se agrega igual para todos en getChecklist.
     DOC_CERT_ANALISIS, DOC_METODO_ANALISIS, DOC_CONTRATO_FAB,
     { id: 'estudios_clinicos_hue', faddiCode: '15.22', name: 'Estudios clínicos (Huérfanos)',    required: false, condition: 'Según disponibilidad — Arts. 107-108 D.E. 27/2024', faddiStep: 15, description: 'Resumen clínico disponible. Declaración notarial de países con registro.' },
-    { id: 'declaracion_paises',    faddiCode: '15.14', name: 'Declaración notarial de países con registro', required: true, condition: 'Obligatorio para huérfanos', faddiStep: 15, description: 'Declaración notarial indicando los países donde está registrado el producto.' },
+    { id: 'declaracion_paises',    faddiCode: 'PENDIENTE_VERIFICAR', name: 'Declaración notarial de países con registro', required: true, condition: 'Obligatorio para huérfanos', faddiStep: 15, description: 'Declaración notarial indicando los países donde está registrado el producto. faddiCode pendiente de confirmar en FADDI (antes 15.14, colisión con "otros_docs"/"aprobacion_arr").' },
   ],
   'Vacuna': [
     // ⚠️ Pendiente de verificar con el PM: las matrices auditadas no
-    // mencionan explícitamente si Vacuna requiere recibo_iea/cert_analisis/
-    // muestra/metodo_analisis/contrato_fabricacion. No se incluyen aquí para
-    // no asumir un requisito regulatorio sin fuente — confirmar antes de
-    // producción si Vacuna necesita alguno de estos.
+    // mencionan explícitamente si Vacuna requiere cert_analisis/muestra/
+    // metodo_analisis/contrato_fabricacion. No se incluyen aquí para no
+    // asumir un requisito regulatorio sin fuente — confirmar antes de
+    // producción si Vacuna necesita alguno de estos. recibo_iea ya no
+    // depende del subtipo, se agrega igual para todos en getChecklist.
     { id: 'estudios_clinicos_vac', faddiCode: '15.22', name: 'Estudios clínicos (Vacuna)', required: true, condition: 'Obligatorio para vacunas', faddiStep: 15, description: 'Datos clínicos de eficacia e inmunogenicidad.' },
     { id: 'estudios_noclinicos_vac',faddiCode: '15.23', name: 'Estudios No clínicos (Vacuna)', required: true, condition: 'Obligatorio para vacunas', faddiStep: 15, description: 'Estudios preclínicos de seguridad.' },
   ],
   // ─── Subtipos agregados en la auditoría 2026-08-26 (antes ausentes — Gap estructural) ───
   'Radiofármaco': [
-    // recibo_iea y metodo_analisis NO aplican; muestra es condicional (Bug 1/3/6).
+    // metodo_analisis NO aplica; muestra es condicional (Bug 3/6). recibo_iea
+    // ya no depende del subtipo, se agrega igual para todos en getChecklist.
     DOC_CERT_ANALISIS, DOC_MUESTRA_RADIOFARMACO, DOC_CONTRATO_FAB,
   ],
   'Homeopático': [
-    // metodo_analisis NO aplica (Bug 6).
-    DOC_RECIBO_IEA, DOC_CERT_ANALISIS, DOC_MUESTRA, DOC_CONTRATO_FAB,
+    // metodo_analisis NO aplica (Bug 6). recibo_iea ya no depende del
+    // subtipo, se agrega igual para todos en getChecklist.
+    DOC_CERT_ANALISIS, DOC_MUESTRA, DOC_CONTRATO_FAB,
   ],
   'Medio de Contraste': [
-    // metodo_analisis NO aplica (Bug 6).
-    DOC_RECIBO_IEA, DOC_CERT_ANALISIS, DOC_MUESTRA, DOC_CONTRATO_FAB,
+    // metodo_analisis NO aplica (Bug 6). recibo_iea ya no depende del
+    // subtipo, se agrega igual para todos en getChecklist.
+    DOC_CERT_ANALISIS, DOC_MUESTRA, DOC_CONTRATO_FAB,
   ],
   'Gas Medicinal': [
-    DOC_RECIBO_IEA, DOC_CERT_ANALISIS, DOC_MUESTRA, DOC_METODO_ANALISIS, DOC_CONTRATO_FAB,
+    // recibo_iea ya no depende del subtipo, se agrega igual para todos en getChecklist.
+    DOC_CERT_ANALISIS, DOC_MUESTRA, DOC_METODO_ANALISIS, DOC_CONTRATO_FAB,
   ],
   'Suplementos': [
-    // recibo_iea, cert_analisis, muestra y metodo_analisis NO aplican (Bug 1/2/3/6).
-    // contrato_fabricacion sí aplica (Bug 8). estabilidad se reemplaza en getChecklist.
+    // cert_analisis, muestra y metodo_analisis NO aplican (Bug 1/2/3/6).
+    // contrato_fabricacion sí aplica (Bug 8). estabilidad se reemplaza en
+    // getChecklist. recibo_iea ya no depende del subtipo (se agrega igual
+    // para todos en getChecklist, aunque para Suplementos aplicaIEA será
+    // casi siempre false/por-confirmar en la práctica).
     DOC_CONTRATO_FAB,
   ],
   'Productos Naturales': [
-    // recibo_iea NO aplica (Bug 1). contrato_fabricacion NO aplica (Bug 8 — la
-    // matriz de Productos Naturales no lo lista). estabilidad se reemplaza en getChecklist.
+    // contrato_fabricacion NO aplica (Bug 8 — la matriz de Productos
+    // Naturales no lo lista). estabilidad se reemplaza en getChecklist.
+    // recibo_iea ya no depende del subtipo, se agrega igual para todos.
     DOC_CERT_ANALISIS, DOC_MUESTRA, DOC_METODO_ANALISIS,
   ],
 };
 
 // Docs especiales para procedimiento Abreviado
 const MED_ABREVIADO_EXTRA = [
-  { id: 'aprobacion_arr', faddiCode: '15.14', name: 'Expediente aprobado por ARR (FDA/EMA/INVIMA/etc.)', required: true, condition: 'Obligatorio para procedimiento Abreviado (D.E. 29/2023)', faddiStep: 15, description: 'Expediente completo tal como fue aprobado por la Autoridad Regulatoria de Referencia. Apostillado o legalizado.' },
+  { id: 'aprobacion_arr', faddiCode: 'PENDIENTE_VERIFICAR', name: 'Expediente aprobado por ARR (FDA/EMA/INVIMA/etc.)', required: true, condition: 'Obligatorio para procedimiento Abreviado (D.E. 29/2023)', faddiStep: 15, description: 'Expediente completo tal como fue aprobado por la Autoridad Regulatoria de Referencia. Apostillado o legalizado. faddiCode pendiente de confirmar en FADDI (antes 15.14, colisión con "otros_docs"/"declaracion_paises").' },
 ];
 
 // ─── COSMÉTICOS ────────────────────────────────────────────────────────────────
@@ -235,14 +321,39 @@ const PUB_DOCS = [
  * @param {object} options
  * @param {string} options.tipoRegistro     - Regular|Abreviado|Reconocimiento Mutuo|Reconocimiento WLA
  * @param {string[]} options.tipoMedicamento - ['Síntesis Química', 'Biotecnológicos', ...]
+ * @param {boolean}  [options.aplicaIEA]    - TAREA 25 (§H.9): de la línea de la cotización ACEPTADA del caso (quotes.js). `undefined` = todavía no hay cotización aceptada ("por confirmar", no bloquea).
+ * @param {boolean}  [options.esInnovador]  - TAREA 26 (§H.9-2): lo confirma el staff en fase_03 (`cases.edit_via_categoria`), junto con tipoRegistro/tipoMedicamento. `undefined` = todavía sin confirmar ("por confirmar", no bloquea). Solo afecta Síntesis Química.
  * @returns {Array} checklist entries
  */
-function getChecklist(tramiteType, options = {}) {
-  const { tipoRegistro = 'Regular', tipoMedicamento = [] } = options;
+// ─── D10 (organizacion/03_INSTRUCCIONES_DEV.md fila D10, R19) ──────────────────
+// Los 3 documentos que Farmazed aporta en vez del cliente. Cualquier otro
+// documento del checklist (los ~80 de todos los trámites) es 'cliente' por
+// default — se calcula al final de getChecklist(), no se anota a mano en
+// cada literal de arriba (menos superficie de error si se agrega un doc
+// nuevo y se olvida marcarlo).
+const FARMAZED_DOC_IDS = new Set(['tasa_servicio', 'recibo_iea', 'recibo_cnf']);
 
+function getChecklist(tramiteType, options = {}) {
+  const { tipoRegistro = 'Regular', tipoMedicamento = [], aplicaIEA, esInnovador } = options;
+
+  let docs;
   switch (tramiteType) {
     case 'medicamentos': {
-      let docs = [...MED_BASE_SHARED];
+      docs = [...MED_BASE_SHARED];
+
+      // TAREA 25 (§H.9, decisión 1): recibo_iea ya no depende del subtipo —
+      // depende de `aplicaIEA` de la cotización ACEPTADA del caso (el
+      // llamador lo resuelve vía quotes.js y lo pasa aquí). Se agrega UNA
+      // vez, para cualquier subtipo de medicamentos.
+      docs.push(docReciboIea(aplicaIEA));
+
+      // TAREA 26 (§H.9-2): los 2 FALTA de SQ que dependían de "innovador" —
+      // solo para Síntesis Química (la auditoría no encontró este gap en
+      // ningún otro subtipo).
+      if (tipoMedicamento.includes('Síntesis Química')) {
+        docs.push(docEstudiosClinicosSQ(esInnovador));
+        docs.push(docResumenSeguridadSQ(esInnovador));
+      }
 
       // Suplementos y Productos Naturales tienen su propia variante condicional
       // de "estabilidad" (depende de la vida útil declarada) — reemplaza la
@@ -272,18 +383,32 @@ function getChecklist(tramiteType, options = {}) {
         if (tipoMedicamento.includes('Síntesis Química') && !docs.find(d => d.id === 'cert_analisis')) {
           docs.push(DOC_CERT_ANALISIS);
         }
+
+        // TAREA 25 (§H.9, decisión 4 — matriz BIO ítem BIO-07, sección
+        // Abreviado): declaración jurada de identidad de fabricación y
+        // formulación, distinta del expediente ARR (aprobacion_arr) — solo
+        // Biológicos/Biotecnológicos, solo Abreviado.
+        if (tipoMedicamento.some(t => ['Biológicos', 'Biotecnológicos'].includes(t)) && !docs.find(d => d.id === 'declaracion_identidad_abreviado')) {
+          docs.push(DOC_DECLARACION_IDENTIDAD_ABREVIADO);
+        }
       }
 
-      return docs;
+      break;
     }
 
-    case 'cosmeticos':   return COS_DOCS;
-    case 'higienicos':   return HIG_DOCS;
-    case 'plaguicidas':  return PLAG_DOCS;
-    case 'excepcion':    return EXC_DOCS;
-    case 'publicidad':   return PUB_DOCS;
-    default:             return [];
+    case 'cosmeticos':   docs = COS_DOCS; break;
+    case 'higienicos':   docs = HIG_DOCS; break;
+    case 'plaguicidas':  docs = PLAG_DOCS; break;
+    case 'excepcion':    docs = EXC_DOCS; break;
+    case 'publicidad':   docs = PUB_DOCS; break;
+    default:             docs = []; break;
   }
+
+  // D10: responsable en TODOS los documentos, de cualquier tramite/subtipo.
+  return docs.map(d => ({
+    ...d,
+    responsable: FARMAZED_DOC_IDS.has(d.id) ? 'farmazed' : 'cliente',
+  }));
 }
 
 const TRAMITE_TYPES = ['medicamentos', 'cosmeticos', 'higienicos', 'plaguicidas', 'excepcion', 'publicidad'];

@@ -20,11 +20,13 @@ async function requireAuth(req, res, next) {
 }
 
 /**
- * Requires admin role (custom claim: admin === true)
- * Must run after requireAuth
+ * Requires admin role. E3 (PM_COMMENTS §H.4): admite tanto el claim legacy
+ * `admin: true` como el nuevo `role: 'admin'` — así ninguna cuenta creada
+ * antes de la migración de roles pierde acceso admin. Ver
+ * middleware/permissions.js para el resto de la matriz de roles.
  */
 function requireAdmin(req, res, next) {
-  if (!req.user?.admin) {
+  if (!req.user?.admin && req.user?.role !== 'admin') {
     return res.status(403).json({ error: 'Admin access required' });
   }
   next();

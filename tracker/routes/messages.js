@@ -1,6 +1,7 @@
 const { Router } = require('express');
 const admin       = require('firebase-admin');
 const { requireAuth } = require('../middleware/auth');
+const { canAccessCase, requirePermission } = require('../middleware/permissions');
 
 const router = Router({ mergeParams: true }); // mergeParams to access :caseId
 const db     = () => admin.firestore();
@@ -10,12 +11,12 @@ async function getCaseOrFail(caseId, user, res) {
   const snap = await db().collection('cases').doc(caseId).get();
   if (!snap.exists) { res.status(404).json({ error: 'Case not found' }); return null; }
   const data = snap.data();
-  if (!user.admin && data.clientId !== user.uid) { res.status(403).json({ error: 'Forbidden' }); return null; }
+  if (!canAccessCase(user, data)) { res.status(403).json({ error: 'Forbidden' }); return null; }
   return { id: snap.id, ...data };
 }
 
 // ─── GET /api/cases/:caseId/messages ───────────────────────────────────────────
-router.get('/', requireAuth, async (req, res) => {
+router.get('/', requireAuth, requirePermission('messages.read'), async (req, res) => {
   try {
     const caseData = await getCaseOrFail(req.params.caseId, req.user, res);
     if (!caseData) return;
@@ -44,7 +45,7 @@ router.get('/', requireAuth, async (req, res) => {
 });
 
 // ─── POST /api/cases/:caseId/messages ──────────────────────────────────────────
-router.post('/', requireAuth, async (req, res) => {
+router.post('/', requireAuth, requirePermission('messages.send'), async (req, res) => {
   try {
     const caseData = await getCaseOrFail(req.params.caseId, req.user, res);
     if (!caseData) return;

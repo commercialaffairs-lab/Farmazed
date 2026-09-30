@@ -22,6 +22,10 @@ const { requireMcpKey } = require('../middleware/auth');
 const { getChecklist }  = require('../data/faddi_checklists');
 const { rechazoTramite } = require('../data/tramites_habilitados');
 const { getSignedUrl }  = require('../services/storage');
+const { CASE_STATUSES, isValidStatus, DOC_STATUSES, PENDING_DOCS } = require('../data/case_status');
+const { serializeTimestamps } = require('../utils/serialize');
+const { checkTransition, computeSideEffects, afterTransition } = require('../services/transitions');
+const { getAcceptedQuoteLineForCase } = require('./quotes');
 
 const router = Router();
 const db     = () => admin.firestore();
@@ -35,7 +39,7 @@ const TOOLS = [
     inputSchema: {
       type: 'object',
       properties: {
-        status:      { type: 'string', description: 'Filter by status: draft|submitted|in_review|faddi_ready|faddi_submitted|approved|observed|denied' },
+        status:      { type: 'string', description: `Filter by status: ${CASE_STATUSES.join('|')}` },
         tramiteType: { type: 'string', description: 'Filter by type: medicamentos|cosmeticos|higienicos|plaguicidas|excepcion|publicidad' },
         assignedTo:  { type: 'string', description: 'Filter by assigned admin email' },
         limit:       { type: 'number', description: 'Max results (default 50)' },
@@ -62,7 +66,7 @@ const TOOLS = [
       properties: {
         caseId: { type: 'string' },
         faddiStep: { type: 'number', description: 'Filter by FADDI step number (e.g. 15)' },
-        status: { type: 'string', description: 'Filter: uploaded|reviewing|approved|rejected' },
+        status: { type: 'string', description: `Filter: ${DOC_STATUSES.join('|')}` },
       },
     },
   },
@@ -100,10 +104,12 @@ Use this at the start of any FADDI fill-assist session.`,
       required: ['caseId'],
       properties: {
         caseId:     { type: 'string' },
-        status:     { type: 'string', description: 'New status value' },
+        status:     { type: 'string', description: `New status value: ${CASE_STATUSES.join('|')}` },
         notes:      { type: 'string', description: 'Internal admin notes' },
         assignedTo: { type: 'string', description: 'Admin email to assign' },
         faddi:      { type: 'object', description: 'FADDI tracking data: { expedienteNumber, solicitudNumber, submittedAt, lastFaddiStatus, observations }' },
+        override:   { type: 'boolean', description: 'Fuerza un salto de status fuera del mapa de transiciones validas (queda registrado en el historial del caso)' },
+        reason:     { type: 'string', description: 'Motivo del override — se guarda en el historial cuando override=true' },
       },
     },
   },
@@ -155,9 +161,12 @@ async function handleGetCase({ caseId }) {
   if (!snap.exists) throw new Error(`Case ${caseId} not found`);
 
   const data      = snap.data();
+  const linea     = await getAcceptedQuoteLineForCase(caseId);
   const checklist = getChecklist(data.tramiteType, {
     tipoRegistro:    data.tipoRegistro,
     tipoMedicamento: data.tipoMedicamento,
+    aplicaIEA:       linea?.aplicaIEA,
+    esInnovador:     data.esInnovador,
   });
 
   // Get doc upload status
@@ -419,7 +428,7 @@ async function handleGetFaddiContext({ caseId }) {
   return context;
 }
 
-async function handleUpdateCase({ caseId, status, notes, assignedTo, faddi, tramiteType }) {
+async function handleUpdateCase({ caseId, status, notes, assignedTo, faddi, tramiteType, override, reason }) {
   // F-6: tramiteType no es un campo actualizable de esta herramienta; si un
   // cliente MCP lo manda, debe ser un trámite habilitado (antes se ignoraba).
   if (tramiteType !== undefined) {
@@ -429,13 +438,60 @@ async function handleUpdateCase({ caseId, status, notes, assignedTo, faddi, tram
     }
   }
 
+  // D06/D06b (07 §4#8, §5): esta es la segunda ruta de escritura de status —
+  // sin esto, cualquier cliente MCP puede saltarse por completo la
+  // validacion de cases.js. Error sin rpcCode -> el handler por defecto lo
+  // manda como -32000 (ver mcpError() mas abajo).
+  if (status !== undefined && !isValidStatus(status)) {
+    throw new Error(`status invalido: "${status}". Validos: ${CASE_STATUSES.join(', ')}`);
+  }
+
+  let caseData = null;
+  if (status !== undefined) {
+    const snap = await db().collection('cases').doc(caseId).get();
+    if (!snap.exists) throw Object.assign(new Error('Case not found'), { rpcCode: -32602 });
+    caseData = snap.data();
+  }
+
   const update = { updatedAt: admin.firestore.Timestamp.now() };
   if (status     !== undefined) update.status     = status;
   if (notes      !== undefined) update.notes      = notes;
   if (assignedTo !== undefined) update.assignedTo = assignedTo;
   if (faddi      !== undefined) update.faddi       = faddi;
 
+  // TAREA 22 (ajuste PM sobre TAREA 21): mismos gates que cases.js (REST),
+  // vía tracker/services/transitions.js — antes esta ruta solo repetía
+  // transición+pago, sin cotización de fase_04 ni las dos confirmaciones de
+  // fase_08 (hueco de cumplimiento real: Cowork podía saltárselos). El
+  // permiso por ROL (canTransitionCase) no aplica aquí — MCP_KEY ya es
+  // acceso de nivel admin, sin usuario individual en esta capa.
+  const isRealTransition = status !== undefined
+    && (status !== caseData.status || (status === 'fase_08' && caseData.status === 'fase_08'));
+  let gateResult = { ok: true, gatesSaltados: [], isFase8Recycle: false };
+
+  if (isRealTransition) {
+    gateResult = await checkTransition(caseData, caseId, status, { override: override === true, reason });
+    if (!gateResult.ok) {
+      throw new Error(gateResult.error.replace('{"override":true}', 'override:true en la llamada MCP'));
+    }
+    Object.assign(update, computeSideEffects(caseData, status, gateResult.isFase8Recycle));
+  }
+
   await db().collection('cases').doc(caseId).update(update);
+
+  if (isRealTransition) {
+    const isOverride = gateResult.gatesSaltados.length > 0 && override === true;
+    const registrarMotivo = isOverride || status === 'cerrado';
+    await db().collection('cases').doc(caseId).collection('statusHistory').add({
+      from: caseData.status, to: status,
+      override: isOverride,
+      reason: registrarMotivo ? (reason || '') : null,
+      by: 'mcp', byEmail: null,
+      at: admin.firestore.Timestamp.now(),
+    });
+    await afterTransition(caseId, caseData, status, { uid: 'mcp', email: null });
+  }
+
   return { updated: true, caseId, fields: Object.keys(update) };
 }
 
@@ -469,11 +525,23 @@ async function handleRequestDocument({ caseId, faddiDocId, message }) {
     });
   }
 
-  // Update case status to pending_docs
+  // Update case status to pending_docs. Entrar a pending_docs es siempre
+  // valido desde cualquier fase (isValidTransition — §H.1), pero se registra
+  // igual para el historial de auditoria de las 3 rutas de escritura.
+  const caseSnap = await db().collection('cases').doc(caseId).get();
+  const prevStatus = caseSnap.exists ? caseSnap.data().status : null;
+
   await db().collection('cases').doc(caseId).update({
-    status: 'pending_docs',
+    status: PENDING_DOCS,
     updatedAt: now,
   });
+
+  if (prevStatus !== null && prevStatus !== PENDING_DOCS) {
+    await db().collection('cases').doc(caseId).collection('statusHistory').add({
+      from: prevStatus, to: PENDING_DOCS, override: false,
+      by: 'mcp', byEmail: null, at: now,
+    });
+  }
 
   return { requested: true, faddiDocId, message };
 }
@@ -537,7 +605,7 @@ router.post('/', requireMcpKey, async (req, res) => {
     try {
       const result = await handler(args);
       return res.json(mcpSuccess(id, {
-        content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+        content: [{ type: 'text', text: JSON.stringify(serializeTimestamps(result), null, 2) }],
       }));
     } catch (e) {
       return res.json(mcpError(id, e.rpcCode || -32000, e.message, e.rpcData));
@@ -556,7 +624,10 @@ router.get('/', (req, res) => {
     transport:   'streamable-http',
     endpoint:    '/mcp',
     auth:        'Bearer token — contact Farmazed admin for your MCP_KEY',
-    tools:       TOOLS.map(t => ({ name: t.name, description: t.description })),
+    // D06c (07 §4#9): incluir inputSchema, no solo el nombre — es donde
+    // viven las descripciones generadas desde CASE_STATUSES/DOC_STATUSES
+    // (ver TOOLS arriba). Sin esto, GET /mcp nunca mostraba el enum.
+    tools:       TOOLS.map(t => ({ name: t.name, description: t.description, inputSchema: t.inputSchema })),
   });
 });
 
