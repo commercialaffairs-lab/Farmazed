@@ -17,6 +17,7 @@ FADDI CREDENTIALS.txt
 # ── Documentos regulatorios (archivos de trabajo) ──
 *.pdf
 *.docx
+!farmazed-web/formularios/*.docx
 *.doc
 
 # ── Misc ──
