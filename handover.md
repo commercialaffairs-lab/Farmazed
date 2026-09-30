@@ -1866,3 +1866,2743 @@ Estado: **nada de esto se ejecutó.** Es el plan para discutir esta noche.
 - Punto 4 (`POST /api/admin/set-role`, x-admin-key): NO tiene el mismo problema. Ningún JS lo llama y la clave nunca está embebida (viene de env en el servidor). `admin/precios.html:332,339,463` usa `x-admin-key` pero la clave la teclea el admin en runtime, no está en el código. Sin cambios; sigue siendo secreto compartido, no token por usuario (mejora posible, no pedida).
 - **No probado en vivo:** el flujo dashboard→/api/scans necesita el tracker desplegado con este cambio; hoy producción corre el código viejo. Además depende de que la cuenta admin tenga el claim `admin` (el mismo que ya usa el gate `isAdmin()`).
 - Sigue pendiente: rotar `ADMIN_KEY`/`MCP_KEY` en Cloud Run (bloqueado por permisos gcloud) y push/deploy. Ojo: hasta el deploy, la clave vieja seguirá en el historial git y producción sigue aceptándola.
+
+## 2026-09-28 — Rescate de 11 assets de marca desde historial git de pb-website
+
+Tarea de Rick (vía PM, fuera del alcance normal del repo Farmazed): en
+`~/Projects/Dominius/pb-website` la carpeta `products/portal/demo/Proyecto Farzetd
+Regulatory/` (borrada en el commit `f1e68c85` — "DemoApp cleanup") tenía la última copia
+de assets de marca de Farmazed que no existen en ningún otro lado. Ese historial se va a
+purgar, así que se rescataron antes de perderlos.
+
+- Extraídos con `git show <commit>:<ruta>` (solo lectura, sin checkout/stash/commit) desde
+  el commit padre `d387eca08c3e9e1308c6eb0a6b5dadaa2f148256` (última versión existente
+  antes del borrado).
+- Destino: `~/Projects/Farmazed/Markting/rescate-pb-website-2026-09-28/` (fuera del repo
+  Farmazed, no se commiteó nada en ningún repo).
+- Los 11 archivos pedidos, todos > 0 bytes: `Email.png`, `Firma.png`, `Firma.psd`,
+  `Firma con Logo.png`, `Firma con Logo e Idoneidad.png`, `Logo Con Idoneidad.png`,
+  `Logos.psd`, `Tarjeta.png`, `Tarjeta.psd`, `Untitled-2.psd`,
+  `Gemini_Generated_Image_e8v6q1e8v6q1e8v6.png`. Listado con tamaño y commit de origen en
+  `listado.txt` dentro de esa misma carpeta.
+- **No se extrajo** `FADDI CREDENTIALS.txt` (excluido a propósito — según las reglas del
+  proyecto, nada de credenciales en archivos).
+- pb-website quedó intacto: mismo HEAD (`3fd7faa1`) antes y después, sin nuevos commits.
+  Había ~668 líneas de `git status` de trabajo previo sin commitear en ese repo (no es
+  nuestro, no se tocó).
+- No se hizo nada más con estos assets (no se movieron a `farmazed-web/`, no se revisó su
+  contenido) — la tarea era solo rescatar del historial antes de la purga.
+
+## 2026-09-28 — Push a origin/main (autorizado por Rick, PM_COMMENTS Parte G #4)
+
+- Paso 1 (`git remote set-url` a `commercialaffairs-lab/Farmazed`) quedó bloqueado por el
+  clasificador de permisos del harness (dos motivos distintos: "Remote Repoint" y luego
+  "Data Exfiltration" tras pedir aprobación). No se forzó ni se rodeó. El PM confirmó que
+  `RichoX-Hub/Farmazed` redirige al mismo repo (`gh api` devuelve `commercialaffairs-lab`
+  para ambas URLs), así que se hizo el push con el origin tal cual estaba. El `set-url` lo
+  hace Rick directamente desde su terminal cuando lo necesite.
+- `git fetch origin` + `git status -sb` → confirmado `ahead 11` antes del push, con
+  `PM_COMMENTS.md`, `handover.md` modificados y `.vscode/` sin trackear (se dejaron fuera,
+  ningún commit nuevo).
+- `git diff origin/main..main | grep 'fz-admin-2026|fz-mcp-2026|admins123'` → todas las
+  coincidencias en archivos de código (`.js`/`.html`/`tracker/.env.example`) son líneas
+  borradas (`-`); las únicas líneas agregadas (`+`) con esas cadenas están en
+  `PM_COMMENTS.md` y `handover.md` (documentación de la limpieza ya hecha, no código).
+  Confirmado con `git diff -- '*.js' '*.html' '*.json' '*.env*'` filtrando solo código.
+- `git push origin main` → éxito, sin bloqueo del clasificador (`0d156fb..5729a63`).
+  GitHub avisó el redirect de repo movido, como se esperaba.
+- Verificación de aceptación: `git status -sb` sin `ahead`; `git rev-parse main` ==
+  `git ls-remote origin main` == `5729a63ef8f53cd90b4740182a81bdf4fe961e61`. Ambos OK.
+- No se commiteó nada en esta tarea (solo push de lo que ya estaba commiteado).
+
+## 2026-09-28 — Rotación de ADMIN_KEY / MCP_KEY en Cloud Run (autorizado por Rick, PM_COMMENTS Parte G #2)
+
+**Regla dura respetada: ningún valor de clave (vieja ni nueva) se imprimió en terminal ni se escribió aquí.**
+
+- **Identificación del servicio vivo:** hay `farmazed-tracker` en DOS proyectos GCP:
+  - `farmazed` (267037695065) → tiene las 4 env vars reales (`GCS_BUCKET`, `ADMIN_KEY`,
+    `MCP_KEY`, `REDIRECT_URL`) y coincide con la URL histórica usada en el código
+    (`farmazed-tracker-267037695065.us-central1.run.app`). **Este es el que sirve
+    producción.**
+  - `durable-sky-484422-b5` (420430979947) → también tiene un `farmazed-tracker`, pero
+    **sin ninguna variable de entorno** — huérfano/de prueba, no es el que sirve. No se
+    tocó.
+- **Rotación:** `gcloud run services update farmazed-tracker --project=farmazed --region
+  us-central1 --update-env-vars "ADMIN_KEY=...,MCP_KEY=..."` en un solo comando, valores
+  generados con `openssl rand -hex 32`, sin `echo`, con `--update-env-vars` (no
+  `--set-env-vars`, para no pisar `GCS_BUCKET`/`REDIRECT_URL`). Nueva revisión
+  `farmazed-tracker-00003-ggw`, sirviendo 100% del tráfico. No se desplegó imagen nueva.
+- **Verificación (solo códigos HTTP, sin exponer nada):**
+  - `GET /health` → `200`
+  - `POST /api/admin/set-role` con `x-admin-key` vieja (`fz-admin-2026`) → `401`
+  - `POST /mcp` con `Bearer` viejo (`fz-mcp-2026`) → `401`
+- **Pendiente real:** las claves nuevas quedan solo en Cloud Run (env vars del servicio).
+  No hay Secret Manager en uso todavía — si se quiere gestión centralizada de secretos,
+  es tarea aparte. `tracker/.env.example` sigue con placeholders (`change-me`), correcto,
+  no se tocó.
+- Rick/PM: si necesitan las claves nuevas para configurar algo (ej. plugin MCP de Cowork,
+  Paso 8 del handover), pedirlas por un canal fuera de este repo — no las tengo impresas
+  en ningún log de esta sesión, pero si se necesitan hay que volver a leerlas con
+  `gcloud run services describe farmazed-tracker --project=farmazed --region us-central1
+  --format='value(spec.template.spec.containers[0].env)'` desde una sesión donde sí se
+  acepte mostrarlas.
+
+## 2026-09-29 — Deploy a producción: tracker v2 + farmazed-web (autorizado por Rick, PM_COMMENTS Parte F paso 3)
+
+Desde el checkout local (`HEAD 5729a63`, igual a `origin/main` — no hizo falta clonar).
+
+**3a — Tracker:**
+- `gcloud builds submit --tag gcr.io/farmazed/farmazed-tracker --project farmazed` → SUCCESS.
+- `gcloud run deploy farmazed-tracker ... --service-account farmazed-api-sa@farmazed.iam.gserviceaccount.com --allow-unauthenticated --port 8080` (sin `--set-env-vars`, para no pisar las claves rotadas) → revisión `farmazed-tracker-00004-vp8`, 100% tráfico.
+- Verificado: `/health` → 200. Nombres de env vars siguen siendo los 4: `GCS_BUCKET;ADMIN_KEY;MCP_KEY;REDIRECT_URL` (valores no expuestos, siguen las claves rotadas de la Tarea 3).
+
+**3b — farmazed-web:**
+- `gcloud builds submit --tag gcr.io/farmazed/farmazed-web --project farmazed` → SUCCESS.
+- `gcloud run deploy farmazed-web ... --allow-unauthenticated --port 80 --memory 256Mi --quiet` → revisión `farmazed-web-00016-zh7`, 100% tráfico.
+
+**Paso 5 — Verificación end-to-end (curl, todo 200):**
+`farmazed.com/`, `farmazed.com/login.html`, `farmazed.com/portal/login.html`,
+`farmazed.com/admin/casos.html`, `api.farmazed.com/health` (domain mapping ya activo).
+`grep -c admins123` sobre `login.html`, `client-dashboard.html` y `dashboard.html` servidos
+por producción → **0 en los tres**: el login demo hardcodeado ya no está en prod, el
+pivote de arquitectura del 2026-08-26 (Firebase Auth real) por fin llegó a producción.
+
+**Limpieza post-deploy:**
+- `gcloud run services delete farmazed-tracker --region us-central1 --project
+  durable-sky-484422-b5` → borrado el servicio huérfano identificado en la Tarea 3 (sin
+  env vars, no era el que servía). Confirmado que el resto de servicios de ese proyecto
+  (pb-website, pb-leto, gangapack-*, etc.) quedaron intactos — no se tocó el proyecto, solo
+  el servicio.
+
+**Estado resultante:** producción (`farmazed.com` + `api.farmazed.com`) corre ahora el
+código v2 completo (tracker con auth real + portal/admin conectados a Firebase). Esto
+desbloquea probar en vivo lo que hasta ahora solo se había verificado en local: Paso 1
+(Firebase Auth ya estaba hecho), y los Pasos 4.5/5/7/8 del checklist original de arriba
+(seed de precios, primer usuario admin, verificación E2E, plugin MCP) siguen pendientes de
+ejecutar/confirmar — no se tocaron en esta tarea, que era solo el deploy.
+
+## 2026-09-29 — Borrado de zona DNS vacía en proyecto Dominius (autorizado directo por Rick)
+
+- `gcloud dns record-sets list --zone farmazed-com --project durable-sky-484422-b5` →
+  solo `NS` y `SOA` (nameservers `ns-cloud-c1..c4.googledomains.com`, distintos de los
+  reales), confirmando que era una zona duplicada/vacía sin usar.
+- `gcloud dns managed-zones delete farmazed-com --project durable-sky-484422-b5` → borrada.
+- Verificado que no se tocó nada más: `pbtradingsolutions-com` (misma proyecto Dominius)
+  intacta; `farmazed-zone` en el proyecto `farmazed` (la zona real) intacta.
+- `dig NS farmazed.com @8.8.8.8` → sigue dando `ns-cloud-e1..e4.googledomains.com` (los
+  nameservers reales, autoritativos, no afectados por el borrado). `curl farmazed.com` →
+  200.
+
+## 2026-09-29 — Fase 0 del encargo de 3 interfaces: entorno dev local con emuladores Firebase (PM_COMMENTS Parte H)
+
+**Sin commit, sin deploy — todo local.** Detalle completo del flujo en **`DEV_LOCAL.md`**
+(nuevo, raíz del repo). Resumen de lo hecho:
+
+**Java:** los emuladores de Firestore piden JDK 21+. Instalado Temurin 21 portátil en
+`~/.local/jdk-21.0.12.1+1-jre` (sin sudo), `~/.bashrc` de este usuario ya exporta
+`JAVA_HOME`/`PATH`. (Probé primero con JDK 17 — firebase-tools lo rechazó, tuve que
+resubir a 21; el 17 quedó borrado.)
+
+**Config del emulador:** `firebase.json` + `.firebaserc` nuevos en la raíz, proyecto
+`demo-farmazed` (el prefijo `demo-` es la convención de Firebase que fuerza modo
+offline — el SDK no puede pegarle a un proyecto real aunque falten env vars). Puertos:
+Auth 9099, Firestore 8090 (movido de 8080 porque lo usa el tracker), Storage 9199, UI
+4040 (movido de 4000, ocupado por otro proceso de esta máquina). `firestore.rules` /
+`storage.rules` abiertas a propósito — solo aplican al emulador, no se despliegan.
+
+**Backend (`tracker/`):**
+- `index.js` y `seed_pricing.js`: `projectId` ahora lee `FIREBASE_PROJECT_ID` con
+  fallback a `'farmazed'` — sin la env var, cero cambio en prod.
+- `services/storage.js`: detecta `STORAGE_EMULATOR_HOST` y usa `apiEndpoint`; como el
+  emulador de Storage no soporta signed URLs (no hay service account real local),
+  devuelve la URL de descarga directa del emulador en su lugar. Probado subiendo y
+  descargando un PDF de prueba end-to-end — funciona.
+- Nada de esto cambia el comportamiento en prod (todas las ramas nuevas están detrás de
+  env vars que solo se setean en dev local).
+
+**Frontend (`farmazed-web/portal/js/`):**
+- `config.js`: `IS_LOCAL` (hostname `localhost`/`127.0.0.1`) selecciona entre el
+  `FIREBASE_CONFIG` real y uno de mentira con `projectId: "demo-farmazed"`.
+- `auth.js`: `connectAuthEmulator(auth, 'http://localhost:9099')` solo cuando
+  `IS_LOCAL`. No hace falta `connectFirestoreEmulator`/`connectStorageEmulator` —
+  confirmado por grep que el frontend nunca usa Firestore/Storage directo, todo pasa
+  por la API del tracker.
+
+**Seed (`tracker/scripts/seed_emulador.js`, nuevo):** 1 admin + 1 cliente (Auth
+emulator, contraseña de desarrollo fija, no es secreto real — no sirve para nada fuera
+del emulador local), 3 casos del cliente en `draft`/`in_review`/`approved` (solo
+`medicamentos`/`cosmeticos`, los únicos trámites habilitados hoy — F-6), y 13
+categorías de precios delegando en `seed_pricing.js` (ejecutado como proceso hijo, sin
+tocar su `process.exit(0)` propio). IDs fijos + `set()` en todo → idempotente,
+verificado corriéndolo dos veces (3 casos, 13 precios, sin duplicar las dos veces).
+Guard: sin `FIRESTORE_EMULATOR_HOST`, aborta con `process.exit(1)` — verificado.
+
+**Verificación end-to-end (sin navegador disponible en esta sesión — probado al nivel
+de protocolo, minteando tokens reales del Auth emulator vía su REST API, que es
+exactamente lo que hace el SDK del navegador por debajo):**
+- `GET /health` → 200 contra el emulador.
+- Login admin y cliente: tokens reales del Auth emulator aceptados por
+  `requireAuth`/`requireAdmin`. `GET /api/cases` como admin ve los 3 casos; como
+  cliente también ve los 3 (son suyos) pero el filtro `clientId` sí corre. `GET
+  /api/admin/pricing` 200 solo con el claim `admin` puesto por el seed. Sin token →
+  401.
+- Subida real de documento (`POST /api/cases/:id/documents`) contra el Storage
+  emulator, descarga con la URL de fallback, y `GET .../checklist` reflejando
+  `uploaded: true` — flujo completo probado.
+- **Pendiente real:** no se verificó el login haciendo clic en `login.html` desde un
+  navegador real (no había uno disponible en esta sesión) — la prueba de arriba es a
+  nivel de protocolo/API, equivalente pero no idéntica a un click-through. Si hace
+  falta esa confirmación visual, decírmelo y la hago con Claude en Chrome.
+
+**D02 — 500 en `GET /api/cases/:id/documents`: intentado, NO reproducido.** Probado con
+caso vacío, caso con 1 documento, y caso inexistente (404 correcto) — los tres dan el
+código esperado. Revisando el código actual: `wizard.js` (Paso 4) llama a
+`/api/cases/:id/checklist`, **no** a `/documents` — confirmado por grep, ningún flujo de
+wizard activo llama a este endpoint. El único call site en el frontend activo es
+`client-dashboard.html:1010` y está envuelto en `.catch(() => ({ documents: [] }))`, así
+que un 500 ahí no se vería como error en consola. Esto refuerza el hallazgo de la
+sesión 2026-08-26: el 500 original reportado por el PM probablemente vino del
+`node_modules` corrupto de esa sesión (ya arreglado entonces), no de un bug real del
+endpoint. No se tocó código de `documents.js`. D03 (arreglar el 500) no aplica mientras
+no se reproduzca — si el PM quiere insistir, hace falta acceso a Firestore de
+staging/prod real, porque el emulador no reproduce límites de índices compuestos de
+producción (aunque esta query es de un solo campo, no debería necesitar índice
+compuesto de todos modos).
+
+**Estado de archivos:** todo sin commitear (`firebase.json`, `.firebaserc`,
+`firestore.rules`, `storage.rules`, `firestore.indexes.json`, `DEV_LOCAL.md`,
+`tracker/scripts/seed_emulador.js` son nuevos; `tracker/index.js`,
+`tracker/seed_pricing.js`, `tracker/services/storage.js`,
+`farmazed-web/portal/js/config.js`, `farmazed-web/portal/js/auth.js` están modificados).
+Procesos de prueba (tracker local + emuladores) detenidos al terminar, puertos
+liberados.
+
+## 2026-09-29 — Ajuste de seguridad post-Fase 0: reglas del emulador renombradas
+
+Rick pidió esto antes de seguir con E1: `firestore.rules`/`storage.rules` con nombre por
+defecto y `allow if true` eran un riesgo — un `firebase deploy --project farmazed` por
+error las subiría a producción y la abriría por completo.
+
+- Renombradas a `firestore.emulator.rules` y `storage.emulator.rules`. `firebase.json`
+  actualizado para apuntar a los nuevos nombres.
+- Comentario de advertencia agregado dentro de cada archivo de reglas.
+- `DEV_LOCAL.md`: agregada la línea en negrita **"Nunca correr `firebase deploy` desde
+  este repo."**, con la explicación de por qué los nombres no son los de por defecto.
+- Sin commit.
+
+## 2026-09-29 — TAREA 7 (E1, máquina de estados): D-INV, D05, D05b, D06+D06b, D06c, D07
+
+`organizacion/07_ALCANCE_E1_VERIFICADO.md` §1.2/§1.4/§4. **Sin commit, sin deploy.**
+D18/D19 (panel admin, dashboard cliente) quedan para la tarea siguiente — no se tocó
+`casos.html`, `expediente.html` ni `client-dashboard.html`.
+
+### D-INV — `organizacion/inventario_estados.txt` (nuevo)
+
+Grep sistemático sobre `tracker/` y `farmazed-web/` (excluyendo `node_modules/` y
+`src/`, el árbol de terceros). **86 sitios (archivo:línea) distintos, 131 ocurrencias de
+literal** — más granular que los "32 sitios" de 07 §1.2 porque ahí se agrupan rangos
+multilínea en una sola fila; esta lista es línea por línea. Los mismos 8 archivos de 07
+§1.2 están cubiertos. Se agregaron a mano 3 líneas que el regex de comillas no capturaba
+(`mcp.js:38,65,103` — enums pipe-separados dentro de un string de descripción), y se
+anotó el hueco central de D06b (`mcp.js:433`, `handleUpdateCase` sin validar).
+
+### D05 + D05b — `tracker/data/case_status.js` (nuevo)
+
+- `CASE_STATUSES`: 18 valores (`fase_01`..`fase_14` + `draft`, `submitted`,
+  `pending_docs`, `deleted`). Sin repetidos. `isValidStatus()` exportado.
+- Labels de las 14 fases en `null` a propósito — R18 fijó claves y orden, el texto
+  (Zelky, Z19) sigue pendiente y no bloquea nada de esto, igual que decidió 07 §1.4 fila
+  D05.
+- `manual: true` en `fase_07`, `fase_10`, `fase_12` (control de calidad, no avanzan
+  solas — PM_COMMENTS.md:679).
+- `DOC_STATUSES` (D05b): **7 valores**, no 8. Decisión documentada en el archivo:
+  **se elimina `pending_upload`** — nunca lo escribe ningún endpoint, y leyendo
+  `wizard.js` completo confirmé que tampoco lo asigna el frontend (marca `pending` al
+  seleccionar el archivo, `uploaded` al terminar la subida; `pending_upload` es una rama
+  de UI para un estado intermedio que el código nunca llega a setear).
+- Verificado con `node -e`: `CASE_STATUSES.length` → 18, únicos, `isValidStatus('fase_07')`
+  → true, `isValidStatus('fase_99')` → false.
+
+### D06 + D06b — validación en las tres rutas de escritura
+
+- `tracker/routes/cases.js` — `PATCH /:id`: valida `status` contra `isValidStatus()`
+  para admin y cliente (el cliente ya estaba limitado a `'submitted'`, siempre válido;
+  esto cierra el hueco del lado admin, que aceptaba cualquier string).
+- `tracker/routes/documents.js` — `PATCH /:docId`: valida contra `isValidDocStatus()`.
+  Reemplazado el `'pending_docs'` hardcodeado de la línea 149 (ruta `/request`) por la
+  constante `PENDING_DOCS`.
+- `tracker/routes/mcp.js` — `handleUpdateCase` (la "segunda ruta de escritura" que 07
+  §1.3a marca como el hueco crítico: saltaba `cases.js` por completo desde Claude
+  Cowork): ahora valida con `isValidStatus()` y lanza `Error` sin `rpcCode` — el handler
+  JSON-RPC ya lo mapea a `-32000` por default. Reemplazado el `'pending_docs'`
+  hardcodeado de `handleRequestDocument` por `PENDING_DOCS`.
+- **Verificado end-to-end contra el emulador** (tracker + Auth emulator, tokens reales):
+  - `PATCH /api/cases/<id>` admin + `{"status":"fase_99"}` → **400**, mensaje con los 18
+    válidos.
+  - `PATCH /api/cases/<id>` admin + `{"status":"fase_05"}` → **200**, Firestore refleja
+    el cambio (confirmado en la respuesta).
+  - `PATCH /api/cases/<id>` cliente sobre un caso recién creado (en `draft`) +
+    `{"status":"fase_07"}` → **400** ("Clients may only set status to submitted") — el
+    comportamiento del cliente no cambió.
+  - `tools/call farmazed_update_case` + `{"status":"fase_99"}` → error JSON-RPC
+    **`-32000`** con los 18 válidos. Con `{"status":"fase_02"}` (válido) → éxito.
+  - `PATCH /api/cases/<id>/documents/<docId>` admin + `{"status":"loquesea"}` → **400**;
+    con `{"status":"approved"}` → **200**.
+  - `grep -rn "'pending_docs'" tracker/` da **2 resultados, no 0** — ambos son la
+    definición canónica dentro de `case_status.js` (`CASE_STATUSES` y la constante
+    `PENDING_DOCS` misma). Excluyendo ese archivo (`--exclude=case_status.js`) → **0**.
+    El criterio literal de 07 §4#8 se escribió antes de que existiera una fuente única
+    de verdad — interpretarlo al pie de la letra sería imposible (el string tiene que
+    vivir en algún lado). Si el PM quiere el grep literal en 0 sin excepciones, dímelo y
+    lo resolvemos de otra forma (ej. derivar el string de otra constante ofuscada, lo
+    cual sería peor).
+
+### D06c — descripciones del MCP generadas desde el enum
+
+- `mcp.js:38,65,103` (los mismos 3 sitios que marcaba 07 §1.4): las descripciones de
+  `farmazed_list_cases`, `farmazed_list_documents` y `farmazed_update_case` ahora usan
+  `` `...${CASE_STATUSES.join('|')}` `` / `DOC_STATUSES.join('|')` en vez de texto
+  literal.
+- **Encontré y corregí un hueco no anticipado por 07:** `GET /mcp` (el endpoint de
+  discovery del plugin) devolvía solo `{name, description}` por tool — el
+  `inputSchema` (donde vive el enum) nunca se exponía ahí, solo en `tools/list`. Sin
+  este fix, el criterio de aceptación de D06c ("GET /mcp muestra los 18 valores") era
+  imposible de cumplir literalmente. Cambié `GET /mcp` para incluir también
+  `inputSchema`.
+- Verificado: `GET /mcp` → `farmazed_list_cases.inputSchema.properties.status.description`
+  lista los 18 valores exactos. Prueba de "agregar un estado no rompe mcp.js": agregué
+  temporalmente un valor de prueba a `CASE_STATUSES`, reinicié el tracker, apareció en
+  `GET /mcp` sin tocar `mcp.js`, y revertí el cambio.
+
+### D07 — `tracker/scripts/migrate_status.js` (nuevo)
+
+**Mapeo PROVISIONAL — ver cabecera del archivo, no confirmado por Rick.** 07 §1.3b es
+explícito: la tabla real necesita un conteo de valores distintos en el `cases` de
+producción (mismo acceso de lectura que D08, que esta tarea no tiene). Lo que sí se
+puede afirmar sin ese acceso:
+- `draft`, `submitted`, `pending_docs`, `deleted` — sin cambio de nombre, ya están en el
+  enum de 18 tal cual.
+- `in_review`→`fase_03`, `faddi_ready`→`fase_06`, `faddi_submitted`→`fase_08`,
+  `observed`→`fase_11`, `approved`→`fase_14` — **provisional**, basado en la agrupación
+  de 4 fases ya aprobada (sesión 2026-08-26) más los anclajes confirmados (`fase_07/10/12`
+  control manual, `fase_13` verificación de saldo — R18).
+- **`denied` NO tiene mapeo — decisión pendiente del PM.** El enum de 18 que pidió esta
+  tarea no incluye ningún estado terminal de "rechazado". Migrar `denied` sin que
+  alguien decida su destino (¿queda fuera del enum como estado 19? ¿se mapea a
+  `deleted`? ¿a alguna fase terminal?) sería inventar una regla de negocio que no me
+  corresponde. El script detecta casos `denied`, los reporta, y **no los toca** — no
+  crashea el resto de la migración por esto.
+- Un valor de `status` que no esté ni en el enum de 18 ni en la tabla de mapeo hace que
+  el script **falle en voz alta y no escriba nada** (ni siquiera los casos que sí sabía
+  migrar) — verificado sembrando un caso con `status:'foobar123'`: exit code 1, mensaje
+  claro, cero escrituras.
+- **Solo corre contra el emulador** — se niega si falta `FIRESTORE_EMULATOR_HOST`,
+  verificado. No se corrió ni se intentó correr contra producción.
+- **Probado en el emulador** sembrando los 9 valores legacy (los 3 del seed normal +
+  6 adicionales creados directo en Firestore para esta prueba: `submitted`,
+  `pending_docs`, `deleted`, `faddi_ready`, `faddi_submitted`, `observed`) más un caso
+  `denied` y uno con valor basura:
+  - 1ª corrida: migró los 5 que necesitaban remapeo, reconoció los 4 sin cambio,
+    reportó el `denied` sin tocarlo.
+  - 2ª corrida (sin sembrar nada nuevo): **"Nada que migrar" — 0 cambios.** Idempotencia
+    confirmada.
+  - Con el caso basura presente: falla con exit code 1, no escribe nada; borrado el caso
+    de prueba, la migración volvió a correr limpia.
+
+### Pendiente para el PM/Rick
+
+1. **Decidir el destino de `denied`** en el enum de 18 (ver arriba) — bloquea que D07
+   pueda migrar el 100% de los casos reales.
+2. **Confirmar o corregir el mapeo provisional** de `in_review`/`faddi_ready`/
+   `faddi_submitted`/`observed`/`approved` a fases concretas — necesita el conteo real
+   de Firestore (mismo acceso que D08).
+3. Si el criterio literal `grep -rn "'pending_docs'" tracker/` → 0 (sin excepciones) es
+   importante tal cual está escrito en 07 §4#8, decírmelo — hoy da 2 (la fuente única de
+   verdad en `case_status.js`).
+
+## 2026-09-29 — TAREA 7b: enum de 21 estados, etiquetas reales, máquina de transiciones (PM_COMMENTS §H.1)
+
+Decisiones del PM en §H.1 (SVG canónico de Zelky) resueltas. **Sin commit, sin deploy,
+sin tocar Firestore de producción en ninguna forma** (ni lectura — el conteo real sigue
+pendiente de Rick).
+
+### `tracker/data/case_status.js` — 21 estados
+
+- **14 etiquetas reales** (antes `null`): Contacto inicial por la web, Captación de
+  datos del cliente, Vía de registro y categoría, Cotización del servicio, Pago de
+  honorarios, Expediente interno (CRM), Documentación digital, Paquete IEA y revisión
+  legal, Revisión del expediente, Cotejo con matrices guía, Originales por DHL,
+  Verificación física, Pago de honorarios Farmazed, Dossier y presentación.
+- **+3 estados post-presentación**: `observado_dnfd` (no terminal — puede volver a
+  fase_07/fase_10), `aprobado` y `denegado` (terminales). `CASE_STATUSES.length` → **21**,
+  sin repetidos (verificado).
+- **`TRANSITIONS` + `isValidTransition(from, to)`** (nuevo): avance secuencial
+  fase_01→...→fase_14; subsanación fase_10→fase_07, fase_12→fase_11,
+  observado_dnfd→fase_07|fase_10; fase_14→{observado_dnfd, aprobado, denegado}.
+  `pending_docs`/`deleted` son "interrupciones" — se puede entrar desde cualquier
+  estado, y desde `pending_docs` se puede volver a cualquiera (no hay dónde guardar "a
+  qué fase volver" sin la subcolección de actividad de Gap 5, que sigue pospuesta).
+  `aprobado`/`denegado` sin salida.
+
+### Validación de transición + `override` en las 3 rutas de escritura
+
+- `cases.js` (`PATCH /:id`), `mcp.js` (`handleUpdateCase`): antes de escribir, comparan
+  el `status` nuevo contra el actual con `isValidTransition()`. Salto inválido → **400**
+  (cases.js) / **-32000** (mcp.js) con el mensaje `"X" -> "Y"` y la instrucción de usar
+  `override:true`. En cases.js el override solo lo puede activar un admin (un cliente
+  nunca llega a este punto con un status fuera de `'submitted'`, ya estaba así); en
+  mcp.js el `MCP_KEY` ya es acceso de nivel admin, no hay usuario individual en esa capa.
+- **Nuevo: subcolección `cases/{id}/statusHistory`.** Cada cambio de `status` (válido,
+  por subsanación, o forzado con override) escribe un documento `{from, to, override,
+  by, byEmail, at}`. Se agregó también a `documents.js`/`mcp.js` en el punto donde se
+  fuerza `pending_docs` (siempre válido por diseño, pero se audita igual, por
+  consistencia con las otras dos rutas). Esto NO es el Gap 5 completo (actividad
+  general, pospuesto en 2026-08-26) — es un log angosto, solo para transiciones de
+  status, construido porque esta tarea explícitamente pidió que el override "quede
+  registrado en el historial del caso".
+- **Verificado en vivo contra el emulador** (tracker + Auth emulator + Firestore
+  emulator, con casos reales creados vía Admin SDK):
+  - `fase_09`→`fase_10` (secuencial) → 200, historial `override:false`.
+  - `fase_10`→`fase_07` (subsanación) → 200, historial `override:false`.
+  - `fase_07`→`fase_12` (salto inválido) sin `override` → 400; con `override:true` →
+    200, historial `override:true`.
+  - Cliente: caso nuevo (`draft`) → `PATCH {"status":"submitted"}` → 200 (sin cambio de
+    comportamiento).
+  - MCP: `fase_02`→`fase_14` sin `override` → `-32000` con el mensaje; con
+    `override:true` → éxito, historial `by:"mcp"`.
+  - `POST /api/cases/:id/documents/request` (admin) → `pending_docs`, y quedó
+    registrado en `statusHistory` (`fase_14 -> pending_docs`).
+
+### `tracker/scripts/migrate_status.js` — mapeo actualizado
+
+Confirmado (ya no provisional, §H.1): `denied`→`denegado`, `approved`→`aprobado`,
+`observed`→`observado_dnfd`, `faddi_submitted`→`fase_14` (el SVG de Zelky ubica
+"enviado a FADDI" en la última fase, no en una intermedia como se había estimado
+antes de leer el SVG). Siguen **provisionales**: `in_review`→`fase_03`,
+`faddi_ready`→`fase_06` — pendientes del conteo real de Firestore (Rick).
+
+Probado en el emulador con los 9 valores legacy + `denied`:
+- 1ª corrida: migró los 6 que necesitaban remapeo (incluido `denied`→`denegado`,
+  antes bloqueado como "sin destino"), reconoció los 4 sin cambio.
+- 2ª corrida: **"Nada que migrar" — 0 cambios.** Idempotencia confirmada de nuevo con
+  el mapeo nuevo.
+- No se tocó ni se intentó leer el Firestore de producción en ningún momento de esta
+  tarea.
+
+### Pendiente para el PM/Rick
+
+Solo queda el conteo real de Firestore de producción para confirmar
+`in_review`/`faddi_ready` — todo lo demás de §H.1 quedó implementado y probado.
+
+## 2026-09-29 — TAREA 8: D18 (admin) + D19 (cliente) sobre el enum de 21 estados
+
+**Sin commit, sin deploy.** ⚠️ **Bloqueo real: no pude hacer la prueba visual en
+navegador con Claude en Chrome — esa herramienta no está conectada en esta sesión**
+(`ToolSearch` no encontró ningún `mcp__claude-in-chrome__*`, ni el `enable__...`). Hice
+en su lugar una verificación funcional completa a nivel de API/protocolo, contra el
+emulador, ejecutando exactamente las mismas llamadas que la UI hace — ver el detalle en
+"Verificación" más abajo — pero **no hay capturas de pantalla reales**, porque no había
+navegador que capturar. No las inventé. Si Rick/el PM tienen una sesión con Chrome
+conectado, o quieren que lo intente en otra sesión de Claude Code, avísenme.
+
+### (a) Backend — `GET /api/meta/statuses` (nuevo, `tracker/routes/meta.js`)
+
+Expone `CASE_STATUSES`, `CASE_STATUS_META` (label+manual), `manual`, `terminal`,
+`postPresentacion`, `TRANSITIONS`, `DOC_STATUSES` — público, sin auth (es la misma
+info que ya vive en `case_status.js`, nada sensible). El frontend lee esto en vez de
+repetir la lista de estados. También agregué `GET /api/cases/:id/history` en
+`cases.js` (mismo control de acceso admin/cliente que el resto) para exponer
+`cases/{id}/statusHistory` (la subcolección de auditoría de TAREA 7b).
+
+`tracker/routes/cases.js` y `tracker/routes/mcp.js`: agregado soporte para `reason`
+(motivo del override) — se guarda en `statusHistory.reason` solo cuando
+`override:true` y la transición no era válida por sí sola; en cualquier otro caso
+queda `null`.
+
+### (b) D18 — `farmazed-web/admin/casos.html` + `expediente.html`
+
+Nuevo módulo compartido **`farmazed-web/portal/js/status_ui.js`** — única fuente de
+presentación (colores Bootstrap por estado, íconos de estado de documento). Todo lo
+demás (labels, transiciones, manual/terminal) viene de `GET /api/meta/statuses`, nunca
+repetido como literal.
+
+- `casos.html`: quitadas las 8 clases CSS `.badge-<estado>` y los mapas `BADGE`/`LABEL`
+  hardcodeados. Badges/labels ahora salen de `status_ui.js`. Contadores rediseñados
+  (ya no tienen sentido los 4 viejos "en_review/faddi_ready/faddi_submitted/approved"):
+  Total, Control manual, Docs Pendientes, Post-presentación, Aprobados. Chips de
+  filtro generados dinámicamente por cada estado que efectivamente aparece en los
+  casos cargados (con 21 estados posibles, chips vacíos para todos sería ruido).
+- `expediente.html`:
+  - El `<select>` de estado ya no es una lista fija de 7 — se construye con
+    `GET /api/meta/statuses`: solo el estado actual + las transiciones válidas desde
+    ahí (`TRANSITIONS[status_actual]`). Con el checkbox "Forzar (override)" marcado,
+    se repuebla con los 21 estados completos.
+  - **Override con motivo obligatorio**: al marcar el checkbox aparece un campo de
+    texto; sin motivo, el botón de guardar rechaza el submit antes de llamar a la API.
+  - **Confirmación explícita en fase_07/10/12**: si el estado ACTUAL del caso es una
+    fase manual y se intenta cambiarlo, un `confirm()` pide verificar
+    ("Verifique: <label de la fase>. ¿Confirma el avance a...?") antes de guardar.
+  - **Historial de estado**: nueva tarjeta que lista `cases/{id}/statusHistory`
+    (from→to, override, motivo si aplica, quién y cuándo).
+  - Iconos/colores de estado de documento (antes hardcodeados en dos objetos
+    inline) ahora vienen de `status_ui.js` (`getDocStatusIcon`/`getDocStatusColor`).
+
+### (c) D19 — `farmazed-web/client-dashboard.html`
+
+`STATUS_PHASE` (antes 9 entradas) remapeado a las 21, conservando el flag
+`bloqueado`. Agrupación en las 4 fases visuales del pipeline existente (no se rediseñó
+el pipeline de 4 puntos — eso sería un cambio de diseño mayor no pedido): 1
+Diagnóstico = draft+fase_01-03; 2 Revisión = submitted+fase_04-07; 3 Elaboración =
+fase_08-10; 4 Obtención = fase_11-14 + los 3 post-presentación. `pending_docs` ancla a
+fase 2 igual que antes (no hay forma de saber a qué fase real volver sin la
+subcolección de actividad de Gap 5, pospuesta).
+
+**"El cliente ve la fase con su nombre real"**: nueva función `claroTextFor(status,
+label)` — para las 14 fases y draft/submitted/pending_docs usa el label real del enum
+(`GET /api/meta/statuses`, no un texto duplicado); para los 3 post-presentación da
+texto claro específico: "DNFD solicitó correcciones" / "¡Registro aprobado!" /
+"Registro denegado". Se renderiza debajo del pipeline de 4 puntos en cada tarjeta de
+producto.
+
+`estadoFromStatus()` y `fases_completadas` actualizados de `approved`/`denied` a
+`aprobado`/`denegado`. Verificado por grep: **cero** literales `'approved'`/`'denied'`/
+`'observed'`/`'in_review'`/`'faddi_ready'`/`'faddi_submitted'` restantes en el archivo.
+
+### Verificación (nivel API/protocolo, sin navegador — ver bloqueo arriba)
+
+Contra el emulador (tracker + Auth + Firestore), con un caso sembrado en `fase_06`:
+- `PATCH status:fase_07` → 200 (06→07).
+- `GET /api/meta/statuses` → `transitions.fase_07 = ['fase_08']` — confirmado que
+  `fase_09` **no** estaría entre las opciones del `<select>` en ese estado.
+- `PATCH status:fase_09` directo (saltándose la UI) → **400**, confirmando que el
+  backend también lo rechaza si alguien lo intenta fuera del `<select>`.
+- Avance real 07→08→09→10, luego subsanación **10→07** → 200 en los 5 pasos.
+- `GET /api/cases/:id/history` → los 5 pasos en orden, incluyendo la subsanación.
+- Como cliente (`GET /api/cases`): el caso muestra `status: fase_07` — confirma que
+  el cliente vería el cambio reflejado (el label "Documentación digital" y el texto
+  claro salen del mismo `GET /api/meta/statuses` ya verificado en TAREA 7b).
+
+### Grep de literales sueltos (organizacion/inventario_estados.txt)
+
+Repetido el grep de D-INV sobre los 3 archivos tocados + `status_ui.js`. Lo que queda:
+- **Único uso legítimo de un solo estado** (contadores/filtros específicos:
+  `'pending_docs'`, `'aprobado'`, `'missing'` como default) — no son mapas duplicados,
+  son referencias puntuales a un estado con sentido propio.
+- **Los mapas canónicos esperados**: `status_ui.js` (colores, íconos de doc),
+  `client-dashboard.html`'s `STATUS_PHASE`/`claroTextFor`/`ESTADO_MAP`/`estadoBadge`/
+  `docBadge` (cada uno es SU mapa único para su propia decisión de presentación, no
+  una copia de otro).
+- **`portal/js/wizard.js` NO se tocó** — está fuera del alcance de D18/D19 (solo
+  `casos.html`/`expediente.html`/`client-dashboard.html`) y sigue siendo código
+  huérfano desde el pivote de arquitectura de 2026-08-26 (Gap 7, aún sin portar).
+  Conserva sus literales viejos, incluido `pending_upload` (ya decidido eliminar en
+  D05b, pero solo del enum del backend — el frontend orgánico de wizard.js no se
+  edita hasta que se porte).
+
+### Estado de archivos
+
+Nuevos: `tracker/routes/meta.js`, `farmazed-web/portal/js/status_ui.js`. Modificados:
+`tracker/data/case_status.js` (agregado `POST_PRESENTACION` a los exports),
+`tracker/index.js` (monta `meta.js`), `tracker/routes/cases.js` (`GET .../history` +
+`reason`), `tracker/routes/mcp.js` (`reason`), `farmazed-web/admin/casos.html`,
+`farmazed-web/admin/expediente.html`, `farmazed-web/client-dashboard.html`,
+`farmazed-web/portal/js/api.js` (`getCaseHistory`, `getStatusMeta`). Todo sin
+commitear. Servicios de prueba (tracker, emuladores, servidor estático) detenidos al
+terminar, puertos liberados. `config.js` quedó revertido a su puerto documentado
+(8080) tras el cambio temporal a 8081 usado solo para esta prueba (8080 seguía
+ocupado por un proceso ajeno de esta máquina).
+
+## 2026-09-29 — TAREA 8 (ajuste): prueba visual real con Playwright — `e2e/`
+
+Rick señaló que Patch ya tiene el Chromium de Playwright cacheado en
+`~/.cache/ms-playwright` (`chromium-1243`) — se pudo hacer la prueba visual real que
+TAREA 8 pedía. **Sin commit, sin deploy.** Carpeta nueva `e2e/` (paquete npm propio,
+separado de `tracker/`, no se despliega):
+
+- **`e2e/estados.spec.js`** — recorrido completo en un Chromium real contra el
+  emulador: login admin → expediente de un caso en `fase_06` (llegado ahí clicando
+  desde `casos.html`, no por URL directa) → avanzar 06→07 → confirmar que desde
+  fase_07 el `<select>` NO ofrece `fase_09` (solo `fase_08`, verificado leyendo las
+  `<option>` reales del DOM) → 07→08 (con la confirmación de fase manual, aceptada
+  automáticamente — ver abajo) → 08→09→10 → subsanación 10→07 (confirmación de nuevo)
+  → override sin motivo intentando un salto inválido (`fase_14`) → verificado que
+  **no se guardó nada** (reload + el estado sigue en fase_07) → historial de estado
+  visible con las 5 transiciones correctas → logout admin → login cliente →
+  `client-dashboard.html` → el cliente ve "Documentación digital" en su tarjeta de
+  producto.
+- **`e2e/global-setup.js`** — resetea el caso de prueba a `fase_06` y limpia su
+  `statusHistory` antes de cada corrida (spec repetible).
+- **`e2e/playwright.config.js`** — Chromium únicamente, `baseURL` apuntando al
+  servidor estático.
+- **`e2e/run.sh`** — script reutilizable de un solo comando: levanta emuladores +
+  siembra + tracker + frontend estático, corre Playwright, y apaga todo al salir
+  (pase o falle). Maneja el mismo problema de siempre en esta máquina (puerto 8080
+  ocupado por un proceso ajeno) apuntando `config.js` al puerto libre temporalmente y
+  **restaurándolo siempre**, incluso si el test falla (`trap cleanup EXIT`).
+- **`page.on('dialog', d => d.accept())`**: la UI de `expediente.html` usa
+  `alert()`/`confirm()` nativos (ya existían antes de TAREA 8, más el `confirm()`
+  nuevo de fase manual) — Playwright los maneja de forma nativa con un listener, sin
+  necesidad de JavaScript injection ni trucos. Un solo listener por test cubre las 7
+  veces que aparecen a lo largo del recorrido (confirmaciones de avance + alerts de
+  "Estado actualizado"/"El override necesita un motivo").
+- **Bugs reales encontrados y corregidos gracias a la prueba real** (no hubiera
+  aparecido con la verificación por curl de la corrida anterior):
+  1. `run.sh`: el `cleanup()` usaba una ruta relativa a `config.js` — al terminar
+     desde dentro de `e2e/` (por el `cd e2e` antes de correr Playwright), la
+     restauración fallaba en silencio y dejaba `config.js` apuntando al puerto
+     temporal. Corregido con rutas absolutas basadas en `$REPO_ROOT`.
+  2. `run.sh`: matar solo el PID de `npx firebase-tools emulators:start` dejaba
+     huérfanos los procesos `java` de Firestore/Storage (hijos independientes, no
+     mueren con el padre) — la siguiente corrida encontraba los puertos ocupados.
+     Corregido agregando `pkill -f` por los tres patrones de proceso.
+  3. `estados.spec.js` (bug de la prueba, no del producto): un `getByText('Mis
+     Productos')` y un `getByText('Analgen Test Visual')` eran ambiguos (coincidían
+     con el link del sidebar, un `<h4>`, y con el nombre del caso repetido en el
+     módulo de Mensajes) — acotados con selectores CSS más específicos.
+  4. **Hallazgo real de timing, no de la app**: una captura tomada justo después de
+     guardar un cambio de estado llegaba antes de que `renderStatusHistory()`
+     terminara su fetch async, mostrando "Sin cambios de estado todavía" un instante
+     desactualizado. Agregado un `waitForHistoryCount()` antes de cada captura para
+     que refleje el estado real. La UI en sí nunca tuvo el bug — solo la prueba
+     necesitaba esperar correctamente.
+- **Nada de la UI en sí necesitó arreglo** — los 21 estados, las transiciones, el
+  override, y el historial funcionaron correctamente a la primera en un navegador
+  real.
+
+**Capturas — `sessions/2026-09-29/`** (9 archivos, un paso cada una):
+`01-admin-login-ok.png`, `02-expediente-fase06.png`, `03-fase07.png`,
+`04-fase08-tras-confirmacion.png`, `05-fase10.png`, `06-subsanacion-fase07.png`,
+`07-override-sin-motivo-bloqueado.png`, `08-historial-visible.png`,
+`09-cliente-ve-fase-real.png`.
+
+**Observación menor (no es bug, no se tocó):** los casos seed legacy sin migrar
+(`seed-case-approved` con `status:'approved'`, `seed-case-in-review` con
+`status:'in_review'`) se ven en el dashboard del cliente como "Fase actual: approved"
+/ "Fase actual: in_review" — el fallback de `claroTextFor()` muestra el status crudo
+cuando no está en el enum de 21 porque son datos *deliberadamente* pre-migración (para
+probar D07). Después de correr `migrate_status.js` se verían con su nombre real. No es
+un `undefined` en pantalla (cumple el criterio de 07 §4#11), solo se ve "crudo" porque
+el dato de prueba es crudo a propósito.
+
+**Aceptación cumplida:** el spec pasa en verde (`1 passed`), las 9 capturas existen y
+se revisaron visualmente (contenido correcto, sin `undefined`, historial y selects
+consistentes con lo esperado en cada paso).
+
+## 2026-09-29 — TAREA 8: 3 ajustes de Rick sobre la prueba visual
+
+Rick miró las capturas y pidió 3 cambios puntuales. **Sin commit, sin deploy.**
+
+### (1) Captura de cliente ilegible a 1280px — causa real, no cosmética
+
+El sidebar es del template vendored (`src/approx/`, `startbar`). Su propio
+`app.js` colapsa el sidebar a un riel de íconos (105px) entre 310–1440px de
+ancho, pero lo **expande a 270px en `:hover`** (flyout) — un patrón normal de
+UI. El bug estaba en mi prueba: el `click()` sobre el link "Mis Productos"
+(dentro del sidebar) deja el mouse virtual de Playwright posado justo ahí, y
+la captura se tomó con el sidebar en su estado flyout expandido tapando el
+contenido. **La UI nunca tuvo el bug** — un usuario real mueve el mouse.
+Arreglado en `estados.spec.js`: `page.mouse.move(...)` a un punto del
+contenido antes de cada captura del dashboard cliente. Se agregaron además
+capturas a **1440px y 390px** (móvil) — ambas se ven correctas: a 1440 el
+sidebar sigue en modo riel (el breakpoint del template es inclusivo hasta
+1440), y a 390 el sidebar se oculta fuera de pantalla por su propio media
+query existente (`@media max-width:767.98px`), sin overlap en ningún caso.
+
+### (2) Fallback neutro para estados sin migrar (no mentirle al cliente)
+
+Antes: un caso con `status` fuera del enum de 21 (legacy, sin migrar — ej.
+`approved`, `in_review` de los datos de seed) caía en `{ fase: 1 }` en
+`client-dashboard.html`, mostrando "1 Diagnóstico / En trámite" — **le
+mentiría a un cliente en realidad aprobado.**
+
+- `client-dashboard.html`: `claroTextFor()` y `estadoFromStatus()` ahora
+  chequean `statusMeta.statuses.includes(status)` primero. Si no está en el
+  enum: texto **"Estado en actualización"**, badge **`sin_migrar`** (gris,
+  `fz-badge-gray`), `console.warn()` con el status crudo, y el fallback de
+  `STATUS_PHASE` cambió de `{fase:1}` a **`{fase:0}`** — `0` no coincide con
+  ningún dot del pipeline (1–4), así que **ningún hito queda marcado** (ni
+  activo ni completado), en vez de simular falsamente "recién empezado".
+- `farmazed-web/admin/casos.html`: mismo criterio. `colorForCaseStatus()` en
+  **`status_ui.js`** (la fuente única de color, usada también por
+  `expediente.html`) ahora devuelve `secondary` (gris) para cualquier status
+  fuera del enum de 21, antes de cualquier otro chequeo — antes caía en el
+  `info` azul genérico, indistinguible de una fase real. El label muestra
+  `"<status crudo> (sin migrar)"` (ej. `"approved (sin migrar)"`) y se
+  emite `console.warn()` por cada caso sin migrar que aparece en la tabla.
+- **Verificado en el spec** (paso nuevo): la tabla de `casos.html` muestra
+  `seed-case-approved` con badge gris `bg-secondary` + texto "sin migrar",
+  y se capturó el `console.warn` correspondiente vía
+  `page.on('console', ...)`. En el dashboard del cliente, los 2 casos
+  legacy (`approved` e `in_review`) muestran "Estado en actualización" (4
+  coincidencias: label + badge × 2 casos) y sus 2 `console.warn`
+  respectivos, verificados igual.
+
+### (3) `run.sh` ya NO edita `config.js` — ni temporalmente
+
+Antes: `run.sh` hacía backup + `sed` + restore de `config.js` para apuntar
+el tracker a un puerto libre cuando 8080 está ocupado (pasa siempre en esta
+máquina). Si el script se cortaba a mitad (Ctrl-C, crash), el restore nunca
+corría y `config.js` quedaba modificado en el árbol de trabajo — commiteable
+o desplegable por error.
+
+**Solución (opción de Rick: localStorage, no abortar):**
+`farmazed-web/portal/js/config.js` ahora resuelve el puerto local con
+`localApiPort()`: primero `?apiPort=` en la URL, si no, `localStorage`, si no,
+el default `'8080'` de siempre — **nunca cambia el comportamiento en
+producción** (la rama solo corre dentro de `IS_LOCAL`, y en prod
+`API_BASE` sigue siendo el string fijo de `api.farmazed.com`, sin tocar
+`localStorage` en absoluto). `estados.spec.js` usa
+`page.addInitScript()` en `beforeEach` para poner `fzApiPort` en
+`localStorage` antes de CADA carga de página del test (sobrevive a los
+redirects internos de `login.html`) — `run.sh` ya no toca ningún archivo
+fuente, solo pasa `FZ_API_PORT` como variable de entorno a Playwright.
+
+**Verificado exactamente como pidió el criterio de aceptación:**
+- `git diff config.js` después de correr `./e2e/run.sh estados.spec.js`
+  completo → solo el diff legítimo de esta función, sin rastro del puerto
+  temporal.
+- `md5sum` de `config.js` antes de correr, y de nuevo tras cortar `run.sh`
+  a mitad (con `timeout 8s`, mientras los emuladores seguían arrancando) →
+  **idéntico**. El `trap cleanup EXIT` mata los procesos igual, sin haber
+  tocado ningún archivo fuente que restaurar.
+
+### Capturas finales — `sessions/2026-09-29/` (13 archivos)
+
+`01-admin-login-ok`, `02-expediente-fase06`, `03-fase07`,
+`04-fase08-tras-confirmacion`, `05-fase10`, `06-subsanacion-fase07`,
+`07-override-sin-motivo-bloqueado`, `08-historial-visible`,
+`09-admin-sin-migrar-gris` (nueva), `10-cliente-ve-fase-real-1280` (nueva),
+`11-cliente-ve-fase-real-1440` (nueva), `12-cliente-ve-fase-real-390`
+(nueva), `13-cliente-sin-migrar-neutro` (nueva). Las 4 primeras del cliente
+se revisaron visualmente una por una — todas legibles, sin overlap, sin
+`undefined`.
+
+### Observación aparte, no pedida, no tocada
+
+En la captura del admin (`09-admin-sin-migrar-gris.png`) la columna
+"Actualizado" muestra "Invalid Date" en las 4 filas — parece que
+`c.updatedAt` llega como Timestamp de Firestore (`{_seconds,...}`), no como
+string parseable por `new Date()`, en `casos.html`. Es un bug preexistente,
+no relacionado con los 3 ajustes de esta tarea — no lo toqué. Si quieren que
+lo arregle, decírmelo como tarea aparte.
+
+## 2026-09-29 — TAREA 9: D10 (responsable) + D11 (UI cliente/Farmazed) + bug de fechas
+
+**Sin commit, sin deploy.**
+
+### (a) D10 — `tracker/data/faddi_checklists.js`
+
+`responsable` (`'cliente'`\|`'farmazed'`) en **todos** los documentos de **todos** los
+trámites y subtipos — no se anotó a mano en cada uno de los ~80 literales (mucha
+superficie de error si alguien agrega un doc y se olvida). En vez de eso: un
+`FARMAZED_DOC_IDS = new Set(['tasa_servicio','recibo_iea','recibo_cnf'])`, y
+`getChecklist()` ahora arma `docs` internamente (los `return` tempranos de cada `case`
+del switch pasaron a `docs = ...; break;`) y hace **un solo** `.map()` final que le
+pone `responsable` a cada documento antes de devolverlo. Cualquier documento nuevo que
+se agregue después nace `'cliente'` automáticamente, sin tocar esta función.
+
+Verificado con `node -e`: para **los 6 trámites** + **los 11 subtipos de
+medicamentos** (con y sin `tipoRegistro:'Abreviado'`) → **0** documentos sin
+`responsable` en total. Para medicamentos, `tasa_servicio`/`recibo_iea`/`recibo_cnf`
+traen `"farmazed"`, el resto `"cliente"`.
+
+### (b) D11 — identificación de la pantalla real + implementación
+
+**La pantalla real NO es la que 03_INSTRUCCIONES_DEV.md asume muerta.** Antes de tocar
+nada, grep para confirmar: `farmazed-web/client-dashboard.html:1614` tiene
+`<script type="module" src="portal/js/wizard.js"></script>`, y el HTML del módulo
+"Solicitar Registro" (línea ~646, comentario "Wizard real — Gap 7") tiene la misma
+estructura/IDs que `wizard.js` espera. **`wizard.js` está vivo, cargado directamente
+por `client-dashboard.html`** — mi nota de TAREA 6 (basada en el handover de
+2026-08-26, antes de que alguien completara el Gap 7 portándolo así) estaba
+desactualizada. Corrijo el registro: D11 se implementó en `portal/js/wizard.js`, que
+es exactamente donde decía 03_INSTRUCCIONES_DEV.md — el archivo nunca estuvo muerto,
+solo lo estaba el `portal/nuevo.html` standalone (que sigue existiendo como referencia,
+sin tocar, según pidió el PM).
+
+Cambios en `wizard.js`:
+- `renderChecklist()`: separa por `responsable`, no por obligatorio/opcional (esa
+  distinción se sigue viendo en el badge de cada tarjeta) — dos secciones:
+  **"Documentos que subes tú"** y **"Documentos que aporta Farmazed"**.
+- `renderDocCard()`: un doc `responsable:'farmazed'` no tiene botón de subir — badge
+  "A cargo de Farmazed" + leyenda "no necesitas subirlo tú, y no bloquea tu avance".
+- **Nueva `updateNextButtonState()`**: deshabilita `#btn-next` en el Paso 4 solo si
+  faltan documentos obligatorios de `responsable:'cliente'`. Se llama al terminar
+  `renderChecklist()` y de nuevo al final del `finally` de `nextStep()` — necesario
+  porque `setLoading(btn,false)` (ya existía) **siempre** rehabilita el botón sin
+  saber nada de documentos, así que sin este segundo llamado el gate se deshacía solo
+  en cada click.
+- Guard defensivo en `nextStep()` (paso 4): revalida `missingCliente` antes de avanzar,
+  por si el botón se reactiva por fuera (devtools, estado viejo).
+
+Cambios en `admin/expediente.html`: un doc `responsable:'farmazed'` sin subir muestra
+badge **"Tarea interna Farmazed"** + **"Pendiente (interno)"** en vez del botón
+"Solicitar" (pedirle al cliente algo que es tarea de Farmazed no tiene sentido). Los
+docs opcionales del cliente sin subir conservan su "Solicitar" normal.
+
+**Hallazgo aparte, no relacionado con D10/D11, no tocado:** al escribir el spec
+encontré que `renderStep2()` (la función que rellena los checkboxes de
+`tipoMedicamento` y otros campos dinámicos del Paso 2) **solo se llama desde
+`prevStep()`, nunca desde el avance normal `nextStep()` 1→2**. Resultado: hoy, un
+cliente que avanza 1→2→3→4 en línea recta (el camino normal) nunca ve pobladas las
+casillas de subtipo de medicamento — solo se rellenan si retrocede de 3 a 2 y vuelve a
+avanzar. No lo arreglé (fuera del alcance de esta tarea, y toca navegación del wizard,
+no D10/D11) — lo marco aquí porque es un bug real que probablemente afecta a clientes
+reales hoy. Avísenme si quieren que lo arregle como tarea aparte.
+
+### (c) Bug "Invalid Date" — serialización de Timestamps
+
+Causa: `res.json({ ...data })` en varias rutas mandaba el Timestamp de Firestore crudo
+(`{_seconds, _nanoseconds}`); `new Date(...)` del lado del cliente no sabe parsear eso.
+Antes se arreglaba a mano, campo por campo, en algunos endpoints sí y en otros no (de
+ahí que solo "Actualizado" en `casos.html` lo sufriera visiblemente, pero el mismo
+problema existía silencioso en más lugares).
+
+**Arreglado en el backend, de raíz — nuevo `tracker/utils/serialize.js`**:
+`serializeTimestamps(value)` recorre el objeto completo (incluye anidados como
+`faddi.submittedAt`) y convierte cualquier Timestamp a ISO string. Aplicado en
+**todos** los `res.json(...)` de `cases.js` y `documents.js` que puedan traer un
+Timestamp (list/create/get/update/history en cases.js; list/create/get/patch en
+documents.js), y en el resultado que `mcp.js` le manda a Claude Cowork (antes de
+`JSON.stringify`). Los `.toDate?.()?.toISOString()` manuales que ya existían en un par
+de sitios se reemplazaron por la función genérica — menos repetido, mismo resultado.
+
+El frontend no necesitó cambios: `client-dashboard.html`'s `tsToISODate()` ya manejaba
+`typeof ts === 'string'` como caso válido (lo tenía por si acaso); ahora es el caso que
+siempre ocurre. `casos.html`'s `new Date(c.updatedAt)` ahora recibe un ISO string real.
+
+### Verificación (Playwright, capturas nuevas en `sessions/2026-09-29/`)
+
+**Nuevo spec `e2e/checklist.spec.js`** (spec separado, sigue el patrón "un spec por
+flujo" para D16): cliente crea un caso de medicamentos real por la UI, llega al Paso 4,
+verifica las 2 secciones y que el botón está deshabilitado; sube 2 documentos reales
+vía `input[type=file]` (multipart real contra el Storage emulator); completa el resto
+de los documentos obligatorios del cliente directo en Firestore (11 uploads reales por
+UI hubiera sido mucho para un solo spec — el mecanismo de upload ya se prueba con los
+2 primeros); recarga y confirma que el botón se **habilita** aunque los 2 documentos de
+Farmazed sigan sin subir; hace logout y entra como admin a ese mismo expediente,
+confirma que ambos aparecen como "Tarea interna Farmazed" / "Pendiente (interno)", sin
+botón "Solicitar". **Pasa en verde**, junto con `estados.spec.js` (subí el timeout
+global de Playwright de 30s a 45s: corriendo los dos specs juntos, el emulador
+acumula más datos y algunas recargas de página tardan un poco más).
+
+Capturas: `01-checklist-01-bloqueado-faltan-docs-cliente.png` (las 2 secciones, botón
+gris), `02-checklist-02-habilitado-solo-faltan-farmazed.png` (botón azul, los 2
+Farmazed siguen pendientes), `03-checklist-03-admin-tarea-interna.png` (admin, 13/18
+docs, los 2 de Farmazed con su badge). Las 13 capturas de `estados.spec.js` se
+regeneraron en la misma corrida — `09-admin-sin-migrar-gris.png` confirma visualmente
+el bug de fechas resuelto ("29-sept"/"27-sept" en vez de "Invalid Date").
+
+### Estado de archivos
+
+Nuevos: `tracker/utils/serialize.js`, `e2e/checklist.spec.js`. Modificados:
+`tracker/data/faddi_checklists.js` (D10), `tracker/routes/cases.js` /
+`tracker/routes/documents.js` / `tracker/routes/mcp.js` (serializeTimestamps),
+`farmazed-web/portal/js/wizard.js` (D11), `farmazed-web/admin/expediente.html` (D11
+admin), `e2e/playwright.config.js` (timeout), `e2e/estados.spec.js` (wait extra tras
+reload). Todo sin commitear. Servicios de prueba detenidos, puertos liberados,
+`config.js` sin tocar (confirmado de nuevo con `git diff` — 0 coincidencias de "8081").
+
+## 2026-09-29 — TAREA 10: fix de renderStep2() + D13 (desglose honorarios/tasas)
+
+**Sin commit, sin deploy.** 4 specs de Playwright en verde juntos (`checklist`, `estados`,
+`pricing` — nuevo — corridos con `./e2e/run.sh`).
+
+### (a) Bug real corregido — `portal/js/wizard.js`
+
+Confirmado el diagnóstico de TAREA 9: en `nextStep()`, después de `showStep(state.step +
+1)` había `if (state.step === 4) await renderChecklist();` y
+`if (state.step === 5) await renderConfirmation();` pero **ningún** `if (state.step ===
+2) renderStep2()`. `renderStep2()` solo se llamaba desde `prevStep()`. Arreglado con una
+línea: `if (state.step === 2) renderStep2();` en el mismo bloque. Ahora las casillas de
+`tipoMedicamento` (y el resto de los campos dinámicos del Paso 2: condición de venta,
+tipo de publicidad, etc.) se pueblan también al avanzar 1→2 en línea recta, no solo al
+retroceder y volver a avanzar.
+
+**Verificado con un recorrido 1→2→3→4 en línea recta** (spec reescrito,
+`e2e/checklist.spec.js`): captura del Paso 2 mostrando las 9 casillas de subtipo de
+medicamento visibles y clicables sin haber retrocedido nunca; se marca "Síntesis
+Química"; en el Paso 4 se confirma que el checklist **corresponde al subtipo elegido**
+— aparecen `muestra` y `metodo_analisis` (obligatorios, `responsable:'cliente'`) y
+`recibo_iea` (obligatorio, `responsable:'farmazed'`), los 3 exclusivos de ese subtipo
+(`MED_VARIABLE_BY_SUBTYPE['Síntesis Química']` en `faddi_checklists.js`) — si el
+checklist mostrado fuera el genérico de antes del fix, estos 3 no existirían. El resto
+del spec (D10/D11 de TAREA 9) se actualizó de 2 a 3 documentos de Farmazed en todas
+partes, ya que ahora sí aparece `recibo_iea`.
+
+### (b) D13 — desglose honorarios Farmazed / tasas oficiales
+
+**Backend — `tracker/routes/pricing.js`:** nuevo `withDesglose(doc)` — agrupa
+`honorarios_farmazed + honorarios_abogado + gastos_adicionales` → `honorariosFarmazed`,
+y `refrendo_cnf + tasa_dnfd_servicio + tasa_dnfd_tramite + iea + tasa_mef` →
+`tasasOficiales`, más un `totalCuadra` (bool) que verifica que ambos grupos sumen el
+`total` guardado — para que un dato corrupto no se sirva en silencio. Aplicado en las 3
+respuestas (`GET /api/admin/pricing`, `GET /api/pricing/:tramiteType`, `PATCH
+/api/admin/pricing/:categoryId`), una sola fuente de verdad para toda pantalla.
+
+**Admin — `farmazed-web/admin/precios.html`:** cada tarjeta ahora muestra las 2 cifras
+(verde/azul) arriba de los inputs de componentes, recalculadas en vivo mientras el
+admin edita (`recomputeTotal()` extendido). De paso, unifiqué su resolución de puerto
+local con el patrón de `config.js` (localStorage `fzApiPort`) — antes tenía su propio
+`http://localhost:8080` hardcodeado, sin forma de probarlo en esta máquina donde 8080
+está ocupado; ahora es consistente y sí se pudo probar con Playwright.
+
+**Cliente — nueva pantalla `client-dashboard.html` → nav "Precios":** módulo de solo
+lectura (`GET /api/admin/pricing`, que ya es público — no pide `x-admin-key` para leer),
+agrupado por `grupo` (Registros Nuevos / Modificaciones / Renovaciones), mismo desglose
+de 2 cifras + total por categoría. Antes **no existía ninguna pantalla de costo para el
+cliente** en el código (`wizard.js` no tiene paso de costo, ninguna otra página del
+portal llamaba a `/api/pricing/*`) — D13 pedía agregar el desglose "en la pantalla de
+costo/cotización del cliente", así que había que construirla, no solo agruparle datos a
+una que ya existiera.
+
+**Verificado (`e2e/pricing.spec.js`, nuevo) con 3 categorías de `grupo` distintos**
+(una de cada uno, para cubrir el "probarlo con 3 categorías" del criterio):
+- `med_abreviado_sintesis` → Honorarios 2,055 · Tasas 2,525 · Total 4,580 (coincide
+  exacto con el ejemplo del criterio en 03_INSTRUCCIONES_DEV.md).
+- `cambio_rep_legal` → Honorarios 400 · Tasas 25 · Total 425.
+- `renovacion` → Honorarios 800 · Tasas 500 · Total 1,300.
+
+Cada una verificada primero contra la API directamente (`honorariosFarmazed +
+tasasOficiales === total`), y después visualmente en ambas pantallas (cliente y admin),
+con captura de cada una.
+
+**Sobre `organizacion/05_DIFF_PRECIOS_D09.md` — no se tocó ningún monto**, tal como
+indicó el PM. Los montos usados son los que ya están en `seed_pricing.js` hoy, con sus
+5 discrepancias conocidas contra el xlsx canónico (`med_abreviado_huerfano`,
+`intercambiabilidad`, `modificacion_expedicion`, `renovacion`, `post_rs_modificacion`)
+sin resolver — eso es decisión de Rick (F-4), no de esta tarea. Las 3 categorías que
+elegí para el spec (`med_abreviado_sintesis`, `cambio_rep_legal`, `renovacion`)
+incluyen a propósito una que SÍ diverge del xlsx (`renovacion`, seed 1,300 vs. xlsx
+2,600 — ver el detalle en 05) para que quede visible en la captura que el desglose ya
+funciona sobre datos que, según el PM (Argus), están subfacturados. No se cambió nada
+al respecto.
+
+### Capturas nuevas — `sessions/2026-09-29/`
+
+`checklist`: `00-paso2-casillas-pobladas`, `01-bloqueado-faltan-docs-cliente` (ahora
+con 3 docs de Farmazed y `muestra`/`metodo_analisis` visibles), `02-habilitado-solo-
+faltan-farmazed`, `03-admin-tarea-interna`. `pricing`: `01-pricing-cliente-precios`
+(las 13 categorías con desglose), `02-pricing-admin-precios` (mismo desglose en el
+panel de edición).
+
+### Estado de archivos
+
+Nuevos: `e2e/pricing.spec.js`. Modificados: `farmazed-web/portal/js/wizard.js` (fix +
+D11 de TAREA 9 ya estaba), `tracker/routes/pricing.js` (D13), `farmazed-web/admin/
+precios.html` (D13 + fix de puerto), `farmazed-web/client-dashboard.html` (nuevo
+módulo Precios), `farmazed-web/portal/js/api.js` (`getPricing`), `e2e/checklist.spec.js`
+(reescrito con el subtipo real). Todo sin commitear. Servicios de prueba detenidos,
+puertos liberados, `config.js` intacto.
+
+## 2026-09-29 — TAREA 10 (ajuste): módulo "Precios" del cliente detrás de feature flag (PM_COMMENTS §H.2)
+
+Rick decidió que mostrar el tarifario completo al cliente es alcance nuevo y decisión
+comercial suya, no algo a habilitar por defecto solo porque el código ya existe (5/13
+montos de `seed_pricing.js` divergen del xlsx canónico, ver `05_DIFF_PRECIOS_D09.md`).
+No se borró nada de lo construido en TAREA 10 — se apagó por defecto.
+
+**`farmazed-web/portal/js/config.js`:** nuevo `FEATURES = { clientePrecios:
+isFeatureOn('clientePrecios') }`. `isFeatureOn(name)` devuelve `false` de inmediato si
+`!IS_LOCAL` — no hay forma de encenderlo en producción pase lo que pase en la URL o en
+`localStorage`. Dentro de `IS_LOCAL`, revisa `?feature_clientePrecios=1` y luego
+`localStorage.getItem('feature_clientePrecios')`.
+
+**`farmazed-web/client-dashboard.html`:** importa `FEATURES`, expone
+`window.__fzFeatures`; el `<li id="nav-precios-item">` queda `style="display:none"` por
+defecto y solo se revela si el flag está prendido. `showModule('precios')` y
+`loadPrecios()` tienen guardas de salida temprana — ni siquiera invocándolas a mano
+desde la consola se llega al módulo sin el flag. El `<li>` **no se borra** del DOM
+(instrucción explícita de Rick), solo queda oculto.
+
+**`e2e/pricing.spec.js`** dividido en 2 pruebas: una confirma que el módulo está oculto
+por defecto (`toBeHidden()`, no `toHaveCount(0)` — el nodo sigue en el DOM a propósito);
+la otra enciende el flag solo para esa prueba vía
+`localStorage.setItem('feature_clientePrecios','1')` y repite las 3 verificaciones de
+desglose de D13. Suite completa corrida 2 veces — 4/4 en verde la segunda vez (la
+primera tuvo un `net::ERR_ABORTED` transitorio de arranque en `checklist.spec.js`, se
+resolvió solo al reintentar, y un `toHaveCount(0)` mal puesto en `pricing.spec.js` que
+corregí a `toBeHidden()`).
+
+Verificado: `git diff config.js | grep -c 8081` → `0` (run.sh nunca lo tocó), puertos
+de emulador/tracker/estático liberados tras el cierre. Sin commit, sin deploy.
+
+## 2026-09-29 — TAREA 11: D12 — modelo de los dos eventos de pago (organizacion/03 fila D12, Parte C.9)
+
+**Reconciliación de nombres de campo:** el encargo verbal de esta tarea usó
+`farmazed_a_entidad`; el documento fuente (`organizacion/03_INSTRUCCIONES_DEV.md`, fila
+D12) usa literalmente `farmazed_a_autoridad` + `autoridad ∈ {DNFD,IEA,CNF,MEF}`, y ese
+es el valor que su propio criterio de aceptación testea explícitamente ("con
+`farmazed_a_autoridad` y sin `autoridad` → 400"). Usé el nombre literal de 03, no la
+paráfrasis — si el nombre `farmazed_a_entidad` era intencional, avisar y lo renombro
+(es un solo string en `tracker/routes/payments.js`, sin costo). Además agregué
+`comprobante` (archivo, no `comprobanteDocId` de un doc ya subido en otro lado — el
+pago sube su propio comprobante) y `registradoPor`, tal como pidió el encargo,
+ampliando el modelo de 03 sin contradecirlo.
+
+**Confirmado contra `PM_COMMENTS.md` §9/R19 antes de programar:** "todas las tasas
+oficiales van dentro del pago de Fase 5 (cliente → Farmazed); Farmazed paga después a
+cada autoridad" — o sea fase_05 es el evento `cliente_a_farmazed` (el cliente paga TODO,
+honorarios + tasas, de una vez) y fase_13 es `farmazed_a_autoridad` (Farmazed
+desembolsando después a DNFD/IEA/CNF/MEF). Coincide exactamente con lo que ya había
+diseñado antes de leer ese párrafo — quedó como confirmación, no como corrección.
+
+**Modelo — `tracker/routes/payments.js` (nuevo), montado en `tracker/index.js` como
+`/api/cases/:caseId/payments`:**
+- `POST /` (admin only, multipart con archivo `comprobante`): valida `tipo ∈
+  {cliente_a_farmazed, farmazed_a_autoridad}` (400 listando los válidos si no),
+  `autoridad` obligatoria y válida solo si `tipo==='farmazed_a_autoridad'` (400 si
+  falta o es inválida), `monto` positivo, `comprobante` obligatorio (registro manual,
+  sin pasarela — Parte H). Sube el archivo reusando `services/storage.js` (mismo
+  patrón que `documents.js`), guarda `{tipo, autoridad, monto, fecha, comprobanteDocId,
+  comprobantePath, registradoPor, registradoPorEmail, createdAt}` en
+  `cases/{id}/payments/{paymentId}`. Devuelve 201 con `comprobanteUrl` firmada.
+- `GET /` — lista los pagos del caso (mismo control de acceso admin/dueño que el resto
+  de subcolecciones).
+- Exporta `hasRequiredPayment(caseId, fromStatus)` — `true` si esa fase no tiene gate de
+  pago (todas menos fase_05/fase_13), o si ya existe al menos un pago del tipo que esa
+  fase exige.
+
+**Conexión con la máquina de estados — mismo patrón en las 3 rutas de escritura de
+status que ya existían para `override` (§H.1):**
+- `cases.js` (`PATCH /:id`): tras validar que el SALTO es estructuralmente válido, si
+  se sale de `fase_05` o `fase_13` sin `override:true`, verifica
+  `hasRequiredPayment(id, statusActual)`; si falta el pago, 400 con el tipo exigido. El
+  override del admin lo sigue pasando por encima — `isOverride` en `statusHistory` ahora
+  es `true` tanto si el salto era estructuralmente inválido como si faltaba el pago,
+  para que quede auditado en cualquiera de los dos casos.
+- `mcp.js` (`handleUpdateCase`): mismo gate, mismo mensaje de error, misma regla de
+  `override` — para que un cliente MCP no pueda saltarse por un canal distinto lo que sí
+  se exige en `cases.js` (mismo razonamiento que ya se aplicó en TAREA 7 para
+  `isValidTransition`).
+
+**UI admin — `farmazed-web/admin/expediente.html`:** tarjeta nueva "Pagos (D12)" junto
+al Historial de Estado — lista de pagos ya registrados (tipo, autoridad si aplica,
+monto, fecha, quién lo registró, link al comprobante) + formulario para registrar uno
+nuevo (select de tipo, select de autoridad que solo aparece si el tipo lo pide, monto,
+fecha, input de archivo). `farmazed-web/portal/js/api.js`: `getPayments`,
+`registerPayment` (multipart, mismo patrón que `uploadDocument`).
+
+**UI cliente — `farmazed-web/client-dashboard.html`:** cada tarjeta de producto, al
+expandirse, muestra un badge "Pagado" / "Pendiente de pago" según si existe un pago
+`cliente_a_farmazed` para ese caso — el cliente NO ve el pago `farmazed_a_autoridad`
+(es interno, no le compete). Dato cargado junto con documentos/mensajes en la misma
+carga inicial (`api.getPayments(c.id)` por caso, en paralelo).
+
+**Verificado con `e2e/payments.spec.js` (nuevo):** caso de prueba separado
+(`test-pago-visual`, fase_05, sin pagos — `e2e/global-setup.js` lo resetea en cada
+corrida junto con `test-flujo-visual`, sin tocarlo). Recorrido: (1) intentar fase_05→
+fase_06 sin pago y sin override → bloqueado, capturado, y confirmado con reload que no
+se guardó nada; (2) registrar el pago `cliente_a_farmazed` con comprobante PDF de
+prueba adjunto vía `setInputFiles`; (3) reintentar el mismo avance → esta vez pasa sin
+necesitar override, y el historial NO lo marca como override (el pago lo habilitó, no
+una excepción manual); (4) el cliente, al loguearse, ve el badge "Pagado" en su
+producto. 5 capturas en `sessions/2026-09-29/*-pagos-*.png`. Suite completa (5 specs)
+corrida junta — 5/5 en verde.
+
+**No implementado — fuera del alcance explícito de esta tarea (el propio 03 lo dice:
+"Es el modelo, no la integración (esa es B06)"):** el comprobante de un pago
+`farmazed_a_autoridad` NO alimenta automáticamente los 3 documentos del checklist que
+PM_COMMENTS §9 menciona (`tasa_servicio`, `recibo_iea`, `recibo_cnf` — los mismos
+`FARMAZED_DOC_IDS` de D10) — eso es B06, una integración aparte, no D12. Tampoco hay
+pasarela de pago (Parte H, supuesto explícito: manual). Sin commit, sin deploy.
+
+Estado de archivos: nuevos `tracker/routes/payments.js`, `e2e/payments.spec.js`.
+Modificados: `tracker/index.js` (monta el router), `tracker/routes/cases.js` +
+`tracker/routes/mcp.js` (gate de pago), `farmazed-web/admin/expediente.html` (UI de
+pagos), `farmazed-web/client-dashboard.html` (badge de pago), `farmazed-web/portal/
+js/api.js` (`getPayments`/`registerPayment`), `e2e/global-setup.js` (segundo caso de
+prueba). Servicios de prueba detenidos, puertos liberados, `config.js` intacto.
+
+## 2026-09-29 — TAREA 11 (corrección): fase_13 NO es el pago a la autoridad (PM_COMMENTS §H.3)
+
+Rick corrigió el diseño anterior de TAREA 11 antes de aceptarlo: el nombre
+`farmazed_a_autoridad` de `organizacion/03` estaba bien (no era un rename), pero el
+gate que yo había puesto en fase_13 estaba mal — según el SVG canónico de Zelky, fase_13
+es **"Pago de honorarios Farmazed"**, es decir el **cliente** paga a Farmazed (probable
+saldo, fase_05 probable anticipo), no Farmazed pagando a una autoridad. El pago a la
+autoridad (DNFD/IEA/CNF/MEF) no es una fase — es el comprobante que se exige antes de
+**salir de fase_14** hacia la presentación.
+
+**Modelo corregido — `tracker/routes/payments.js`:** los pagos `cliente_a_farmazed`
+ahora llevan un campo obligatorio `fase: 'fase_05' | 'fase_13'` — son DOS eventos
+distintos con su propio comprobante y fecha, y un pago de fase_05 **no** satisface el
+gate de fase_13 (ni al revés). `GATES_PAGO` quedó:
+- `fase_05` → exige `cliente_a_farmazed` con `fase:'fase_05'`.
+- `fase_13` → exige `cliente_a_farmazed` con `fase:'fase_13'`.
+- `fase_14` → exige `farmazed_a_autoridad` (cualquiera de las 4 autoridades) para poder
+  salir hacia `observado_dnfd`/`aprobado`/`denegado`.
+
+`hasRequiredPayment(caseId, fromStatus)` ahora agrega un segundo `where('fase', '==',
+...)` cuando el gate lo pide (dos igualdades, sin necesidad de índice compuesto en
+Firestore). `POST /payments` valida `fase` como obligatoria y válida
+(`fase_05`/`fase_13`) cuando `tipo==='cliente_a_farmazed'`, con el mismo formato de
+error 400 que ya tenían `tipo`/`autoridad`.
+
+**`cases.js`/`mcp.js`:** sin cambios de estructura — solo pasaron de leer
+`PAGO_REQUERIDO_POR_FASE[status]` (un tipo plano) a `describeGate(status)`, que arma el
+mensaje de error incluyendo la fase cuando aplica (ej. `"cliente_a_farmazed (fase:
+fase_13)"`). El gate de fase_14 se activa con el mismo mecanismo: al salir de fase_14
+sin `farmazed_a_autoridad` registrado y sin `override`, bloquea igual que fase_05/13.
+
+**UI admin (`expediente.html`):** el formulario de registrar pago ahora muestra un
+select "Fase que cubre" (Fase 5 / Fase 13) cuando el tipo es `cliente_a_farmazed`, y el
+select de autoridad solo cuando es `farmazed_a_autoridad` — son mutuamente excluyentes,
+nunca los dos visibles a la vez. El listado de pagos muestra la fase o la autoridad
+según corresponda.
+
+**UI cliente (`client-dashboard.html`):** el badge único "Pagado" se separó en DOS
+(`pagoFase05`/`pagoFase13`), mostrados como "Anticipo (fase 5)" y "Honorarios (fase
+13)" con su propio badge Pagado/Pendiente cada uno — un cliente con el anticipo pagado
+y el saldo pendiente ve exactamente eso, no un "Pagado" ambiguo.
+
+**`e2e/global-setup.js`:** 2 casos de prueba nuevos (además de `test-pago-visual` para
+fase_05): `test-pago-fase13` (sembrado en fase_13 **con un pago de fase_05 ya
+registrado**, a propósito, para probar que NO alcanza) y `test-pago-fase14` (en fase_14,
+sin pagos).
+
+**`e2e/payments.spec.js` reescrito con los 3 gates que pidió el ajuste, cada uno en su
+propio test (antes era 1 test único):**
+1. fase_05 sin pago → bloqueado; con pago de fase_05 → avanza; cliente ve "Anticipo
+   (fase 5)" y "Honorarios (fase 13)" por separado.
+2. fase_13 con **solo** un pago de fase_05 ya registrado → sigue bloqueado (prueba que
+   el gate mira la `fase`, no solo el `tipo`); se registra el pago de fase_13 → avanza.
+3. fase_14 sin pago a autoridad → bloqueado; **override con motivo** → avanza, y el
+   historial queda con el badge `override` + el motivo visible (auditoría intacta).
+
+12 capturas nuevas en `sessions/2026-09-29/*-pagos-*.png`. Suite completa (7 specs:
+checklist, estados, 3×payments, 2×pricing) corrida junta — 7/7 en verde.
+
+Sin commit, sin deploy. Pendiente de Rick/Zelky (ya registrado en PM_COMMENTS §H.3):
+si fase_05 y fase_13 son anticipo+saldo del mismo honorario, o si fase_05 ya incluye
+las tasas oficiales — no afecta el código (el gate es el mismo pase lo que pase), pero
+sí el texto que ve el cliente.
+
+## 2026-09-29 — TAREA 12: D16, cierre de E2 — prueba end-to-end completa
+
+Un solo spec nuevo, `e2e/flujo_completo.spec.js`, que recorre un caso de medicamentos
+(Síntesis Química, vía Regular) de punta a punta como lo viviría Zelky: cliente se
+registra (invocando `register()` de `auth.js` directo, no hay página de registro — ver
+abajo), wizard 1→4 con los **15 documentos obligatorios subidos uno por uno via UI
+real** (no batch), envío, y el admin recorriendo `fase_01`→`fase_14`→`aprobado` con los
+2 pagos del cliente (`fase_05`/`fase_13`), el pago a la autoridad (`fase_14`, DNFD), una
+**subsanación real** (`fase_10→fase_07→...→fase_10`, ciclo completo, no solo el salto),
+y una **solicitud de documento** (`pending_docs`) en medio del camino. El cliente entra
+3 veces a verificar (fase, pagos, documentos pendientes). 21 capturas en
+`sessions/2026-09-29/*-flujo-*.png`. Detalle completo, con qué se probó y qué queda
+fuera, en **`organizacion/08_PRUEBA_E2E_E2.md`** (nuevo, tal como pidió la tarea).
+
+**3 bugs de producto encontrados y arreglados** viviendo el flujo (no leyendo código):
+
+1. **El caso recién enviado quedaba invisible para el cliente.** El wizard embebido en
+   `client-dashboard.html` (el modo real, no el standalone `nuevo.html`) solo cambiaba
+   de módulo a "Mis Productos" tras enviar, sin recargar — `DATA.productos` se carga una
+   sola vez al abrir la página, antes de que el caso existiera. El modo standalone sí
+   recargaba y por eso nunca tuvo el bug. Arreglo: unificar ambos a recargar siempre.
+   (`portal/js/wizard.js`, `nextStep()` paso 5.)
+2. **La confirmación final del wizard asustaba al cliente sin motivo.**
+   `renderConfirmation()` contaba TODO el checklist obligatorio como "faltante" sin
+   filtrar por responsable — un cliente con sus 15 documentos ya subidos igual veía
+   "⚠️ faltantes (3)" listando los 3 documentos que son tarea interna de Farmazed
+   (tasa_servicio/recibo_cnf/recibo_iea, D10/D11). Arreglo: mismo filtro
+   `responsable !== 'farmazed'` que ya usan `updateNextButtonState()`/`renderChecklist()`
+   en el mismo archivo. (`portal/js/wizard.js`, `renderConfirmation()`.)
+3. **El admin no podía salir de "Documentos pendientes" sin marcar un override que el
+   backend luego ignoraba.** `buildStatusOptions()` en `expediente.html` lee el mapa
+   ESTÁTICO de transiciones, que no tiene entrada para `pending_docs` (a propósito,
+   `isValidTransition()` lo trata como comodín — sale hacia cualquier estado sin
+   override, D07). Sin este caso especial, el select solo ofrecía "pending_docs",
+   obligando al admin a marcar Forzar+motivo que el backend descartaba en silencio
+   (la transición YA era válida, nunca se registraba como override real). Arreglo: el
+   select trata `current==='pending_docs'` igual que override marcado. Verificado en el
+   propio spec: `fase_07` aparece en las opciones sin override, y el historial de esa
+   transición no lleva el badge `override`. (`admin/expediente.html`,
+   `buildStatusOptions()`.)
+
+**Lo que NO se pudo probar** (detalle completo en el .md nuevo): no existe página de
+registro de clientes en el producto (gap de alcance, no bug — se probó llamando
+`register()` directo); los botones "Subir archivo" de la sección Pendientes del
+resumen del cliente no tienen `onclick` (no hacen nada); el pago `farmazed_a_autoridad`
+no alimenta automáticamente los 3 documentos del dossier que PM_COMMENTS §9 menciona
+(eso es B06, integración, no D12/D16 — el propio 03 dice "es el modelo, no la
+integración"); FADDI real y el conteo de casos en producción por fase (pendiente de
+Rick, sin cambios).
+
+Suite completa (8 specs: checklist, estados, flujo_completo, 3×payments, 2×pricing)
+corrida junta — 8/8 en verde. Sin commit, sin deploy. `config.js` intacto, puertos
+liberados.
+
+## 2026-09-29 — TAREA 13: conectar "Subir archivo" de Pendientes (cierra el gap #2 de TAREA 12)
+
+El botón "Subir archivo" de la sección Pendientes del cliente (Resumen) era decorativo
+— `pendActionBtn()` lo generaba sin `onclick` ni listener. Es el lazo de subsanación
+del cliente: si el admin le pide un documento y el caso queda en `pending_docs`, hoy el
+cliente no tenía forma de subirlo desde ahí (solo podía, indirectamente, resumir el
+wizard con `?caseId=` en la URL — nunca documentado ni enlazado). Conectado.
+
+**Backend — bug encontrado al conectar el botón (`tracker/routes/documents.js`):**
+`POST /documents` siempre creaba un `uuid()` nuevo, sin importar si ya existía un
+registro con el mismo `faddiDocId`. El placeholder que crea
+`POST /documents/request` (status `requested`, `fileName:'(pendiente)'`) se quedaba
+como una fila separada, **más vieja**, y `admin/expediente.html`'s `docsById[d.faddiDocId]
+= d` (recorriendo el array en orden `uploadedAt desc`) terminaba mostrando esa fila
+vieja, no la subida real — el admin nunca veía el documento que el cliente acababa de
+subir. Arreglo: buscar si ya existe un documento con ese `faddiDocId` antes de subir; si
+existe, **reemplazarlo en el mismo id** (`docsCol.doc(docId).set(docData)`) en vez de
+crear uno nuevo. Mismo criterio aplica a cualquier re-subida futura (ej. un documento
+`rejected` que el cliente corrige), no solo al caso de `pending_docs` — un solo registro
+por `faddiDocId`, siempre.
+
+**Frontend (`farmazed-web/client-dashboard.html`):**
+- `DATA.pendientes` ahora incluye `caseId`, `faddiDocId`, `faddiCode`, `faddiDocName`,
+  `faddiStep` (antes solo tenía el código/nombre para mostrar, nada para poder subir).
+- `pendActionBtn()`: para `tipo_accion:'subir'`, genera un `<label>` + `<input type=file
+  class="d-none">` (mismo patrón que ya usa `wizard.js` para su checklist), en vez del
+  `<button>` sin handler de antes.
+- `renderPendientes()`: listener delegado (`dataset.wired`, igual que
+  `renderChecklist()` en `wizard.js`) sobre `#pendientes-list` — sube el archivo con
+  `window.__fzApi.uploadDocument(caseId, file, {faddiDocId,...})`, y al terminar hace
+  `alert()` + `window.location.reload()` (misma razón que el fix de TAREA 12: una
+  recarga completa es la forma simple de traer datos frescos — ya no hay pendiente, tal
+  vez cambió el estado del documento, etc.).
+
+**`e2e/flujo_completo.spec.js` actualizado** — reemplaza el atajo de TAREA 12 (el admin
+resolvía `pending_docs` sin que el cliente hubiera subido nada de verdad) por el flujo
+real: el cliente sube el documento solicitado desde "Subir archivo" en Resumen, se
+verifica que `#sec-pendientes` desaparece, y que el admin ve el documento con status
+subido (ya no "Solicitar", ahora "Ver") antes de retomar `pending_docs -> fase_07`.
+Nueva captura `11c-cliente-resuelve-pendiente-subiendo`.
+
+Suite completa (8 specs) corrida junta — 8/8 en verde (una corrida tuvo el mismo
+`net::ERR_ABORTED` transitorio ya documentado en TAREA 9/estados — se resolvió al
+reintentar, no es un bug de este cambio). Sin commit, sin deploy. `config.js` intacto,
+puertos liberados. **No se tocó la página de registro** (decisión explícita de Rick:
+se define en E3 — invitación de empresa vs. registro abierto).
+
+## 2026-09-29 — TAREA 13 (ajuste de cumplimiento): versionado de documentos
+
+Rick aceptó TAREA 13 con una condición: "reemplazar el doc en el mismo id" no puede
+significar "perder" la versión anterior — un documento rechazado y su reemplazo deben
+quedar trazables.
+
+**`tracker/routes/documents.js`, `POST /`:** antes de sobrescribir un documento existente
+(el mismo `faddiDocId`), la versión ANTERIOR (si tenía un archivo real, no el placeholder
+vacío de `requested`) se archiva en la subcolección `documents/{docId}/versions` con su
+`storagePath`, `status`, `reviewNotes` (motivo de rechazo si lo hubo) y quién/cuándo la
+subió. **El archivo viejo nunca se borra de Storage** — se sube la nueva versión con un
+nombre de objeto distinto (`${docId}-v${version}`, no `${docId}` a secas) para no pisar
+los bytes del anterior. El doc VISIBLE lleva un campo `version` (1, 2, 3…).
+
+**Nuevo endpoint** `GET /api/cases/:caseId/documents/:docId/versions` — versiones
+archivadas, más nueva primero, con signed URL fresca cada una.
+
+**Admin (`admin/expediente.html`):** cuando `version > 1`, aparece el badge
+"v{N} · ver versiones anteriores" junto al nombre del documento — abre un modal nuevo
+(`#versionsModal`) con cada versión archivada, su status/motivo, y un link al archivo
+viejo (que sigue existiendo).
+
+**`e2e/document_versions.spec.js` (nuevo):** cliente sube v1 → admin la rechaza con
+motivo → cliente re-sube v2 → admin ve el badge, abre el modal, confirma que la v1
+archivada muestra el motivo, y que el link al archivo viejo **responde 200 con el
+contenido original intacto** (fetch directo al signedUrl, no solo un registro en Firestore
+— prueba real de que no se borró de Storage). Suite completa (9 specs) corrida junta —
+9/9 en verde. Sin commit, sin deploy.
+
+## 2026-09-29 — TAREA 14: E3 parte 1 (backend) — roles, empresas, permisos, invitaciones
+
+Según PM_COMMENTS §H.4. Alcance: solo backend, sin UI (como pidió la tarea). Todo
+verificado contra el emulador; nada de esto se corrió ni se migró en producción.
+
+### (a) Roles + orgs + asignación
+
+6 roles en el claim `role` (`cliente_titular`, `cliente_miembro`, `analista`, `abogado`,
+`regente`, `admin`), `orgId` además para los dos de cliente. Nueva colección `orgs`
+(`{nombre, createdAt, createdBy}`). Los casos ahora llevan `orgId` (de qué EMPRESA es,
+no de quién lo creó — así un `cliente_miembro` ve los casos de su `cliente_titular` y
+viceversa) y `asignados: {analista, abogado, regente}` (uids, para que el staff solo vea
+lo que tiene asignado).
+
+**Compatibilidad con cuentas sin migrar — decisión deliberada, no un descuido:**
+`effectiveRole(user)` (en `tracker/middleware/permissions.js`, nuevo) traduce una cuenta
+SIN `role` (todas las de antes de hoy) así: `admin:true` → `'admin'`; cualquier otra →
+`'cliente_titular'` — que es exactamente lo que esas cuentas ya podían hacer (crear/leer
+sus propios casos por `clientId`). Gracias a esto, **los 9 specs de Playwright existentes
+siguen pasando sin tocarlos** (confirmado corriendo la suite completa después de todo
+este cambio) — nadie pierde acceso por no haber sido migrado todavía.
+
+### (b) Middleware de permisos — un archivo, una tabla
+
+`tracker/middleware/permissions.js` (nuevo): la tabla `PERMISSIONS` (endpoint/acción ×
+rol) es la ÚNICA fuente de verdad — ninguna ruta compara roles a mano. Expone:
+- `requirePermission(nombre)` — middleware Express, 403 si el rol efectivo no está en la
+  tabla para ese nombre.
+- `canAccessCase(user, caso)` — reemplaza el `data.clientId !== user.uid` repetido en
+  `cases.js`/`documents.js`/`messages.js`/`payments.js`: admin ve todo; cliente ve su
+  `orgId` (o su `clientId` si la cuenta no está migrada); staff ve lo que tiene asignado.
+- `canTransitionCase(role, fromStatus)` — dentro de `cases.advance`/`confirm_*`, qué rol
+  de staff puede sacar el caso de CADA fase (no cabe en la tabla rol×endpoint porque
+  depende del `status` actual del caso, no solo de la ruta).
+- `generateMarkdownTable()` — la tabla en Markdown, usada por
+  `scripts/generate_permissions_doc.js` para escribir
+  **`organizacion/09_TABLA_PERMISOS.md`** (el entregable pedido, generado desde el
+  código — no a mano).
+
+**No incluye `pricing.js`** — ese router usa `x-admin-key` por header (el login separado
+de `admin/precios.html`), no token de Firebase; migrarlo es trabajo aparte, listado en la
+tabla sin poder exigirlo de verdad habría sido una mentira documental. Tampoco toca
+`mcp.js` (su propio `MCP_KEY`, mismo criterio).
+
+### (c) Reglas conectadas a los endpoints reales (no solo declaradas)
+
+- `cases.js`: `POST /` exige `cases.create` (cliente_titular/miembro/admin). `PATCH /:id`
+  reparte los campos editables en 3 grupos (admin: todo incluido `asignados`; cliente:
+  datos del caso en borrador; staff: solo `status`/`notes`) y, cuando el cambio es de
+  `status`, valida con `canTransitionCase()` que ESE rol de staff pueda sacar el caso de
+  la fase en la que está (abogado solo fase_08, regente solo fase_10, analista todo lo
+  demás incluidas fase_07/fase_12) — `override` sigue siendo estrictamente
+  `effectiveRole===admin`. `GET /` filtra por `orgId`/`asignados.<rol>` según quién
+  pregunta.
+- `documents.js`: `POST /` (subir) exige `documents.upload`; `POST /request` y
+  `PATCH /:docId` (revisar) exigen `documents.request`/`documents.review`
+  (analista/abogado/regente/admin — ya no `requireAdmin` a secas).
+- `payments.js`: `POST /` exige `payments.create` (admin, sin cambio de comportamiento,
+  ahora vía la tabla en vez de `requireAdmin` suelto).
+- `messages.js`: mismo `canAccessCase()` que el resto.
+
+### (d) Alta por invitación (`tracker/routes/invitations.js`, `orgs.js`, nuevos)
+
+Sin registro abierto (decisión de Rick — la página de registro NO se construyó, como
+pidió explícitamente). Tres rutas, cada una de un solo uso (`invitations/{token}`,
+`used:boolean`):
+- `POST /api/invitations/titular` (admin) — crea la empresa Y la invitación del primer
+  usuario (titular) juntas.
+- `POST /api/invitations/empleado` (admin) — invita analista/abogado/regente/admin.
+- `POST /api/invitations/miembro` (cliente_titular) — invita a SU propia empresa; el
+  `orgId` sale del token del que invita, nunca del body (un titular no puede colar el
+  `orgId` de otra empresa aunque lo mande a mano).
+- `POST /api/invitations/:token/accept` — sin `requireAuth` a propósito (quien acepta
+  puede no tener sesión todavía); body `{uid}`, asigna los custom claims y marca la
+  invitación usada. Quién junta "crear cuenta" + "aceptar invitación" en una pantalla es
+  trabajo de frontend, fuera de esta tarea ("Sin UI todavía").
+
+### (e) Seed — `tracker/scripts/seed_roles.js` (nuevo)
+
+2 empresas (Laboratorios Alfa, Farmacéutica Beta) + 7 cuentas (1 por rol, más un segundo
+`cliente_titular` en la empresa Beta para poder probar el 403 cruzado) + varios casos de
+prueba AISLADOS por escenario (uno por fase de control 7/8/10/12, uno para pagos, uno
+para documentos, uno para override) — aislados a propósito para que las pruebas que
+mutan estado no se pisen entre sí. Completamente independiente del seed de `e2e/`
+(`seed_emulador.js`) — no comparte UIDs ni casos.
+
+### (f) Migración + tests
+
+**`tracker/scripts/migrate_roles.js` (nuevo, SOLO EMULADOR):** recorre TODAS las cuentas
+de Auth; la que ya tiene `role` se salta (idempotente — no rompe las de `seed_roles.js`);
+`admin:true` sin `role` → `role:'admin'` (conserva `admin:true`); cualquier otra → `role:
+'cliente_titular'` de una empresa nueva, y hace un segundo paso para agregarle `orgId` a
+los casos existentes de esa cuenta que no lo tuvieran (si no, habrían quedado invisibles
+para ella — el filtro nuevo de `GET /api/cases` es por `orgId`).
+
+**`tracker/tests/permissions.test.js` + `migration.test.js` (nuevos, `node --test`
+nativo, sin dependencias nuevas):** corren con
+**`tracker/scripts/run_permission_tests.sh`** (nuevo — arranca Auth+Firestore, siembra
+LEGACY (`seed_emulador.js`) + roles (`seed_roles.js`), levanta el tracker, corre la
+matriz, corre la migración sobre las cuentas legacy, y verifica el resultado). 48 pruebas
+de permisos (crear caso, listar/leer con ownership por org y por asignación, **el 403
+cruzado entre empresas que pidió la tarea explícitamente**, subir/solicitar/revisar
+documentos, registrar pagos, gestionar empresas, las 3 rutas de invitación, asignar
+staff, y las 4 confirmaciones de fase 7/8/10/12 cada una con su rol correcto y los
+incorrectos bloqueados) + 5 de migración (admin legacy → role admin; cliente legacy →
+cliente_titular con org nueva; sus 3 casos legacy quedan con `orgId` y él los sigue
+viendo; las cuentas ya migradas no se tocan de nuevo) — **53/53 en verde**.
+
+Suite completa de Playwright (9 specs) corrida DESPUÉS de todo este cambio — **9/9 sigue
+en verde**, sin tocar ni un spec existente.
+
+### Lo que no se hizo (fuera de alcance explícito de esta tarea)
+
+Ninguna UI (dicho por la propia tarea). `mcp.js` y `pricing.js` no pasaron al sistema de
+roles (auth propia cada uno, ver arriba). El criterio "spec Playwright por rol" de
+§H.4 (probar los roles desde el navegador, no solo por HTTP) queda para cuando haya UI
+que probar — hoy no hay pantallas que reaccionen a `cliente_miembro`/`analista`/
+`abogado`/`regente` de forma distinta a como ya reaccionan a "admin"/"cliente".
+
+Estado de archivos: nuevos `tracker/middleware/permissions.js`, `tracker/routes/orgs.js`,
+`tracker/routes/invitations.js`, `tracker/scripts/seed_roles.js`,
+`tracker/scripts/migrate_roles.js`, `tracker/scripts/generate_permissions_doc.js`,
+`tracker/scripts/run_permission_tests.sh`, `tracker/tests/permissions.test.js`,
+`tracker/tests/migration.test.js`, `organizacion/09_TABLA_PERMISOS.md`. Modificados:
+`tracker/middleware/auth.js` (`requireAdmin` acepta `role:'admin'` además de
+`admin:true`), `tracker/index.js` (monta `orgs`/`invitations`), `tracker/routes/cases.js`,
+`documents.js`, `messages.js`, `payments.js`. Sin commit, sin deploy.
+
+## 2026-09-29 — TAREA 15: E3 parte 2 (UI) — bandeja, empresas, invitación pública, Mi Empresa
+
+Según PM_COMMENTS §H.4, sobre la base de TAREA 14. Todo verificado contra el emulador;
+nada tocó producción.
+
+### (a) "Mi Bandeja" — `farmazed-web/admin/bandeja.html` (nuevo)
+
+Landing del staff (analista/abogado/regente/admin): lista SOLO sus casos asignados
+(el backend ya filtra — `GET /api/cases` de TAREA 14) con una "acción pendiente" por
+fila (ej. "Revisión legal pendiente", "Cotejo con matrices guía pendiente",
+"N documento(s) por revisar"). La etiqueta usa un mapeo fase→texto que es solo
+COSMÉTICO — no decide nada; si se equivocara, el backend igual rechaza cualquier
+intento fuera de rol (ya probado en los 48 tests de permisos). Abre `expediente.html`
+al hacer clic en una fila.
+
+**Ampliación necesaria del gate de acceso:** `admin/casos.html` y
+`admin/expediente.html` antes solo dejaban entrar a `isAdmin()` — bloqueaban por
+completo a analista/abogado/regente, que SÍ necesitan `expediente.html` para confirmar
+sus fases. Nuevo helper `hasBackofficeAccess()` en `portal/js/auth.js` (admin o staff)
+reemplaza ese gate en ambas páginas — "Mi Bandeja" es la entrada recomendada del staff,
+pero no se les bloquea `casos.html` tampoco (el backend ya les muestra solo lo suyo).
+
+**`admin/expediente.html` — "SOLO los botones que su rol permite":** al cargar, pide
+`GET /api/me/permissions` (nuevo endpoint, `tracker/routes/me.js`) y con eso:
+- Oculta "Forzar (override)" si no tiene `cases.override` (solo admin).
+- Oculta el formulario de registrar pago si no tiene `payments.create` (solo admin) —
+  la lista de pagos ya registrados se sigue viendo (todos los roles tienen
+  `payments.read`).
+- Oculta la nueva tarjeta "Equipo Asignado" si no tiene `cases.assign` (solo admin).
+- Agrega botones ✓/✗ (aprobar/rechazar, con motivo) en cada documento subido, visibles
+  con `documents.review` (analista/abogado/regente/admin — antes este endpoint existía
+  en el backend desde TAREA 13 pero SIN ningún botón que lo llamara).
+- Resalta con fondo amarillo pálido los documentos **legales** (`poder`, `clv`) cuando
+  quien mira es **abogado**, y los **técnicos** (todos los demás no-Farmazed) cuando es
+  **regente** — es una convención de estilo hardcodeada en esta página (comentada como
+  tal), no una regla de `permissions.js`.
+- El desplegable de estado se deja visible e igual para todos los roles de back-office
+  (no se intenta adivinar client-side cuál transición específica puede pedir cada uno —
+  el backend ya lo exige con `canTransitionCase()`, TAREA 14; duplicarlo en el front
+  sería exactamente lo que la tarea pidió NO hacer).
+
+El front **nunca repite la tabla de `permissions.js`** — todo sale de
+`GET /api/me/permissions` (`{role, orgId, permissions: [...]}`).
+
+### (b) Admin: gestión de empresas y empleados — `admin/empresas.html` (nuevo)
+
+Lista de empresas (con "Ver miembros"), lista de empleados Farmazed, y 2 formularios de
+invitación (titular → crea empresa nueva; empleado → analista/abogado/regente/admin) +
+tabla de invitaciones con su estado (Pendiente/Usada) y el link de aceptación (todavía
+no se manda por correo — el link se muestra en la tabla, "dev" explícito en el
+encabezado de esa columna). Asignar analista/abogado/regente a UN caso específico vive
+en `expediente.html` (tarjeta "Equipo Asignado"), no aquí — aquí es gestión general.
+
+Backend nuevo: `GET /api/orgs/:orgId/members` (cualquier empresa, admin),
+`GET /api/employees` (staff + admin), `GET /api/invitations/:token` (público, para la
+página de aceptar).
+
+### (c) Página pública de aceptar invitación — `farmazed-web/aceptar-invitacion.html` (nuevo)
+
+`?token=...` → `GET /api/invitations/:token` (sin auth) muestra el correo/rol de la
+invitación → la persona pone su nombre y contraseña → `register()` (mismo `auth.js` de
+siempre) crea la cuenta de Firebase → `POST /api/invitations/:token/accept` asigna los
+custom claims y marca la invitación usada (409 si ya se había usado) → se fuerza un
+refresh del ID token (`getIdTokenResult(true)`) para que el rol recién asignado ya esté
+disponible sin tener que volver a loguearse → redirige a `client-dashboard.html`
+(cliente) o `admin/bandeja.html` (staff/admin) ya logueado.
+
+### (d) Cliente titular: "Mi Empresa" — módulo nuevo en `client-dashboard.html`
+
+Nav "Mi Empresa" para TODO cliente (titular o miembro, sin flag — a diferencia de
+Precios, esto no es una decisión comercial pendiente). Muestra los miembros de la
+empresa (`GET /api/me/org`, nuevo); el **titular** además ve sus invitaciones enviadas y
+un formulario para invitar un miembro nuevo (`POST /api/invitations/miembro` — el
+`orgId` sale del token de quien invita, nunca de lo que el formulario mande, ya
+verificado en TAREA 14). El **miembro** ve la misma info, sin el formulario.
+
+### (e) `pricing.js` + `admin/precios.html` migrados a token de Firebase con rol admin
+
+`PATCH /api/admin/pricing/:categoryId` pasó de `x-admin-key` (una clave compartida en
+un header) a `requireAuth + requirePermission('pricing.write')` — mismo sistema de roles
+que el resto del tracker. `admin/precios.html` ya no pide "admin key": usa
+`requireLogin`/`isAdmin` como `casos.html`/`expediente.html`, y manda
+`Authorization: Bearer <token>`. `GET /api/admin/pricing` sigue público (los precios no
+son secretos, sin cambio).
+
+**Pregunta respondida — qué más usa `ADMIN_KEY`:** `POST /api/admin/set-role` en
+`tracker/index.js` (asignación de claims por clave compartida, el mecanismo de arranque
+de antes de que existieran las invitaciones). **No se tocó** — sigue siendo la única
+otra ruta que usa `ADMIN_KEY`, así que la variable de entorno se queda definida en Cloud
+Run por esa razón, no por `pricing.js`.
+
+`e2e/pricing.spec.js` actualizado (ya no llena `#admin-key-input` — usa la sesión de
+Firebase ya iniciada).
+
+### (f) Tests
+
+**`tracker/tests/permissions.test.js`** sin cambios de fondo, pero la migración de
+`pricing.js` se verificó aparte (48/48 sigue en verde tras el cambio, y
+`pricing.spec.js` de Playwright confirma la UI real).
+
+**`e2e/roles.spec.js` (nuevo, 7 specs):** un test por cada uno de los 6 roles —
+`cliente_titular` (Mi Empresa + solo sus casos), `cliente_miembro` (misma empresa, sin
+invitar), `analista` (bandeja + expediente sin override/pagos/asignar),
+`abogado` (bandeja + doc legal resaltado), `regente` (bandeja + doc técnico resaltado),
+`admin` (ambas empresas + todo visible) — más un 7º test end-to-end: admin invita a un
+titular nuevo desde `empresas.html`, se extrae el token real de la tabla, se visita
+`/aceptar-invitacion.html?token=...`, se completa el registro, y se confirma que la
+cuenta nueva entra ya logueada viendo su propia empresa recién creada. 15 capturas
+nuevas. Usa el fixture de `tracker/scripts/seed_roles.js` (2 empresas + 1 cuenta por
+rol) — `e2e/run.sh` ahora también corre ese seed además del legacy
+(`seed_emulador.js`), sin tocar ningún caso/UID existente.
+
+Suite completa de Playwright (16 specs: los 9 de antes + `roles.spec.js` ×7) — **16/16
+en verde**. `node --test` de permisos y migración — **53/53 sigue en verde** tras la
+migración de `pricing.js`. Sin commit, sin deploy. `config.js` intacto, puertos
+liberados.
+
+Estado de archivos: nuevos `farmazed-web/admin/bandeja.html`,
+`farmazed-web/admin/empresas.html`, `farmazed-web/aceptar-invitacion.html`,
+`tracker/routes/me.js`, `tracker/routes/employees.js`, `e2e/roles.spec.js`.
+Modificados: `tracker/routes/pricing.js`, `tracker/routes/orgs.js`,
+`tracker/routes/invitations.js`, `tracker/middleware/permissions.js` (agrega
+`pricing.write`/`orgs.read_members`/`employees.list`/`invitations.read` +
+`permissionsForRole()`), `tracker/index.js`, `farmazed-web/admin/precios.html`,
+`farmazed-web/admin/casos.html`, `farmazed-web/admin/expediente.html`,
+`farmazed-web/client-dashboard.html`, `farmazed-web/portal/js/auth.js` (`getRole`,
+`getOrgId`, `isStaff`, `hasBackofficeAccess`), `farmazed-web/portal/js/api.js`,
+`e2e/pricing.spec.js`, `e2e/run.sh` (siembra también `seed_roles.js`).
+
+## 2026-09-29 — TAREA 16: cierre antes de que vuelva Rick — set-role, tabla completa, ENTREGA
+
+### (a) `POST /api/admin/set-role` ya no usa `ADMIN_KEY`
+
+Era una puerta trasera real al modelo de roles: cualquiera con la clave se hacía admin
+sin invitación ni registro de quién lo hizo. Ahora exige token de Firebase +
+`admin.set_role` (nuevo permiso, solo admin) y cada uso queda en la nueva colección
+`adminAuditLog` (`{action, targetUid, targetEmail, admin, by, byEmail, at}`). También
+arreglé un bug de paso: el endpoint viejo hacía `setCustomUserClaims(uid, {admin:bool})`
+a secas, que REEMPLAZA todos los claims — revocar admin a alguien con `role`/`orgId` se
+los habría borrado sin querer. Ahora hace merge: lee los claims actuales, solo toca
+`admin`/`role`.
+
+**`tracker/scripts/bootstrap_admin.js` (nuevo):** da el PRIMER admin (cuando todavía no
+existe ninguno para invitar) con credenciales de GCP por línea de comandos, nunca por
+HTTP. A propósito NO tiene el guard "solo emulador" de los demás scripts — su trabajo es
+poder correr contra producción cuando haga falta; se probó igual contra el emulador
+(`FIREBASE_AUTH_EMULATOR_HOST`) sin tocar producción. Confirmado manualmente: da el rol,
+es idempotente (correrlo de nuevo dice "ya es admin, nada que hacer").
+
+**Qué más lee `ADMIN_KEY` — respuesta a la pregunta:** nada. Después de este cambio no
+queda ningún lector en el código (pricing.js ya se había migrado en TAREA 15). La
+variable de entorno en Cloud Run no se tocó — queda ahí hasta que Rick decida retirarla.
+
+### (b) Tabla de permisos completada — endpoints que faltaban
+
+Auditué cada ruta de `cases.js`/`documents.js`/`messages.js` contra la tabla y agregué
+las que faltaban: `cases.edit_faddi`/`cases.edit_notes` (staff+admin, nunca cliente —
+`faddi` faltaba en `STAFF_FIELDS`, ya estaba en `ADMIN_FIELDS` pero no en el otro lado),
+`cases.delete`, `cases.read_history`, `cases.read_checklist`, `documents.delete`,
+`messages.read`, y `admin.set_role`. Todas conectadas con `requirePermission()` en su
+ruta real, no solo declaradas. `organizacion/09_TABLA_PERMISOS.md` regenerada — ya no
+dice que `pricing.js` está fuera (se migró en TAREA 15) y explica por qué
+`GET/POST /api/invitations/:token(/accept)` y `GET /api/me/permissions` no están (son
+públicas por diseño o reflexivas, no una acción con rol).
+
+`tracker/tests/permissions.test.js`: 8 pruebas nuevas (edit_faddi/edit_notes,
+cases.delete, documents.delete, y 3 para `admin.set_role` incluyendo que el merge de
+claims no borra `orgId` al revocar admin) — **56/56 en verde** (antes 48).
+
+### (c) `ENTREGA_E1_E3.md` (nuevo, raíz del repo) + `verificar_local.sh` (nuevo)
+
+Documento corto para Rick: qué se construyó por interfaz (cliente/empleados/admin),
+cómo revisarlo en 1 comando, las decisiones de PM_COMMENTS §H.1-H.4 que puede revertir
+(con sus preguntas abiertas), qué falta/está bloqueado, y un plan de salida a producción
+**no ejecutado** (commits por bloques, migraciones con `--dry-run`, deploy
+tracker→web, cómo volver atrás).
+
+**`verificar_local.sh` (nuevo, raíz):** un solo comando que corre `e2e/run.sh` y
+`tracker/scripts/run_permission_tests.sh` en secuencia y da un resumen final — antes
+había que correr las dos suites por separado para ver todo.
+
+**`--dry-run` agregado a `migrate_status.js` y `migrate_roles.js`** (no existía) —
+necesario para que el plan de salida a producción fuera ejecutable de verdad, no solo
+aspiracional. Probado contra el emulador: el dry-run reporta exactamente lo que
+migraría sin escribir nada (confirmado corriendo la migración real después — migró
+exactamente los mismos casos que el dry-run había anunciado).
+
+Suite completa vía `./verificar_local.sh` — **16/16 Playwright + 56/56 permisos + 5/5
+migración, todo en verde**. Sin commit, sin deploy.
+
+Estado de archivos: nuevos `tracker/scripts/bootstrap_admin.js`, `ENTREGA_E1_E3.md`,
+`verificar_local.sh`. Modificados: `tracker/index.js` (set-role con auditoría),
+`tracker/middleware/permissions.js` (6 permisos nuevos), `tracker/routes/cases.js`,
+`documents.js`, `messages.js` (requirePermission agregado donde faltaba, `faddi` en
+STAFF_FIELDS), `tracker/scripts/generate_permissions_doc.js`,
+`tracker/scripts/migrate_status.js`, `migrate_roles.js` (`--dry-run`),
+`tracker/scripts/run_permission_tests.sh`, `tracker/tests/permissions.test.js`,
+`organizacion/09_TABLA_PERMISOS.md`, `tracker/routes/pricing.js` (comentario
+actualizado).
+
+## 2026-09-30 — TAREA 17: R14, biblioteca de los 13 formularios canónicos
+
+Retomado por orden de Rick vía Dandy: seguir el plan técnico; commit/push/deploy siguen
+esperando a Rick directo.
+
+### (0) Respaldo fuera del repo (antes de tocar nada)
+
+Todo lo de esta sesión (TAREA 6 en adelante) sigue sin commitear y solo vive en esta
+máquina. Sin `git stash`, sin commit — copia aparte:
+- `~/respaldo-farmazed/2026-09-30/cambios.patch` — `git diff` de los archivos ya
+  trackeados y modificados (275 KB).
+- `~/respaldo-farmazed/2026-09-30/untracked.tar.gz` — tar de los 130 archivos nuevos
+  sin trackear (`git ls-files --others --exclude-standard`), 17.8 MB, sin
+  `node_modules` (ya está en `.gitignore`).
+
+El árbol de trabajo del repo no se tocó — solo lectura (`git diff`, `git ls-files`,
+`tar`).
+
+### (1) Catálogo — `tracker/data/formularios.js` (nuevo)
+
+Fuente: `~/Projects/Farmazed/_Zelky-Drive-2026-09-25/F08-Form-1..13*.docx` — la serie
+que `organizacion/02_MAPA_DATA.md` (sección D) marca CANONICO, la más nueva y la única
+completa 1–13. Copiados a `farmazed-web/formularios/` con nombres limpios
+(`formulario-01-...docx` … `formulario-13-...docx`, sin espacios ni tildes).
+
+**`firma` y `aplica` de cada uno salen de leer el TEXTO real de cada .docx** (no solo el
+nombre de archivo — `unzip -p *.docx word/document.xml` para extraer el título y el
+primer párrafo de cada uno), cruzado con el vocabulario fijo de vía/subtipo que pidió la
+tarea. 9 de los 13 tienen `aplica` con certeza (el título dice explícitamente
+Abreviado/Reconocimiento Mutuo/Renovación/Suplementos/Intercambiabilidad/No
+comercializados). **Los otros 4 (formularios 1, 2, 3 y 10) quedaron `aplica:
+'por_confirmar'`** — son autorizaciones de representación legal y una declaración de
+nombre comercial cuyo título no menciona ninguna vía ni tipo de solicitud; no se les
+asignó nada a ciegas.
+
+**Hueco de datos encontrado y documentado (no resuelto, no era el pedido de esta
+tarea):** el modelo de casos no tiene forma de marcar que una solicitud es una
+RENOVACIÓN — `wizard.js` fija `tipoSolicitud: 'Nuevo Registro'` siempre, sin UI para
+cambiarlo. Los 6 formularios etiquetados `renovaciones`/`intercambiabilidad`/
+`no_comercializados` (4, 5, 7, 8, 12, 13) nunca le van a aparecer a un cliente en su caso
+mientras ese hueco siga abierto — sí se siguen viendo en la biblioteca completa del
+admin, que no filtra. Queda anotado en el propio `formularios.js` para quien retome esto
+después.
+
+### (2) UI — cliente filtrado, admin biblioteca completa
+
+**Backend** (`tracker/routes/formularios.js`, nuevo): `GET /api/formularios`
+(biblioteca completa, cualquier rol) y `GET /api/cases/:id/formularios` (solo lo que
+aplica con certeza a ESE caso + los `por_confirmar` aparte — nunca ocultados, nunca
+afirmados). Los .docx en sí se sirven como estáticos públicos
+(`farmazed-web/formularios/*.docx`) — son plantillas en blanco sin datos de ningún
+cliente, no necesitan signed URL como sí necesita un documento ya subido.
+
+**Permiso nuevo** `formularios.read` (los 6 roles) en `tracker/middleware/permissions.js`
+— `organizacion/09_TABLA_PERMISOS.md` regenerada.
+
+**Cliente** (`client-dashboard.html`): sección "Formularios" dentro de cada expediente
+expandido, junto a "Documentos del expediente" — descarga directa, sin duplicar en el
+front la lógica de qué formulario va con qué trámite (el backend ya decide, el cliente
+solo pregunta por SU caso).
+
+**Admin** (`admin/formularios.html`, nuevo): biblioteca completa, con firma y aplicación
+de cada uno, badge "Por confirmar" para los 4 que quedaron así. Nav "Formularios"
+agregado a los sidebars de `casos.html`/`bandeja.html`/`empresas.html`.
+
+### (3) Tests
+
+`tracker/tests/permissions.test.js`: 3 pruebas nuevas — biblioteca completa da 13
+siempre; un caso Abreviado+Suplementos (`case-formularios-test`, nuevo en
+`seed_roles.js`) trae form-06/07/11/12 en `aplicables` y exactamente 1/2/3/10 en
+`porConfirmar`, nunca form-09 (Reconocimiento Mutuo); el 403 cruzado entre empresas
+también aplica aquí. **59/59 en verde** (antes 56).
+
+`e2e/formularios.spec.js` (nuevo, 2 specs, capturas en `sessions/2026-09-30/`): admin ve
+las 13 con los 4 "Por confirmar" marcados; el cliente del caso Abreviado+Suplementos ve
+exactamente los 4 aplicables + los 4 por-confirmar, y NO ve Reconocimiento Mutuo.
+
+**`./verificar_local.sh` corrido completo — 18/18 Playwright + 59/59 permisos + 5/5
+migración, todo en verde** (una corrida aislada de Playwright tuvo un fallo transitorio
+ya conocido en esta máquina — re-corrida limpia dio 18/18, no era un bug de esta tarea).
+
+Sin commit, sin deploy. Estado de archivos: nuevos `tracker/data/formularios.js`,
+`tracker/routes/formularios.js`, `farmazed-web/formularios/*.docx` (13),
+`farmazed-web/admin/formularios.html`, `e2e/formularios.spec.js`. Modificados:
+`tracker/index.js` (monta el router), `tracker/middleware/permissions.js`
+(`formularios.read`), `tracker/scripts/seed_roles.js` (fixture
+`case-formularios-test`), `tracker/tests/permissions.test.js`,
+`organizacion/09_TABLA_PERMISOS.md`, `farmazed-web/portal/js/api.js`
+(`getFormularios`/`getCaseFormularios`), `farmazed-web/client-dashboard.html` (sección
+Formularios), `farmazed-web/admin/casos.html`/`bandeja.html`/`empresas.html` (nav).
+
+## 2026-09-30 — TAREA 18: R5/R12, cotizaciones (agrupa N casos, borrador automático)
+
+Retomado en la misma jornada que TAREA 17, orden de Rick vía Dandy (seguir el plan
+técnico; commit/push/deploy siguen esperando a Rick directo).
+
+**Qué pedía la tarea** (PM_COMMENTS líneas 50/57/78/447, SVG fase 4 "Cotización del
+servicio"): una colección `quotes` por encima de los casos que agrupa N casos de la
+MISMA empresa (R5 — cada caso conserva su `caseCode`), con borrador automático al
+definirse vía/categoría en fase_03 (R12), que el admin ajusta (motivo obligatorio si el
+monto se aparta del tarifario) y envía; el cliente titular la acepta o rechaza con el
+desglose honorarios/tasas visible; y un gate nuevo: fase_04 → fase_05 exige una
+cotización aceptada que incluya ese caso.
+
+**(a) Modelo y resolución de categoría — `tracker/routes/quotes.js`.** Colección
+`quotes` (top-level): `orgId`, `caseIds[]`, `lineas[]` (`caseId`, `caseCode`,
+`categoriaPrecio`, `tarifarioHonorarios`/`tarifarioTasas` — congelados al crear la
+línea —, `honorariosFarmazed`/`tasasOficiales`/`monto` efectivos, `ajustado`,
+`motivoAjuste`), `total`, `estado` (`borrador`|`enviada`|`aceptada`|`rechazada`),
+`historial` (array, no subcolección — alcanza para el volumen de esto). `resolverCategoriaPrecio()`
+mapea `tramiteType`/`tipoRegistro`/`tipoMedicamento` a un id de `tracker/seed_pricing.js`
+— **igual disciplina que TAREA 17 con los formularios: si no se puede resolver con
+certeza, `categoriaPrecio: null` y el admin la completa a mano, nunca se inventa un
+precio.** Hueco encontrado (documentado en el código, no resuelto — fuera de esta
+tarea): `seed_pricing.js` solo tiene filas de `medicamentos`/Nuevo Registro; Regular +
+Biológicos/Homeopático/Suplementos/Vacuna, y Abreviado + Vacuna/Medio de
+Contraste/Gas Medicinal/Productos Naturales, no tienen fila propia — quedan `null`
+hasta que Farmazed defina esos precios.
+
+**(b) Borrador automático (R12).** Factoricé el desglose honorarios/tasas de
+`pricing.js` a `tracker/utils/pricing_desglose.js` (antes solo vivía ahí, ahora lo
+comparten pricing.js y quotes.js). En `cases.js`, al ENTRAR a fase_04 se llama
+`attachCaseToDraftQuote()`: si ya hay un borrador de esa empresa lo reusa (agrega la
+línea), si no lo crea. Si algo falla ahí no bloquea la respuesta del PATCH (el admin
+siempre puede armar la línea a mano desde `admin/cotizaciones.html`) — solo se registra
+el error.
+
+**(c) Gate fase_04 → fase_05.** Mismo patrón que el gate de pagos de TAREA 11
+(`hasAcceptedQuote()`/`describeQuoteGate()`, ver `quotes.js`): sin una cotización
+`aceptada` que incluya el caso, el PATCH da 400; el admin puede forzarlo con
+`override:true` (queda en `statusHistory`, igual que los demás overrides).
+
+**(d) Permisos nuevos** (`tracker/middleware/permissions.js`, tabla regenerada):
+`quotes.read` (cliente_titular/cliente_miembro/admin — el staff no participa de la
+cotización, no está en la lista), `quotes.edit`/`quotes.send` (solo admin),
+`quotes.accept` (**solo cliente_titular, no cliente_miembro** — decisión de esta tarea:
+quien acepta un compromiso de pago de la empresa es el dueño de la cuenta, mismo
+criterio que `invitations.create_miembro`).
+
+**(e) UI.** `admin/cotizaciones.html` (nueva, nav agregado a casos/bandeja/empresas/
+formularios): lista las cotizaciones por empresa, cada línea editable
+(honorarios/tasas + motivo), botón "Enviar cotización". `client-dashboard.html`: módulo
+nuevo "Cotización" (badge con el conteo de `enviada`) — el cliente NUNCA ve el borrador
+sin ajustar (se filtra en el front), solo desde que se envía; ve el desglose por caso y
+Aceptar/Rechazar (Rechazar pide motivo).
+
+**(f) Pruebas.** `tracker/tests/permissions.test.js`: 8 pruebas nuevas (67/67 en total)
+con 3 casos dedicados `case-quote-test-1/2/3` (org Alfa, fase_03, seed_roles.js) —
+borrador agrupa los 3, ajuste sin motivo (400) y con motivo (200), envío, 403 cruzado
+(titular_beta) y de rol (cliente_miembro no edita/envía/acepta), gate bloqueado+override,
+y gate satisfecho tras aceptar (fase_04→fase_05 sin override). `e2e/quotes.spec.js`
+(nuevo): flujo completo por UI con capturas — 3 casos a fase_04, ajuste con motivo en
+`admin/cotizaciones.html`, envío, el cliente ve el desglose y acepta desde
+`client-dashboard.html`, los 3 casos avanzan a fase_05 con su propio caseCode.
+
+**Bug de interacción encontrado y corregido en el spec (no es un bug de layout):** el
+sidebar del portal cliente se expande (overlay) al pasar el mouse por un nav-link y
+tarda en volver a su ancho colapsado; el primer intento del spec chocó con eso
+(Playwright reintentó un click sobre un botón que quedó momentáneamente bajo el
+sidebar expandido). Se corrige en el spec alejando el mouse (`page.mouse.move`) antes
+de interactuar con el contenido — no se tocó el CSS/JS del sidebar (comportamiento
+preexistente, no introducido por esta tarea).
+
+**Bug real encontrado y corregido — el gate de fase_04 rompía flujo_completo.spec.js:**
+el primer gate que escribí exigía cotización aceptada para CUALQUIER caso al salir de
+fase_04, sin importar si tenía empresa (`orgId`). Un caso de una cuenta sin migrar
+(`orgId: null` — el flujo normal del cliente que se auto-registra, como
+`flujo_completo.spec.js`) nunca puede tener una cotización (`attachCaseToDraftQuote()`
+tampoco le crea línea, por diseño), así que quedaba bloqueado en fase_04 para
+siempre, sin override posible desde la UI del cliente. Esto NO se vio en las pruebas de
+permisos (usan cuentas con `orgId` de seed_roles.js) — apareció recién al correr la
+suite completa de Playwright y romper un spec previo a esta tarea. Corregido: el gate
+solo aplica si `data.orgId` existe (mismo criterio de compatibilidad que
+`canAccessCase()`/`attachCaseToDraftQuote()` ya usan en toda la E3). Tras el fix,
+`./verificar_local.sh` completo en verde.
+
+**Segundo hallazgo, de test-authoring (no de producto):** con la suite completa (no en
+solitario), `quotes.spec.js` fallaba de forma intermitente con `net::ERR_ABORTED` al
+navegar al `expediente.html` del siguiente caso del loop — carrera entre el `alert()`
+bloqueante que dispara `btn-save-status` (antes de refrescar `caseData`) y el
+`page.goto()` inmediato al caso siguiente. A diferencia de `flujo_completo.spec.js`
+(que reusa la MISMA página para cada avance de fase), este spec navega a una página
+DISTINTA por cada uno de los 3 casos, exponiendo la carrera. Corregido centralizando el
+avance en un helper `guardarEstado()` con un margen de 300ms tras el diálogo antes de
+navegar — no se tocó el producto.
+
+**Resultado final:** `./verificar_local.sh` completo — 19/19 Playwright (incluye
+`quotes.spec.js`), 67/67 permisos, 5/5 migración, todo en verde.
+
+**Estado de archivos** — nuevos: `tracker/routes/quotes.js`,
+`tracker/utils/pricing_desglose.js`, `farmazed-web/admin/cotizaciones.html`,
+`e2e/quotes.spec.js`. Modificados: `tracker/routes/pricing.js` (usa el util
+compartido), `tracker/routes/cases.js` (hook de borrador + gate), `tracker/index.js`
+(mount `/api/quotes`), `tracker/middleware/permissions.js` (4 permisos `quotes.*`),
+`tracker/scripts/seed_roles.js` (3 fixtures `case-quote-test-*`),
+`tracker/tests/permissions.test.js`, `organizacion/09_TABLA_PERMISOS.md`,
+`farmazed-web/portal/js/api.js` (`getQuotes`/`getQuote`/`updateQuoteLine`/`sendQuote`/
+`respondQuote`), `farmazed-web/client-dashboard.html` (módulo Cotización),
+`farmazed-web/admin/casos.html`/`bandeja.html`/`empresas.html`/`formularios.html` (nav).
+Sin commit, sin deploy.
+
+## 2026-09-30 — TAREA 18, ajuste PM_COMMENTS §H.7: el gate de cotización cierra el hueco de cumplimiento
+
+El PM corrigió TAREA 18: excluir del gate los casos sin `orgId` abría un hueco — con
+alta por invitación todo cliente tiene empresa (y la migración le crea una a las
+cuentas viejas), así que un caso sin `orgId` es dato SIN MIGRAR, no un caso
+legítimamente exento.
+
+**Cambio en `tracker/routes/cases.js`:** el gate de fase_04 → fase_05 ahora aplica
+SIEMPRE. Si el caso no tiene `orgId`, el error es explícito: `"Caso sin empresa
+asignada: migrar la cuenta"` (400), y el override del admin lo pasa igual que
+cualquier otro gate (queda en `statusHistory`). Test nuevo en
+`tracker/tests/permissions.test.js` con el fixture dedicado `case-quote-test-sin-org`
+(seed_roles.js, fase_04, `orgId: null`) — bloqueado sin override, avanza con
+override. 68/68 permisos en verde.
+
+**`e2e/flujo_completo.spec.js` corregido para entrar por invitación (el modelo real,
+no `register()` directo):** el admin invita al titular desde `admin/empresas.html`
+(crea la empresa), el cliente acepta el token en `aceptar-invitacion.html` y entra ya
+con `orgId` — mismo recorrido que `roles.spec.js` "invitación -> aceptar -> login".
+Como consecuencia, el caso de este spec SÍ tiene empresa y el gate de cotización le
+aplica de verdad en fase_04 → fase_05; como ese flujo (pagos/documentos/subsanación)
+no es donde se prueba la cotización (eso ya lo cubre `e2e/quotes.spec.js`), esa
+transición puntual se fuerza con `{"override":true}` y un motivo explícito
+(`advanceOverride()`), igual que lo haría un admin ante una excepción real. Ajustada
+también la aserción de "no fue un override real" en fase_07 para mirar solo la
+entrada más nueva del historial (`.field-row` primero) — antes miraba el panel
+completo y el override de fase_04/05 la hacía fallar en falso.
+
+Dos bugs de test-authoring encontrados y corregidos en `advanceOverride()` (ninguno de
+producto): (1) marcar "Forzar (override)" dispara `buildStatusOptions()`
+(`admin/expediente.html`), que RECONSTRUYE el `<select>` y vuelve a seleccionar el
+estado ACTUAL — si el target ya estaba elegido ANTES de marcar el checkbox, la
+reconstrucción lo pisaba; el checkbox debe ir primero. (2) inmediatamente después de
+un cambio de estado sin recargar la página, el checkbox/fila de motivo no quedaban en
+un estado estable para un `check()+fill()` encadenado — se corrigió con un
+`page.reload()` antes del override, el mismo patrón que ya usaban
+`payments.spec.js`/`estados.spec.js`.
+
+**Resultado:** `./verificar_local.sh` completo — 20/20 Playwright, 68/68 permisos,
+4/4 paquete IEA, 5/5 migración, todo en verde (con TAREA 19 ya incluida en la misma
+corrida — ver su propia sección abajo).
+
+## 2026-09-30 — TAREA 19: R13, conteo de páginas del paquete IEA (advierte, nunca bloquea)
+
+**Límite: 150 páginas** — encontrado en `_Zelky-Drive-2026-09-25`, en DOS documentos
+independientes: `F08-IEA-guia para usuarios IEA word listo.docx` y `F10-Fase 10 Se
+verifica la documentación con nuestras matrices guias.docx`, ambos con el mismo texto
+("...No exceder en la documentación de 150 páginas"). Coincide con el número que
+PM_COMMENTS Parte 0 (R13) ya tenía fijado — no hizo falta dejarlo en null/por
+confirmar, aparece explícito y dos veces.
+
+**Qué documentos "van al IEA"** — fuente: `F08-IEA-Matriz requisitos IEA enviar.docx`,
+Sección 4, lista 7: Fórmula Cualitativa-Cuantitativa, Metodología Analítica,
+Certificado de Análisis de Producto Terminado, Especificaciones de Producto
+Terminado, Espectros/Cromatogramas, Proyecto de Etiqueta, Validación Analítica. De
+esos 7, el checklist actual (`faddi_checklists.js`) solo tiene upload propio para 5:
+`formula`, `metodo_analisis`, `cert_analisis`, `especificaciones`, `etiquetas` (ver
+`tracker/data/paquete_iea.js`, `IEA_DOC_IDS`). **"Espectros/Cromatogramas" y
+"Validación Analítica" NO tienen un id de documento propio hoy** — no se inventó uno
+ni se asumió que viajan dentro de otro upload; quedan fuera del conteo (el total que
+muestra el tracker es un piso, nunca cuenta de más). Gap documentado en el código,
+pendiente de que Farmazed confirme cómo se suben esos dos si hace falta.
+
+Esa misma Sección 4 también dice que el IEA recibe todo consolidado en UN solo PDF
+por correo — este tracker no arma ese consolidado (cada documento se sube por
+separado), así que sumar las páginas de lo ya subido es la aproximación más fiel
+posible sin ese paso.
+
+**Implementación:**
+- Dependencia nueva: `pdf-lib` (pura JS, sin bindings nativos, cero dependencias
+  propias) en `tracker/` y en `e2e/` (para generar PDFs reales en el spec). Contar
+  páginas de un PDF de forma confiable no se puede hacer a mano sin repetir el
+  trabajo de una librería ya madura — se evaluó y se decidió que valía la pena, a
+  diferencia de los tests (que sí evitan dependencias nuevas a propósito).
+- `tracker/utils/pdf_pages.js`: `countPdfPages(buffer)` — `null` si no es un PDF
+  válido/parseable (nunca lanza, nunca bloquea la subida por esto).
+- `tracker/routes/documents.js`: guarda `pageCount` en cada documento subido (PDF) y
+  expone `GET /api/cases/:caseId/documents/paquete-iea` (mismo permiso
+  `documents.read` que ya existía — no hizo falta un permiso nuevo) con
+  `{ limite, totalPaginas, excedido, documentos }`.
+- UI: `admin/expediente.html` muestra un banner "Paquete IEA: X / 150 páginas"
+  (visible para todo el staff que abre el expediente — es informativo, no una acción
+  con permiso propio). `wizard.js` avisa con un toast tras cada subida si se excede;
+  `client-dashboard.html` (subida desde "Pendientes", TAREA 13) lo agrega al mismo
+  `alert()` de confirmación. Ninguno de los dos bloquea nada.
+
+**Pruebas:** `tracker/tests/paquete_iea.test.js` (nuevo, 4/4) con el fixture dedicado
+`case-iea-test` — sube PDFs reales generados con pdf-lib, confirma la suma, que un
+documento fuera del paquete no cuenta, que un archivo no-PDF no rompe el conteo
+(pageCount null, se excluye), y que la subida NUNCA se bloquea aunque exceda.
+`e2e/paquete_iea.spec.js` (nuevo, con capturas): el cliente sube `formula` (90p, sin
+aviso) y `especificaciones` (70p, cruza a 160/150 — aparece el toast), el wizard
+sigue sin bloquearse, y el admin ve el mismo conteo en `admin/expediente.html`.
+
+**Resultado:** `./verificar_local.sh` completo — 20/20 Playwright (incluye
+`paquete_iea.spec.js`), 68/68 permisos, 4/4 paquete IEA, 5/5 migración, todo en
+verde.
+
+**Estado de archivos** — nuevos: `tracker/utils/pdf_pages.js`,
+`tracker/data/paquete_iea.js`, `tracker/tests/paquete_iea.test.js`,
+`e2e/paquete_iea.spec.js`. Modificados: `tracker/routes/documents.js`,
+`tracker/routes/cases.js` (gate §H.7), `tracker/scripts/seed_roles.js` (fixtures
+`case-quote-test-sin-org`, `case-iea-test`), `tracker/tests/permissions.test.js`,
+`tracker/scripts/run_permission_tests.sh`, `tracker/package.json`/`package-lock.json`
+(pdf-lib), `e2e/package.json`/`package-lock.json` (pdf-lib, devDependency),
+`e2e/flujo_completo.spec.js` (invitación + override puntual),
+`farmazed-web/portal/js/api.js` (`getPaqueteIEA`), `farmazed-web/portal/js/wizard.js`,
+`farmazed-web/client-dashboard.html`, `farmazed-web/admin/expediente.html`. Sin
+commit, sin deploy.
+
+## 2026-09-30 — TAREA 20 (cierre): ENTREGA_E1_E3.md actualizada con TAREAS 17-19
+
+Sin código nuevo — solo documentación y respaldo, por instrucción explícita del PM.
+
+- **`ENTREGA_E1_E3.md`** actualizada: §1 con 3 subsecciones nuevas (Formularios R14,
+  Cotizaciones R5/R12, Paquete IEA R13); §2 con los conteos actuales (20 specs
+  Playwright, 68 permisos, 4 paquete IEA, 5 migración); §3 con §H.6 (formularios/
+  renovaciones) y §H.7 (gate de cotización siempre aplica); §4 con los 3 huecos
+  documentados en TAREAS 17-19 (renovaciones sin `tipoSolicitud`, categorías de precio
+  sin fila en el tarifario, paquete IEA con 2 de 7 documentos sin id propio); §5 con
+  los bloques de commit 10-12 (formularios, cotizaciones, paquete IEA) y una nota sobre
+  la dependencia nueva `pdf-lib` en el build del tracker (se resuelve sola vía
+  `npm install`, no hace falta un paso manual — solo confirmar en el log del build);
+  §6 nueva, con el resultado de la última corrida de `verificar_local.sh`.
+- **Respaldo nuevo** (mismo método que el 29-sep, fuera del repo):
+  `~/respaldo-farmazed/2026-09-30b/cambios.patch` (5552 líneas) + `untracked.tar.gz`
+  (168 archivos sin trackear, sin `node_modules`).
+- **`verificar_local.sh` corrido una vez más**, en limpio: 20/20 Playwright, 68/68
+  permisos, 4/4 paquete IEA, 5/5 migración — todo en verde. Resultado pegado en
+  ENTREGA_E1_E3.md §6.
+
+Sin commit, sin deploy. Quedo en espera, como pidió el PM.
+
+## 2026-09-30/01-oct — TAREA 21: el flujo canónico pasa a 13 fases en 5 bloques (§H.8, reemplaza §H.1/§H.3)
+
+Zelky (vía Raion) mandó los documentos del 26-sep (`Matriz_flujo_cliente_.docx`,
+`Manual_flujo_al_cliente_.docx`) que reemplazan el SVG de 14 fases del 12-sep. Esta
+tarea rehace TODA la máquina de estados y todo lo que dependía de ella — el cambio más
+grande de la sesión hasta ahora.
+
+**(a) `tracker/data/case_status.js` reescrito:** 13 fases en 5 bloques (A: 1-3, B: 4-5,
+C: 6-8, D: 9-10, E: 11-13) + `draft`/`submitted`/`pending_docs`/`deleted` + `cerrado`
+(nuevo — cotización rechazada) + `observado_dnfd`/`aprobado`/`denegado` = 21 estados.
+Transiciones: secuencial + `fase_04`→`cerrado` (motivo obligatorio) + `fase_08`→`fase_08`
+(self-loop, nuevo ciclo de subsanación, SE REGISTRA como transición real aunque el
+status no cambie de valor) + `fase_10`→`fase_09` (subsanación) + `fase_13`↔`observado_dnfd`
++ `fase_13`→`aprobado`|`denegado`. Nuevo: `PHASE_BLOCK`/`BLOCK_LABELS` (los 5 bloques,
+consumidos por `GET /api/meta/statuses` como `blockLabels`).
+
+**(b) Controles rehechos.** `MANUAL_PHASES = {fase_08, fase_10}` (antes fase_07/10/12).
+Fase 8 exige DOS confirmaciones — legal (abogado) y técnica/matrices (regente) — antes
+de que el ANALISTA pueda avanzarla a fase_09; fase 10 la confirma el analista solo
+(cambió de dueño: antes la confirmaba el regente). `STAFF_EXIT_OWNER` quedó VACÍO —
+ningún rol de staff que no sea analista mueve status directamente nunca (ni siquiera en
+fases secuenciales sin control); abogado/regente solo registran su confirmación de
+fase_08 vía el endpoint nuevo `POST /api/cases/:id/confirmaciones/fase8` (body
+`{tipo:'legal'|'tecnica'}`), gateado por los permisos nuevos `cases.confirm_8_legal`/
+`cases.confirm_8_tecnica` (se quitaron `cases.confirm_7`/`cases.confirm_8` viejo/
+`cases.confirm_12` — ya no aplican; `cases.confirm_10` ahora es de analista). Cada
+confirmación queda en `cases/{id}/confirmacionesFase8Log` además del campo
+denormalizado `confirmacionesFase8` en el caso. El ciclo fase_08→fase_08 limpia las dos
+confirmaciones (nuevo ciclo = requiere firmar de nuevo). 09_TABLA_PERMISOS.md
+regenerada. **Bug de UI encontrado y corregido en el mismo cambio:** el guard
+`if (newStatus === caseData.status)` de `admin/expediente.html` bloqueaba el propio
+self-loop de fase_08 desde la interfaz (nunca se podía disparar un "nuevo ciclo" a
+mano) — se agregó la excepción explícita.
+
+**(c) Plazo de subsanación.** `tracker/utils/plazo_subsanacion.js` (nuevo): al entrar a
+`observado_dnfd` calcula la fecha límite (Art. 22 D.E. 27/2024) — Regular 3 meses,
+Abreviado 8 días hábiles (lunes a viernes, sin calendario de feriados de Panamá —
+limitación documentada, no un bug). Cualquier otra vía queda con una NOTA en vez de una
+fecha inventada. Se recalcula cada vez que se entra (puede haber más de un ciclo
+fase_13↔observado_dnfd). Visible al staff (`admin/expediente.html`, banner nuevo) y al
+cliente (`client-dashboard.html`, banner en el expediente expandido).
+
+**(d) Gates reubicados.** Cotización aceptada para fase_04→fase_05: sin cambios (TAREA
+18/§H.7). Pagos (`tracker/routes/payments.js`): se QUITARON los gates de fase_13 y de
+salida de fase_14 — esas fases ya no existen con ese significado (fase_13 nueva es
+"Seguimiento y gestión post-ingreso"; fase_14 no existe). Queda solo el gate de fase_05
+(pago `cliente_a_farmazed`) — la TAREA 22 rehace el desglose por concepto (honorarios +
+tasas DNFD + IEA, "en cheques separados" según §H.8). El campo `fase` de un pago sigue
+aceptando `'fase_13'` como ETIQUETA (anticipo/saldo), no como fase real — las etiquetas
+de UI se renombraron de "Fase 5 (anticipo)"/"Fase 13 (saldo)" a "Anticipo"/"Saldo" en
+`admin/expediente.html` y "Anticipo (honorarios)"/"Saldo (honorarios)" en
+`client-dashboard.html`, para no mentir sobre una fase que ya no significa eso.
+
+**(e) `tracker/scripts/migrate_status.js` reescrito.** Legacy pre-fases → modelo nuevo,
+con los mapeos exactos que dio el PM: `in_review`→`fase_08`, `faddi_ready`→`fase_11`,
+`faddi_submitted`→`fase_13`, `observed`→`observado_dnfd`, `approved`→`aprobado`,
+`denied`→`denegado`. `fase_14` (único valor del modelo de 14 fases que no existe en el
+de 13) → `fase_12`. **Limitación documentada, no resuelta a medias:** `fase_01`..`fase_13`
+son el MISMO string en el modelo viejo y el nuevo pero con significado distinto a
+partir de fase_07 — el script no puede distinguir un caso ya-en-el-modelo-nuevo de uno
+viejo con ese string (no hay marcador de versión de esquema, y ningún caso de
+PRODUCCIÓN llegó a usar el modelo de 14 fases). Documentado en el propio script;
+recomendación si hiciera falta limpiar datos locales viejos: re-sembrar, no migrar in
+situ. Sigue `--dry-run`, solo emulador, idempotente.
+
+**(f) UI actualizada — admin/bandeja/cliente.**
+- `admin/expediente.html`: tarjeta nueva "Fase 8 — Confirmaciones" (botones de
+  confirmar legal/técnica, solo visibles para quien tiene el permiso y falta
+  confirmar), banner de plazo de subsanación, comentarios/labels de pago corregidos.
+- `admin/bandeja.html`: `ACCION_LABEL`/`FASE_DE_ROL` (que asumían fase_07/12 del
+  analista, fase_08 solo-abogado, fase_10 solo-regente) reescritos por completo:
+  fase_08 muestra el estado de CADA confirmación por rol (abogado ve si falta la
+  legal, regente si falta la técnica, analista/admin ven cuáles faltan); fase_10
+  muestra "confirmar" solo para analista/admin.
+- `client-dashboard.html`: el pipeline visual pasa de 4 "fases" hardcodeadas
+  (Diagnóstico/Revisión/Elaboración/Obtención, con fase_14 que ya no existe) a los 5
+  BLOQUES A-E reales (R9: "hitos del cliente"), leídos de
+  `GET /api/meta/statuses.blockLabels` — un solo lugar define los bloques, backend y
+  frontend no pueden desincronizarse. Etiquetas de pago renombradas (ver (d)). Banner
+  de plazo de subsanación en el expediente expandido cuando el caso está
+  `observado_dnfd`.
+- `tracker/routes/meta.js`: expone `blockLabels` (nuevo).
+
+**(g) Suite adaptada — todo en verde.**
+- `tracker/scripts/seed_roles.js`: fixtures `case-org-alfa-fase08`/`-fase10`/`-fase12`
+  (semántica vieja) reemplazados por `case-fase8-test`, `case-fase8-recycle-test`,
+  `case-fase10-test`, `case-org-alfa-secuencial`, `case-cerrado-test`,
+  `case-observado-regular-test`, `case-observado-abreviado-test`.
+- `tracker/tests/permissions.test.js`: los 4 `describe()` de confirm_7/8/10/12 (67
+  líneas, modelo viejo) reemplazados por: fase_08 dos confirmaciones (con endpoint
+  nuevo), fase_08 self-loop limpia confirmaciones, fase_10 analista, "solo analista
+  mueve status" genérico, fase_04→cerrado con motivo, observado_dnfd con las dos
+  vías (Regular/Abreviado) y el round-trip a fase_13. 73/73 en verde (subió de 68).
+- `e2e/global-setup.js`, `e2e/payments.spec.js`: se retiraron los fixtures/tests de
+  los gates de fase_13/fase_14 (ya no existen); queda solo el de fase_05.
+- `e2e/estados.spec.js`: reescrito para el journey de 13 fases — confirma fase_08 (dos
+  partes) vía la nueva tarjeta UI, subsanación 10→09 (no 10→07 como antes), etc.
+- `e2e/flujo_completo.spec.js`: mismo journey completo reescrito — incluye el ciclo
+  fase_08 dual-confirm, subsanación 10→09, un round-trip fase_13↔observado_dnfd con
+  el plazo visible, y termina en aprobado. Se quitó el paso de "pago a la autoridad en
+  fase_14" (ya no existe esa fase; el desglose de tasas queda para la TAREA 22).
+- `e2e/roles.spec.js`: analista ahora se prueba en fase_10 (no fase_07, que ya no es
+  manual); abogado/regente se prueban en fase_08 (antes regente se probaba en
+  fase_10, que ya no es su rol). **Bug de test encontrado y corregido:** dos fixtures
+  nuevas (`case-fase8-test` y `case-fase8-recycle-test`) quedaron asignadas al mismo
+  abogado/regente y ambas en fase_08 — un `getByText()` de página completa
+  matcheaba las dos filas de la bandeja (strict mode violation); se acotó a la fila
+  del producto específico.
+- **Flake ya documentado, no una regresión:** `flujo_completo.spec.js` falló una vez
+  corriendo la suite completa ("Execution context was destroyed") — pasó limpio 2/2
+  veces corriéndolo solo. Mismo patrón de carreras de navegación/logout ya visto
+  varias veces en esta sesión.
+
+**Resultado:** `./verificar_local.sh`-equivalente corrido por partes — 18/18 Playwright
+(incluye todos los specs adaptados), 73/73 permisos, 4/4 paquete IEA, 5/5 migración,
+todo en verde.
+
+**Fuera de alcance a propósito (documentado, no un olvido):**
+- `tracker/routes/mcp.js` no se tocó — su `handleUpdateCase` sigue sin el gate de
+  cotización (gap preexistente de TAREA 18, no de esta tarea) ni el de las
+  confirmaciones de fase_08 (gap nuevo). Sin test que lo cubra hoy; documentado para
+  quien retome el MCP.
+- El desglose de fase_05 por concepto (honorarios/tasas DNFD/IEA, "en cheques
+  separados") — TAREA 22, instrucción explícita del PM.
+- El xlsx de precios del 24-sep (`Actualización de nuestros precios... - copia.xlsx`)
+  con las categorías nuevas (Abreviado/Regular ampliados, renovaciones,
+  modificaciones) — no se cargó en esta tarea; pendiente de tarea propia.
+
+**Estado de archivos** — nuevos: `tracker/utils/plazo_subsanacion.js`. Reescritos:
+`tracker/data/case_status.js`, `tracker/scripts/migrate_status.js`,
+`e2e/estados.spec.js`, `e2e/payments.spec.js`. Modificados: `tracker/middleware/permissions.js`,
+`tracker/routes/cases.js` (endpoint confirmaciones/fase8 + gates), `tracker/routes/payments.js`,
+`tracker/routes/meta.js`, `tracker/scripts/generate_permissions_doc.js`,
+`tracker/scripts/seed_roles.js`, `tracker/tests/permissions.test.js`,
+`organizacion/09_TABLA_PERMISOS.md`, `farmazed-web/portal/js/api.js` (`confirmarFase8`),
+`farmazed-web/admin/expediente.html`, `farmazed-web/admin/bandeja.html`,
+`farmazed-web/client-dashboard.html`, `e2e/global-setup.js`, `e2e/flujo_completo.spec.js`,
+`e2e/roles.spec.js`. Sin commit, sin deploy.
+
+## 2026-10-01 — TAREA 22: gates de transición centralizados (ajuste del PM sobre TAREA 21)
+
+El PM no aceptó TAREA 21 hasta cerrar un hueco de cumplimiento real: `mcp.js`
+(Cowork) validaba transición y pago, pero NO exigía las dos confirmaciones de
+fase_08 ni la cotización aceptada de fase_04→05 — cualquiera con `MCP_KEY` podía
+saltarse esos dos controles aunque REST los bloqueara.
+
+**Centralización — `tracker/services/transitions.js` (nuevo).** Única fuente de
+verdad de los 5 gates de negocio: transición válida, pago de fase_05, cotización
+aceptada de fase_04→05, motivo obligatorio de `cerrado`, y las dos confirmaciones
+de fase_08. `checkTransition(caseData, caseId, to, {override, reason})` devuelve
+`{ok, status, error, gatesSaltados, transitionValid, isFase8Recycle}` — nada se
+repite entre rutas. `computeSideEffects()` calcula los campos derivados de ENTRAR
+a un estado (reset de `confirmacionesFase8` al reciclar fase_08, fecha límite al
+entrar a `observado_dnfd`) — tampoco se repiten. `afterTransition()` dispara el
+único efecto que escribe en OTRA colección (el borrador de cotización al entrar a
+fase_04). El permiso por ROL (`canTransitionCase` — quién puede pedir el salto)
+queda a propósito FUERA de este servicio: es exclusivo de REST (usuario con rol),
+MCP no tiene ese concepto (MCP_KEY ya es acceso de nivel admin).
+
+**Tres llamadores, cero lógica duplicada:**
+- `tracker/routes/cases.js` (PATCH /api/cases/:id) — reescrito para llamar a
+  `checkTransition`/`computeSideEffects`/`afterTransition` en vez de repetir los
+  5 gates inline (bajó ~150 líneas).
+- `tracker/routes/mcp.js` (`handleUpdateCase`) — mismo cambio; ahora SÍ exige
+  cotización y confirmaciones de fase_08, cerrando el hueco. `by: 'mcp'` se sigue
+  escribiendo en `statusHistory` igual que antes.
+- `tracker/routes/documents.js` (`POST /request`, el que dispara `pending_docs`)
+  — ANTES no pasaba por ningún gate (escribía el status directo); ahora sí, con
+  `override`/`reason` opcionales en el body, solo-admin, igual que cases.js. En
+  la práctica solo el gate de pago puede llegar a aplicar ahí (los demás son
+  específicos de otros orígenes/destinos que `pending_docs` no toca).
+
+**Tests nuevos — `tracker/tests/transition_gates.test.js` (12 pruebas):** por
+CADA uno de los 5 gates, una prueba vía REST (`PATCH /api/cases/:id`) y una vía
+MCP (`POST /mcp`, `tools/call farmazed_update_case`, con `MCP_KEY` del emulador)
+que confirman que ambas vías bloquean igual sin `override` — más 2 pruebas de que
+`override:true` fuerza el salto en las dos vías. Corre con
+`tracker/scripts/run_permission_tests.sh`, que ahora también arranca el tracker
+con `MCP_KEY` fijo (`dev-mcp-local`, ya lo hacía) y lo pasa al test nuevo como
+`FZ_MCP_KEY`. Fixtures dedicados en `seed_roles.js`: `case-gate-{transicion,pago,
+cotizacion,cerrado,fase8}-{rest,mcp}` (10 casos, uno por gate y por vía).
+
+**Por qué la suite Playwright bajó de 20 a 18 specs (pregunta directa del PM):**
+NINGÚN archivo de spec se borró ni se fusionó — los 10 archivos siguen todos. Lo
+que bajó es el CONTEO de tests dentro de `e2e/payments.spec.js`: tenía 3 (fase_05,
+fase_13, fase_14) y en TAREA 21 quedó en 1 (solo fase_05), porque los gates de
+fase_13/fase_14 se QUITARON del código (ya no existen con ese significado en el
+modelo de 13 fases — instrucción explícita del PM en TAREA 21: "QUITA el gate de
+fase_13 y el de salida de fase_14"). 20 − 2 = 18, exacto. Ningún otro archivo
+cambió su número de tests (aunque varios — estados/flujo_completo/roles —
+cambiaron bastante de CONTENIDO para el journey de 13 fases).
+
+**Resultado:** 18/18 Playwright + 73/73 permisos + 4/4 paquete IEA + 12/12 gates
+nuevos + 5/5 migración, todo en verde en el primer intento (sin necesitar ningún
+fix posterior — ni siquiera el flake ya documentado de flujo_completo.spec.js
+apareció esta vez).
+
+**Estado de archivos** — nuevos: `tracker/services/transitions.js`,
+`tracker/tests/transition_gates.test.js`. Modificados: `tracker/routes/cases.js`
+(refactor grande), `tracker/routes/mcp.js` (gates nuevos), `tracker/routes/documents.js`
+(gate nuevo en `pending_docs`), `tracker/scripts/seed_roles.js` (10 fixtures),
+`tracker/scripts/run_permission_tests.sh` (arranca `transition_gates.test.js`).
+Sin commit, sin deploy.
+
+---
+
+## TAREA 23 — Pagos por concepto y precios nuevos (§H.8, PM_COMMENTS parte
+Pagos y Precios) — 29-sep
+
+### (a) Pagos por CONCEPTO — reemplaza el modelo por `fase` de TAREA 21/22
+
+Cada registro `cliente_a_farmazed` ahora lleva un `concepto` (no `fase`):
+`honorarios | tasa_dnfd (B/.200) | mef (B/.25, solo extranjero) | iea (B/.1500
+regular / B/.2250 expedita, solo si aplica) | honorarios_saldo` (informativo, NO
+bloquea — instrucción explícita del PM). Cheques separados = registros
+separados, cada uno con su propio comprobante. `tracker/routes/payments.js`:
+`CONCEPTOS_CLIENTE`, `MONTOS_REFERENCIA` (los montos oficiales son solo
+referencia de UI — el admin registra el monto real del cheque, nunca se valida
+contra esto); `hasConceptPayment(caseId, concepto)` reemplaza el viejo
+`hasRequiredPayment`/`GATES_PAGO`/`describeGate` (retirados — ya no tenían
+sentido con un gate por concepto).
+
+**De dónde sale qué concepto es obligatorio:** de la línea de la cotización
+ACEPTADA del caso (`tracker/routes/quotes.js`) — 3 campos nuevos por línea:
+`esExtranjero` (bool), `aplicaIEA` (bool), `modalidadIEA`
+(`'regular'|'expedita'|null`, forzado a `null` si `aplicaIEA` es falso).
+Editables vía `PATCH /api/quotes/:id/lineas/:caseId` (mismo endpoint de TAREA
+18, body extendido). Nuevo helper exportado `getAcceptedQuoteLineForCase(caseId)`.
+
+**Gate de fase_05 — ahora vive por completo en `tracker/services/transitions.js`**
+(antes llamaba a `hasRequiredPayment` genérico de payments.js; ese generic ya no
+existe). `conceptosRequeridosFase05(linea)`: honorarios + tasa_dnfd SIEMPRE; +
+mef si `esExtranjero`; + iea si `aplicaIEA`. Si no hay cotización aceptada
+(override pasado el gate de fase_04, o caso sin orgId forzado), la línea es
+`null` y el gate cae a la base (honorarios + tasa_dnfd) — no inventa un
+requisito que no puede sustentar. El mensaje de error lista los conceptos que
+faltan (`"...sin registrar el pago de: mef, iea."`), no un texto genérico.
+
+**UI:** `admin/expediente.html` — el selector de pago pasó de "Fase que cubre"
+(fase_05/fase_13) a "Concepto" (los 5 de arriba); nuevo bloque
+`#payments-resumen` (solo admin, `has('quotes.read')`) que muestra cada concepto
+requerido con badge ✓/pendiente, leyendo la cotización aceptada del caso.
+`admin/cotizaciones.html` — checkboxes "Extranjero (MEF)"/"Aplica IEA" + select
+de modalidad por línea, guardados junto con honorarios/tasas en el mismo botón
+"Guardar". `client-dashboard.html` — el bloque "Pagos" del expediente pasó de 2
+badges fijos (Anticipo/Saldo) a una fila por CONCEPTO (`pagoBadge` ahora acepta
+`null` = "No aplica", para mef/iea cuando la cotización no los marca — nunca se
+muestra como "pendiente" algo que nunca va a pagarse).
+
+### (b) Precios — tarifario del xlsx 24-sep, SOLO emulador
+
+`tracker/scripts/seed_pricing_24sep.js` (nuevo, ~910 líneas, ids con sufijo
+`_24sep`) carga las 53 filas de
+`_Zelky-Drive-2026-09-25/F04-Actualización de nuestros precios para la
+plataforma - copia.xlsx` (24-sep) en la colección `pricing` del EMULADOR —
+**`tracker/seed_pricing.js` (prod, 12-sep) no se tocó**, cero riesgo de precio
+en producción. Parseado con un parser XLSX propio (`zipfile` + XML de Python,
+sin librerías nuevas — `pip install` está bloqueado por PEP 668 en esta
+máquina): lee `sharedStrings.xml` + `sheet1.xml` directo, incluida la celda
+`#REF!` cacheada de Excel.
+
+`organizacion/10_DIFF_PRECIOS_24SEP.md` (nuevo): categoría por categoría, viejo
+vs. nuevo. Hallazgos:
+- **3 diferencias de precio reales** (no solo de agrupación): Mutuo Acuerdo
+  B/.4,580→**4,130** (-450, se separó de WLA WHO que se queda en 4,580);
+  Síntesis Química Regular B/.3,930→**4,130** (+200); Intercambiabilidad
+  B/.4,030→**3,880** (-150).
+- **2 inconsistencias DENTRO del xlsx** (el total declarado no cuadra con la
+  suma de sus propias columnas — filas 5 y 7): se cargó la suma de componentes,
+  no el total declarado (más confiable tras una edición desactualizada);
+  reportado para que Zelky lo revise.
+- **La fila "Renovación de registro sanitario por trámite abreviado" tiene
+  `#REF!`** en el xlsx original (IEA/Total de tasas/Total general rotos en la
+  fuente) — se cargó `iea: null` y `total: null`, **no se inventó un número**
+  (mismo criterio de TAREA 17/19). *Nota de proceso: mi primer borrador del
+  script de diff mostró por error un total fabricado (3,125, sumando el resto
+  de componentes e ignorando el `#REF!`) para esta fila — lo detecté al
+  revisar el propio documento antes de entregarlo y lo corregí a "sin dato" en
+  `organizacion/10_DIFF_PRECIOS_24SEP.md` antes de que llegara a nadie; el
+  archivo `seed_pricing_24sep.js` (los datos que de verdad carga el emulador)
+  nunca tuvo el error — estaba bien desde el primer borrador.*
+- ~39 categorías que el xlsx AGREGA sin equivalente viejo (Renovaciones — 8
+  filas, categoría completa nueva; Modificaciones — 27 filas, categoría
+  completa nueva; más Cosméticos-10-variedades y Prioridad-innovadores).
+- Sigue sin resolver (ya anotado en §H.8 antes de esta tarea): Regular+
+  Biológicos/Homeopático/Suplementos/Vacuna y Abreviado+Vacuna/Contraste/Gas
+  Medicinal/Naturales — `resolverCategoriaPrecio()` los sigue devolviendo
+  `null`, el xlsx 24-sep tampoco los trae.
+
+**`resolverCategoriaPrecio()` (tracker/routes/quotes.js) actualizado** — pero
+con una decisión de diseño explícita para no arriesgar producción: resuelve a
+los ids `_24sep` (más finos — separan Mutuo Acuerdo/WLA WHO,
+Suplementos/Homeopático/Radiofármaco, Naturales/Gas/Contraste, que antes
+compartían una sola fila) **solo si `FIRESTORE_EMULATOR_HOST` está definido**
+(`TARIFARIO_24SEP`, mismo criterio de guarda que ya usan todos los scripts de
+seed/migración de esta sesión); fuera del emulador (si esto llegara a correr
+contra producción) devuelve exactamente los ids viejos de siempre, sin cambio
+de comportamiento. Como HOY todo (dev, tests, e2e) corre contra el emulador,
+esto SÍ cambió los ids que ven las pruebas existentes — actualicé 3
+aserciones en `permissions.test.js` (categoriaPrecio esperado + 2 totales que
+subieron 200 por el cambio real de precio de Síntesis Química Regular).
+
+`tracker/scripts/seed_emulador.js` ahora también corre
+`seed_pricing_24sep.js` después de `seed_pricing.js` (mismo patrón,
+`execFileSync`) — se siembra automáticamente en cualquier corrida de
+`e2e/run.sh` o `run_permission_tests.sh`, sin paso manual.
+
+### (c) Tests
+
+- `tracker/tests/payment_concepts.test.js` (nuevo, 6 pruebas): fixtures
+  dedicados `case-gate-pago-concepto-{rest,mcp}` (org Beta, para no chocar con
+  el locator "Laboratorios Alfa" de `quotes.spec.js` — ver nota de bug abajo)
+  con una cotización 'aceptada' sembrada directo con `esExtranjero:true,
+  aplicaIEA:true, modalidadIEA:'expedita'`, así el gate exige los 4 conceptos.
+  Por CADA vía (REST y MCP): sin pagos bloquea mencionando los 4; con 3 de 4
+  sigue bloqueado por el que falta; con los 4, avanza. MCP no tiene un tool
+  para registrar pagos (por diseño — ver `tracker/routes/mcp.js`), así que los
+  pagos siempre se registran vía REST y se prueba que MCP VE los mismos pagos
+  que REST escribió (no hay una vía "MCP" de pago separada que probar).
+- `tracker/tests/permissions.test.js` — 3 aserciones actualizadas (arriba).
+- `e2e/payments.spec.js` (reescrito): ahora demuestra la granularidad por
+  concepto — bloqueado sin nada → bloqueado con solo "honorarios" (falta
+  "tasa_dnfd") → desbloqueado con ambos → el cliente ve cada concepto por
+  separado. Capturas en `sessions/2026-09-29/`.
+- `e2e/flujo_completo.spec.js` — los 2 `registerPayment()` (antes
+  `fase:'fase_05'`/`fase:'fase_13'`) pasan a `concepto:'honorarios'` +
+  `concepto:'tasa_dnfd'` (fase_05, sin cotización aceptada — llegó por
+  override — así que el gate es la base de 2) y `concepto:'honorarios_saldo'`
+  (fase_13, informativo). Conteos de badges actualizados (2 checks
+  intermedios + el final).
+
+**Bug real encontrado y corregido durante la verificación:** las 2 cotizaciones
+'aceptada' nuevas de `payment_concepts.test.js` se sembraron primero en org
+Alfa — `admin/cotizaciones.html` (que `e2e/quotes.spec.js` recorre con un
+locator `.quote-card` filtrado por texto "Laboratorios Alfa") pasó de 1 a 3
+tarjetas, y Playwright lo marcó como violación de "strict mode" (locator
+ambiguo). Se movieron esos 2 fixtures a org Beta (el token admin/MCP que usan
+esos tests no depende de organización) — re-corrida limpia.
+
+**Resultado final:** 18/18 Playwright + 73/73 permisos + 4/4 paquete IEA +
+12/12 gates de transición + **6/6 pago por concepto (nuevo)** + 5/5 migración —
+todo en verde. (El único fallo visto en el camino, en
+`document_versions.spec.js` por "Invalid or expired token", es el flake ya
+documentado de sesiones anteriores — desapareció en la re-corrida limpia, no
+relacionado con esta tarea.)
+
+**No hecho / fuera de alcance de esta tarea** (para que quede explícito, no
+hay nada escondido):
+- No se conectaron Renovaciones/Modificaciones a `resolverCategoriaPrecio()`
+  — el caso no tiene forma de marcarse como "Renovación" (`tipoSolicitud` fijo
+  en 'Nuevo Registro', gap de TAREA 17/§H.6) ni de indicar QUÉ modificación
+  específica (27 tipos, sin campo en el modelo de caso). Se cargaron al
+  tarifario para que el admin las asigne a mano.
+- No se agregó ninguna reconciliación automática entre el total agregado de
+  la línea de cotización (`tasasOficiales`) y la suma de los pagos por
+  concepto — son dos cosas distintas a propósito (uno es el tarifario
+  congelado de la línea, el otro es lo que de verdad se cobró en cheques
+  reales) y el PM no pidió esa validación cruzada para esta tarea.
+
+**Estado de archivos** — nuevos: `tracker/scripts/seed_pricing_24sep.js`,
+`organizacion/10_DIFF_PRECIOS_24SEP.md`, `tracker/tests/payment_concepts.test.js`.
+Modificados: `tracker/routes/payments.js` (concepto reemplaza fase),
+`tracker/routes/quotes.js` (esExtranjero/aplicaIEA/modalidadIEA +
+`resolverCategoriaPrecio` con ids `_24sep` bajo emulador),
+`tracker/services/transitions.js` (gate de fase_05 concept-aware),
+`tracker/scripts/seed_emulador.js` (siembra el tarifario 24-sep),
+`tracker/scripts/seed_roles.js` (2 fixtures + 2 cotizaciones sembradas),
+`tracker/scripts/run_permission_tests.sh` (corre el test nuevo),
+`tracker/tests/permissions.test.js` (3 aserciones), `farmazed-web/portal/js/api.js`
+(`registerPayment` concepto en vez de fase), `farmazed-web/admin/expediente.html`,
+`farmazed-web/admin/cotizaciones.html`, `farmazed-web/client-dashboard.html`,
+`e2e/payments.spec.js` (reescrito), `e2e/flujo_completo.spec.js`. Sin commit,
+sin deploy.
+
+### Ajuste del PM (mismo día): `PRICING_TABLE` explícita, no atada al entorno
+
+TAREA 23 aceptada, con 1 corrección: qué tarifario está activo
+(`TARIFARIO_24SEP` en `resolverCategoriaPrecio()`) miraba
+`FIRESTORE_EMULATOR_HOST` — ata una decisión de NEGOCIO al entorno técnico. Se
+cambió a una variable explícita: `PRICING_TABLE=24sep` activa el tarifario
+nuevo; cualquier otro valor (incluida la variable sin definir) usa el de
+siempre — así Rick lo enciende en producción con un solo cambio de variable de
+entorno en Cloud Run cuando lo apruebe, sin que dependa de si el proceso corre
+contra el emulador.
+
+Cambios: `tracker/routes/quotes.js` (`TARIFARIO_24SEP = process.env.PRICING_TABLE
+=== '24sep'`), `tracker/scripts/run_permission_tests.sh` y `e2e/run.sh`
+(arrancan el tracker con `PRICING_TABLE=24sep` para que las pruebas sigan
+viendo el tarifario nuevo), `DEV_LOCAL.md` y `tracker/.env.example`
+(documentan la variable). `ENTREGA_E1_E3.md` (Bloque 3, plan de deploy):
+nota explícita de que el deploy normal deja el tarifario de SIEMPRE activo
+(la variable no existe en Cloud Run hoy) y el comando exacto
+(`gcloud run services update ... --update-env-vars PRICING_TABLE=24sep`)
+para cuando Rick apruebe promoverlo — con la advertencia de que antes de
+encenderla alguien tiene que sembrar esas categorías en la colección
+`pricing` de producción (hoy solo existen en el seed del emulador).
+
+Re-verificado tras el cambio: 18/18 Playwright + 73/73 permisos + 4/4 IEA +
+12/12 gates + 6/6 pago-por-concepto + 5/5 migración — el único fallo del
+camino (`flujo_completo.spec.js`, "Execution context was destroyed" en el
+logout de la corrida completa) es el flake ya documentado de sesiones
+anteriores, confirmado al pasar limpio en una re-corrida aislada del mismo
+spec. Sin commit, sin deploy.
+
+---
+
+## TAREA 24 — Auditoría del checklist contra las matrices nuevas de Zelky
+(Síntesis Química + Biológicos/Biotecnológicos) — 29-sep, SOLO DIAGNÓSTICO
+
+Instrucción explícita del PM: comparar `tracker/data/faddi_checklists.js`
+requisito por requisito contra dos matrices nuevas de Zelky (28-sep) —
+`Matriz_SQ_anexo1.docx` (Drive, id `1ox97pJUm0nVHKKpdyG8DbX8mdNffRHLo`, leída
+con el conector de Google Drive) y `References/matrices_zelky_2026-09-28/
+Matriz_BIO_anexo1.md` (ya en el repo) — **sin tocar el checklist todavía**
+("primero reviso la auditoría", instrucción textual del PM). Solo registro
+nuevo (renovaciones/modificaciones fuera de alcance, §H.6).
+
+Entregado: **`organizacion/11_AUDITORIA_CHECKLIST_MATRICES.md`** — tabla
+requisito-por-requisito para SQ y para BIO (N.° de la matriz, fundamento, vía,
+estado ESTA/FALTA/SOBRA/DISTINTO/N/A, nota), más una sección de "hallazgos
+transversales" que aplican a ambas.
+
+**Los 3 hallazgos más accionables:**
+1. **`recibo_iea` (pago del IEA) no distingue Regular de Abreviado en NINGÚN
+   subtipo del checklist** — la matriz BIO-03 dice explícitamente "en
+   procedimiento ABREVIADO: no aplica" (D.E. 29/2023 Art. 6: en abreviado no
+   se requieren ensayos analíticos previos), pero `DOC_RECIBO_IEA` es
+   `required:true` fijo sin mirar `tipoRegistro`, para Síntesis Química,
+   Biológicos, Biotecnológicos, Homeopático, Medio de Contraste y Gas
+   Medicinal.
+2. **Colisión de `faddiCode` 15.14 sin señalar en el código** — `otros_docs`
+   (base), `declaracion_paises` (Huérfanos) y `aprobacion_arr` (Abreviado)
+   comparten el mismo código; un caso Abreviado dispara `otros_docs` Y
+   `aprobacion_arr` a la vez con el mismo `faddiCode`. Las otras 2 colisiones
+   conocidas (15.16, 15.11) ya estaban marcadas `PENDIENTE_VERIFICAR` en el
+   código; esta no.
+3. **Biológicos y Biotecnológicos son un solo `tipoMedicamento` separado en
+   el checklist, pero la matriz de Zelky los trata como UNA sola categoría
+   unificada** — asimetría concreta: `farmacovigilancia_bio` (15.20) solo
+   existe para `'Biotecnológicos'`, aunque BIO-29 (Plan de farmacovigilancia)
+   no distingue entre los dos en la matriz.
+
+Además: 3 `FALTA` claros en SQ (protección de datos, especificaciones de
+principio activo/materias primas, bioequivalencia — este último con el
+`⚠ VERIFICAR` propio de Zelky sin resolver), 7 `FALTA` claros en BIO
+(protección de datos, declaración jurada de identidad para Abreviado,
+especificaciones de fuentes del PA/banco de células, especificaciones de
+excipientes, ausencia de agentes patógenos, ausencia de materias primas EET,
+programa de gestión de riesgo — este último solo insinuado dentro de la
+descripción de `farmacovigilancia_bio`, nunca como documento propio), y el
+único `⚠ VERIFICAR` que la propia matriz BIO deja pendiente
+(`BIO-S/N-1`, especificación de calidad/pureza del principio activo) se
+transcribió tal cual, sin intentar resolverlo.
+
+**No hecho, por instrucción explícita:** no se tocó `faddi_checklists.js` (el
+PM revisa primero); no se auditó `Vacuna` (fuera de alcance de esta tarea);
+Renovaciones/Modificaciones siguen fuera (§H.6). Sin commit, sin deploy.
+
+---
+
+## TAREA 25 — Aplicar la auditoría al checklist (PM_COMMENTS §H.9) — 30-sep
+
+El PM aceptó TAREA 24 y registró 5 decisiones en §H.9 sobre qué aplicar de la
+auditoría (`organizacion/11_AUDITORIA_CHECKLIST_MATRICES.md`). Esta tarea las
+aplicó todas a `tracker/data/faddi_checklists.js` — la auditoría quedó
+actualizada con una columna **"Aplicado en TAREA 25"** por fila (qué se tocó,
+qué se dejó igual y por qué).
+
+### (1) `recibo_iea` deja de depender del subtipo
+
+Antes: `DOC_RECIBO_IEA` era una constante fija (`required:true` siempre) que
+cada subtipo incluía o excluía a mano en su propia lista (Suplementos,
+Productos Naturales, Huérfanos, Vacuna y Radiofármaco lo excluían; los demás
+lo exigían siempre, **incluso en Abreviado**, que era el bug más concreto de
+la auditoría — BIO-03 dice explícito que en Abreviado no aplica).
+
+Ahora: `docReciboIea(aplicaIEA)` (función, no constante) — tres estados:
+`aplicaIEA===true` → `required:true`; `aplicaIEA===false` → no aplica,
+`required:false` con motivo; `aplicaIEA===undefined` (sin cotización aceptada
+todavía) → `required:false`, `condition:'Por confirmar: depende de si la
+cotización marca IEA...'`. Se agrega UNA vez en `getChecklist()`, para
+**cualquier** subtipo de medicamentos — ya no vive en las listas por subtipo.
+`aplicaIEA` sale de `getAcceptedQuoteLineForCase(caseId)` (quotes.js, ya
+existía desde TAREA 23) — los 3 llamadores de `getChecklist()`
+(`cases.js` GET /:id, GET /:id/checklist, `mcp.js` `handleGetCase`) ahora
+hacen ese fetch primero y pasan `aplicaIEA: linea?.aplicaIEA`.
+
+### (2) Las 3 colisiones de `faddiCode` 15.14
+
+`otros_docs`, `declaracion_paises` (Huérfanos) y `aprobacion_arr` (Abreviado)
+compartían el código `15.14` — un caso Abreviado con Huérfanos disparaba los
+3 a la vez. Los 3 quedaron `faddiCode: 'PENDIENTE_VERIFICAR'`, mismo criterio
+que las otras 2 colisiones ya conocidas (`etiquetas`/`patrones` en 15.16,
+`contrato_fabricacion`/`monografia` en 15.11).
+
+### (3) Biológicos y Biotecnológicos: los mismos requisitos
+
+Antes cada uno tenía su propia lista en `MED_VARIABLE_BY_SUBTYPE`, con
+`farmacovigilancia_bio` solo en Biotecnológicos. Ahora ambos apuntan al
+MISMO array (`MED_BIO_DOCS`) — cualquier documento que se agregue a uno
+automáticamente aplica al otro, sin volver a divergir por accidente.
+
+### (4) Los FALTA de la auditoría, agregados
+
+**SQ (2):** `proteccion_datos` (opcional, Dec. 1389/2012 Art. 5),
+`especificaciones_pa` (obligatorio, distinto de `especificaciones` que es
+del producto terminado — Res. 126 núm. 7.6; D.E. 27/2024 Art. 78).
+
+**BIO (7):** `proteccion_datos` (compartido con SQ),
+`declaracion_identidad_abreviado` (obligatorio, **solo Abreviado** — mismo
+patrón de código que `cert_analisis`/SQ: se agrega en el bloque
+`if (tipoRegistro==='Abreviado')`, no en `MED_BIO_DOCS`),
+`especificaciones_fuentes_pa`, `especificaciones_excipientes`,
+`ausencia_agentes_patogenos`, `ausencia_materias_primas_eet`,
+`programa_gestion_riesgo` (los 6 últimos obligatorios, en `MED_BIO_DOCS`).
+
+Todos con `responsable:'cliente'` (por default), `faddiCode:
+'PENDIENTE_VERIFICAR'` (ninguna matriz trae un código FADDI real) y el
+fundamento normativo (N.° de la matriz + artículo/decreto) en la
+`description` — no un texto genérico.
+
+### (5) Los `⚠ VERIFICAR` de Zelky, opcionales con nota
+
+`bioequivalencia` (SQ-15) y `especificacion_calidad_pureza_pa` (BIO-S/N-1):
+`required:false`, `condition:'Farmazed confirma si aplica'` — no se resuelve
+la pregunta de Zelky, solo se deja de bloquear por ella.
+
+### Tabla antes/después (conteo total de documentos del checklist por combinación)
+
+| Subtipo | Vía | Antes | Después | Diferencia |
+|---|---|---:|---:|---|
+| Síntesis Química | Regular | 22 | 25 | +3 (proteccion_datos, especificaciones_pa, bioequivalencia) |
+| Síntesis Química | Abreviado | 24 | 27 | +3 (mismos 3 — recibo_iea/aprobacion_arr/cert_analisis sin cambio de conteo) |
+| Biológicos | Regular | 25 | 33 | +8 (farmacovigilancia_bio, que antes solo tenía Biotecnológicos, + los 7 FALTA) |
+| Biológicos | Abreviado | — | 35 | +2 sobre Regular (aprobacion_arr + declaracion_identidad_abreviado) |
+| Biotecnológicos | Regular | 26 | 33 | +7 (los 7 FALTA — ya tenía farmacovigilancia_bio) |
+| Biotecnológicos | Abreviado | — | 35 | +2 sobre Regular (aprobacion_arr + declaracion_identidad_abreviado) |
+| Huérfanos | Regular | 23 | 24 | +1 (recibo_iea, que antes excluía por completo — ahora "por confirmar") |
+
+(Biológicos y Biotecnológicos ya dan el MISMO número — confirma la decisión 3.
+Huérfanos no estaba en el alcance de la auditoría, pero decisión 1 es
+universal — se incluye para mostrar el efecto colateral esperado, no un bug.)
+
+### Tests
+
+- **`tracker/tests/checklist_tarea25.test.js`** (nuevo, 17 pruebas) — unitario
+  PURO sobre `getChecklist()` (no usa emulador ni HTTP, corre standalone con
+  `node --test`): cubre las 5 decisiones una por una (recibo_iea en sus 3
+  estados incluso en subtipos que antes lo excluían por completo; las 3
+  colisiones de 15.14 en `PENDIENTE_VERIFICAR`; Biológicos===Biotecnológicos
+  documento por documento; los 9 FALTA presentes con su fundamento en la
+  descripción; los 2 `⚠ VERIFICAR` opcionales con la nota exacta) + una
+  prueba de no-regresión (trámites no-medicamentos no tienen `recibo_iea`).
+  Agregado a `run_permission_tests.sh`.
+- **`e2e/checklist_recibo_iea.spec.js`** (nuevo) — flujo real completo:
+  2 casos nuevos (`case-checklist-iea-si`/`-no`, org Beta, seed_roles.js) en
+  fase_03 → fase_04 (dispara el borrador de cotización) → admin marca
+  "Aplica IEA" SOLO en uno vía `admin/cotizaciones.html` (checkbox de TAREA
+  23) → envía y el cliente acepta → el checklist de `admin/expediente.html`
+  muestra `recibo_iea` obligatorio en el caso marcado y "(opcional)" en el
+  otro — antes de aceptar la cotización, los dos lo mostraban "(opcional)"
+  por igual. Capturas en `sessions/2026-09-30/`.
+- **3 specs existentes actualizados** (`e2e/checklist.spec.js`,
+  `e2e/flujo_completo.spec.js`, `e2e/paquete_iea.spec.js`): sus listas
+  `CLIENTE_REQUIRED_IDS` (documentos que se suben para desbloquear
+  `#btn-next`) pasaron de 15 a 16 — les faltaba `especificaciones_pa`, el
+  nuevo obligatorio de Síntesis Química.
+- **Bug de test encontrado y corregido**: `flujo_completo.spec.js` tenía
+  `otros_docsItem.getByText('Ver')` — Playwright hace match por substring,
+  y `'PENDIENTE_VERIFICAR'` (el nuevo `faddiCode` de `otros_docs`) contiene
+  "ver" como substring, así que el locator empezó a resolver 2 elementos
+  (strict-mode violation). Se acotó a `.locator('a', { hasText: 'Ver' })`.
+
+**Resultado final:** 18/19 Playwright + 73/73 permisos + 4/4 IEA + 12/12
+gates + 6/6 pago-por-concepto + **17/17 checklist (nuevo)** + 5/5 migración.
+El único fallo (`flujo_completo.spec.js`, a veces `document_versions.spec.js`
+o `paquete_iea.spec.js`) es el mismo flake de navegación login/logout ya
+documentado muchas veces en esta sesión — confirmado de nuevo: cada uno de
+los 3 pasó limpio en una re-corrida aislada; nunca falla dos veces seguidas
+por el mismo motivo, y el motivo exacto cambia de corrida en corrida (a veces
+"Execution context was destroyed", a veces "net::ERR_ABORTED", a veces
+"dialog.accept: Not attached to an active page") — todos síntomas de la misma
+carrera de navegación bajo carga con 1 worker, no de este código.
+
+**No aplicado** (documentado con su motivo exacto en la columna de
+`organizacion/11_AUDITORIA_CHECKLIST_MATRICES.md`, fila por fila): las 3
+diferencias de redacción/contenido (BIO-12/13/20), la separación
+monografía/inserto (SQ-18), el gate `cert_analisis`-solo-Abreviado de SQ
+(SQ-19 — "verificar con Zelky antes de tocar el código", instrucción propia
+de la auditoría, no tocado), el `required` fijo de `patrones`/`almacenamiento`
+(BIO-55/31), separar el poder en dos documentos (BIO-04), y los 2 FALTA
+condicionados a un campo "innovador" que el modelo de caso no tiene
+(SQ-33/34, fuera de pedido de esta tarea). Vacuna sigue fuera de alcance.
+Renovaciones/Modificaciones siguen fuera (§H.6). Sin commit, sin deploy.
+
+---
+
+## TAREA 26 — Cierre de la ronda: flake de e2e, `esInnovador`, ENTREGA y
+respaldo — 30-sep
+
+Instrucción del PM en 4 partes. Se hicieron las 4; la parte 1 (flake) quedó
+con 2 causas reales corregidas y una tercera de infraestructura, más una
+limitación real de la máquina que no se puede "arreglar" con código.
+
+### (1) Flake de login/logout — causa raíz
+
+Encontrado y corregido en **3 capas**, ninguna es un retry ni un timeout más
+alto:
+
+1. **Condición de carrera evaluate()+navegación (9 archivos de specs).**
+   `logout()` (en `portal/js/auth.js`) hace `signOut()` y después
+   `window.location.href = '/login.html'` — TODOS los specs disparaban esto
+   dentro de `page.evaluate()` y esperaban a que el propio `evaluate()`
+   resolviera ANTES de armar `page.waitForURL(...)`. Cuando la navegación
+   ocurre DENTRO de `evaluate()`, a veces destruye el execution context antes
+   de que `evaluate()` pueda devolver su valor — Playwright lo reporta como
+   `"Execution context was destroyed"`, y el `login()` siguiente hereda la
+   carrera con síntomas distintos (`net::ERR_ABORTED`, `"dialog.accept: Not
+   attached to an active page"`). Arreglo: armar `page.waitForURL(...)` ANTES
+   de disparar el `evaluate()`, en paralelo (`Promise.all`), e ignorar el
+   rechazo del `evaluate()` — lo único que importa es que la navegación
+   ocurrió de verdad. Aplicado en los 9 archivos que tenían el patrón viejo
+   (de 3 variantes distintas: await completo, fire-and-forget con `.then()`,
+   y una mezcla): `checklist_recibo_iea.spec.js`, `payments.spec.js`,
+   `quotes.spec.js`, `paquete_iea.spec.js`, `flujo_completo.spec.js`,
+   `checklist.spec.js`, `roles.spec.js`, `pricing.spec.js`,
+   `document_versions.spec.js`.
+2. **Bug real de producción, no solo de las pruebas — `getToken()` en
+   `farmazed-web/portal/js/auth.js`.** Justo después de un redirect a una
+   página nueva (login exitoso → dashboard), el módulo de `auth.js` de ESA
+   página arranca con `_currentUser = null` — se llena recién cuando
+   `onAuthStateChanged` dispara de forma ASÍNCRONA al restaurar la sesión
+   persistida de Firebase. `getToken()` miraba `_currentUser` directo: si
+   algo pedía un token en esa ventana (en las pruebas: `uploadAs()` justo
+   después de `login()`; en la vida real: un clic del cliente inmediatamente
+   después de entrar al dashboard, en una conexión lenta), devolvía `null`
+   sin intentarlo — el backend rechazaba con "Invalid or expired token".
+   Arreglo: `getToken()` ahora hace `await auth.authStateReady()` (API de
+   Firebase v10.7+, pensada exactamente para esto) antes de mirar
+   `auth.currentUser` — la fuente de verdad real de Firebase, no una
+   variable de módulo que puede ir un paso atrás.
+3. **Infra: `e2e/run.sh` arrancaba el frontend estático con un `sleep 1` sin
+   verificar nada.** Bajo carga del host, 1 segundo no siempre alcanza para
+   que `python3 -m http.server` esté aceptando conexiones cuando Playwright
+   hace su primer `page.goto()`. Reemplazado por el mismo patrón de
+   reintentos con `curl` que ya usan los emuladores y el tracker (hasta 15
+   intentos de 1s, con `❌` y log si nunca arranca) — no es un timeout más
+   largo "a ciegas", es esperar a que el proceso real esté listo.
+
+**Lo que NO se pudo arreglar con código — limitación real de la máquina,
+documentada con evidencia, no una excusa:** Patch es una máquina compartida
+(18 usuarios conectados a la vez en las corridas de esta tarea, confirmado
+con `uptime`/`who`). Durante las verificaciones de esta tarea el load average
+subió de 6.7 a 16.1 y el swap (8 GiB) estuvo permanentemente saturado —
+confirmé que NINGÚN proceso mío quedó huérfano entre corridas (`ps aux` sin
+emuladores/tracker/playwright colgados). Con los 3 arreglos de arriba, varias
+corridas completas pasaron limpias; pero en corridas con la máquina bajo
+carga alta, sigue apareciendo un fallo — siempre en el PRIMER test de la
+corrida, siempre con un síntoma distinto cada vez (a veces
+`"Execution context was destroyed"`, a veces `net::ERR_ABORTED`, a veces
+`"dialog.accept: Not attached to an active page"`), y NUNCA en una corrida
+aislada del mismo spec (confirmado repetidas veces). Eso es la firma de
+contención de recursos del host, no de un bug determinista de la app —
+**no cumplí el criterio de aceptación de "3 corridas seguidas sin fallos"**,
+y no intenté forzarlo con reintentos ni timeouts porque la instrucción del
+PM lo prohibía explícitamente y hacerlo habría escondido el síntoma sin
+arreglar nada real. Si Rick quiere una corrida 100% limpia para algo
+puntual, mejor en un momento de menos carga en Patch — aviso al PM de este
+resultado en vez de reportar un falso "arreglado".
+
+### (2) Campo `esInnovador` — staff lo confirma en fase 3, junto con vía y categoría
+
+- **Modelo**: `esInnovador` (boolean) en el caso. Tri-estado igual que
+  `aplicaIEA` (TAREA 25): `true` = obligatorio, `false` = no aplica,
+  `undefined` = "por confirmar" (no bloquea).
+- **Quién lo edita**: antes, el staff (analista/abogado/regente) solo podía
+  tocar `status`/`notes`/`faddi` de un caso — ni siquiera podía corregir
+  `tipoRegistro`/`tipoMedicamento`, pese a que fase_03 ("Tipo de registro
+  sanitario y ruta de registro", §H.8) es responsabilidad de Farmazed, no
+  del cliente. Se agregaron los 3 campos (`tipoRegistro`, `tipoMedicamento`,
+  `esInnovador`) a `STAFF_FIELDS` en `tracker/routes/cases.js`, con un
+  permiso nuevo `cases.edit_via_categoria` (`tracker/middleware/
+  permissions.js`, roles: analista/abogado/regente/admin — no se restringió
+  a un rol de staff específico porque el resto de `STAFF_FIELDS` tampoco lo
+  hace). `organizacion/09_TABLA_PERMISOS.md` regenerado con el script
+  existente.
+- **Checklist**: se aplicaron los 2 FALTA de SQ que quedaron pendientes en
+  TAREA 25 — `docEstudiosClinicosSQ(esInnovador)` (matriz SQ ítem 33) y
+  `docResumenSeguridadSQ(esInnovador)` (matriz SQ ítem 34), mismo patrón
+  tri-estado que `docReciboIea`. Solo para Síntesis Química (la auditoría no
+  encontró este gap en BIO ni en otro subtipo). `getChecklist()` recibe
+  `esInnovador` como opción nueva; los 3 llamadores (`cases.js` GET /:id,
+  GET /:id/checklist, `mcp.js` `handleGetCase`) pasan `data.esInnovador`
+  directo (a diferencia de `aplicaIEA`, este campo vive en el caso mismo, no
+  hace falta ir a buscar la cotización).
+- **UI nueva** — `admin/expediente.html`, tarjeta "Vía y Categoría — Fase 3"
+  (gateada por `cases.edit_via_categoria`, solo visible para trámites
+  `medicamentos`): select de vía, checkboxes de categoría (mismo listado
+  `TIPOS_MED` que usa el wizard del cliente, para no divergir), select de
+  "¿Es innovador?" con 3 opciones (Por confirmar/Sí/No), botón Guardar.
+  **Bug encontrado y corregido en el camino**: `PATCH /api/cases/:id`
+  devuelve solo los campos actualizados (`{id, ...update}`), no el caso
+  completo — el primer borrador del handler hacía `caseData = updated`,
+  que hubiera borrado `tramiteType`/`status`/`product`/etc. de la variable
+  en memoria y roto `render()`. Corregido a `Object.assign(caseData,
+  updated)` (mismo patrón que ya usan `btn-save-assign`/`btn-save-faddi`).
+- **`resolverCategoriaPrecio()` (tracker/routes/quotes.js) — decisión
+  explícita de NO mapear "Prioridad innovadores"** (categoría del tarifario
+  24-sep, `med_abreviado_prioridad_innovadores_24sep`). La regla no es
+  obvia: no está claro si "innovador" debe REEMPLAZAR la categoría del
+  subtipo (Biológicos/Huérfanos ya tienen su propia fila obligatoria por
+  ley, independiente de si el producto es innovador) o si solo debe aplicar
+  cuando no hay una fila más específica (p.ej. Síntesis Química genérica);
+  tampoco el xlsx aclara si es excluyente de las demás filas de Abreviado o
+  un cargo adicional. Se dejó un comentario extenso en el código explicando
+  esto — el admin sigue completando la línea a mano en estos casos, como
+  hace hoy con toda categoría sin fila propia.
+- **Tests**: `tracker/tests/checklist_tarea26.test.js` (nuevo, 5 pruebas,
+  unitario puro sobre `getChecklist()`) + `tracker/tests/
+  permissions.test.js` (3 pruebas nuevas: cliente bloqueado, analista SÍ
+  puede confirmar los 3 campos juntos, el checklist refleja `esInnovador`
+  inmediatamente). Agregado a `run_permission_tests.sh`.
+- `organizacion/11_AUDITORIA_CHECKLIST_MATRICES.md` actualizado: las filas
+  SQ-33/34 pasan de "No aplicado" a "Sí (TAREA 26)", con nota de qué se
+  agregó; sección D renombrada a "TAREA 24 vs. 25 vs. 26" con el resumen de
+  esta parte.
+
+### (3) `ENTREGA_E1_E3.md` actualizado con TAREAS 21-26
+
+Nueva sección completa ("El flujo canónico pasa a 13 fases, pagos por
+concepto, precios 24-sep y auditoría del checklist") resumiendo, para Rick
+(no con el detalle técnico de este handover): la máquina de 13 fases, los
+gates centralizados, los pagos por concepto y el tarifario del 24-sep
+(`PRICING_TABLE`), y la auditoría del checklist. §H.1 y §H.3 (sección 3,
+decisiones) marcados explícitamente como **superados por §H.8**; §H.8 y §H.9
+agregados como viñetas nuevas. Sección 2 (comando de verificación) y sección
+6 (última verificación) actualizadas con los conteos reales de hoy (125
+pruebas de backend, 19 specs de Playwright) y con la nota honesta sobre el
+flake del punto (1).
+
+### (4) Respaldo
+
+`~/respaldo-farmazed/2026-09-30c/cambios.patch` (414 KB, verificado con
+`git apply --check` contra un clon fresco del mismo HEAD — aplica limpio) +
+`untracked.tar.gz` (215 archivos, ~40 MB).
+
+### Verificación final
+
+Backend: **125/125** (76 permisos + 4 IEA + 12 gates + 6 pago-por-concepto +
+17 checklist TAREA 25 + 5 checklist TAREA 26 + 5 migración) — verde en cada
+corrida, sin excepción. Playwright: **18-19/19** según la corrida — ver nota
+del punto (1) para el detalle honesto del flake residual. Sin commit, sin
+deploy. El PM pidió esperar después de esto.
+
+---
+
+## TAREA 27 — Rick autoriza commit y push (§H.10) — 30-sep
+
+Instrucción directa de Rick a través del PM: *"procede con todo pero no hagas
+deployment aun, solo commit y push, asi yo pruebo todo en local desde la pc
+de argus."* — **sin deploy, sin migraciones en producción, sin tocar Cloud
+Run ni Firestore de prod.**
+
+### (1) Antes de stagear
+
+- `.vscode/` estaba untracked y a punto de entrar — se agregó a
+  `.gitignore` (no estaba cubierto antes; PM lo pidió explícitamente).
+- `tracker/node_modules/` y `e2e/node_modules/` ya estaban correctamente
+  excluidos (`tracker/.gitignore` propio + `e2e/node_modules/` en el
+  `.gitignore` raíz) — verificado con `git check-ignore`, no con solo
+  mirarlo.
+- `e2e/test-results/`, `playwright-report/`, logs de emuladores
+  (`firestore-debug.log`, etc.): ya excluidos, y no había ninguno suelto en
+  el repo al momento de revisar.
+- JDK / `~/.local`: no hay binarios del JDK en el repo — las 4 menciones que
+  aparecen (`DEV_LOCAL.md`, `run_permission_tests.sh`, `e2e/run.sh`,
+  `handover.md`) son solo la ruta por defecto de una variable de entorno
+  (`JAVA_HOME`), no el JDK copiado.
+- **Archivos >5 MB**: ninguno. Verificado programáticamente sobre los 238
+  archivos que terminaron entrando (`stat` de cada uno) — los únicos >1 MB
+  eran PDFs/PSD de `References/`, y esos ya estaban excluidos por
+  `*.pdf`/`*.psd` en `.gitignore` desde antes de esta tarea (confirmado con
+  `git check-ignore -v`, no estaban a punto de entrar).
+- Total: **238 archivos** nuevos/modificados entraron en esta entrega (la
+  primera desde `5729a63`, hace varias sesiones) — 146 son capturas de
+  Playwright (`sessions/`), el resto es código real.
+
+### (2) gitleaks sobre lo stageado
+
+`gitleaks git --staged` → **2 hallazgos, ambos ya conocidos**: las claves
+viejas `fz-admin-2026` y `fz-mcp-2026` en `PM_COMMENTS.md` (líneas 639 y
+643), dentro del runbook de rotación de claves — son ejemplos de curl que
+verifican que esas claves YA ROTADAS devuelven 401, no credenciales activas.
+Cero hallazgos nuevos o inesperados. El apiKey web de Firebase
+(`farmazed-web/portal/js/config.js`) ni siquiera lo marcó — es pública por
+diseño (Firebase no la trata como secreto; la seguridad la dan las reglas de
+Firestore/Storage, no ocultar esta clave).
+
+### (3) Commits por bloques (orden de `ENTREGA_E1_E3.md`)
+
+Como nunca hubo commits incrementales de este trabajo (todo llegó a esta
+sesión como un único árbol de trabajo sin commitear de varias sesiones), no
+existía una historia real por TAREA para preservar — se agrupó por ÁREA
+funcional, en el orden en que `ENTREGA_E1_E3.md` describe el producto:
+
+1. `d9cd70f` — Tracker v2: API completa (todo `tracker/`: rutas,
+   middleware, servicios, utils, scripts, tests de integración).
+2. `8a1c337` — Portal del cliente: dashboard, wizard, `auth.js` (incluye el
+   fix de `getToken()`/`authStateReady()` de TAREA 26).
+3. `21e31ec` — Panel de empleados (bandeja).
+4. `f8caa7d` — Panel admin (casos, expediente, cotizaciones, precios,
+   empresas, formularios).
+5. `9ab6f80` — Alta de cuentas por invitación.
+6. `46cd4de` — Suite E2E con Playwright (19 specs) + capturas (`sessions/`).
+7. `b6b2d1a` — Config de infraestructura local (emuladores, `.gitignore`,
+   `verificar_local.sh`, `DEV_LOCAL.md`).
+8. Este commit — documentación de proceso y decisiones (`organizacion/`,
+   `PM_COMMENTS.md`, `ENTREGA_E1_E3.md`, `References/matrices_zelky_2026-09-28/`,
+   este `handover.md`).
+
+Todos terminan con `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`
+(línea exacta que pidió el PM).
+
+### (4) Push y respaldo
+
+`git push origin main` — el remoto apunta a la URL vieja del repo
+(RichoX-Hub/Farmazed), que redirige; funciona igual. Respaldo adicional (por
+si acaso, aunque ya no hace falta para recuperar nada) sigue en
+`~/respaldo-farmazed/2026-09-30c/` de TAREA 26.
+
+### Qué NO se hizo (por instrucción explícita)
+
+Ningún deploy a Cloud Run, ninguna migración contra Firestore de
+producción, `PRICING_TABLE` sin tocar en prod (sigue en el tarifario de
+siempre). El conteo de casos por estado en producción sigue bloqueado por
+el clasificador de permisos (§H.1) — sin cambios en esta tarea.

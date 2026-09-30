@@ -1,0 +1,190 @@
+INVENTARIO ESTATICO DE LITERALES DE ESTADO (D-INV)
+Generado: 2026-09-29 · developer, TAREA 7 (organizacion/07_ALCANCE_E1_VERIFICADO.md §4#3)
+
+Metodo: grep sobre tracker/ y farmazed-web/ (excluyendo node_modules/ y
+farmazed-web/src/ — arbol de terceros, ver PENDIENTE #3 de 07), buscando los
+literales de los cinco vocabularios de estado descritos en 07 §1.1:
+
+  Estado de CASO (V1-V3): draft, submitted, in_review, faddi_ready,
+    faddi_submitted, approved, observed, denied, pending_docs, deleted
+  Estado de DOCUMENTO (V4): uploaded, reviewing, rejected, requested,
+    missing, pending, pending_upload
+
+Contextos capturados: literal entre comillas ('draft', "draft", `draft`),
+clase CSS badge-<estado>, y clave de objeto <estado>: (para los mapas
+BADGE/LABEL/FASE_MAP/ESTADO_MAP).
+
+V5 (fases de cliente en español — dashboard.html, maqueta sin conectar a la
+API) NO esta incluido: no aplica, ver 07 §1.1.
+
+RESULTADO: 86 sitios (archivo:linea) distintos, 131 ocurrencias de literal
+(algunas lineas tienen mas de un literal, ej. mapas de una sola linea).
+07 §1.2 reporta 32 "sitios" porque agrupa rangos multi-linea (ej.
+casos.html:108-110) en una sola fila; esta lista es linea por linea, mas
+granular. Los 8 archivos de 07 §1.2 (backend: cases.js, documents.js,
+mcp.js; frontend: casos.html, expediente.html, wizard.js,
+client-dashboard.html) estan todos cubiertos, mas tracker/scripts/
+seed_emulador.js (no existia cuando se escribio 07 — es el seed nuevo de
+Fase 0, ver DEV_LOCAL.md; se actualiza para importar de case_status.js en
+esta misma tarea).
+
+Total por archivo:
+  farmazed-web/admin/casos.html           43
+  farmazed-web/admin/expediente.html      19
+  farmazed-web/client-dashboard.html      24
+  farmazed-web/portal/js/wizard.js        19
+  tracker/routes/cases.js                  8
+  tracker/routes/documents.js              7
+  tracker/routes/mcp.js                    7
+  tracker/scripts/seed_emulador.js         4
+  TOTAL                                  131
+
+────────────────────────────────────────────────────────────────────────
+
+farmazed-web/admin/casos.html:20 -> draft
+farmazed-web/admin/casos.html:21 -> submitted
+farmazed-web/admin/casos.html:22 -> in_review
+farmazed-web/admin/casos.html:23 -> pending_docs
+farmazed-web/admin/casos.html:24 -> faddi_ready
+farmazed-web/admin/casos.html:25 -> faddi_submitted
+farmazed-web/admin/casos.html:26 -> approved
+farmazed-web/admin/casos.html:27 -> observed
+farmazed-web/admin/casos.html:70 -> submitted
+farmazed-web/admin/casos.html:71 -> in_review
+farmazed-web/admin/casos.html:72 -> pending_docs
+farmazed-web/admin/casos.html:73 -> faddi_ready
+farmazed-web/admin/casos.html:74 -> faddi_submitted
+farmazed-web/admin/casos.html:75 -> approved
+farmazed-web/admin/casos.html:108 -> draft
+farmazed-web/admin/casos.html:108 -> draft
+farmazed-web/admin/casos.html:108 -> submitted
+farmazed-web/admin/casos.html:108 -> submitted
+farmazed-web/admin/casos.html:108 -> in_review
+farmazed-web/admin/casos.html:108 -> in_review
+farmazed-web/admin/casos.html:109 -> pending_docs
+farmazed-web/admin/casos.html:109 -> pending_docs
+farmazed-web/admin/casos.html:109 -> faddi_ready
+farmazed-web/admin/casos.html:109 -> faddi_ready
+farmazed-web/admin/casos.html:110 -> faddi_submitted
+farmazed-web/admin/casos.html:110 -> faddi_submitted
+farmazed-web/admin/casos.html:110 -> approved
+farmazed-web/admin/casos.html:110 -> approved
+farmazed-web/admin/casos.html:110 -> observed
+farmazed-web/admin/casos.html:110 -> observed
+farmazed-web/admin/casos.html:113 -> draft
+farmazed-web/admin/casos.html:113 -> submitted
+farmazed-web/admin/casos.html:113 -> in_review
+farmazed-web/admin/casos.html:113 -> pending_docs
+farmazed-web/admin/casos.html:114 -> faddi_ready
+farmazed-web/admin/casos.html:114 -> faddi_submitted
+farmazed-web/admin/casos.html:114 -> approved
+farmazed-web/admin/casos.html:114 -> observed
+farmazed-web/admin/casos.html:136 -> in_review
+farmazed-web/admin/casos.html:137 -> faddi_ready
+farmazed-web/admin/casos.html:138 -> faddi_submitted
+farmazed-web/admin/casos.html:139 -> approved
+farmazed-web/admin/casos.html:165 -> draft
+farmazed-web/admin/expediente.html:37 -> submitted
+farmazed-web/admin/expediente.html:38 -> in_review
+farmazed-web/admin/expediente.html:39 -> pending_docs
+farmazed-web/admin/expediente.html:40 -> faddi_ready
+farmazed-web/admin/expediente.html:41 -> faddi_submitted
+farmazed-web/admin/expediente.html:42 -> approved
+farmazed-web/admin/expediente.html:43 -> observed
+farmazed-web/admin/expediente.html:249 -> missing
+farmazed-web/admin/expediente.html:250 -> uploaded
+farmazed-web/admin/expediente.html:250 -> approved
+farmazed-web/admin/expediente.html:250 -> rejected
+farmazed-web/admin/expediente.html:250 -> requested
+farmazed-web/admin/expediente.html:250 -> missing
+farmazed-web/admin/expediente.html:250 -> reviewing
+farmazed-web/admin/expediente.html:251 -> uploaded
+farmazed-web/admin/expediente.html:251 -> approved
+farmazed-web/admin/expediente.html:251 -> rejected
+farmazed-web/admin/expediente.html:251 -> missing
+farmazed-web/admin/expediente.html:251 -> requested
+farmazed-web/client-dashboard.html:968 -> requested
+farmazed-web/client-dashboard.html:968 -> uploaded
+farmazed-web/client-dashboard.html:968 -> reviewing
+farmazed-web/client-dashboard.html:968 -> approved
+farmazed-web/client-dashboard.html:968 -> rejected
+farmazed-web/client-dashboard.html:975 -> draft
+farmazed-web/client-dashboard.html:976 -> submitted
+farmazed-web/client-dashboard.html:977 -> in_review
+farmazed-web/client-dashboard.html:978 -> pending_docs
+farmazed-web/client-dashboard.html:979 -> faddi_ready
+farmazed-web/client-dashboard.html:980 -> faddi_submitted
+farmazed-web/client-dashboard.html:981 -> approved
+farmazed-web/client-dashboard.html:982 -> observed
+farmazed-web/client-dashboard.html:983 -> denied
+farmazed-web/client-dashboard.html:994 -> denied
+farmazed-web/client-dashboard.html:995 -> pending_docs
+farmazed-web/client-dashboard.html:995 -> observed
+farmazed-web/client-dashboard.html:996 -> approved
+farmazed-web/client-dashboard.html:1008 -> deleted
+farmazed-web/client-dashboard.html:1051 -> approved
+farmazed-web/client-dashboard.html:1051 -> denied
+farmazed-web/client-dashboard.html:1067 -> requested
+farmazed-web/client-dashboard.html:1070 -> pending_docs
+farmazed-web/client-dashboard.html:1071 -> requested
+farmazed-web/portal/js/wizard.js:326 -> pending
+farmazed-web/portal/js/wizard.js:359 -> uploaded
+farmazed-web/portal/js/wizard.js:359 -> pending
+farmazed-web/portal/js/wizard.js:360 -> pending
+farmazed-web/portal/js/wizard.js:360 -> pending_upload
+farmazed-web/portal/js/wizard.js:360 -> uploaded
+farmazed-web/portal/js/wizard.js:360 -> approved
+farmazed-web/portal/js/wizard.js:360 -> rejected
+farmazed-web/portal/js/wizard.js:360 -> requested
+farmazed-web/portal/js/wizard.js:361 -> pending
+farmazed-web/portal/js/wizard.js:361 -> uploaded
+farmazed-web/portal/js/wizard.js:361 -> approved
+farmazed-web/portal/js/wizard.js:361 -> rejected
+farmazed-web/portal/js/wizard.js:361 -> requested
+farmazed-web/portal/js/wizard.js:387 -> uploaded
+farmazed-web/portal/js/wizard.js:387 -> approved
+farmazed-web/portal/js/wizard.js:391 -> pending_upload
+farmazed-web/portal/js/wizard.js:410 -> uploaded
+farmazed-web/portal/js/wizard.js:512 -> submitted
+tracker/routes/cases.js:84 -> draft
+tracker/routes/cases.js:155 -> draft
+tracker/routes/cases.js:173 -> submitted
+tracker/routes/cases.js:174 -> submitted
+tracker/routes/cases.js:176 -> submitted
+tracker/routes/cases.js:198 -> deleted
+tracker/routes/cases.js:201 -> deleted
+tracker/routes/cases.js:233 -> uploaded
+tracker/routes/documents.js:92 -> uploaded
+tracker/routes/documents.js:122 -> requested
+tracker/routes/documents.js:137 -> requested
+tracker/routes/documents.js:144 -> requested
+tracker/routes/documents.js:149 -> pending_docs
+tracker/routes/documents.js:151 -> requested
+tracker/routes/documents.js:227 -> deleted
+tracker/routes/mcp.js:112 -> requested
+tracker/routes/mcp.js:183 -> uploaded
+tracker/routes/mcp.js:452 -> requested
+tracker/routes/mcp.js:453 -> requested
+tracker/routes/mcp.js:465 -> requested
+tracker/routes/mcp.js:474 -> pending_docs
+tracker/routes/mcp.js:478 -> requested
+tracker/scripts/seed_emulador.js:72 -> draft
+tracker/scripts/seed_emulador.js:80 -> in_review
+tracker/scripts/seed_emulador.js:88 -> approved
+tracker/scripts/seed_emulador.js:114 -> draft
+
+────────────────────────────────────────────────────────────────────────
+AGREGADOS A MANO — el regex de comillas individuales no captura listas
+pipe-separadas dentro de un solo string de descripcion. Confirmados leyendo
+el archivo (coinciden con 07 §1.2, filas mcp.js:37 y mcp.js:64):
+
+tracker/routes/mcp.js:38 -> "draft|submitted|in_review|faddi_ready|faddi_submitted|approved|observed|denied" (enum de 8 en descripcion de farmazed_list_cases)
+tracker/routes/mcp.js:65 -> "uploaded|reviewing|approved|rejected" (enum de 4, estado de documento, en descripcion de farmazed_list_documents)
+tracker/routes/mcp.js:103 -> "New status value" (sin enum — es el hueco: handleUpdateCase no valida, ver linea 433 mas abajo)
+
+NO es un literal de estado, pero es el hueco central de D06b — anotado para
+que no se pierda: tracker/routes/mcp.js:433 -> `update.status = status` sin
+ningun isValidStatus(). Esta es la "SEGUNDA RUTA DE ESCRITURA" de 07 §1.2
+(el documento la marca como linea ~421; en esta version del archivo el
+`if` que asigna status esta en la 433 — el bloque es el mismo,
+handleUpdateCase).

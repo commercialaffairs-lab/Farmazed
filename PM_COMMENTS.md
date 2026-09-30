@@ -528,3 +528,253 @@ Los dos siguen describiendo el pre-pivote y T0 con `repo/`. R15 (mover `repo/` a
 ---
 
 *Documento mantenido por el PM. Las respuestas se incorporan a `handover.md` como instrucciones al developer.*
+
+---
+
+# PARTE E — Respuestas de Rick (25-sep noche, directas al dev, relevadas por Argus)
+
+1. **F-6 ratificada.** Se conserva el espejo backend de F-2.
+2. **Claves vigentes → rotarlas con gcloud.** Advertencia de Argus (vinculante): primero sacar la clave del código público (`dashboard.html:736`, `.env.example`) y autenticar `/api/scans` del lado del servidor; recién después rotar. Rotar y volver a hardcodear es cosmético.
+3. **Un solo frontend:** el de git/producción; el otro se borra. El dev demostró con sha256 contra farmazed.com que prod sirve la raíz (versión prototipo) → se retiró `portal/login.html`, `portal/dashboard.html`, `shell.js`, `shell.css` en `ecea3b0`, reversible desde `af3f304`.
+4. **Correr contra producción** (no hay clientes reales). Bloqueado: falta ADC en Patch (lo debe ejecutar Rick).
+5. **Commitear después de confirmar el código real; sin push.** Hecho: 8 commits locales `6ec1c98…63f7fa4`, `main` ahead de origin, sin push.
+
+**Revisión del PM:** entrega aceptada salvo el punto 2 — el dev dejó la clave en el código "hasta rotar", orden inverso al correcto. Tarea asignada: mover `/api/scans` a `requireAuth+requireAdmin` y quitar la clave del JS y del `.env.example`. La rotación queda para después y necesita que Rick autorice/ejecute los `gcloud` que el clasificador bloqueó.
+**Hallazgo:** producción sigue sirviendo el prototipo con credenciales demo; el trabajo del 25-26 ago nunca se desplegó.
+
+**Entrega del ajuste Q2 — ACEPTADA** (verificada por Argus por ssh): commit local `49119a9`. `/api/scans` exige requireAuth+requireAdmin, `dashboard.html` manda Bearer idToken, `.env.example` en `change-me`, grep de las claves viejas fuera de docs = 0. Sin push, sin deploy, sin rotar.
+**Corrección al análisis:** el repo es público y las dos claves ya están en `origin/main` desde antes. El push reduce la fuga (el tip deja de tenerlas); según T4, prod ya rechaza `fz-admin-2026`. La rotación sigue pendiente, pero es menos urgente. Push, deploy, gcloud y ADC están escalados a Rick (decisión #36).
+
+---
+
+# PARTE F — RUNBOOK DE DEPLOY Y ROTACIÓN (decisiones #36/#42) — escrito, NO ejecutado
+
+Estado de partida: `main` va 11 commits por delante de `origin/main` (hasta `49119a9` + docs). Producción sirve el prototipo del 25-ago (`login.html` con `ricardo`/`user` + `admins123`).
+Fuentes: `DEPLOY.md:44-66` (web), `PM_INSTRUCTIONS.md:515` (usar el método gcr.io en dos pasos, no `--source .`), `handover.md:215-235` (tracker).
+**Orden obligatorio:** tracker antes que web. El `dashboard.html` nuevo llama a `/api/scans` con Bearer, y eso solo lo entiende el tracker nuevo.
+
+### Paso 1 — Allow list · **lo edita Rick**
+Archivo: `Proyecto Farmazetd Regulatory/.claude/settings.local.json`, dentro de `permissions.allow`:
+```json
+"Bash(git push origin main)",
+"Bash(curl -s*)"
+```
+- La primera permite el push del paso 2. La segunda permite las comprobaciones del paso 5.
+- **Recomendación del PM: no dar `gcloud` al dev.** DEPLOY.md:46 dice que el deploy se hace desde Cloud Shell. Además, en la rotación las claves nuevas quedarían escritas en el transcript del dev. Por eso los pasos 3 y 4 los corre Rick en Cloud Shell.
+- Si Rick igual quiere delegarlo, las líneas serían `"Bash(gcloud builds submit --tag gcr.io/farmazed/*)"` y `"Bash(gcloud run deploy farmazed-*)"`. El paso 4 sigue siendo de Rick.
+
+### Paso 2 — Push · **lo corre el dev** (o Rick)
+```bash
+cd "/home/claude-msi/Projects/Farmazed/Proyecto Farmazetd Regulatory"
+git status -sb            # esperado: ## main...origin/main [ahead 11], sin cambios de código
+git log origin/main..main --oneline
+git diff origin/main..main | grep -n "fz-admin-2026\|fz-mcp-2026\|admins123"   # solo líneas '-' o docs
+git push origin main
+```
+Resultado esperado: `git status -sb` → `## main...origin/main`, sin ahead.
+
+### Paso 3 — Deploy · **lo corre Rick en Cloud Shell** (console.cloud.google.com, proyecto `farmazed`)
+```bash
+cd ~/Farmazed && git pull origin main      # si no existe: git clone https://github.com/RichoX-Hub/Farmazed.git
+git log -1 --oneline                       # debe coincidir con el HEAD que se empujó
+
+# 3a) Tracker (API) — handover.md:226-234
+cd ~/Farmazed/tracker
+gcloud builds submit --tag gcr.io/farmazed/farmazed-tracker
+gcloud run deploy farmazed-tracker \
+  --image gcr.io/farmazed/farmazed-tracker \
+  --region us-central1 \
+  --service-account farmazed-api-sa@farmazed.iam.gserviceaccount.com \
+  --allow-unauthenticated \
+  --port 8080
+curl -s https://farmazed-tracker-267037695065.us-central1.run.app/health   # → {"status":"ok"...}
+
+# 3b) Web — DEPLOY.md:59-65 con el método de PM_INSTRUCTIONS.md:515
+cd ~/Farmazed
+gcloud builds submit --tag gcr.io/farmazed/farmazed-web
+gcloud run deploy farmazed-web \
+  --image gcr.io/farmazed/farmazed-web \
+  --region us-central1 \
+  --allow-unauthenticated \
+  --port 80 \
+  --memory 256Mi \
+  --quiet
+```
+- En 3a se omite `--set-env-vars` a propósito. Sin ese flag, el deploy conserva las variables actuales (`GCS_BUCKET`, `ADMIN_KEY`, `MCP_KEY`, `REDIRECT_URL`). Si se incluye, las reemplaza todas.
+- El repo no define ningún `cloudbuild.yaml` ni script de deploy. Lo de arriba es todo lo que hay documentado.
+
+### Paso 4 — Rotación de ADMIN_KEY y MCP_KEY · **lo corre Rick en Cloud Shell**
+**Dónde viven hoy [S, sin verificar]:** en variables de entorno planas del servicio Cloud Run `farmazed-tracker`, puestas con `--set-env-vars` (handover.md:232). No se pudo confirmar porque le denegaron el `describe` al dev. Rick puede confirmarlo sin imprimir los valores:
+```bash
+gcloud run services describe farmazed-tracker --region us-central1 \
+  --format="value(spec.template.spec.containers[0].env[].name)"
+```
+Rotación, conservando el mismo lugar (variables de entorno):
+```bash
+NEW_ADMIN=$(openssl rand -hex 32)
+NEW_MCP=$(openssl rand -hex 32)
+gcloud run services update farmazed-tracker --region us-central1 \
+  --update-env-vars "ADMIN_KEY=$NEW_ADMIN,MCP_KEY=$NEW_MCP"
+echo "$NEW_ADMIN"; echo "$NEW_MCP"    # copiar al gestor de contraseñas y cerrar la terminal
+```
+**Dónde quedan después:** en las mismas variables de entorno de `farmazed-tracker` (el valor solo lo ve quien tenga acceso al proyecto GCP) y en el gestor de contraseñas de Rick. **Nunca en el repo.**
+**Quién usa cada clave:**
+- `ADMIN_KEY`: `admin/precios.html` y `POST /api/admin/set-role`. El admin la escribe en pantalla, así que no hay que cambiar código.
+- `MCP_KEY`: el plugin de Cowork (handover, Paso 8). Hay que actualizarle la clave; si no, deja de funcionar.
+
+*Mejora opcional, no incluida:* pasar las claves a Secret Manager con `--update-secrets` y dar `secretAccessor` a `farmazed-api-sa`. Si se quiere hacer, es una tarea aparte.
+
+### Paso 5 — Comprobación · **la corre el dev** (con `curl -s` permitido) **o Rick**
+```bash
+# a) Ya no se sirve el login demo
+curl -s https://farmazed.com/login.html | grep -c "admins123"          # esperado: 0 (hoy: 2)
+curl -s https://farmazed.com/login.html | grep -c "firebase-auth"      # esperado: ≥1
+curl -s https://farmazed.com/login.html | sha256sum                    # igual a:
+git show HEAD:farmazed-web/login.html | sha256sum
+# repetir sha256 para dashboard.html y client-dashboard.html
+curl -s -o /dev/null -w "%{http_code}\n" https://farmazed.com/portal/login.html   # el clon retirado ya no existe; ver qué devuelve (nginx puede mandar al index)
+
+# b) /api/scans ya no acepta la clave por URL
+T=https://farmazed-tracker-267037695065.us-central1.run.app
+curl -s -o /dev/null -w "%{http_code}\n" "$T/api/scans?key=fz-admin-2026"   # esperado: 401
+
+# c) Rotación efectiva (después del paso 4)
+curl -s -o /dev/null -w "%{http_code}\n" -X POST "$T/api/admin/set-role" -H "x-admin-key: fz-admin-2026"   # esperado: 401
+curl -s -o /dev/null -w "%{http_code}\n" -X POST "$T/mcp" -H "Authorization: Bearer fz-mcp-2026" \
+  -H "Content-Type: application/json" -d '{"jsonrpc":"2.0","method":"tools/list","id":1}'              # esperado: 401
+```
+- Prueba manual de Rick: entrar a farmazed.com/login.html con la cuenta admin de Firebase y confirmar que el panel QR de `dashboard.html` carga. Eso depende de que la cuenta tenga el claim `admin` (handover, entrada `49119a9`).
+
+### Aparte — login ADC para correr contra producción (Q4) · **lo corre Rick en Patch**
+`! gcloud auth application-default login`. No se necesita para este runbook; sirve para desbloquear D02/D03/D07.
+
+---
+
+# PARTE G — Desvinculación de pb-website (Dominius) · 2026-09-28
+
+Contexto: el repo propio es `github.com/commercialaffairs-lab/Farmazed` (es el mismo que `RichoX-Hub/Farmazed`, transferido; GitHub redirige). gitleaks sobre los 39 commits: las claves viejas `fz-admin-*`/`fz-mcp-*` están en 8 commits antiguos (ya fuera del código en HEAD). La apiKey web de Firebase no es secreto. `FADDI CREDENTIALS.txt` nunca estuvo en este repo.
+
+Rescate: 11 assets de marca que solo vivían en el historial de pb-website → `~/Projects/Farmazed/Markting/rescate-pb-website-2026-09-28/` (verificados por hash contra el mirror `~/respaldo-2026-09-27/pb-website-mirror.git`). pm-dominius tiene el OK para purgar `products/portal/demo/Proyecto Farzetd Regulatory/` de su historial.
+
+Decisiones de Rick (28-sep):
+1. Repo **privado**: hecho (verificado con `gh api`).
+2. Rotar `ADMIN_KEY`/`MCP_KEY`: **Rick autoriza `gcloud` al dev.** Reemplaza la recomendación del Paso 1/4 de la Parte F (allí era Rick en Cloud Shell). Regla: las claves nuevas no se imprimen en la terminal del dev.
+3. Reescribir historial + force-push: **No.** Repo privado + rotación bastan.
+4. Push de los 11 commits: **Sí**, previa actualización de `origin` a la URL nueva.
+5. Quitar la propuesta de Farmazed de pb-website (`farzetd-regulatory/index.html`, nginx, Dockerfile, tarjeta en DemoApp): **Sí**, lo ejecuta pm-dominius.
+6. Clave demo (`ricardo`/`user` del prototipo, citada en pb-website `LOCAL-DOCKER.md:273`): **Sí.** En Farmazed esas cuentas están en el `login.html` estático que sirve prod; desaparecen con el deploy del frontend nuevo (Parte F, paso 3b).
+
+Seguimiento 28/29-sep:
+- Push hecho: `main` = `origin/main` = `5729a63` en commercialaffairs-lab/Farmazed. `origin` local sigue en la URL de RichoX-Hub (redirige); el clasificador le negó `set-url` al dev, lo corre Rick.
+- Rotación hecha: `farmazed-tracker` (proyecto `farmazed`) revisión 00003-ggw; claves viejas → 401. Claves nuevas solo en env vars de Cloud Run; Rick las copia a su gestor y a Cowork.
+- **Rick (29-sep, confirmado en la sesión del PM):** deploy a prod (tracker y luego web) **lo corre el dev** con gcloud desde Patch, Parte F paso 3. Borrar **solo el servicio** `farmazed-tracker` del proyecto `durable-sky-484422-b5`; el proyecto se queda. (La misma orden llegó antes vía Dandy y no se ejecutó hasta la confirmación de Rick.)
+- 29-sep, verificación DNS (pedida por Rick vía Dandy, solo lectura): el registrador delega farmazed.com a `ns-cloud-e1..e4` = zona `farmazed-zone` del proyecto `farmazed` (SOA serial 4 igual en los 4). A/AAAA/MX/SPF/DKIM/www/api: autoritativo = público (8.8.8.8). Certificados TLS válidos (farmazed.com hasta 12-nov-2026, www 15-nov, api 23-nov); domain mappings en True; dominio vence 23-abr-2027; sin DNSSEC. La zona `farmazed-com` de `durable-sky-484422-b5` (NS c1–c4, vacía) no la usa nadie. Borrarla: pendiente de orden directa de Rick.
+
+---
+
+# PARTE H — Encargo de Rick 29-sep: tres interfaces (cliente, empleados, admin) con cumplimiento estricto de los procesos
+
+**Orden de Rick (directo):** "con la base de datos de procedimientos y matrices del Drive, desarrollen la interfaz de usuario, la de empleados y la del admin, para dar estricto cumplimiento a estos procesos. Queda Dandy a cargo mientras descanso."
+
+**Lectura del PM:** es el roadmap ya escrito en `organizacion/04_ROADMAP.md` (E1 → E2 → E3). "Empleados" = los roles internos de R6/R7: analista, abogado, farmacéutica regente; "admin" = dirección. El cumplimiento estricto sale de las matrices del Drive (`organizacion/02_MAPA_DATA.md`) y de la máquina de 14 fases; las Fases 7, 10 y 12 son control manual y no avanzan solas.
+
+**Orden de trabajo:**
+- **Fase 0 — Entorno local:** emuladores de Firebase (Auth, Firestore, Storage) con datos de prueba. Todo lo que sigue se prueba ahí; nada escribe en producción.
+- **Fase 1 = E1:** D17, D02→D03→D04, D05→D06→D07 (enum de 18 estados + migración, probada en emulador), D14, D15. D08 es lectura de prod: permitida solo lectura.
+- **Fase 2 = E2:** D10→D11 (responsable por documento), D12, D13, D16 (prueba end-to-end cliente + admin).
+- **Fase 3 = E3:** roles cliente/titular, analista, abogado+regente, admin; organizaciones multiusuario; interfaz de empleados; matriz de permisos con un test por celda; vista de hitos del cliente; biblioteca de formularios.
+
+**Límites mientras Rick no esté (Dandy a cargo de lo rutinario):** sin deploy, sin commit/push, sin escribir en el Firestore/Storage de producción, sin recursos que cobren, sin `sudo`. Instalaciones en espacio de usuario (npx, JDK en ~/.local) sí.
+
+**Decisiones abiertas del roadmap que siguen siendo de Rick** (se avanza con el supuesto indicado y se puede revertir): 1 entrega por etapas (supuesto: sí); 3 WHO-PQP (supuesto: fuera, oculto); 4 qué xlsx de precios manda (supuesto: el canónico del 12-sep, sin tocar prod); 5 pasarela de pago (supuesto: manual).
+
+## H.1 — Etiquetas de las 14 fases y estados post-presentación (decisión del PM, 29-sep, revertible por Rick)
+Fuente: SVG canónico de Zelky `Flujo_Cliente_Farmazed_ SVG 14_Fases_vertical.svg` (Drive `1FaoT49WePyC6QgyxeTXonIAsSguMUBFS`, 12-sep). El docx canónico `1zIRjEU3…` ya no está en Drive.
+1 Contacto inicial por la web · 2 Captación de datos del cliente · 3 Vía de registro y categoría · 4 Cotización del servicio · 5 Pago de honorarios · 6 Expediente interno (CRM) · **7 Documentación digital** (control, subsanar) · 8 Paquete IEA y revisión legal · 9 Revisión del expediente · **10 Cotejo con matrices guía** (control; subsanar → vuelve a 7) · 11 Originales por DHL · **12 Verificación física** (control; subsanar → vuelve a 11) · 13 Pago de honorarios Farmazed · 14 Dossier y presentación.
+Salida del flujo: "expediente presentado ante DNFD e IEA". **Lo que pasa después no es una fase.**
+Decisión: el enum suma 3 estados post-presentación: `observado_dnfd` (DNFD pide subsanar), `aprobado`, `denegado` → **21 estados**. Mapeo legacy: `denied`→`denegado`, `approved`→`aprobado`, `observed`→`observado_dnfd`, `faddi_submitted`→`fase_14`. `in_review` y `faddi_ready` quedan provisionales.
+Transiciones de subsanación permitidas hacia atrás: 10→7, 12→11, `observado_dnfd`→7 o 10.
+**Pendiente de Rick:** el conteo de casos por estado en el Firestore de producción (solo lectura) fue denegado por el clasificador de permisos. Sin ese dato, el mapeo de `in_review`/`faddi_ready` sigue provisional y la migración no se corre en prod.
+
+## H.2 — Módulo "Precios" del cliente (29-sep)
+El dev construyó una lista de precios visible para todos los clientes (no existía ninguna vista de costo). Mostrar el tarifario completo es decisión comercial, y 5 montos pueden estar subfacturados (05_DIFF_PRECIOS_D09). **PM: queda detrás de un flag apagado por defecto.** El desglose honorarios/tasas se mostrará en la cotización de cada caso (E3, R5/R12). **Pregunta a Rick:** ¿el cliente debe ver el tarifario completo, o solo su cotización?
+
+## H.3 — Qué pago bloquea cada fase (decisión del PM, 29-sep, revertible)
+Fuentes: SVG de Zelky ("5 · Pago de honorarios", "13 · Pago de honorarios Farmazed") y `F05-Fase 5. Pago del Proceso de Registro.docx` ("Pago del costo del trámite… % de pago o método de pago").
+Lectura: fase 5 y fase 13 son **pagos del cliente a Farmazed** (probable anticipo y saldo). El pago `farmazed_a_autoridad` (tasas DNFD/IEA/CNF/MEF) no es una fase: su comprobante es documento del dossier (15.17, 15.1, 16.1.1, responsable Farmazed) y se exige antes de salir de **fase_14** hacia la presentación.
+Gates: fase_05 → `cliente_a_farmazed` con `fase:'fase_05'`; fase_13 → `cliente_a_farmazed` con `fase:'fase_13'`; salir de fase_14 → al menos un `farmazed_a_autoridad`. Override del admin intacto.
+**Pregunta a Rick/Zelky:** ¿fase 5 y fase 13 son anticipo y saldo del mismo honorario, o la fase 5 incluye las tasas oficiales?
+
+## H.4 — Especificación de E3: roles, empresas e interfaz de empleados (propuesta del PM, 29-sep, revertible)
+Base: R6 (cuatro roles con login) y R7 (empresa con varios usuarios), PM_COMMENTS líneas 51-52; roadmap E3. **Sin firma electrónica** (Z21, E4).
+
+**Roles (6 valores en el claim `role`, + `orgId` para los de cliente):**
+| rol | quién | ve | puede |
+|---|---|---|---|
+| `cliente_titular` | dueño de la cuenta de la empresa | todos los casos de su empresa, en hitos | crear casos, subir docs del cliente, ver pagos, invitar/quitar miembros de su empresa |
+| `cliente_miembro` | empleado de la empresa cliente | casos de su empresa | crear casos y subir docs; no gestiona usuarios |
+| `analista` | empleado Farmazed | casos asignados a él | avanzar fases secuenciales, pedir documentos, confirmar controles **7** y **12**, subsanar |
+| `abogado` | empleado Farmazed | casos asignados, sección legal | confirmar **fase 8** (revisión legal), marcar docs legales (poderes, autorizaciones) aprobados/observados |
+| `regente` | farmacéutica regente | casos asignados, sección técnica | confirmar **fase 10** (cotejo con matrices), marcar docs técnicos aprobados/observados |
+| `admin` | dirección | todo | todo lo anterior + override, registrar pagos, precios, asignar casos, gestionar empleados y empresas |
+
+Reglas duras: override y pagos solo `admin`. Un cliente nunca ve casos de otra empresa (403). Cada confirmación de control guarda quién y cuándo en `statusHistory`. Un caso tiene `asignados: {analista, abogado, regente}`.
+
+**Alta de usuarios (supuesto: por invitación, sin registro abierto):** el admin crea la empresa e invita al titular; el titular invita a sus miembros; el admin invita a los empleados. Enlace de invitación de un solo uso. La página de registro libre no se construye.
+
+**Interfaz de empleados:** "Mi bandeja", con los casos asignados y la acción pendiente de cada uno según su rol (p.ej. "Cotejo con matrices pendiente"). Desde ahí se abre el expediente con solo las acciones que su rol permite.
+
+**Vista del cliente (R9):** los 21 estados agrupados en 4 hitos (ya existe en client-dashboard), por empresa.
+
+**Criterio de salida:** matriz endpoint × rol con un test por celda (permitido/403); spec Playwright por rol; un cliente de la empresa A recibe 403 en un caso de la empresa B.
+
+**Preguntas a Rick:** (1) ¿invitación o registro abierto? (2) ¿el analista puede confirmar los controles 7 y 12, o solo el admin? (3) ¿abogado y regente son usuarios de Farmazed o externos por caso?
+
+## H.5 — Respuestas vía Dandy (30-sep)
+- GCP: el proyecto `farmazed` **se queda** en la organización de PBS.
+- `set-url` del origin: lo hace Rick más tarde; no bloquea.
+- §H.1–H.4: Rick las revisa en local; si las ve bien, quedan como están.
+- Conteo de producción (solo lectura) y commit: autorizados por Rick **vía Dandy**. **No ejecutados.** El commit requiere orden escrita de Rick según las reglas del PM. La lectura de producción la bloquea el clasificador de permisos: Rick debe agregar la regla de permiso o correr el conteo él mismo.
+
+## H.6 — Biblioteca de formularios (R14) y renovaciones (30-sep)
+- Hecha en local con la serie canónica 1–13. Formularios **1, 2, 3 y 10** quedan `por_confirmar` (autorizaciones y declaración genérica sin vía ni tipo de solicitud en el texto). **Pregunta para Zelky, vía Rick:** ¿a qué trámites aplican los formularios 1, 2, 3 y 10?
+- El modelo de casos no distingue Renovación (el wizard fija "Nuevo Registro"). Renovaciones y modificaciones **están en el MVP (R16)**, pero bloqueadas en E4-a: no hay matriz consolidada de Zelky (`04_ROADMAP.md` l.157, 213; Z18/Z9). No se construye el flujo sin checklist. Mientras tanto, los 6 formularios de renovación, intercambiabilidad y no comercializados solo se ven en la biblioteca del admin.
+
+## H.7 — Cotizaciones (R5/R12) (30-sep)
+- Hecha en local: cotización por empresa que agrupa casos, borrador automático al entrar a fase_04, ajuste con motivo, envío, aceptación **solo por el titular**, y gate fase_04→05.
+- **Sin precio en el tarifario** (no se inventan; el admin los completa a mano): Regular + Biológicos/Homeopático/Suplementos/Vacuna; Abreviado + Vacuna/Contraste/Gas/Naturales. **Pregunta para Rick/Zelky:** montos de esas categorías.
+- PM: el gate de cotización aplica también a casos sin `orgId` (se rechazan con mensaje claro; override del admin disponible). Un caso sin empresa es dato sin migrar, no una excepción al control.
+- 30-sep (vía Dandy): las preguntas para Zelky de §H.3, §H.6 y §H.7 están en trámite (Raion la entrevista). Las de §H.4 son de Rick y las revisa en local. Se sigue avanzando con los supuestos actuales.
+
+## H.8 — El flujo canónico pasa a 13 fases (decisión del PM con respaldo documental de Zelky, 30-sep) · **reemplaza §H.1 y §H.3**
+Fuentes (Drive, Operaciones > "Flujos del proceso de registro sanitario", ambos de Zelky, 26-sep): `Matriz_flujo_cliente_.docx` (`1HZUNrJx5Xn-BsZnh3GwpNRAAc6OHBLKY`) y `Manual_flujo_al_cliente_.docx` (`1-yN2k57YiUoTBX2IIm45gaWq101EoETl`). La matriz dice: *"Los archivos … conservan la numeración anterior de 14 fases … hasta que se renombren"* → el SVG de 14 fases (12-sep) queda superado.
+
+**Fases (bloque · nombre · responsable):**
+A · 1 Primer contacto (Farmazed) · 2 Captación de información preliminar (Farmazed) · 3 Tipo de registro sanitario y ruta de registro (Farmazed · Lic. Zelky Marín)
+B · 4 Elaboración y envío de cotización (Farmazed; el cliente acepta con nombre, firma y fecha; **NO acepta → cierre del expediente y archivo**) · 5 Pago de costos del trámite (Cliente paga, Farmazed verifica)
+C · 6 Apertura de expediente interno — CRM (Farmazed) · 7 Instrucción al cliente: documentación requerida (Farmazed; **no enviar originales**) · **8 Recepción y revisión de documentación digital — PUNTO DE CONTROL** (Farmazed revisa: cotejo con matrices guía, verificación legal de poderes/declaraciones, consistencia cruzada IEA/DNFD, fórmula por unidad de dosis, límite 150 págs IEA; cliente subsana; NO → subsanación y nuevo cotejo **en la misma fase 8**)
+D · 9 Solicitud y envío de documentos originales (cliente envía por DHL, Farmazed instruye) · **10 Recepción y verificación de originales — PUNTO DE CONTROL** (firmas, apostillas, vigencia, muestras; NO → vuelve a 9 o 10)
+E · 11 Confección de dossiers DNFD e IEA (Farmazed · Lic. Zelky Marín) · 12 Ingreso ante DNFD e IEA (número de expediente DNFD al CRM) · 13 Seguimiento y gestión post-ingreso (observaciones del evaluador, resultados IEA; **salida: Certificado de Registro Sanitario entregado**)
+
+**Máquina de estados resultante (21):** `fase_01`…`fase_13` + `draft`, `submitted`, `pending_docs`, `deleted` + `cerrado` (cotización rechazada, con motivo) + `observado_dnfd`, `aprobado` (certificado entregado), `denegado`.
+Transiciones: secuencial; `fase_04`→`cerrado`; `fase_08`→`fase_08` (nuevo ciclo, se registra); `fase_10`→`fase_09`; `fase_13`→`observado_dnfd`→`fase_13`; `fase_13`→`aprobado`|`denegado`.
+**Controles manuales:** fase 8 exige **dos confirmaciones**: legal (abogado) y técnica/matrices (regente); fase 10: analista. Admin puede todo con override.
+**Plazo de subsanación DNFD** al entrar a `observado_dnfd`: Regular 3 meses, Abreviado 8 días hábiles (Art. 22 D.E. 27/2024). Se muestra la fecha límite.
+
+**Pagos (reemplaza §H.3):** todo se paga en fase 5 según la cotización aceptada: honorarios Farmazed; tasas DNFD (tasa por servicio B/.200 + MEF B/.25 extranjeros); IEA si aplica (B/.1,500 regular / B/.2,250 expedita), **en cheques separados** → un registro de pago por concepto. Salir de fase 5 exige honorarios (monto del anticipo pactado) + tasas DNFD + IEA si aplica. El saldo de honorarios se registra y se ve, pero no bloquea fases (Zelky: "definición del porcentaje de avance… y de la cancelación del saldo").
+
+**Precios:** el xlsx `Actualización de nuestros precios para la plataforma - copia.xlsx` (`15H9YqBTwdEyqQySmhsScGYKnFBAgKru-`, 24-sep) es más nuevo que el canónico del 12-sep y trae Abreviado (SQ, Biológicos, Prioridad innovadores, Suplementos, Homeopáticos, Radiofármacos, Huérfanos, Mutuo acuerdo, WLA WHO), Regular (general, SQ, Naturales, Gases, Contraste, Cosméticos por 10 variedades, Intercambiabilidad), 8 renovaciones y ~27 modificaciones. Se carga **solo en el emulador** con un informe de diferencias. En producción no cambia ningún precio sin Rick (es dinero). La fila "Renovación por trámite abreviado" tiene `#REF!`: queda sin total. Combinaciones que el xlsx no trae (Regular + Biológicos/Homeopático/Suplementos/Vacuna; Abreviado + Vacuna/Contraste/Gas/Naturales): **pregunta a Zelky** si existen como ruta o no deben ofrecerse.
+
+**Pendiente de Zelky (vía Raion):** formularios 1, 2, 3 y 10 (§H.6), en trámite.
+- 30-sep: Zelky no entendió la pregunta técnica sobre los formularios 1, 2, 3 y 10. El PM redactó una versión en lenguaje llano para que Raion se la reenvíe: nombre de cada formulario (1 Autorización de Representación Legal por Titular · 2 ídem por Casa Matriz · 3 Autorización de Trámite RS al Farmacéutico · 10 Declaración de Nombre Comercial MED), y para cada uno: en qué tipo de registro, para qué productos, y si va siempre o solo en ciertos casos (¿1 y 2 son alternativos?).
+
+## H.9 — Qué se aplica de la auditoría checklist vs matrices SQ/BIO (decisión del PM, 30-sep, revertible) · ver `organizacion/11_AUDITORIA_CHECKLIST_MATRICES.md`
+Fuente de verdad: matrices de Zelky del 28-sep (carpeta Drive "Matriz_to Claude"). Solo registro nuevo.
+1. **recibo_iea deja de depender del subtipo** y pasa a depender del caso: se exige solo si la cotización marcó `aplicaIEA` (Zelky decide en fase 3 si requiere IEA; BIO-03: en Abreviado no aplica, D.E. 29/2023 Art. 6).
+2. **faddiCode 15.14** repetido en 3 documentos → los 3 quedan `PENDIENTE_VERIFICAR` como las otras colisiones conocidas.
+3. **Biológicos y Biotecnológicos** siguen como dos opciones del wizard (así lo pide la plataforma), pero con **los mismos requisitos**: la matriz de Zelky es unificada. `farmacovigilancia_bio` aplica a ambos (BIO-29).
+4. **Se agregan los FALTA** de la auditoría como documentos del cliente, con el fundamento normativo de la matriz en su descripción: SQ — declaración de protección de datos de prueba, especificaciones del principio activo y materias primas; BIO — los 7 de la auditoría. faddiCode `PENDIENTE_VERIFICAR` si la matriz no da uno.
+5. Lo marcado **"⚠ VERIFICAR"** por Zelky (bioequivalencia SQ-15, BIO-S/N-1) entra como **opcional con nota "Farmazed confirma si aplica"**, sin bloquear.
+
+## H.10 — Rick autoriza commit y push (30-sep, directo en la sesión del PM)
+"procede con todo pero no hagas deployment aun, solo commit y push, asi yo pruebo todo en local desde la pc de argus." → commit por bloques + push a `origin main`. **Sin deploy y sin migraciones en producción.** El conteo de producción sigue bloqueado por el clasificador.
