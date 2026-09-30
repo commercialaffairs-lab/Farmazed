@@ -48,6 +48,18 @@ const api = {
     body: JSON.stringify(data),
   }),
 
+  // Status history (D18)
+  getCaseHistory: (id) => apiFetch(`/api/cases/${id}/history`),
+
+  // Status enum metadata (D18/D19) — labels, manual, TRANSITIONS
+  getStatusMeta: () => apiFetch('/api/meta/statuses'),
+
+  // §H.8 (TAREA 21) — las dos confirmaciones de fase_08 (legal/tecnica)
+  confirmarFase8: (caseId, tipo) => apiFetch(`/api/cases/${caseId}/confirmaciones/fase8`, {
+    method: 'POST',
+    body: JSON.stringify({ tipo }),
+  }),
+
   // ── Documents ───────────────────────────────────────────────────────────────
 
   listDocuments: (caseId, params = {}) => {
@@ -56,6 +68,17 @@ const api = {
   },
 
   getDocument: (caseId, docId) => apiFetch(`/api/cases/${caseId}/documents/${docId}`),
+
+  // Versiones anteriores archivadas (TAREA 13, ajuste de cumplimiento) — la
+  // vigente ya viene en getDocument().
+  getDocumentVersions: (caseId, docId) => apiFetch(`/api/cases/${caseId}/documents/${docId}/versions`),
+
+  // Revisión de un documento (admin only) — status/reviewNotes. Sin UI propia
+  // todavía; existe en el backend desde antes de esta tarea.
+  updateDocument: (caseId, docId, data) => apiFetch(`/api/cases/${caseId}/documents/${docId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  }),
 
   deleteDocument: (caseId, docId) => apiFetch(`/api/cases/${caseId}/documents/${docId}`, {
     method: 'DELETE',
@@ -100,6 +123,78 @@ const api = {
     method: 'POST',
     body: JSON.stringify({ text }),
   }),
+
+  // ── Pricing (D13) — lectura pública, con desglose honorarios/tasas ────────────
+  getPricing: () => apiFetch('/api/admin/pricing'),
+
+  // ── Pagos (D12) — dos eventos distintos: cliente_a_farmazed / farmazed_a_autoridad ──
+  getPayments: (caseId) => apiFetch(`/api/cases/${caseId}/payments`),
+
+  /**
+   * Registrar un pago (admin only). Multipart: requiere comprobante (archivo).
+   */
+  registerPayment: async (caseId, { tipo, autoridad, concepto, monto, fecha, comprobante }) => {
+    const token = await getToken();
+    const form  = new FormData();
+    form.append('tipo',  tipo);
+    if (autoridad) form.append('autoridad', autoridad);
+    if (concepto)  form.append('concepto', concepto);
+    form.append('monto', monto);
+    if (fecha) form.append('fecha', fecha);
+    form.append('comprobante', comprobante);
+
+    const res = await fetch(`${API_BASE}/api/cases/${caseId}/payments`, {
+      method:  'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body:    form,
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: res.statusText }));
+      throw new Error(err.error || `HTTP ${res.status}`);
+    }
+    return res.json();
+  },
+
+  // ── E3 parte 2 (TAREA 15) — permisos, empresas, empleados, invitaciones ──────
+
+  // El front nunca repite la tabla de permisos — pregunta qué puede.
+  getMyPermissions: () => apiFetch('/api/me/permissions'),
+
+  // Empresa propia (cliente_titular/cliente_miembro): miembros + invitaciones.
+  getMyOrg: () => apiFetch('/api/me/org'),
+
+  getOrgs: () => apiFetch('/api/orgs'),
+  getOrgMembers: (orgId) => apiFetch(`/api/orgs/${orgId}/members`),
+  createOrg: (nombre) => apiFetch('/api/orgs', { method: 'POST', body: JSON.stringify({ nombre }) }),
+
+  getEmployees: () => apiFetch('/api/employees'),
+
+  getInvitations: () => apiFetch('/api/invitations'),
+  getInvitation:  (token) => apiFetch(`/api/invitations/${token}`),
+  inviteTitular:  (email, orgName) => apiFetch('/api/invitations/titular', { method: 'POST', body: JSON.stringify({ email, orgName }) }),
+  inviteEmpleado: (email, role) => apiFetch('/api/invitations/empleado', { method: 'POST', body: JSON.stringify({ email, role }) }),
+  inviteMiembro:  (email) => apiFetch('/api/invitations/miembro', { method: 'POST', body: JSON.stringify({ email }) }),
+  acceptInvitation: (token, uid) => apiFetch(`/api/invitations/${token}/accept`, { method: 'POST', body: JSON.stringify({ uid }) }),
+
+  // ── R14 (TAREA 17) — biblioteca de formularios ────────────────────────────────
+  getFormularios:     () => apiFetch('/api/formularios'),
+  getCaseFormularios: (caseId) => apiFetch(`/api/cases/${caseId}/formularios`),
+
+  // ── R5/R12 (TAREA 18) — cotizaciones ───────────────────────────────────────────
+  getQuotes: () => apiFetch('/api/quotes'),
+  getQuote:  (id) => apiFetch(`/api/quotes/${id}`),
+  updateQuoteLine: (quoteId, caseId, data) => apiFetch(`/api/quotes/${quoteId}/lineas/${caseId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  }),
+  sendQuote:    (id) => apiFetch(`/api/quotes/${id}/send`, { method: 'POST' }),
+  respondQuote: (id, decision, motivo) => apiFetch(`/api/quotes/${id}/respond`, {
+    method: 'POST',
+    body: JSON.stringify({ decision, motivo }),
+  }),
+
+  // ── R13 (TAREA 19) — conteo de páginas del paquete IEA (solo advierte) ────────
+  getPaqueteIEA: (caseId) => apiFetch(`/api/cases/${caseId}/documents/paquete-iea`),
 };
 
 export default api;

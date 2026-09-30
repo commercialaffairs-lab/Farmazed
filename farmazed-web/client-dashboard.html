@@ -438,12 +438,32 @@
               <span class="badge ms-auto" id="msg-badge" style="background:var(--fz-amber);font-size:.6rem;display:none;"></span>
             </a>
           </li>
+          <li class="nav-item">
+            <a class="nav-link" href="#" onclick="showModule('empresa',this);return false;">
+              <i class="iconoir-building menu-icon"></i><span>Mi Empresa</span>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="#" onclick="showModule('cotizacion',this);return false;">
+              <i class="iconoir-receipt menu-icon"></i>
+              <span>Cotización</span>
+              <span class="badge ms-auto" id="cotizacion-badge" style="background:var(--fz-amber);font-size:.6rem;display:none;"></span>
+            </a>
+          </li>
 
           <li class="px-3 mb-1" style="font-size:.6rem;text-transform:uppercase;letter-spacing:.08em;color:rgba(255,255,255,.3);font-weight:600;margin-top:16px;">Trámites</li>
 
           <li class="nav-item">
             <a class="nav-link" href="#" onclick="showModule('solicitar',this);return false;">
               <i class="iconoir-add-circle menu-icon"></i><span>Solicitar Registro</span>
+            </a>
+          </li>
+          <!-- FEATURES.clientePrecios (config.js) — apagado por defecto, ver
+               PM_COMMENTS.md §H.2. Sigue oculto (display:none) hasta que el
+               script de arriba lo revele si el flag está encendido. -->
+          <li class="nav-item" id="nav-precios-item" style="display:none">
+            <a class="nav-link" href="#" onclick="showModule('precios',this);return false;">
+              <i class="iconoir-coins menu-icon"></i><span>Precios</span>
             </a>
           </li>
         </ul>
@@ -619,6 +639,27 @@
               </button>
             </div>
           </div>
+        </div>
+      </div>
+
+      <!-- ══ MODULE: MI EMPRESA (TAREA 15/E3 parte 2) ══ -->
+      <div class="fz-module" id="mod-empresa">
+        <div class="fz-mod-header">
+          <h4>Mi Empresa</h4>
+        </div>
+        <div id="empresa-content">
+          <div class="text-center py-4"><div class="spinner-border spinner-border-sm text-primary"></div></div>
+        </div>
+      </div>
+
+      <!-- ══ MODULE: COTIZACIÓN (R5/R12, TAREA 18) ══ -->
+      <div class="fz-module" id="mod-cotizacion">
+        <div class="fz-mod-header">
+          <h4>Cotización</h4>
+          <p>Agrupa todos tus trámites en curso en una sola cotización, con el desglose de honorarios Farmazed y tasas oficiales.</p>
+        </div>
+        <div id="cotizacion-content">
+          <div class="text-center py-4"><div class="spinner-border spinner-border-sm text-primary"></div></div>
         </div>
       </div>
 
@@ -934,6 +975,20 @@
         </div>
       </div>
 
+      <!-- D13 (organizacion/03_INSTRUCCIONES_DEV.md fila D13): precios con
+           desglose honorarios Farmazed / tasas oficiales, de solo lectura.
+           Usa GET /api/admin/pricing (público para lectura — el PATCH de
+           precios.html sí exige sesión de Firebase con rol admin, TAREA 15). -->
+      <div class="fz-module" id="mod-precios">
+        <div class="fz-mod-header">
+          <div>
+            <h4>Precios</h4>
+            <p>Lo que cobra Farmazed por sus honorarios y lo que corresponde a tasas oficiales de DNFD/IEA/CNF/MEF — desglosado, para que sepas a dónde va cada balboa.</p>
+          </div>
+        </div>
+        <div id="precios-content"><div class="text-center py-4 text-muted">Cargando…</div></div>
+      </div>
+
     </div><!-- container -->
   </div><!-- page-content -->
 </div><!-- page-wrapper -->
@@ -945,12 +1000,30 @@
 <script type="module">
   import { requireLogin, logout } from './portal/js/auth.js';
   import api from './portal/js/api.js';
+  import { getFullMeta } from './portal/js/status_ui.js';
+  import { FEATURES } from './portal/js/config.js';
 
   // El módulo Mensajes (classic script) llama sendMessage() del chat en vivo,
   // fuera de este script — expuesto en window para que pueda llegar al API.
   window.__fzApi = api;
+  // Ajuste TAREA 10 (PM_COMMENTS §H.2): el módulo "Precios" del cliente
+  // queda detrás de este flag, apagado por defecto — ver config.js. Revela
+  // el link del nav solo si está encendido; si no, ni el <li> existe
+  // visualmente (sigue en el DOM con display:none, nunca se quita el nodo
+  // porque "no lo borres" — pero el usuario no lo ve ni lo puede clickear
+  // sin abrir devtools).
+  window.__fzFeatures = FEATURES;
+  if (FEATURES.clientePrecios) {
+    document.getElementById('nav-precios-item').style.display = '';
+  }
 
   const user = await requireLogin('login.html');
+
+  // TAREA 15/E3 parte 2: el módulo "Mi Empresa" (classic script) necesita
+  // saber si esta cuenta es titular (puede invitar) o miembro (solo ve) —
+  // sale de GET /api/me/permissions, no de un if de rol hardcodeado aquí.
+  const myPerms = await api.getMyPermissions();
+  window.__fzMyRole = myPerms.role;
 
   window.DATA.cliente = {
     empresa: 'Mi Empresa', // TODO: no company field on the user/case model yet
@@ -967,21 +1040,59 @@
   // status real (documents.js) -> badge/tab del prototipo (docBadge/filterDocs sin tocar)
   const ESTADO_MAP = { requested: 'pendiente', uploaded: 'en_revision', reviewing: 'en_revision', approved: 'aprobado', rejected: 'rechazado' };
 
-  // Tabla status(caso real, cases.js) -> fase visual (1-4) del pipeline,
-  // aprobada antes en esta sesión: draft->Diagnóstico; submitted/in_review->
-  // Revisión (pending_docs=bloqueada); faddi_ready->Elaboración; faddi_submitted/
-  // approved->Obtención (observed=bloqueada); denied=badge propio fuera del flujo.
-  const STATUS_PHASE = {
-    draft:           { fase: 1, bloqueado: false },
-    submitted:       { fase: 2, bloqueado: false },
-    in_review:       { fase: 2, bloqueado: false },
-    pending_docs:    { fase: 2, bloqueado: true  },
-    faddi_ready:     { fase: 3, bloqueado: false },
-    faddi_submitted: { fase: 4, bloqueado: false },
-    approved:        { fase: 4, bloqueado: false },
-    observed:        { fase: 4, bloqueado: true  },
-    denied:          { fase: 4, bloqueado: false },
+  // Tabla status(caso real, 21 estados de tracker/data/case_status.js) ->
+  // bloque visual (A-E) del pipeline de 5 puntos. TAREA 21 (§H.8, reemplaza
+  // §H.1): el flujo canónico pasa a 13 fases en 5 BLOQUES (A-E) — antes
+  // eran 4 "fases visuales" (Diagnóstico/Revisión/Elaboración/Obtención)
+  // hardcodeadas aquí; ahora se leen del backend (`statusMeta.meta[status].block`
+  // + `statusMeta.blockLabels`, tracker/data/case_status.js `PHASE_BLOCK`/
+  // `BLOCK_LABELS`) — un solo lugar define los bloques, no dos que puedan
+  // desincronizarse. pending_docs sigue anclado a un bloque intermedio (C,
+  // "Documentación digital" — la interrupción más común) porque no hay
+  // forma de saber a qué fase real volver sin la subcolección de actividad
+  // de Gap 5, pospuesta. El NOMBRE REAL de la fase se muestra aparte — ver
+  // `fase_label` más abajo, viene de GET /api/meta/statuses.
+  const BLOCK_ORDER = ['A', 'B', 'C', 'D', 'E'];
+  function blockIndex(letra) { return BLOCK_ORDER.indexOf(letra) + 1; } // 1-5, 0 si no reconoce la letra
+
+  const STATUS_BLOCK_FALLBACK = {
+    draft:          { bloque: 'A', bloqueado: false },
+    submitted:      { bloque: 'A', bloqueado: false },
+    cerrado:        { bloque: 'B', bloqueado: false }, // cotización rechazada, en fase_04 (bloque B)
+    observado_dnfd: { bloque: 'E', bloqueado: true  },
+    aprobado:       { bloque: 'E', bloqueado: false },
+    denegado:       { bloque: 'E', bloqueado: false },
+    pending_docs:   { bloque: 'C', bloqueado: true  },
+    deleted:        { bloque: 'A', bloqueado: false }, // no se renderiza — activeCases ya lo excluye
   };
+
+  function bloqueDe(status) {
+    const meta = statusMeta.meta[status];
+    if (meta?.block) return { bloque: meta.block, bloqueado: false };
+    return STATUS_BLOCK_FALLBACK[status] || null;
+  }
+
+  // Texto claro para el cliente en los 3 estados post-presentación — más
+  // directo que la etiqueta admin ("Observado por DNFD"/"Aprobado"/"Denegado").
+  // Para las 14 fases y draft/submitted/pending_docs se usa el label real del
+  // enum (GET /api/meta/statuses), no un texto duplicado aquí.
+  function claroTextFor(status, label) {
+    if (status === 'observado_dnfd') return 'DNFD solicitó correcciones';
+    if (status === 'aprobado')       return '¡Registro aprobado!';
+    if (status === 'denegado')       return 'Registro denegado';
+    if (status === 'draft')          return 'Borrador — aún no enviado';
+    if (status === 'submitted')      return 'Enviado — en cola de revisión';
+    if (status === 'pending_docs')   return 'Esperando documentos tuyos';
+    // Ajuste TAREA 8 (Rick, 29-sep): un status que no está en el enum de 21
+    // (caso legacy sin migrar, D07) NO debe caer en un texto que insinúe una
+    // fase real — mentiría (ej. mostrar "aprobado" como si estuviera en
+    // Diagnóstico). Fallback neutro + aviso para quien mire la consola.
+    if (!statusMeta.statuses.includes(status)) {
+      console.warn(`[client-dashboard] status "${status}" no está en el enum de 21 (caso sin migrar) — mostrando fallback neutro.`);
+      return 'Estado en actualización';
+    }
+    return `Fase actual: ${label}`;
+  }
 
   function tsToISODate(ts) {
     if (!ts) return null;
@@ -991,23 +1102,39 @@
   }
 
   function estadoFromStatus(status, vencimientoISO) {
-    if (status === 'denied') return 'denegado';
-    if (status === 'pending_docs' || status === 'observed') return 'bloqueado';
-    if (status === 'approved') {
+    if (status === 'denegado') return 'denegado';
+    if (status === 'pending_docs' || status === 'observado_dnfd') return 'bloqueado';
+    if (status === 'aprobado') {
       if (vencimientoISO) {
         const days = Math.round((new Date(vencimientoISO) - new Date()) / 86400000);
         if (days <= 90) return 'por_vencer';
       }
       return 'activo';
     }
+    // Caso sin migrar (ver claroTextFor) — badge propio, neutro, no "en_tramite".
+    if (!statusMeta.statuses.includes(status)) return 'sin_migrar';
     return 'en_tramite';
   }
+
+  const statusMeta = await getFullMeta();
+  // El script clásico de más abajo (pipelineHTML) no comparte scope con este
+  // módulo — necesita los 5 bloques A-E para pintar el pipeline.
+  window.__fzStatusMeta = statusMeta;
 
   try {
     const { cases } = await api.listCases();
     const activeCases = cases.filter(c => c.status !== 'deleted');
 
     const docLists = await Promise.all(activeCases.map(c => api.listDocuments(c.id).catch(() => ({ documents: [] }))));
+    const payLists = await Promise.all(activeCases.map(c => api.getPayments(c.id).catch(() => ({ payments: [] }))));
+    // TAREA 23 (§H.8, Pagos): qué conceptos APLICAN a cada caso (mef si es
+    // extranjero, iea si aplica) sale de la línea de SU cotización aceptada
+    // — mismo dato que usa el gate de fase_05 en transitions.js.
+    const { quotes: quotesAceptadasParaPagos } = await api.getQuotes().catch(() => ({ quotes: [] }));
+    // R14 (TAREA 17): solo los formularios que aplican con certeza a ESTE
+    // caso, calculado en el backend (tracker/data/formularios.js) — el front
+    // no repite la lógica de qué formulario va con qué trámite/vía.
+    const formLists = await Promise.all(activeCases.map(c => api.getCaseFormularios(c.id).catch(() => ({ aplicables: [], porConfirmar: [] }))));
 
     // ── Documentos (flat, todos los expedientes) ──
     const documentos = [];
@@ -1028,7 +1155,13 @@
 
     // ── Productos (un producto = un expediente/caso) ──
     const productos = activeCases.map((c, i) => {
-      const phaseInfo   = STATUS_PHASE[c.status] || { fase: 1, bloqueado: false };
+      // bloque:0 (no coincide con ningun dot 1-5 del pipeline, ver pipelineHTML)
+      // es el fallback neutro para un status sin migrar — no marca ningun
+      // hito como alcanzado, a diferencia de mostrar el bloque A activo
+      // para un caso que podia estar en cualquier otro estado.
+      const info        = bloqueDe(c.status);
+      const bloqueIdx    = info ? blockIndex(info.bloque) : 0;
+      const phaseInfo   = { fase: bloqueIdx, bloqueado: info?.bloqueado || false };
       const vencimiento = tsToISODate(c.vencimiento);
       const docsDelCaso = docLists[i].documents || [];
 
@@ -1043,13 +1176,16 @@
       }
       actividad.sort((a, b) => (b.fecha || '').localeCompare(a.fecha || ''));
 
+      const label = statusMeta.meta[c.status]?.label || c.status;
+
       return {
         codigo:             c.caseCode || c.id,
         nombre_comercial:   c.productName || c.product?.nombreComercial || '(sin nombre)',
         categoria:          c.tramiteType,
         fase_actual:        phaseInfo.fase,
-        fases_completadas:  c.status === 'approved' || c.status === 'denied'
-                               ? [1,2,3,4]
+        fase_label:         claroTextFor(c.status, label),
+        fases_completadas:  c.status === 'aprobado' || c.status === 'denegado'
+                               ? [1,2,3,4,5]
                                : Array.from({ length: Math.max(0, phaseInfo.fase - 1) }, (_, idx) => idx + 1),
         estado:             estadoFromStatus(c.status, vencimiento),
         vencimiento,
@@ -1059,6 +1195,30 @@
                                estado: ESTADO_MAP[doc.status] || 'pendiente',
                                nota:   doc.reviewNotes || null,
                              })),
+        // TAREA 23 (§H.8, Pagos, reemplaza el modelo por `fase` de TAREA
+        // 21/22): un estado por CONCEPTO, cada uno con su propio comprobante
+        // — `null` = no aplica a este caso (mef si no es extranjero, iea si
+        // no aplica), no "pendiente" (nunca va a pagarse). honorarios/
+        // tasa_dnfd siempre aplican. El pago a la autoridad
+        // (farmazed_a_autoridad) es interno del dossier, no le compete al
+        // cliente.
+        pagos: (() => {
+          const quoteAceptada = quotesAceptadasParaPagos.find(q => q.estado === 'aceptada' && q.caseIds.includes(c.id));
+          const linea = quoteAceptada?.lineas.find(l => l.caseId === c.id);
+          const pagados = new Set((payLists[i].payments || []).filter(pg => pg.tipo === 'cliente_a_farmazed').map(pg => pg.concepto));
+          return {
+            honorarios:       pagados.has('honorarios'),
+            tasa_dnfd:        pagados.has('tasa_dnfd'),
+            mef:              linea?.esExtranjero ? pagados.has('mef') : null,
+            iea:              linea?.aplicaIEA    ? pagados.has('iea') : null,
+            honorarios_saldo: pagados.has('honorarios_saldo'),
+          };
+        })(),
+        // §H.8 (TAREA 21): plazo de subsanación (Art. 22 D.E. 27/2024) —
+        // solo tiene sentido mientras el caso está observado por DNFD.
+        fechaLimiteSubsanacion:     c.status === 'observado_dnfd' ? tsToISODate(c.fechaLimiteSubsanacion) : null,
+        fechaLimiteSubsanacionNota: c.status === 'observado_dnfd' ? (c.fechaLimiteSubsanacionNota || null) : null,
+        formularios: { aplicables: formLists[i].aplicables || [], porConfirmar: formLists[i].porConfirmar || [] },
         actividad,
       };
     });
@@ -1077,6 +1237,14 @@
           descripcion:      d.reviewNotes || `Farmazed solicita: ${d.faddiDocName || d.faddiDocId}`,
           fase:             TRAMITE_LABEL[c.tramiteType] || c.tramiteType,
           fecha_limite:     null,
+          // TAREA 13: datos que necesita el botón "Subir archivo" para
+          // llamar a uploadDocument() — antes no existían y el botón no
+          // tenía forma de saber a qué caso/documento pertenecía.
+          caseId:           c.id,
+          faddiDocId:       d.faddiDocId,
+          faddiCode:        d.faddiCode,
+          faddiDocName:     d.faddiDocName,
+          faddiStep:        d.faddiStep,
         });
       });
     });
@@ -1140,8 +1308,15 @@ const DATA = {
 window.DATA = DATA;
 
 // ── Constants ──
-const FASES_FULL  = ['Diagnóstico Regulatorio','Revisión Documental','Elaboración del Expediente','Obtención del Registro'];
-const FASES_SHORT = ['Diagnóstico','Revisión','Elaboración','Obtención'];
+// §H.8 (TAREA 21): 5 bloques (A-E), no 4 — las etiquetas vienen del backend
+// (statusMeta.blockLabels, tracker/data/case_status.js BLOCK_LABELS) para
+// que no haya dos copias del mismo texto que se puedan desincronizar. El
+// script módulo de arriba las deja en window.__fzStatusMeta (scope distinto).
+const BLOCK_ORDER = ['A', 'B', 'C', 'D', 'E'];
+function fasesLabels() {
+  const labels = window.__fzStatusMeta?.blockLabels || {};
+  return BLOCK_ORDER.map(l => labels[l] || l);
+}
 // TIPOS_NOMBRES/DOCS_POR_TIPO/PAISES_ABREVIADO (categorías y checklist falsos del
 // wizard de maqueta, países incompletos) eliminados junto con el wizard falso —
 // ver el wizard real portado más abajo (Gap 7) y portal/js/wizard.js.
@@ -1159,7 +1334,7 @@ function formatDate(d) {
   return `${parseInt(day)} ${'ene feb mar abr may jun jul ago sep oct nov dic'.split(' ')[parseInt(m)-1]} ${y}`;
 }
 function estadoBadge(e) {
-  const m = {activo:['fz-badge-green','Activo'],en_tramite:['fz-badge-blue','En trámite'],bloqueado:['fz-badge-amber','Bloqueado'],vencido:['fz-badge-red','Vencido'],por_vencer:['fz-badge-amber','Por renovar'],denegado:['fz-badge-red','Denegado']};
+  const m = {activo:['fz-badge-green','Activo'],en_tramite:['fz-badge-blue','En trámite'],bloqueado:['fz-badge-amber','Bloqueado'],vencido:['fz-badge-red','Vencido'],por_vencer:['fz-badge-amber','Por renovar'],denegado:['fz-badge-red','Denegado'],sin_migrar:['fz-badge-gray','Estado en actualización']};
   const [c,l] = m[e]||['fz-badge-gray',e];
   return `<span class="fz-badge ${c}">${l}</span>`;
 }
@@ -1189,9 +1364,19 @@ function docActionBtn(e) {
   if (e==='aprobado')   return `<button class="btn-fz-outline btn-fz-sm">Ver</button>`;
   return '';
 }
-function pendActionBtn(t) {
-  const m = {subir:'Subir archivo',revisar:'Revisar y aprobar',confirmar:'Completar info',firmar:'Ver detalle'};
-  return `<button class="btn-fz btn-fz-sm">${m[t]||'Ver detalle'}</button>`;
+function pendActionBtn(p, idx) {
+  // TAREA 13: "Subir archivo" ahora sube de verdad — antes era un <button>
+  // sin onclick, decorativo. Un <label> + <input type=file> oculto es el
+  // mismo patrón que ya usa portal/js/wizard.js para el checklist.
+  if (p.tipo_accion === 'subir') {
+    return `<label class="btn-fz btn-fz-sm" style="cursor:pointer;">
+      Subir archivo
+      <input type="file" class="d-none" data-pendiente-idx="${idx}"
+             accept=".pdf,.jpg,.jpeg,.png,.doc,.docx">
+    </label>`;
+  }
+  const m = {revisar:'Revisar y aprobar',confirmar:'Completar info',firmar:'Ver detalle'};
+  return `<button class="btn-fz btn-fz-sm">${m[p.tipo_accion]||'Ver detalle'}</button>`;
 }
 function pendIcon(t) {
   const m = {subir:'iconoir-upload-square',revisar:'iconoir-eye',confirmar:'iconoir-edit-pencil',firmar:'iconoir-pen-tablet'};
@@ -1201,6 +1386,9 @@ function pendIcon(t) {
 // ── Module switcher ──
 let currentModule = 'resumen';
 function showModule(name, linkEl) {
+  // FEATURES.clientePrecios (§H.2): ni con el nav oculto ni invocando esto
+  // a mano (consola) se llega al módulo si el flag está apagado.
+  if (name === 'precios' && !window.__fzFeatures?.clientePrecios) return;
   document.querySelectorAll('.fz-module').forEach(m => m.classList.remove('active'));
   document.getElementById('mod-' + name).classList.add('active');
   document.querySelectorAll('.startbar .nav-link').forEach(n => n.classList.remove('active'));
@@ -1212,6 +1400,201 @@ function showModule(name, linkEl) {
   }
   currentModule = name;
   window.scrollTo({top:0,behavior:'smooth'});
+  if (name === 'precios') loadPrecios();
+  if (name === 'empresa') loadEmpresa();
+  if (name === 'cotizacion') loadCotizacion();
+}
+
+// D13 — carga perezosa (solo la primera vez que se abre el módulo), de solo
+// lectura. GRUPO_ORDER fija el orden de las 3 secciones (Registros Nuevos
+// primero — es lo que más consulta un cliente nuevo).
+let preciosLoaded = false;
+const GRUPO_ORDER = ['Registros Nuevos', 'Modificaciones', 'Renovaciones'];
+async function loadPrecios() {
+  if (!window.__fzFeatures?.clientePrecios) return; // defensa extra — ver showModule()
+  if (preciosLoaded) return;
+  const box = document.getElementById('precios-content');
+  try {
+    const { pricing } = await window.__fzApi.getPricing();
+    const byGrupo = {};
+    pricing.forEach(p => { (byGrupo[p.grupo] = byGrupo[p.grupo] || []).push(p); });
+
+    box.innerHTML = GRUPO_ORDER.filter(g => byGrupo[g]).map(grupo => `
+      <div class="mb-4">
+        <h6 class="text-muted fw-bold text-uppercase small mb-2">${grupo}</h6>
+        ${byGrupo[grupo].map(p => `
+          <div class="fz-price-card mb-2 p-3" style="background:#fff;border:0.5px solid var(--fz-border);border-radius:8px;">
+            <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+              <div class="fw-semibold small">${p.name}</div>
+              <div class="fw-bold" style="color:var(--fz-primary);">B/. ${(p.total || 0).toLocaleString('es-PA')}</div>
+            </div>
+            <div class="d-flex gap-4 mt-2 flex-wrap">
+              <div>
+                <div class="text-muted" style="font-size:.68rem;text-transform:uppercase;">Honorarios Farmazed</div>
+                <div class="fw-semibold small" style="color:var(--fz-green);">B/. ${(p.honorariosFarmazed || 0).toLocaleString('es-PA')}</div>
+              </div>
+              <div>
+                <div class="text-muted" style="font-size:.68rem;text-transform:uppercase;">Tasas oficiales</div>
+                <div class="fw-semibold small" style="color:var(--fz-primary);">B/. ${(p.tasasOficiales || 0).toLocaleString('es-PA')}</div>
+              </div>
+            </div>
+          </div>`).join('')}
+      </div>`).join('') || '<div class="text-muted small">No hay precios cargados todavía.</div>';
+
+    preciosLoaded = true;
+  } catch (err) {
+    box.innerHTML = `<div class="alert alert-danger">${err.message}</div>`;
+  }
+}
+
+// TAREA 15/E3 parte 2 — "Mi Empresa": miembros de la empresa + invitaciones
+// (solo el titular las ve/crea — window.__fzMyRole lo dice el módulo de auth
+// de arriba, GET /api/me/permissions, nunca un if de rol hardcodeado aquí).
+let empresaLoaded = false;
+async function loadEmpresa() {
+  if (empresaLoaded) return;
+  const box = document.getElementById('empresa-content');
+  try {
+    const org = await window.__fzApi.getMyOrg();
+    const esTitular = window.__fzMyRole === 'cliente_titular';
+
+    const miembrosHtml = org.members.map(m => `
+      <div class="d-flex justify-content-between align-items-center border-bottom py-2">
+        <div>
+          <div class="small fw-semibold">${m.displayName}</div>
+          <div class="text-muted" style="font-size:.72rem">${m.email}</div>
+        </div>
+        <span class="fz-badge fz-badge-blue">${m.role === 'cliente_titular' ? 'Titular' : 'Miembro'}</span>
+      </div>`).join('');
+
+    const invitacionesHtml = esTitular && org.invitations?.length ? `
+      <p style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#9ca3af;margin:20px 0 8px;">Invitaciones enviadas</p>
+      ${org.invitations.map(inv => `
+        <div class="d-flex justify-content-between align-items-center border-bottom py-2">
+          <div class="small">${inv.email}</div>
+          <span class="fz-badge ${inv.used ? 'fz-badge-green' : 'fz-badge-amber'}">${inv.used ? 'Activa' : 'Pendiente'}</span>
+        </div>`).join('')}` : '';
+
+    const invitarFormHtml = esTitular ? `
+      <p style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#9ca3af;margin:20px 0 8px;">Invitar miembro</p>
+      <form id="form-invitar-miembro" class="d-flex gap-2">
+        <input type="email" class="form-control form-control-sm" id="miembro-email" placeholder="correo@empresa.com" required>
+        <button type="submit" class="btn-fz btn-fz-sm">Invitar</button>
+      </form>
+      <div id="invitar-miembro-msg" class="small mt-2"></div>` : '';
+
+    box.innerHTML = `
+      <div class="row g-3">
+        <div class="col-md-7">
+          <p style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#9ca3af;margin-bottom:8px;">${org.nombre} — miembros</p>
+          ${miembrosHtml || '<p class="text-muted small">Sin miembros todavía.</p>'}
+          ${invitacionesHtml}
+        </div>
+        <div class="col-md-5">${invitarFormHtml}</div>
+      </div>`;
+
+    if (esTitular) {
+      document.getElementById('form-invitar-miembro').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const email = document.getElementById('miembro-email').value.trim();
+        const msg   = document.getElementById('invitar-miembro-msg');
+        try {
+          await window.__fzApi.inviteMiembro(email);
+          msg.className = 'small mt-2 text-success';
+          msg.textContent = 'Invitación enviada.';
+          empresaLoaded = false;
+          loadEmpresa();
+        } catch (err) {
+          msg.className = 'small mt-2 text-danger';
+          msg.textContent = err.message;
+        }
+      });
+    }
+
+    empresaLoaded = true;
+  } catch (err) {
+    box.innerHTML = `<div class="alert alert-danger">${err.message}</div>`;
+  }
+}
+
+// R5/R12 (TAREA 18): 'borrador' es el ajuste interno de Farmazed — el
+// cliente solo ve la cotización desde que se envía (nunca se le presenta el
+// borrador sin ajustar como si fuera una cifra final).
+let cotizacionLoaded = false;
+const COTIZACION_ESTADO_LABEL = {
+  enviada: 'Pendiente de tu respuesta', aceptada: 'Aceptada', rechazada: 'Rechazada',
+};
+async function loadCotizacion() {
+  if (cotizacionLoaded) return;
+  const box = document.getElementById('cotizacion-content');
+  try {
+    const { quotes } = await window.__fzApi.getQuotes();
+    renderCotizacion(quotes.filter(q => q.estado !== 'borrador'));
+    cotizacionLoaded = true;
+  } catch (err) {
+    box.innerHTML = `<div class="alert alert-danger">${err.message}</div>`;
+  }
+}
+
+function renderCotizacion(quotes) {
+  const box = document.getElementById('cotizacion-content');
+  if (!quotes.length) {
+    box.innerHTML = `<p class="text-muted small">Todavía no tienes una cotización enviada.</p>`;
+  } else {
+    const esTitular = window.__fzMyRole === 'cliente_titular';
+    box.innerHTML = quotes.map(q => {
+      const lineasHtml = q.lineas.map(l => `
+        <div class="d-flex justify-content-between align-items-start border-bottom py-2">
+          <div class="small fw-semibold">${l.caseCode}</div>
+          <div class="text-end" style="font-size:.75rem;color:#4b5563">
+            <div>Honorarios Farmazed: B/. ${Number(l.honorariosFarmazed).toFixed(2)}</div>
+            <div>Tasas oficiales: B/. ${Number(l.tasasOficiales).toFixed(2)}</div>
+          </div>
+        </div>`).join('');
+
+      const accionesHtml = (q.estado === 'enviada' && esTitular) ? `
+        <div class="d-flex gap-2 mt-3">
+          <button class="btn-fz btn-fz-sm btn-aceptar-cot" data-quote="${q.id}">Aceptar</button>
+          <button class="btn-fz btn-fz-sm btn-fz-outline btn-rechazar-cot" data-quote="${q.id}">Rechazar</button>
+        </div>` : '';
+
+      return `
+        <div class="card border-0 shadow-sm mb-3">
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <span class="fz-badge fz-badge-blue">${COTIZACION_ESTADO_LABEL[q.estado] || q.estado}</span>
+              <span class="fw-bold">Total: B/. ${Number(q.total).toFixed(2)}</span>
+            </div>
+            ${lineasHtml}
+            ${q.motivoRechazo ? `<div class="text-danger small mt-2">Rechazada: ${q.motivoRechazo}</div>` : ''}
+            ${accionesHtml}
+          </div>
+        </div>`;
+    }).join('');
+
+    box.querySelectorAll('.btn-aceptar-cot').forEach(btn => btn.addEventListener('click', async () => {
+      if (!confirm('¿Aceptar esta cotización?')) return;
+      try {
+        await window.__fzApi.respondQuote(btn.dataset.quote, 'aceptada');
+        cotizacionLoaded = false;
+        loadCotizacion();
+      } catch (e) { alert('Error: ' + e.message); }
+    }));
+    box.querySelectorAll('.btn-rechazar-cot').forEach(btn => btn.addEventListener('click', async () => {
+      const motivo = prompt('Motivo del rechazo:');
+      if (!motivo) return;
+      try {
+        await window.__fzApi.respondQuote(btn.dataset.quote, 'rechazada', motivo);
+        cotizacionLoaded = false;
+        loadCotizacion();
+      } catch (e) { alert('Error: ' + e.message); }
+    }));
+  }
+
+  const pendientes = quotes.filter(q => q.estado === 'enviada').length;
+  const badge = document.getElementById('cotizacion-badge');
+  if (pendientes > 0) { badge.style.display = ''; badge.textContent = pendientes; }
+  else { badge.style.display = 'none'; }
 }
 
 // ── Init topbar ──
@@ -1256,7 +1639,8 @@ function renderMetrics() {
 function renderPendientes() {
   if (!DATA.pendientes.length) return;
   document.getElementById('sec-pendientes').style.display = 'block';
-  document.getElementById('pendientes-list').innerHTML = DATA.pendientes.map(p => {
+  const list = document.getElementById('pendientes-list');
+  list.innerHTML = DATA.pendientes.map((p, idx) => {
     const d = daysUntil(p.fecha_limite);
     const urg = d !== null && d <= 5;
     return `
@@ -1271,15 +1655,53 @@ function renderPendientes() {
         <p style="font-size:.78rem;color:#374151;margin:0 0 4px;">${p.descripcion}</p>
         ${p.fecha_limite ? `<span class="fz-deadline${urg?' urgent':''}">${urg?'⚠ ':''}Límite: ${formatDate(p.fecha_limite)}</span>` : ''}
       </div>
-      <div style="flex-shrink:0;">${pendActionBtn(p.tipo_accion)}</div>
+      <div style="flex-shrink:0;">${pendActionBtn(p, idx)}</div>
     </div>`;
   }).join('');
+
+  // TAREA 13: conecta el "Subir archivo" — antes no tenía onclick ni
+  // listener, era decorativo. Delegado sobre el contenedor (igual que
+  // wizard.js hace con su checklist) para no re-cablear en cada render.
+  if (!list.dataset.wired) {
+    list.dataset.wired = '1';
+    list.addEventListener('change', async (e) => {
+      if (e.target.type !== 'file' || !e.target.files[0]) return;
+      const p = DATA.pendientes[Number(e.target.dataset.pendienteIdx)];
+      const file = e.target.files[0];
+      try {
+        await window.__fzApi.uploadDocument(p.caseId, file, {
+          faddiDocId:   p.faddiDocId,
+          faddiCode:    p.faddiCode,
+          faddiDocName: p.faddiDocName,
+          faddiStep:    p.faddiStep,
+        });
+        // R13 (TAREA 19): advierte si el paquete IEA supera las 150 páginas
+        // — nunca bloquea. Se consulta ANTES del alert porque el reload de
+        // abajo destruye el contexto (misma razón por la que el wizard
+        // hace lo mismo en warnIfPaqueteIEAExcedido()).
+        let avisoIEA = '';
+        try {
+          const { excedido, totalPaginas, limite } = await window.__fzApi.getPaqueteIEA(p.caseId);
+          if (excedido) avisoIEA = `\n\n⚠️ El paquete de documentos para el IEA lleva ${totalPaginas} páginas (límite orientativo: ${limite}). No bloquea tu solicitud — Farmazed lo revisa contigo.`;
+        } catch (e) { /* informativo — si falla, no se molesta al cliente */ }
+        alert('Documento subido. Farmazed lo revisará.' + avisoIEA);
+        // Recarga completa: misma razón que el envío del wizard (TAREA 12) —
+        // es la única forma simple de traer datos frescos (el documento ya
+        // no está "requested", puede que ya no haya más pendientes, etc.).
+        window.location.reload();
+      } catch (err) {
+        alert('Error al subir: ' + err.message);
+      }
+    });
+  }
 }
 
-// ── Pipeline ──
+// ── Pipeline ── (§H.8, TAREA 21: 5 bloques A-E, no 4)
 function pipelineHTML(p) {
+  const labels = fasesLabels();
+  const N = labels.length;
   let html = '<div class="fz-pipeline">';
-  for (let i = 1; i <= 4; i++) {
+  for (let i = 1; i <= N; i++) {
     const done  = p.fases_completadas.includes(i);
     const act   = p.fase_actual === i;
     const blk   = act && p.bloqueado;
@@ -1290,10 +1712,10 @@ function pipelineHTML(p) {
     html += `<div class="fz-phase-col">
       <div class="fz-phase-row">
         ${i>1 ? `<div class="fz-phase-line${(done||act)?' done':''}"></div>` : '<div style="flex:0;"></div>'}
-        <div class="fz-phase-dot ${dc}" title="${FASES_FULL[i-1]}">${ic}</div>
-        ${i<4 ? `<div class="fz-phase-line${done?' done':''}"></div>` : '<div style="flex:0;"></div>'}
+        <div class="fz-phase-dot ${dc}" title="${labels[i-1]}">${ic}</div>
+        ${i<N ? `<div class="fz-phase-line${done?' done':''}"></div>` : '<div style="flex:0;"></div>'}
       </div>
-      <div class="fz-phase-name ${nc}">${FASES_SHORT[i-1]}</div>
+      <div class="fz-phase-name ${nc}">${labels[i-1]}</div>
     </div>`;
   }
   return html + '</div>';
@@ -1329,14 +1751,71 @@ function expandedHTML(p) {
     });
   });
   if (!docs) docs = `<p style="font-size:.78rem;color:#9ca3af;">Aún no se han subido documentos para este expediente.</p>`;
+
+  // R14 (TAREA 17) — solo los formularios que aplican con certeza a este
+  // caso vienen resaltados; los "por confirmar" se listan aparte, sin
+  // afirmar que aplican (el backend nunca inventó una aplicabilidad que no
+  // pudo deducir del nombre del formulario).
+  const formulariosHtml = (() => {
+    const { aplicables = [], porConfirmar = [] } = p.formularios || {};
+    if (!aplicables.length && !porConfirmar.length) {
+      return `<p style="font-size:.78rem;color:#9ca3af;">Sin formularios aplicables identificados todavía.</p>`;
+    }
+    const row = (f, dudoso) => `
+      <div class="fz-flat-doc">
+        <i class="iconoir-page" style="font-size:1.1rem;color:${dudoso ? '#d97706' : '#9ca3af'};flex-shrink:0;"></i>
+        <div class="fz-flat-doc-info">
+          <div class="fz-flat-doc-name">${f.titulo}</div>
+          ${dudoso ? `<div class="text-muted" style="font-size:.7rem">Por confirmar con Farmazed si te corresponde.</div>` : ''}
+        </div>
+        <a class="btn-fz btn-fz-sm" href="/formularios/${f.archivo}" download>Descargar</a>
+      </div>`;
+    return aplicables.map(f => row(f, false)).join('') + porConfirmar.map(f => row(f, true)).join('');
+  })();
+
   const act = p.actividad.map(a => `
     <div class="fz-activity-item">
       <span class="fz-activity-date">${formatDate(a.fecha)}</span>
       <span>${a.descripcion}</span>
     </div>`).join('');
-  return `<div class="row g-3">
-    <div class="col-md-8"><p style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#9ca3af;margin-bottom:8px;">Documentos del expediente</p>${docs}</div>
-    <div class="col-md-4"><p style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#9ca3af;margin-bottom:8px;">Actividad reciente</p>${act}</div>
+  // §H.8 (TAREA 21): dos pagos distintos, cada uno con su propio badge — un
+  // anticipo no implica nada sobre el saldo, ni viceversa.
+  // TAREA 23 (§H.8, Pagos): `null` = concepto que no aplica a este caso
+  // (mef si no es extranjero, iea si no aplica) — no se muestra como
+  // "pendiente" porque nunca va a pagarse.
+  function pagoBadge(pagado) {
+    if (pagado === null) return `<span class="badge" style="background:#f1f5f9;color:#64748b;font-weight:600;">No aplica</span>`;
+    return pagado
+      ? `<span class="badge" style="background:#dcfce7;color:#166534;font-weight:600;"><i class="iconoir-check-circle"></i> Pagado</span>`
+      : `<span class="badge" style="background:#fef3c7;color:#92400e;font-weight:600;"><i class="iconoir-warning-triangle"></i> Pendiente</span>`;
+  }
+  const CONCEPTO_LABEL_CLIENTE = {
+    honorarios: 'Honorarios', tasa_dnfd: 'Tasa DNFD', mef: 'MEF (producto extranjero)',
+    iea: 'IEA', honorarios_saldo: 'Saldo de honorarios',
+  };
+  // §H.8 (TAREA 21): plazo de subsanación (Art. 22 D.E. 27/2024) — solo se
+  // muestra mientras el caso está observado por DNFD.
+  const plazoHtml = (p.fechaLimiteSubsanacion || p.fechaLimiteSubsanacionNota) ? `
+    <div class="alert alert-warning py-2 px-3 mb-3" style="font-size:.78rem;">
+      <strong>DNFD solicitó correcciones.</strong>
+      ${p.fechaLimiteSubsanacion
+        ? `Fecha límite para subsanar: ${formatDate(p.fechaLimiteSubsanacion)}.`
+        : (p.fechaLimiteSubsanacionNota || '')}
+    </div>` : '';
+
+  return `${plazoHtml}<div class="row g-3">
+    <div class="col-md-8">
+      <p style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#9ca3af;margin-bottom:8px;">Documentos del expediente</p>${docs}
+      <p style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#9ca3af;margin:16px 0 8px;">Formularios</p>${formulariosHtml}
+    </div>
+    <div class="col-md-4">
+      <p style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#9ca3af;margin-bottom:8px;">Pagos</p>
+      ${Object.entries(p.pagos || {}).filter(([, v]) => v !== null).map(([k, v]) => `
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+        <span style="font-size:.78rem;color:#1e293b;">${CONCEPTO_LABEL_CLIENTE[k] || k}</span>${pagoBadge(v)}
+      </div>`).join('')}
+      <p style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#9ca3af;margin:14px 0 8px;">Actividad reciente</p>${act}
+    </div>
   </div>`;
 }
 
@@ -1365,7 +1844,10 @@ function renderProductos() {
           <div style="font-size:.85rem;font-weight:700;color:#1e293b;">${p.nombre_comercial}</div>
           <div style="margin-top:3px;">${catBadge(p.categoria)}</div>
         </div>
-        <div class="fz-prod-center">${pipelineHTML(p)}</div>
+        <div class="fz-prod-center">
+          ${pipelineHTML(p)}
+          <div style="font-size:.7rem;color:#6b7280;text-align:center;margin-top:2px;">${p.fase_label}</div>
+        </div>
         <div class="fz-prod-right">
           ${vHtml}
           ${estadoBadge(p.estado)}

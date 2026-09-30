@@ -302,12 +302,16 @@ async function renderChecklist() {
     currentChecklist = checklist;
     renderProgressBar(progress);
 
-    const required = checklist.filter(d => d.required);
-    const optional = checklist.filter(d => !d.required);
+    // D11 (organizacion/03_INSTRUCCIONES_DEV.md fila D11, depende de D10):
+    // separar por responsable, no por obligatorio/opcional — esa distinción
+    // sigue visible en cada tarjeta (badge Obligatorio/Opcional), pero lo que
+    // decide si el cliente puede avanzar es de QUIÉN es el documento.
+    const clienteDocs  = checklist.filter(d => d.responsable !== 'farmazed');
+    const farmazedDocs = checklist.filter(d => d.responsable === 'farmazed');
 
     container.innerHTML = `
-      ${renderDocGroup('Documentos Obligatorios', required)}
-      ${optional.length ? renderDocGroup('Documentos Condicionales / Opcionales', optional, true) : ''}`;
+      ${renderDocGroup('Documentos que subes tú', clienteDocs)}
+      ${farmazedDocs.length ? renderDocGroup('Documentos que aporta Farmazed', farmazedDocs) : ''}`;
 
     // Attach upload handler once — innerHTML above replaces children but not
     // the container node itself, so re-adding here on every refresh would
@@ -328,9 +332,27 @@ async function renderChecklist() {
         }
       });
     }
+
+    updateNextButtonState();
   } catch (err) {
     container.innerHTML = `<div class="alert alert-danger">${err.message}</div>`;
   }
+}
+
+// D11: el botón de continuar del Paso 4 se bloquea SOLO por documentos
+// obligatorios de responsable:'cliente' — los de Farmazed nunca bloquean al
+// cliente (son tarea interna, ver admin/expediente.html).
+function updateNextButtonState() {
+  if (state.step !== 4) return;
+  const btn = $('#btn-next');
+  if (!btn) return;
+  const missingCliente = currentChecklist.filter(
+    d => d.required && d.responsable !== 'farmazed' && !d.uploaded
+  );
+  btn.disabled = missingCliente.length > 0;
+  btn.title = missingCliente.length
+    ? `Faltan ${missingCliente.length} documento(s) obligatorio(s) tuyo(s) por subir`
+    : '';
 }
 
 function renderProgressBar({ uploaded, total, percent }) {
@@ -365,6 +387,9 @@ function renderDocCard(doc) {
   // for docs that need prior arrangement but ARE still uploaded once
   // obtained (e.g. hig_cotizacion). physicalOnly is the explicit marker.
   const isPhysicalOnly = doc.physicalOnly === true;
+  // D11: documento a cargo de Farmazed — el cliente lo ve, pero no lo sube
+  // ni lo bloquea (ver updateNextButtonState arriba).
+  const isFarmazedDoc  = doc.responsable === 'farmazed';
 
   return `
     <div class="doc-card card mb-2 border-0 shadow-sm" id="doc-${doc.id}">
@@ -380,9 +405,12 @@ function renderDocCard(doc) {
           ${up?.file ? `<div class="small text-success mt-1">📎 ${up.file.name}</div>` : ''}
           ${doc.condition ? `<div class="small text-warning-emphasis mt-1">⚡ ${doc.condition}</div>` : ''}
           ${isPhysicalOnly ? `<div class="small text-info mt-1">📍 Este documento se presenta físicamente en DNFD, no se carga en FADDI. Farmazed coordinará la entrega.</div>` : ''}
+          ${isFarmazedDoc ? `<div class="small text-primary mt-1">🏢 Este documento lo aporta Farmazed — no necesitas subirlo tú, y no bloquea tu avance.</div>` : ''}
         </div>
         <div class="doc-upload-action" style="min-width:120px">
-          ${isPhysicalOnly
+          ${isFarmazedDoc
+            ? '<span class="badge bg-primary-subtle text-primary border border-primary-subtle small">A cargo de Farmazed</span>'
+            : isPhysicalOnly
             ? '<span class="badge bg-info-subtle text-info border border-info-subtle small">Presencial</span>'
             : status === 'uploaded' || status === 'approved'
             ? '<span class="text-success small">✓ Subido</span>'
@@ -413,6 +441,7 @@ async function uploadDoc(faddiDocId, file, docMeta) {
     // the modal fade-out is what reveals the already-updated list.
     await renderChecklist();
     toast(`✅ ${docMeta?.name || faddiDocId} subido correctamente.`);
+    await warnIfPaqueteIEAExcedido();
   } catch (err) {
     state.uploads[faddiDocId] = { file, status: 'error' };
     toast(`❌ Error al subir ${docMeta?.name}: ${err.message}`, 'danger');
@@ -426,11 +455,30 @@ async function uploadDoc(faddiDocId, file, docMeta) {
   }
 }
 
+// R13 (TAREA 19): tras cada subida, si el paquete IEA (formula,
+// metodo_analisis, cert_analisis, especificaciones, etiquetas — ver
+// tracker/data/paquete_iea.js) supera las 150 páginas, se avisa al cliente.
+// NUNCA bloquea el flujo — solo un toast informativo.
+async function warnIfPaqueteIEAExcedido() {
+  try {
+    const { excedido, totalPaginas, limite } = await api.getPaqueteIEA(state.caseId);
+    if (excedido) {
+      toast(`⚠️ El paquete de documentos para el IEA lleva ${totalPaginas} páginas (límite orientativo: ${limite}). No bloquea tu solicitud — Farmazed lo revisa contigo.`, 'warning');
+    }
+  } catch (e) { /* informativo — si falla, no se molesta al cliente */ }
+}
+
 // ── Step 5: Confirmación ──────────────────────────────────────────────────────
 async function renderConfirmation() {
   const cs = await api.getCase(state.caseId);
   const cl = await api.getChecklist(state.caseId);
-  const missing = cl.checklist.filter(d => d.required && !d.uploaded);
+  // D11/TAREA 12: los documentos a cargo de Farmazed nunca deben contar como
+  // "faltantes" del cliente aquí — antes de este fix, un cliente que subió
+  // TODOS sus documentos igual veía "⚠️ Documentos obligatorios faltantes
+  // (3)" listando tasa_servicio/recibo_cnf/recibo_iea (tarea interna de
+  // Farmazed), como si él se hubiera dejado algo. Mismo criterio que
+  // updateNextButtonState() y renderChecklist() ya aplican en este archivo.
+  const missing = cl.checklist.filter(d => d.required && !d.uploaded && d.responsable !== 'farmazed');
 
   $('#confirm-product-name').textContent = cs.product?.nombreComercial || '(sin nombre)';
   $('#confirm-tramite').textContent      = cs.tramiteType;
@@ -505,28 +553,40 @@ async function nextStep() {
     }
 
     if (state.step === 4) {
-      // Checklist upload — already saved per upload. Just advance.
+      // D11: guard defensivo — el botón ya viene deshabilitado por
+      // updateNextButtonState(), esto cubre el caso de que se reactive por
+      // fuera (ej. devtools) o quede un estado viejo antes del refresh.
+      const missingCliente = currentChecklist.filter(
+        d => d.required && d.responsable !== 'farmazed' && !d.uploaded
+      );
+      if (missingCliente.length) {
+        toast(`Faltan ${missingCliente.length} documento(s) obligatorio(s) tuyo(s) por subir.`, 'warning');
+        return;
+      }
     }
 
     if (state.step === 5) {
       await api.updateCase(state.caseId, { status: 'submitted' });
       toast('🎉 Expediente enviado a Farmazed para revisión.');
-      // Embedded in client-dashboard.html: switch modules in place instead of
-      // a hard page navigation. Standalone (nuevo.html): fall back to the
-      // real single frontend at the repo root.
-      setTimeout(() => {
-        if (typeof window.showModule === 'function') {
-          document.getElementById('wizard-form')?.style && (document.getElementById('wizard-form').style.display = 'none');
-          window.showModule('productos');
-        } else {
-          window.location.href = '/client-dashboard.html';
-        }
-      }, 2000);
+      // Bug encontrado en TAREA 12/D16: el modo embebido (showModule existe)
+      // solo cambiaba de módulo SIN recargar — el caso recién creado quedaba
+      // invisible en "Mis Productos" porque DATA.productos se carga una sola
+      // vez al abrir client-dashboard.html, antes de que este caso existiera.
+      // El modo standalone SÍ recargaba (y por eso nunca tuvo el bug) — se
+      // unifica en ambos casos: una recarga completa siempre trae datos
+      // frescos, que es lo único que garantiza ver el caso nuevo.
+      setTimeout(() => { window.location.href = '/client-dashboard.html'; }, 2000);
       return;
     }
 
     showStep(state.step + 1);
 
+    // TAREA 10 (a): bug real, no cosmético — renderStep2() solo se llamaba
+    // desde prevStep(), nunca desde el avance normal 1->2. El tipo de
+    // medicamento (checkboxes de este paso) define qué checklist recibe el
+    // cliente en el Paso 4, así que sin esto el checklist podía no
+    // corresponder al subtipo que el cliente cree haber elegido.
+    if (state.step === 2) renderStep2();
     if (state.step === 4) await renderChecklist();
     if (state.step === 5) await renderConfirmation();
 
@@ -534,6 +594,10 @@ async function nextStep() {
     toast(`Error: ${err.message}`, 'danger');
   } finally {
     setLoading(btn, false);
+    // setLoading() siempre re-habilita el botón — updateNextButtonState()
+    // es un no-op fuera del Paso 4, y en el Paso 4 vuelve a aplicar el
+    // bloqueo si todavía faltan documentos obligatorios del cliente.
+    updateNextButtonState();
   }
 }
 
