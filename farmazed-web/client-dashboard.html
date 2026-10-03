@@ -1204,7 +1204,10 @@
         // cliente.
         pagos: (() => {
           const quoteAceptada = quotesAceptadasParaPagos.find(q => q.estado === 'aceptada' && q.caseIds.includes(c.id));
-          const linea = quoteAceptada?.lineas.find(l => l.caseId === c.id);
+          // TAREA 28: un caso puede tener 2 líneas (principal + "prioridad
+          // innovadores", mismo caseId) — esExtranjero/aplicaIEA viven en la
+          // línea PRINCIPAL.
+          const linea = quoteAceptada?.lineas.find(l => l.caseId === c.id && (l.tipo || 'principal') === 'principal');
           const pagados = new Set((payLists[i].payments || []).filter(pg => pg.tipo === 'cliente_a_farmazed').map(pg => pg.concepto));
           return {
             honorarios:       pagados.has('honorarios'),
@@ -1545,7 +1548,7 @@ function renderCotizacion(quotes) {
     box.innerHTML = quotes.map(q => {
       const lineasHtml = q.lineas.map(l => `
         <div class="d-flex justify-content-between align-items-start border-bottom py-2">
-          <div class="small fw-semibold">${l.caseCode}</div>
+          <div class="small fw-semibold">${l.caseCode}${l.tipo === 'prioridad_innovadores' ? ' <span class="text-muted" style="font-size:.68rem;font-weight:400">(prioridad innovadores)</span>' : ''}</div>
           <div class="text-end" style="font-size:.75rem;color:#4b5563">
             <div>Honorarios Farmazed: B/. ${Number(l.honorariosFarmazed).toFixed(2)}</div>
             <div>Tasas oficiales: B/. ${Number(l.tasasOficiales).toFixed(2)}</div>

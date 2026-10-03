@@ -48,9 +48,9 @@
 
   <div class="p-4">
     <p class="text-muted small mb-3">
-      Los 13 formularios/declaraciones juradas canónicos (serie F08-Form-1..13). 4 de
-      ellos (marcados "por confirmar") no tienen su aplicabilidad exacta deducida con
-      certeza del nombre — no se les asignó trámite/vía a ciegas.
+      Los 13 formularios/declaraciones juradas canónicos (serie F08-Form-1..13). F1 y
+      F2 (marcados "por confirmar" acá, sin contexto de caso) dependen de la
+      representación del titular — ver el expediente de cada caso para su valor real.
     </p>
     <div class="card border-0 shadow-sm">
       <div id="formularios-list">
@@ -72,6 +72,9 @@
     suplementos:           'Suplementos',
     intercambiabilidad:    'Intercambiabilidad',
     no_comercializados:    'No comercializados',
+    // TAREA 28 (§H.11): F3 y F10 ya no son "por_confirmar" en biblioteca.
+    medicamentos_siempre: 'Siempre (medicamentos)',
+    nuevo_registro:       'Registro nuevo',
   };
   const FIRMA_LABEL = {
     titular: 'Titular', representante_legal: 'Representante Legal',

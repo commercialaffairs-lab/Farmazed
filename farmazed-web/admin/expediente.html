@@ -143,6 +143,15 @@
             </select>
             <div class="text-muted mt-1" style="font-size:.7rem">Afecta el checklist (estudios clínicos / resumen de seguridad, Síntesis Química) y el tarifario ("Prioridad ... innovadores").</div>
           </div>
+          <div class="mb-2">
+            <label class="form-label small">Representación (§H.11)</label>
+            <select class="form-select form-select-sm" id="via-representacion">
+              <option value="">Por confirmar</option>
+              <option value="titular_directo">Titular directo</option>
+              <option value="casa_matriz_distribuidor">Casa matriz + distribuidor local</option>
+            </select>
+            <div class="text-muted mt-1" style="font-size:.7rem">Define si aplica el Formulario 1 (titular directo) o el Formulario 2 (casa matriz + distribuidor).</div>
+          </div>
           <button class="btn btn-sm btn-outline-primary w-100" id="btn-save-via-categoria">Guardar vía y categoría</button>
         </div>
 
@@ -383,6 +392,7 @@
       </div>`).join('');
     document.getElementById('via-es-innovador').value =
       caseData.esInnovador === true ? 'true' : caseData.esInnovador === false ? 'false' : '';
+    document.getElementById('via-representacion').value = caseData.representacion || '';
   }
 
   async function loadAssignCard() {
@@ -901,11 +911,13 @@
     const tipoMedicamento = Array.from(document.querySelectorAll('.via-tipo-med:checked')).map(el => el.value);
     const esInnovadorRaw = document.getElementById('via-es-innovador').value;
     const esInnovador = esInnovadorRaw === '' ? null : esInnovadorRaw === 'true';
+    const representacionRaw = document.getElementById('via-representacion').value;
+    const representacion = representacionRaw === '' ? null : representacionRaw;
     try {
       // El PATCH devuelve solo los campos actualizados (id + update), no el
       // caso completo — se mezcla en caseData en vez de reemplazarlo (si no,
       // se pierden tramiteType/status/product/etc. y render() se rompe).
-      const updated = await api.updateCase(caseId, { tipoRegistro, tipoMedicamento, esInnovador });
+      const updated = await api.updateCase(caseId, { tipoRegistro, tipoMedicamento, esInnovador, representacion });
       Object.assign(caseData, updated);
       render();
       renderViaCategoria();

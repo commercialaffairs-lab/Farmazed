@@ -115,10 +115,13 @@
     const puedeEnviar = myPerms.includes('quotes.send');
 
     box.innerHTML = quotes.map(q => {
-      const lineasHtml = q.lineas.map(l => `
-        <div class="linea-row" data-case="${l.caseId}" data-quote="${q.id}">
+      const lineasHtml = q.lineas.map(l => {
+        const tipoLinea = l.tipo || 'principal';
+        const esExtra = tipoLinea === 'prioridad_innovadores';
+        return `
+        <div class="linea-row ${esExtra ? 'linea-extra' : ''}" data-case="${l.caseId}" data-quote="${q.id}" data-tipo="${tipoLinea}">
           <div class="flex-grow-1">
-            <div class="fw-semibold small">${l.caseCode}</div>
+            <div class="fw-semibold small">${l.caseCode}${esExtra ? ' <span class="badge bg-info-subtle text-info border border-info-subtle">Línea adicional — Prioridad innovadores</span>' : ''}</div>
             <div class="text-muted" style="font-size:.72rem">
               ${l.categoriaPrecio || '<span class="text-warning">sin categoría — completar a mano</span>'}
               ${l.ajustado ? `<span class="badge bg-warning-subtle text-warning border border-warning-subtle ms-1">Ajustado: ${l.motivoAjuste || ''}</span>` : ''}
@@ -151,7 +154,8 @@
             </div>
             <button class="btn btn-sm btn-outline-primary btn-guardar-linea">Guardar</button>
           ` : ''}
-        </div>`).join('');
+        </div>`;
+      }).join('');
 
       return `
         <div class="card border-0 shadow-sm mb-3 quote-card">
@@ -180,7 +184,7 @@
     box.querySelectorAll('.btn-guardar-linea').forEach(btn => {
       btn.addEventListener('click', async () => {
         const row = btn.closest('.linea-row');
-        const quoteId = row.dataset.quote, caseId = row.dataset.case;
+        const quoteId = row.dataset.quote, caseId = row.dataset.case, tipo = row.dataset.tipo;
         const honorariosFarmazed = row.querySelector('.inp-honorarios').value;
         const tasasOficiales     = row.querySelector('.inp-tasas').value;
         const motivo             = row.querySelector('.inp-motivo').value.trim();
@@ -191,6 +195,7 @@
           await api.updateQuoteLine(quoteId, caseId, {
             honorariosFarmazed, tasasOficiales, motivo: motivo || undefined,
             esExtranjero, aplicaIEA, modalidadIEA: aplicaIEA ? modalidadIEA : null,
+            tipo,
           });
           await load();
         } catch (e) { alert('Error: ' + e.message); }
