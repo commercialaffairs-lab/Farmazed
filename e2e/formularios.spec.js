@@ -40,16 +40,22 @@ test.describe('R14 — biblioteca de formularios', () => {
     }, apiPort);
   });
 
-  test('admin ve la biblioteca completa (13), con los 4 "por confirmar" marcados', async ({ page }) => {
+  test('admin ve la biblioteca completa (13), con F1/F2 "por confirmar" (TAREA 28: dependen de representación)', async ({ page }) => {
     await login(page, 'admin-e3@farmazed.test', 'Farmazed123!');
     await page.goto('/admin/formularios.html');
     await expect(page.getByText('Autorización de Representación Legal en Panamá (otorgada por el Titular)')).toBeVisible({ timeout: 10000 });
     await expect(page.locator('.form-row')).toHaveCount(13);
-    await expect(page.locator('.form-row .badge', { hasText: 'Por confirmar' })).toHaveCount(4);
+    // TAREA 28 (§H.11): F3 ("aplica siempre") y F10 ("todo registro nuevo")
+    // ya tienen una condición cierta — solo F1/F2 (dependen de
+    // `representacion`, un dato del caso que la biblioteca sin contexto no
+    // tiene) siguen "por confirmar" acá.
+    await expect(page.locator('.form-row .badge', { hasText: 'Por confirmar' })).toHaveCount(2);
     // Un aplicable con certeza sí lleva su tag, no "por confirmar".
     const formSuplementos = page.locator('.form-row', { hasText: 'Inscripción de Suplementos' });
     await expect(formSuplementos.locator('.badge', { hasText: 'Suplementos' })).toBeVisible();
     await expect(formSuplementos.locator('.badge', { hasText: 'Por confirmar' })).toHaveCount(0);
+    const formPoderFarmaceutico = page.locator('.form-row', { hasText: 'Autorización de Trámite de Registro Sanitario al Farmacéutico' });
+    await expect(formPoderFarmaceutico.locator('.badge', { hasText: 'Siempre' })).toBeVisible();
     await shot(page, '00-admin-biblioteca-completa');
   });
 
@@ -60,18 +66,22 @@ test.describe('R14 — biblioteca de formularios', () => {
     await expect(card).toBeVisible({ timeout: 10000 });
     await card.locator('.fz-prod-header').click();
 
-    // Aplicables con certeza: Abreviado (06/07) + Suplementos (11/12).
+    // Aplicables con certeza: Abreviado (06/07) + Suplementos (11/12) + F3
+    // (siempre) + F10 (todo registro nuevo) — TAREA 28 (§H.11).
     await expect(card.getByText('Procedimiento Abreviado, Nuevo Registro Sanitario')).toBeVisible({ timeout: 10000 });
     await expect(card.getByText('Procedimiento Abreviado, Renovación con Cambios')).toBeVisible();
     await expect(card.getByText('Inscripción de Suplementos')).toBeVisible();
     await expect(card.getByText('Renovación de Suplementos')).toBeVisible();
+    await expect(card.getByText('Autorización de Trámite de Registro Sanitario al Farmacéutico')).toBeVisible();
+    await expect(card.getByText('Declaración de Nombre Comercial del Producto')).toBeVisible();
 
     // NO aplicable a este caso: Reconocimiento Mutuo.
     await expect(card.getByText('Reconocimiento Mutuo')).toHaveCount(0);
 
-    // "Por confirmar" (1, 2, 3, 10) se listan, marcados como tal — no se
-    // ocultan ni se afirma que aplican.
-    await expect(card.getByText('Por confirmar con Farmazed si te corresponde.')).toHaveCount(4);
+    // "Por confirmar" (solo F1/F2 — representacion sin definir en este
+    // caso) se listan, marcados como tal — no se ocultan ni se afirma que
+    // aplican.
+    await expect(card.getByText('Por confirmar con Farmazed si te corresponde.')).toHaveCount(2);
 
     await page.mouse.move(700, 400);
     await shot(page, '01-cliente-formularios-filtrados');

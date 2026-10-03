@@ -99,26 +99,41 @@ echo "→ Sembrando roles (TAREA 15/E3 — 2 empresas + 1 usuario por rol, para 
 if [ $? -ne 0 ]; then echo "❌ Seed de roles fallo. Log:"; cat /tmp/e2e-seed-roles.log; exit 1; fi
 echo "  seed OK."
 
-echo "→ Levantando tracker en :$TRACKER_PORT..."
-(cd tracker && \
-  FIRESTORE_EMULATOR_HOST=localhost:$FIRESTORE_PORT \
-  FIREBASE_AUTH_EMULATOR_HOST=localhost:$AUTH_PORT \
-  STORAGE_EMULATOR_HOST=http://localhost:$STORAGE_PORT \
-  FIREBASE_PROJECT_ID=demo-farmazed \
-  GCS_BUCKET=demo-farmazed.appspot.com \
-  ADMIN_KEY=dev-admin-local \
-  MCP_KEY=dev-mcp-local \
-  PORT=$TRACKER_PORT \
-  PRICING_TABLE=24sep \
-  node index.js) > /tmp/e2e-tracker.log 2>&1 &
-PIDS+=($!)
+# TAREA 28: esta máquina es compartida — otro proceso, de otro usuario,
+# puede tomar un puerto justo entre que find_free_port lo revisa y node
+# alcanza a escuchar (visto repetidas veces: "EADDRINUSE" en el log del
+# tracker aunque find_free_port haya dicho que estaba libre un instante
+# antes). No es un bug de find_free_port; se reintenta con un puerto NUEVO
+# (no el mismo con más timeout) hasta 3 veces antes de rendirse.
+TRACKER_OK=""
+for intento in 1 2 3; do
+  TRACKER_PORT=$(find_free_port "$TRACKER_PORT")
+  echo "→ Levantando tracker en :$TRACKER_PORT (intento $intento)..."
+  (cd tracker && \
+    FIRESTORE_EMULATOR_HOST=localhost:$FIRESTORE_PORT \
+    FIREBASE_AUTH_EMULATOR_HOST=localhost:$AUTH_PORT \
+    STORAGE_EMULATOR_HOST=http://localhost:$STORAGE_PORT \
+    FIREBASE_PROJECT_ID=demo-farmazed \
+    GCS_BUCKET=demo-farmazed.appspot.com \
+    ADMIN_KEY=dev-admin-local \
+    MCP_KEY=dev-mcp-local \
+    PORT=$TRACKER_PORT \
+    PRICING_TABLE=24sep \
+    node index.js) > /tmp/e2e-tracker.log 2>&1 &
+  TRACKER_PID=$!
+  PIDS+=($TRACKER_PID)
 
-for i in $(seq 1 30); do
-  curl -s -o /dev/null "http://localhost:$TRACKER_PORT/health" && break
-  sleep 1
+  for i in $(seq 1 30); do
+    curl -s -o /dev/null "http://localhost:$TRACKER_PORT/health" && { TRACKER_OK=1; break; }
+    kill -0 "$TRACKER_PID" 2>/dev/null || break # el proceso murió (p.ej. EADDRINUSE) — reintenta ya, no sigas esperando
+    sleep 1
+  done
+  [ -n "$TRACKER_OK" ] && break
+  echo "  intento $intento falló (puerto $TRACKER_PORT) — reintentando con otro puerto..."
+  TRACKER_PORT=$((TRACKER_PORT + 1))
 done
-if ! curl -s -o /dev/null "http://localhost:$TRACKER_PORT/health"; then
-  echo "❌ El tracker no arranco. Log:"; cat /tmp/e2e-tracker.log; exit 1
+if [ -z "$TRACKER_OK" ]; then
+  echo "❌ El tracker no arrancó tras 3 intentos. Log:"; cat /tmp/e2e-tracker.log; exit 1
 fi
 echo "  tracker OK."
 
