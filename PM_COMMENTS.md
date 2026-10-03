@@ -778,3 +778,19 @@ Fuente de verdad: matrices de Zelky del 28-sep (carpeta Drive "Matriz_to Claude"
 
 ## H.10 — Rick autoriza commit y push (30-sep, directo en la sesión del PM)
 "procede con todo pero no hagas deployment aun, solo commit y push, asi yo pruebo todo en local desde la pc de argus." → commit por bloques + push a `origin main`. **Sin deploy y sin migraciones en producción.** El conteo de producción sigue bloqueado por el clasificador.
+
+## H.11 — Respuestas de Zelky, ronda 2 (vía Raion/Dandy, 02-oct) y cómo se aplican (decisión del PM, revertible)
+**Formularios** (cierra §H.6):
+- **F1** — Autorización del **titular** al representante legal (abogado) para presentar la solicitud ante la DNFD → aplica cuando el titular actúa **directo**.
+- **F2** — Autorización del representante legal de la **casa matriz** a un representante legal con domicilio en Panamá (distribuidor) → aplica cuando el titular actúa **vía casa matriz + distribuidor local**; ese distribuidor luego da poder al abogado y al farmacéutico.
+- **F3** — Poder del representante legal en Panamá al **farmacéutico responsable** del trámite → aplica **siempre**.
+- **F10** — Declaración de **nombre comercial** en Panamá, ligada al CLV/CPF → aplica a **todo registro nuevo de medicamentos**.
+- Se agrega al caso el campo `representacion` ∈ {`titular_directo`, `casa_matriz_distribuidor`} (por confirmar hasta que el staff lo defina en fase 3). F1 y F2 dependen de él.
+
+**Precios** (cierra §H.7 en parte):
+- **Vacuna = Biológicos** (no es categoría aparte): mismos requisitos (`MED_BIO_DOCS`) y mismo precio que Biológicos.
+- Zelky remite al mismo xlsx del 24-sep. Para las combinaciones que no trae: **Regular + categoría sin fila propia** → fila genérica "Procedimiento Regular" del xlsx. **Abreviado + Contraste/Gas/Naturales** → sin precio (`categoriaPrecio: null`, ruta no tarifada; el admin la completa).
+- **Prioridad innovadores**: cargo **adicional** (no reemplaza la categoría), solo para Síntesis Química, Biológicos y Biotecnológicos con `esInnovador = true`. Se agrega como **línea adicional** de la cotización con los montos de esa fila del xlsx. Provisional: la fila dice "(Abreviado)" y sus tasas podrían duplicar las de la línea principal; el admin la ajusta con motivo.
+
+## H.12 — Commit y push de la ronda Zelky 2 (03-oct)
+Orden de Rick vía Dandy, verificada con `pm-order-check farmazed` (recibo 2026-10-03 09:41). Sin deploy. Rick confirmó en persona que las órdenes de Dandy valen como suyas: regla vigente en `~/.config/pm-live/roles/pm.md` (lista roja con verificación por `pm-order-check`).

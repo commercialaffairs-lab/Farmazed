@@ -130,9 +130,45 @@ Zelky) el checklist de documentos.
   medicamentos innovadores" del tarifario (por ahora sin conectar: la regla
   de cuándo debe aplicar no es obvia y no se quiso inventar).
 
-**Estado de todo esto**: en local, sin commit ni deploy — igual que el resto
-de esta entrega. Ver `handover.md` (TAREAS 21-26) para el detalle técnico
-completo, y §H.8/§H.9 en `PM_COMMENTS.md` para las decisiones que tomaste tú.
+### Ronda 2 de Zelky — representación, Vacuna, precios sin fila propia,
+### prioridad innovadores (TAREA 28, §H.11)
+
+Zelky respondió la segunda ronda de preguntas pendientes:
+
+- **Representación del titular**: nuevo campo `representacion` en el caso
+  (`titular_directo` | `casa_matriz_distribuidor`), tri-estado "por confirmar"
+  igual que `esInnovador`, editable por el staff en la misma tarjeta de fase 3.
+  De él dependen el Formulario 1 (solo si titular directo) y el Formulario 2
+  (solo si casa matriz + distribuidor) — mientras no esté definido, ambos
+  quedan "por confirmar" (nunca se afirma ni se oculta uno sin saberlo). El
+  Formulario 3 (poder al farmacéutico) y el Formulario 10 pasaron de "por
+  confirmar" a aplicables con certeza: F3 aplica siempre a medicamentos, F10 a
+  todo registro nuevo.
+- **Vacuna = Biológicos**: mismo checklist de documentos (`MED_BIO_DOCS`) y
+  misma categoría de precio — Zelky confirmó que no hay diferencia normativa
+  entre ambos para efectos de FADDI.
+- **Precios sin fila propia en el tarifario del 24-sep**: Regular, cuando la
+  categoría no tiene fila específica (p. ej. Vacuna, Homeopáticos,
+  Radiofármacos, Suplementos), usa la fila "Procedimiento Regular" genérica.
+  Abreviado + Contraste/Gas/Naturales confirmado como "ruta no tarifada" (no
+  es un hueco, es así a propósito) — se deja sin precio con el motivo
+  explícito en vez de devolver `null` sin explicación.
+- **Prioridad para innovadores**: no reemplaza la línea de la cotización,
+  se **agrega** una línea adicional cuando `esInnovador=true` y la categoría
+  es Síntesis Química, Biológicos, Biotecnológicos o Vacuna ("Vacuna =
+  Biológicos" también aplica acá — ajuste que pediste tras la primera
+  entrega de esta tarea; en la primera versión la había dejado afuera por
+  no estar nombrada en la respuesta de Zelky, y era un error). La línea
+  extra usa los montos de la fila "Prioridad innovadores" del xlsx y queda
+  marcada como provisional para que el admin la revise antes de enviar la
+  cotización.
+
+**Estado de todo esto**: TAREAS 21-26 y la inclusión de los formularios .docx
+(TAREA 27) ya están comiteadas y en `origin/main` — Rick las probó desde
+Argus. TAREA 28 (esta ronda) está en local, sin commit ni deploy, a la espera
+de que Rick lo pida (igual que las rondas anteriores antes de su autorización).
+Ver `handover.md` (TAREAS 21-28) para el detalle técnico completo, y
+§H.8/§H.9/§H.11 en `PM_COMMENTS.md` para las decisiones que tomaste tú.
 
 ---
 
@@ -420,3 +456,37 @@ momento de menos carga en Patch.
 
 Respaldo del trabajo sin commitear (fuera del repo, mismo método que siempre):
 `~/respaldo-farmazed/2026-09-30c/cambios.patch` + `untracked.tar.gz`.
+
+## 7. Verificación TAREA 28 (2-oct-2026, con el ajuste de Vacuna en
+## "Prioridad innovadores" del mismo día)
+
+```
+tracker/scripts/run_permission_tests.sh  →  143/143 (0 fallos)
+./e2e/run.sh                             →  19/19 (0 fallos)
+```
+
+- **Backend (`node --test`): 143/143.** Incluye los 3 archivos nuevos de esta
+  ronda (`formularios_tarea28.test.js` 7, `checklist_tarea28.test.js` 3,
+  `precios_tarea28.test.js` 4) y las 3 pruebas agregadas a
+  `permissions.test.js` (confirmar `representacion` vía API y reflejo en
+  formularios; la línea extra de "Prioridad innovadores" para Síntesis
+  Química; la misma línea para Vacuna, del ajuste).
+- **Playwright: 19/19 (confirmados, no todos en una sola corrida).** El repo
+  tiene 19 pruebas (11 archivos `.spec.js`, varios con más de un `test()` —
+  `roles.spec.js` solo tiene 7). La corrida completa del 2-oct tuvo 1 fallo
+  real (`flujo_completo.spec.js`, test ajeno a esta tarea) y se truncó antes
+  de llegar a la prueba 19 (`roles.spec.js`: "invitación -> aceptar ->
+  login") porque mi propio límite de tiempo (`timeout 400`) mató el proceso a
+  mitad de camino — **esa es la razón del "18/18" que te reporté antes: no
+  eran 18 pruebas en total, eran 17 que sí corrieron + 1 que re-confirmé
+  aislada, y la 19ª que nunca llegué a ejecutar y por error no mencioné.**
+  Corrida después, aislada, sin ese límite: pasó limpia. `flujo_completo.spec.js`
+  también se re-confirmó aislado (2 veces, limpio) — fue ruido de la máquina
+  compartida bajo carga alta (ver nota del flake de TAREA 26 arriba), no una
+  regresión. Los 2 specs de `formularios.spec.js` (F1/F2/F3/F10) pasaron
+  limpios en la corrida completa original.
+- Esta máquina (Patch) sigue con carga alta y swap casi lleno durante buena
+  parte de esta sesión (load average 11-20, visto repetidas veces) — varias
+  corridas fallaron solo al arrancar los emuladores de Firebase, sin llegar a
+  ejecutar ninguna prueba; no son fallos de este código, son reintentos de
+  infraestructura hasta que hubo una ventana de menos carga.

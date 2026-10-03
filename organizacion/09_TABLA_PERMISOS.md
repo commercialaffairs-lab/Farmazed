@@ -21,7 +21,7 @@ quien acepta una invitación todavía no tiene cuenta) ni `GET /api/me/permissio
 | Editar datos del caso (producto/entidades, en borrador) (`cases.update_fields`) | ✅ | ✅ | — | — | — | ✅ |
 | Editar el seguimiento FADDI (N° expediente/solicitud, observaciones) (`cases.edit_faddi`) | — | — | ✅ | ✅ | ✅ | ✅ |
 | Editar las notas internas del caso (`cases.edit_notes`) | — | — | ✅ | ✅ | ✅ | ✅ |
-| Confirmar vía, categoría y si el producto es innovador (fase 3) (`cases.edit_via_categoria`) | — | — | ✅ | ✅ | ✅ | ✅ |
+| Confirmar vía, categoría, representación y si el producto es innovador (fase 3) (`cases.edit_via_categoria`) | — | — | ✅ | ✅ | ✅ | ✅ |
 | Avanzar fases secuenciales (no 8, no 10) (`cases.advance`) | — | — | ✅ | — | — | ✅ |
 | Fase 8 — confirmar revisión legal (poderes/declaraciones) (`cases.confirm_8_legal`) | — | — | — | ✅ | — | ✅ |
 | Fase 8 — confirmar cotejo técnico/matrices (`cases.confirm_8_tecnica`) | — | — | — | — | ✅ | ✅ |

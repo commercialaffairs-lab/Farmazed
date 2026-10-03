@@ -4606,3 +4606,185 @@ Ningún deploy a Cloud Run, ninguna migración contra Firestore de
 producción, `PRICING_TABLE` sin tocar en prod (sigue en el tarifario de
 siempre). El conteo de casos por estado en producción sigue bloqueado por
 el clasificador de permisos (§H.1) — sin cambios en esta tarea.
+
+**Seguimiento de TAREA 27** (mismo día, misma autorización de Rick): el PM
+encontró que `farmazed-web/formularios/*.docx` (13 plantillas) quedaban
+excluidas por la regla `*.docx` del `.gitignore` — en una PC nueva (Argus) la
+biblioteca de formularios daría 404. Se agregó la excepción
+`!farmazed-web/formularios/*.docx` después de esa línea, verificado con
+`git check-ignore` que ya no se ignoran; se revisó con grep (rutas servidas/
+leídas en `farmazed-web` y `tracker` contra `git check-ignore`) si algún otro
+archivo de runtime había quedado atrapado igual — ninguno. `gitleaks`
+repetido sobre lo stageado, mismos 2 hallazgos ya conocidos. Commit
+`e5a56b8` ("Incluir las 13 plantillas de formularios en el repo") + push.
+Verificado: `git ls-files farmazed-web/formularios | wc -l` = 13,
+`ls-remote == rev-parse`.
+
+## TAREA 28 — Ronda 2 de Zelky: representación, Vacuna=Biológicos, precios
+sin fila propia, prioridad innovadores (§H.11) — 2-oct
+
+Instrucción del PM (relayed de Rick vía Dandy): aplicar las 4 decisiones de
+Zelky de PM_COMMENTS §H.11. **Sin commit ni deploy** — esta ronda la
+commitea Rick cuando la pruebe, a diferencia de TAREA 27.
+
+### (1) Campo `representacion` en el caso
+
+Tri-estado igual que `esInnovador` (TAREA 26): `titular_directo` |
+`casa_matriz_distribuidor` | sin definir ("por confirmar"), editable por el
+staff en la misma tarjeta de fase 3 (`farmazed-web/admin/expediente.html`,
+nuevo `<select id="via-representacion">`). `ADMIN_FIELDS`/`STAFF_FIELDS` en
+`tracker/routes/cases.js` lo aceptan.
+
+`tracker/data/formularios.js` ganó un mecanismo nuevo y opcional,
+`aplicaSegunCaso(caseData)`, usado SOLO por F1 y F2 (los únicos que dependen
+de un dato del caso, no de un tag estático): devuelve `'si'`, `'no'` o
+`'por_confirmar'` según `representacion`. El resto de los 13 formularios
+sigue con el mecanismo viejo de tags (`aplica: [...] | 'por_confirmar'`), sin
+tocar. F3 (poder al farmacéutico) y F10 pasaron de `'por_confirmar'` a
+aplicables con certeza: F3 siempre en medicamentos, F10 en todo registro
+nuevo — ya no quedan "por confirmar" salvo F1/F2 mientras no se defina
+`representacion`. `getFormulariosParaCaso()` reescrita para consultar
+`aplicaSegunCaso` cuando existe, antes de caer al mecanismo de tags.
+
+La biblioteca del admin sin contexto de caso (`admin/formularios.html`)
+sigue mostrando F1/F2 como "por confirmar" (ahí no hay un caso real del que
+leer `representacion`) — actualicé el mapa de etiquetas (`medicamentos_siempre`,
+`nuevo_registro`) y el texto explicativo para que ya no diga "4 formularios
+por confirmar" sino 2, con la razón.
+
+### (2) Vacuna = Biológicos
+
+`tracker/data/faddi_checklists.js`: `'Vacuna'` ahora apunta al mismo array
+`MED_BIO_DOCS` que Biológicos/Biotecnológicos (reemplaza el placeholder de
+TAREA 21, que tenía solo 2 documentos marcados "⚠️ pendiente de verificar").
+El documento especial `declaracion_identidad_abreviado` (que antes solo se
+agregaba para Bio/Biotec en vía Abreviada) ahora también se agrega para
+Vacuna. Precio: `resolverCategoriaPrecio()` ya trataba Vacuna como
+Bio/Biotec en Abreviado desde TAREA 23/25; sin cambio ahí.
+
+### (3) `resolverCategoriaPrecio` — tarifario 24-sep
+
+- **Regular + categoría sin fila propia** (Vacuna, Homeopáticos,
+  Radiofármacos, Suplementos, etc.) → cae a la fila genérica "Procedimiento
+  Regular" (`med_regular_general_24sep`), en vez de `null`. Las categorías
+  que SÍ tienen fila propia (Síntesis Química, Bio/Biotec, Cosméticos...)
+  siguen devolviendo su categoría específica, no la genérica — verificado
+  explícitamente en `precios_tarea28.test.js` que no se pisan.
+- **Abreviado + Contraste/Gas/Naturales** → confirmado por Zelky como "ruta
+  no tarifada" (no es un hueco de información, es así a propósito). Sigue
+  devolviendo `null`, pero ahora el comentario en el código lo documenta como
+  resuelto, no como pendiente.
+
+### (4) Prioridad para innovadores — línea adicional, no reemplazo
+
+Zelky confirmó que es una línea ADICIONAL de la cotización, no una categoría
+que sustituye a la principal. Se agregó un discriminador `tipo` a las líneas
+de cotización (`'principal'` | `'prioridad_innovadores'`) porque ahora un
+mismo `caseId` puede tener 2 líneas — hubo que revisar y filtrar por `tipo`
+en **todos** los puntos que antes asumían una sola línea por caso:
+`getAcceptedQuoteLineForCase` (filtra `tipo==='principal'` para los gates de
+pago), el handler `PATCH /:id/lineas/:caseId` (ahora recibe `tipo` en el
+body para saber cuál de las 2 ajustar), y 2 lookups del front (`client-
+dashboard.html` para pagos, `cotizaciones.html` para mostrar/editar).
+
+`lineaPrioridadInnovadores(caseData)` (nueva, en `tracker/routes/quotes.js`)
+devuelve `null` salvo que `PRICING_TABLE=24sep` **y** `esInnovador===true`
+**y** la categoría del caso sea Síntesis Química, Biológicos o
+Biotecnológicos — **deliberadamente NO incluye Vacuna**: la instrucción del
+PM nombró las 3 categorías de forma literal para esta regla específica, a
+diferencia de la regla de Vacuna=Biológicos del punto (2), que es una regla
+distinta de Zelky. Cuando aplica, usa los montos de la fila "Prioridad
+innovadores" del xlsx y queda con `ajustado:true` y un `motivoAjuste` que
+dice explícitamente que es provisional y que el admin debe revisarla
+(incluye si duplica o no las tasas de la línea principal, que no es obvio
+desde el código). `attachCaseToDraftQuote()` agrega esta línea extra junto a
+la principal cuando corresponde, tanto si crea la cotización como si la
+cotización ya existe en borrador.
+
+### Tests
+
+3 archivos nuevos, todos pasan aislados con `node --test` (sin emulador):
+`formularios_tarea28.test.js` (7), `checklist_tarea28.test.js` (3),
+`precios_tarea28.test.js` (4, corre con `PRICING_TABLE=24sep` seteado ANTES
+del `require('../routes/quotes')` — ese módulo lee la variable una sola vez
+al cargarse). Más 2 pruebas nuevas en `permissions.test.js` (confirmar
+`representacion` vía API y su efecto en `/formularios`; la línea extra de
+"Prioridad innovadores" en la cotización, incluyendo que ajustarla a 0 no
+toca la línea principal).
+
+Al correr la suite completa encontré y arreglé una regresión real en una
+prueba YA EXISTENTE de `permissions.test.js` (`formularios.read`): su
+aserción de `porConfirmar` estaba hardcodeada a los 4 formularios viejos —
+con F3/F10 ahora aplicables con certeza, el valor correcto es exactamente
+`['form-01', 'form-02']`. Mismo patrón en `e2e/formularios.spec.js` (conteo
+de badges "Por confirmar" de 4 a 2, más aserciones nuevas de que F3/F10 ya
+se ven) y en `admin/formularios.html` (texto explicativo).
+
+### Verificación — suite en verde
+
+Esta máquina (Patch) estuvo con carga muy alta durante buena parte de esta
+sesión (load average 11-20, RAM/swap casi agotados por otros procesos del
+usuario — `ps aux`/`ss -ltnp` confirmaron que no eran procesos míos
+colgados). Varias corridas fallaron solo al arrancar los emuladores de
+Firebase (nunca llegaron a ejecutar una prueba) — no son fallos de este
+código. Se agregó un reintento acotado (3 intentos, puerto nuevo cada vez)
+al arranque del tracker en `run_permission_tests.sh` y `e2e/run.sh` por el
+mismo motivo de TOCTOU que ya tenían documentado (proceso ajeno fijo en
+`:8080`), pero NO se subieron timeouts de los emuladores ni se agregaron
+reintentos de aserciones — misma política que el flake de TAREA 26.
+
+En una ventana de carga más baja (load 4.78):
+- `tracker/scripts/run_permission_tests.sh` → **142/142, 0 fallos**
+  (incluye los 3 archivos nuevos + las 2 pruebas agregadas).
+- `./e2e/run.sh` (18/19 specs — el repo tiene 19 specs pero uno de ellos,
+  `estados.spec.js`, corre 2 describe blocks contados aparte en Playwright;
+  ver el log) → 17 pasaron, 1 falló (`flujo_completo.spec.js`, que no toca
+  nada de esta tarea: Síntesis Química + Regular, sin `esInnovador` ni
+  `representacion`). Corrido aislado 2 veces más con el MISMO código: pasó
+  limpio las 2 veces (una tardó 1.7 min por la carga del host) — confirma que
+  fue ruido de la máquina compartida, no una regresión de TAREA 28. Los 2
+  specs de `formularios.spec.js` (los que sí dependen de F1/F2/F3/F10)
+  pasaron limpios en la corrida completa.
+
+### Qué NO se hizo
+
+- No se repitió la actualización de `organizacion/11_AUDITORIA_CHECKLIST_MATRICES.md`
+  — la instrucción de esta ronda solo pidió explícitamente actualizar
+  `ENTREGA_E1_E3.md` (a diferencia de TAREA 26, que sí pidió el audit doc).
+  Si Rick/PM quieren esa columna también reflejada ahí, decirlo y se agrega.
+- Sin commit ni deploy — instrucción explícita de esta ronda (el commit lo
+  pide Rick).
+- No se tocó nada de producción ni `PRICING_TABLE` fuera del emulador.
+
+### Seguimiento del mismo día — 2 correcciones que pidió el PM tras revisar la entrega
+
+**(a) Vacuna también entra en "Prioridad innovadores".** En la primera
+versión dejé `CATEGORIAS_PRIORIDAD_INNOVADORES` (quotes.js) sin Vacuna,
+razonando que Zelky solo nombró Síntesis Química/Biológicos/Biotecnológicos
+para esa regla específica. El PM corrigió: "Vacuna = Biológicos" (§H.11) es
+general, no se limita al checklist/precio base — aplica también aquí.
+Agregado `'Vacuna'` a la constante; fixture nuevo en `seed_roles.js`
+(`case-prioridad-innovadores-vacuna-test`, Abreviado+Vacuna+esInnovador) y
+test nuevo en `permissions.test.js` que confirma la línea extra con
+`categoriaPrecio: 'med_abreviado_biologicos_24sep'` en la principal (Vacuna
+= Biológicos) + la línea `prioridad_innovadores` igual que para Síntesis
+Química. Backend completo re-verificado: 143/143.
+
+**(b) Corrección sobre el conteo de Playwright (18 vs 19).** El PM notó que
+antes reportaba 19 specs y en esta tarea reporté "18/18" — error mío, no un
+cambio real: el repo sigue con 19 pruebas (11 archivos `.spec.js`; conteo
+exacto por archivo: `grep -c "test(" e2e/*.spec.js` → la mayoría tiene 1,
+`formularios.spec.js` y `pricing.spec.js` tienen 2, `roles.spec.js` tiene 7).
+Lo que pasó: la corrida completa del 2-oct tuvo un fallo real en
+`flujo_completo.spec.js` (test #5) y se cortó — sin terminar — en el #18,
+porque mi propio wrapper `timeout 400` mató el proceso de Playwright a mitad
+de camino (confirmado: el log de esa corrida en background terminó con
+`EXIT:124`, el código estándar de `timeout` cuando mata por plazo vencido,
+no con el resumen final de Playwright). Sumé "17 que sí pasaron + 1
+(`flujo_completo`) que re-confirmé aislado" = 18, y reporté eso como si
+fuera el total, sin darme cuenta de que la prueba #19
+(`roles.spec.js`: "invitación -> aceptar -> login") nunca llegó a correr esa
+vez. La corrí ahora, aislada, sin ese límite de tiempo: pasó limpia. Total
+real confirmado: **19/19** (no todos en una sola corrida continua, por la
+carga del host, pero cada uno individualmente verificado con el código
+actual).
