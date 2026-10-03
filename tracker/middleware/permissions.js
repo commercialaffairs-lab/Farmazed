@@ -73,7 +73,7 @@ const PERMISSIONS = {
   // TAREA 26: fase_03 ("Tipo de registro sanitario y ruta de registro",
   // §H.8) la confirma Farmazed, no el cliente — vía (tipoRegistro),
   // categoría (tipoMedicamento) y ahora esInnovador se editan juntos.
-  'cases.edit_via_categoria': { label: 'Confirmar vía, categoría y si el producto es innovador (fase 3)', roles: [...STAFF_ROLES, 'admin'] },
+  'cases.edit_via_categoria': { label: 'Confirmar vía, categoría, representación y si el producto es innovador (fase 3)', roles: [...STAFF_ROLES, 'admin'] },
   'cases.advance':         { label: 'Avanzar fases secuenciales (no 8, no 10)',   roles: ['analista', 'admin'] },
   'cases.confirm_8_legal':   { label: 'Fase 8 — confirmar revisión legal (poderes/declaraciones)', roles: ['abogado', 'admin'] },
   'cases.confirm_8_tecnica': { label: 'Fase 8 — confirmar cotejo técnico/matrices', roles: ['regente', 'admin'] },

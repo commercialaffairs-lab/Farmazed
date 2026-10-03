@@ -75,26 +75,42 @@ echo "  seed OK."
 
 MCP_KEY_LOCAL=dev-mcp-local
 
-echo "→ Levantando tracker en :$TRACKER_PORT..."
-(cd tracker && \
-  FIRESTORE_EMULATOR_HOST=localhost:$FIRESTORE_PORT \
-  FIREBASE_AUTH_EMULATOR_HOST=localhost:$AUTH_PORT \
-  STORAGE_EMULATOR_HOST=http://localhost:$STORAGE_PORT \
-  FIREBASE_PROJECT_ID=demo-farmazed \
-  GCS_BUCKET=demo-farmazed.appspot.com \
-  ADMIN_KEY=dev-admin-local \
-  MCP_KEY=$MCP_KEY_LOCAL \
-  PORT=$TRACKER_PORT \
-  PRICING_TABLE=24sep \
-  node index.js) > /tmp/perm-tracker.log 2>&1 &
-PIDS+=($!)
+# TAREA 28: esta máquina es compartida (otros procesos, de otros usuarios,
+# pueden tomar un puerto justo entre que find_free_port lo revisa y node
+# alcanza a escuchar — visto repetidas veces con un proceso ajeno fijo en
+# :8080, "EADDRINUSE" en el log del tracker). No es un bug de
+# find_free_port (funciona bien aislado) sino una carrera real contra algo
+# externo — se reintenta con un puerto NUEVO (no el mismo con más timeout)
+# hasta 3 veces antes de rendirse.
+TRACKER_OK=""
+for intento in 1 2 3; do
+  TRACKER_PORT=$(find_free_port "$TRACKER_PORT")
+  echo "→ Levantando tracker en :$TRACKER_PORT (intento $intento)..."
+  (cd tracker && \
+    FIRESTORE_EMULATOR_HOST=localhost:$FIRESTORE_PORT \
+    FIREBASE_AUTH_EMULATOR_HOST=localhost:$AUTH_PORT \
+    STORAGE_EMULATOR_HOST=http://localhost:$STORAGE_PORT \
+    FIREBASE_PROJECT_ID=demo-farmazed \
+    GCS_BUCKET=demo-farmazed.appspot.com \
+    ADMIN_KEY=dev-admin-local \
+    MCP_KEY=$MCP_KEY_LOCAL \
+    PORT=$TRACKER_PORT \
+    PRICING_TABLE=24sep \
+    node index.js) > /tmp/perm-tracker.log 2>&1 &
+  TRACKER_PID=$!
+  PIDS+=($TRACKER_PID)
 
-for i in $(seq 1 30); do
-  curl -s -o /dev/null "http://localhost:$TRACKER_PORT/health" && break
-  sleep 1
+  for i in $(seq 1 30); do
+    curl -s -o /dev/null "http://localhost:$TRACKER_PORT/health" && { TRACKER_OK=1; break; }
+    kill -0 "$TRACKER_PID" 2>/dev/null || break # el proceso murió (p.ej. EADDRINUSE) — no sigas esperando, reintenta ya
+    sleep 1
+  done
+  [ -n "$TRACKER_OK" ] && break
+  echo "  intento $intento falló (puerto $TRACKER_PORT) — reintentando con otro puerto..."
+  TRACKER_PORT=$((TRACKER_PORT + 1))
 done
-if ! curl -s -o /dev/null "http://localhost:$TRACKER_PORT/health"; then
-  echo "❌ El tracker no arranco. Log:"; cat /tmp/perm-tracker.log; exit 1
+if [ -z "$TRACKER_OK" ]; then
+  echo "❌ El tracker no arrancó tras 3 intentos. Log:"; cat /tmp/perm-tracker.log; exit 1
 fi
 echo "  tracker OK."
 
@@ -124,6 +140,18 @@ if [ $? -ne 0 ]; then EXIT_CODE=1; fi
 
 echo "→ Corriendo esInnovador en el checklist de SQ (TAREA 26, prueba unitaria pura)..."
 node --test tracker/tests/checklist_tarea26.test.js
+if [ $? -ne 0 ]; then EXIT_CODE=1; fi
+
+echo "→ Corriendo formularios F1/F2/F3/F10 (TAREA 28, prueba unitaria pura)..."
+node --test tracker/tests/formularios_tarea28.test.js
+if [ $? -ne 0 ]; then EXIT_CODE=1; fi
+
+echo "→ Corriendo Vacuna=Biológicos en el checklist (TAREA 28, prueba unitaria pura)..."
+node --test tracker/tests/checklist_tarea28.test.js
+if [ $? -ne 0 ]; then EXIT_CODE=1; fi
+
+echo "→ Corriendo resolverCategoriaPrecio (Vacuna/Regular-generico/Abreviado-sin-precio, TAREA 28, prueba unitaria pura)..."
+PRICING_TABLE=24sep node --test tracker/tests/precios_tarea28.test.js
 if [ $? -ne 0 ]; then EXIT_CODE=1; fi
 
 echo "→ Corriendo la migración de roles sobre las cuentas legacy..."

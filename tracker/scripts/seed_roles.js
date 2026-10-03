@@ -223,6 +223,30 @@ async function main() {
     asignados: { analista: null, abogado: null, regente: null }, product: { nombreComercial: 'Producto Checklist IEA No' },
   }));
 
+  // TAREA 28 (§H.11): "Prioridad innovadores" es una línea EXTRA de la
+  // cotización (no reemplaza la principal) cuando esInnovador=true y la
+  // categoría es Síntesis Química/Biológicos/Biotecnológicos, en Abreviado
+  // (el xlsx 24-sep solo trae esa fila bajo "Registros Nuevos (Abreviado)").
+  // En fase_03, org Beta (mismo criterio de no-colisión con "Laboratorios
+  // Alfa" de quotes.spec.js) — el test avanza a fase_04 y revisa que la
+  // cotización en borrador trae las 2 líneas.
+  await db.collection('cases').doc('case-prioridad-innovadores-test').set(baseCase({
+    status: 'fase_03', caseCode: 'FZ-MED-ABR-2026-0115',
+    tipoRegistro: 'Abreviado', tipoMedicamento: ['Síntesis Química'], esInnovador: true,
+    orgId: ORG_BETA, clientId: 'role-titular-beta', clientEmail: 'titular-beta@farmazed.test', clientName: 'Titular Beta',
+    asignados: { analista: null, abogado: null, regente: null }, product: { nombreComercial: 'Producto Prioridad Innovadores Test' },
+  }));
+
+  // Ajuste del PM tras la entrega de TAREA 28: "Vacuna = Biológicos" (§H.11)
+  // también aplica a "Prioridad innovadores" — mismo caso que el de arriba,
+  // pero con Vacuna en vez de Síntesis Química.
+  await db.collection('cases').doc('case-prioridad-innovadores-vacuna-test').set(baseCase({
+    status: 'fase_03', caseCode: 'FZ-MED-ABR-2026-0116',
+    tipoRegistro: 'Abreviado', tipoMedicamento: ['Vacuna'], esInnovador: true,
+    orgId: ORG_BETA, clientId: 'role-titular-beta', clientEmail: 'titular-beta@farmazed.test', clientName: 'Titular Beta',
+    asignados: { analista: null, abogado: null, regente: null }, product: { nombreComercial: 'Producto Prioridad Innovadores Vacuna Test' },
+  }));
+
   // Caso de org Beta — para el 403 cruzado (titular/miembro de Alfa no debe verlo).
   await db.collection('cases').doc('case-org-beta').set(baseCase({
     status: 'draft', caseCode: 'FZ-MED-REG-2026-0094',

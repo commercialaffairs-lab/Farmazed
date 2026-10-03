@@ -75,22 +75,16 @@ const db     = () => admin.firestore();
 // apruebe el tarifario del 24-sep — ver ENTREGA_E1_E3.md, plan de deploy.
 const TARIFARIO_24SEP = process.env.PRICING_TABLE === '24sep';
 
-// TAREA 26 (§H.9-2): el xlsx 24-sep trae una fila propia "Prioridad para el
-// trámite de solicitud de registros sanitarios de medicamentos innovadores
-// inicial, renovación y modificación" (`med_abreviado_prioridad_innovadores_24sep`,
-// dentro del bloque Abreviado del xlsx). El PM pidió usar `esInnovador` (el
-// caso ya lo tiene, TAREA 26 parte 2) para resolver esta categoría SI la
-// regla es obvia — deliberadamente NO se mapea:
-//   - No es obvio si "innovador" debe REEMPLAZAR la categoría del subtipo
-//     (Biológicos/Biotecnológicos/Huérfanos ya tienen su propia fila
-//     obligatoria por ley, independiente de si el producto es innovador) o
-//     si debe aplicar solo cuando no hay una fila más específica (p.ej.
-//     Síntesis Química).
-//   - La fila del xlsx no aclara si es EXCLUYENTE de las demás filas de
-//     Abreviado o un cargo adicional sobre la categoría del subtipo.
-// Mientras Zelky no confirme esto, `esInnovador` NO cambia el resultado de
-// esta función — el admin completa la línea a mano en la cotización para
-// estos casos (mismo criterio de "no inventar" del resto de esta auditoría).
+// TAREA 26 (§H.9-2) dejó "Prioridad innovadores" sin mapear por ambigüedad
+// (¿reemplaza la categoría del subtipo o es un cargo adicional? ¿excluyente
+// de las demás filas de Abreviado?). TAREA 28 (§H.11, Zelky ronda 2): es un
+// cargo ADICIONAL (no reemplaza nada), solo para Síntesis Química,
+// Biológicos y Biotecnológicos con `esInnovador = true` — por eso NO vive
+// en `resolverCategoriaPrecio()` (que resuelve LA categoría principal, una
+// sola por línea): se agrega como línea EXTRA de la cotización en
+// `attachCaseToDraftQuote()` (ver más abajo, `lineaPrioridadInnovadores()`),
+// marcada como provisional para que el admin la revise (Zelky: la fila dice
+// "(Abreviado)" y sus tasas podrían duplicar las de la línea principal).
 function resolverCategoriaPrecio({ tramiteType, tipoRegistro, tipoMedicamento = [] }) {
   if (tramiteType !== 'medicamentos') return null; // cosmeticos/higienicos/plaguicidas/... sin tarifario hoy.
 
@@ -106,9 +100,13 @@ function resolverCategoriaPrecio({ tramiteType, tipoRegistro, tipoMedicamento = 
     if (tipoMedicamento.includes('Suplementos')) return TARIFARIO_24SEP ? 'med_abreviado_suplementos_24sep' : 'med_abreviado_suplemento';
     if (tipoMedicamento.includes('Homeopático')) return TARIFARIO_24SEP ? 'med_abreviado_homeopaticos_24sep' : 'med_abreviado_suplemento';
     if (tipoMedicamento.includes('Radiofármaco')) return TARIFARIO_24SEP ? 'med_abreviado_radiofarmacos_24sep' : 'med_abreviado_suplemento';
-    if (tipoMedicamento.some(t => ['Biológicos', 'Biotecnológicos'].includes(t))) return TARIFARIO_24SEP ? 'med_abreviado_biologicos_24sep' : 'med_abreviado_biologico';
+    // TAREA 28 (§H.11): "Vacuna = Biológicos" — mismo precio, no es categoría aparte.
+    if (tipoMedicamento.some(t => ['Biológicos', 'Biotecnológicos', 'Vacuna'].includes(t))) return TARIFARIO_24SEP ? 'med_abreviado_biologicos_24sep' : 'med_abreviado_biologico';
     if (tipoMedicamento.includes('Síntesis Química')) return TARIFARIO_24SEP ? 'med_abreviado_sintesis_24sep' : 'med_abreviado_sintesis';
-    return null; // Vacuna/Medio de Contraste/Gas Medicinal/Productos Naturales en Abreviado: sin fila propia (ni en prod ni en el xlsx 24-sep).
+    // TAREA 28 (§H.11): Zelky confirmó — Medio de Contraste/Gas Medicinal/
+    // Productos Naturales en Abreviado quedan SIN precio a propósito ("ruta
+    // no tarifada"), no es un gap pendiente de confirmar.
+    return null;
   }
 
   if (tipoRegistro === 'Regular') {
@@ -117,7 +115,13 @@ function resolverCategoriaPrecio({ tramiteType, tipoRegistro, tipoMedicamento = 
     if (tipoMedicamento.includes('Gas Medicinal')) return TARIFARIO_24SEP ? 'med_regular_gases_24sep' : 'med_regular_natural';
     if (tipoMedicamento.includes('Medio de Contraste')) return TARIFARIO_24SEP ? 'med_regular_contraste_24sep' : 'med_regular_natural';
     if (tipoMedicamento.includes('Síntesis Química')) return TARIFARIO_24SEP ? 'med_regular_sintesis_24sep' : 'med_regular_sintesis';
-    return null; // Biológicos/Biotecnológicos/Homeopático/Radiofármaco/Suplementos/Vacuna en Regular: sin fila propia (ni en prod ni en el xlsx 24-sep).
+    // TAREA 28 (§H.11): Zelky confirmó — Regular + categoría SIN fila propia
+    // (Biológicos/Biotecnológicos/Homeopático/Radiofármaco/Suplementos/
+    // Vacuna) usa la fila genérica "Procedimiento Regular" del xlsx 24-sep.
+    // Solo existe en el tarifario nuevo — en legacy (prod, sin
+    // PRICING_TABLE=24sep) sigue sin fila propia, null, como siempre.
+    if (TARIFARIO_24SEP) return 'med_regular_general_24sep';
+    return null;
   }
 
   return null;
@@ -155,6 +159,40 @@ function canAccessQuote(user, quoteData) {
   return false;
 }
 
+const CATEGORIAS_PRIORIDAD_INNOVADORES = ['Síntesis Química', 'Biológicos', 'Biotecnológicos', 'Vacuna'];
+
+/**
+ * TAREA 28 (§H.11, ajuste PM tras entrega): línea EXTRA de "Prioridad
+ * innovadores" — cargo adicional, no reemplaza la línea principal. Solo si
+ * `esInnovador===true` y la categoría es Síntesis Química/Biológicos/
+ * Biotecnológicos/Vacuna ("Vacuna = Biológicos" aplica también aquí, el PM
+ * lo confirmó explícitamente). Solo existe en el tarifario 24-sep
+ * (`TARIFARIO_24SEP`) — en legacy no hay fila que cobrar. `null` si no
+ * corresponde.
+ */
+async function lineaPrioridadInnovadores(caseData) {
+  if (!TARIFARIO_24SEP) return null;
+  if (caseData.esInnovador !== true) return null;
+  if (!(caseData.tipoMedicamento || []).some(t => CATEGORIAS_PRIORIDAD_INNOVADORES.includes(t))) return null;
+
+  const { honorariosFarmazed, tasasOficiales } = await tarifarioDe('med_abreviado_prioridad_innovadores_24sep');
+  return {
+    caseId: caseData.id, caseCode: caseData.caseCode,
+    tipo: 'prioridad_innovadores',
+    categoriaPrecio: 'med_abreviado_prioridad_innovadores_24sep',
+    tarifarioHonorarios: honorariosFarmazed, tarifarioTasas: tasasOficiales,
+    honorariosFarmazed, tasasOficiales, monto: honorariosFarmazed + tasasOficiales,
+    // Provisional desde que se crea — Zelky: la fila dice "(Abreviado)" y
+    // sus tasas podrían duplicar las de la línea principal; el admin la
+    // revisa y ajusta con motivo (PATCH /lineas/:caseId con tipo:
+    // 'prioridad_innovadores'). Si el admin la guarda sin cambiar el monto,
+    // `ajustado` vuelve a `false` — ya no hace falta seguir marcándola.
+    ajustado: true,
+    motivoAjuste: 'Línea provisional (Prioridad innovadores, Abreviado) — revisar si corresponde a este caso y si las tasas duplican las de la línea principal.',
+    esExtranjero: false, aplicaIEA: false, modalidadIEA: null,
+  };
+}
+
 // ─── R12: borrador automático — llamado desde cases.js al salir de fase_03 ──
 // hacia fase_04. Reusa el borrador 'borrador' de la empresa si ya existe uno
 // (agrega/actualiza la línea de este caso); si no, crea uno nuevo. Si el
@@ -167,7 +205,9 @@ async function attachCaseToDraftQuote(caseData, systemUser = { uid: 'sistema', e
   const categoriaPrecio = resolverCategoriaPrecio(caseData);
   const { honorariosFarmazed, tasasOficiales } = await tarifarioDe(categoriaPrecio);
   const nuevaLinea = {
-    caseId: caseData.id, caseCode: caseData.caseCode, categoriaPrecio,
+    caseId: caseData.id, caseCode: caseData.caseCode,
+    tipo: 'principal', // TAREA 28: distingue de la línea extra de "prioridad_innovadores" (mismo caseId).
+    categoriaPrecio,
     tarifarioHonorarios: honorariosFarmazed, tarifarioTasas: tasasOficiales,
     honorariosFarmazed, tasasOficiales, monto: honorariosFarmazed + tasasOficiales,
     ajustado: false, motivoAjuste: null,
@@ -178,6 +218,8 @@ async function attachCaseToDraftQuote(caseData, systemUser = { uid: 'sistema', e
     // del wizard (el caso no trae ese dato hoy).
     esExtranjero: false, aplicaIEA: false, modalidadIEA: null,
   };
+  const lineaExtra = await lineaPrioridadInnovadores(caseData);
+  const lineasNuevas = lineaExtra ? [nuevaLinea, lineaExtra] : [nuevaLinea];
 
   const existente = await db().collection('quotes')
     .where('orgId', '==', caseData.orgId)
@@ -192,8 +234,8 @@ async function attachCaseToDraftQuote(caseData, systemUser = { uid: 'sistema', e
     const ref = await db().collection('quotes').add({
       orgId: caseData.orgId,
       caseIds: [caseData.id],
-      lineas: [nuevaLinea],
-      total: nuevaLinea.monto,
+      lineas: lineasNuevas,
+      total: recomputeTotal(lineasNuevas),
       estado: 'borrador',
       historial: [histEntry],
       createdAt: now, updatedAt: now,
@@ -205,7 +247,7 @@ async function attachCaseToDraftQuote(caseData, systemUser = { uid: 'sistema', e
   const data = doc.data();
   if (data.caseIds.includes(caseData.id)) return doc.id; // ya estaba (reintento idempotente)
 
-  const lineas = [...data.lineas, nuevaLinea];
+  const lineas = [...data.lineas, ...lineasNuevas];
   await doc.ref.update({
     caseIds: [...data.caseIds, caseData.id],
     lineas,
@@ -249,7 +291,10 @@ async function getAcceptedQuoteLineForCase(caseId) {
     .get();
   if (snap.empty) return null;
   const data = snap.docs[0].data();
-  return data.lineas.find(l => l.caseId === caseId) || null;
+  // TAREA 28: un caso puede tener 2 líneas (principal + "prioridad
+  // innovadores", mismo caseId) — esta función es para los gates de pago/
+  // checklist (aplicaIEA/esExtranjero), que viven en la línea PRINCIPAL.
+  return data.lineas.find(l => l.caseId === caseId && (l.tipo || 'principal') === 'principal') || null;
 }
 
 // ─── GET /api/quotes ──────────────────────────────────────────────────────────
@@ -284,8 +329,10 @@ const MODALIDADES_IEA = ['regular', 'expedita'];
 
 // ─── PATCH /api/quotes/:id/lineas/:caseId (admin only) ───────────────────────
 // Body: { honorariosFarmazed?, tasasOficiales?, motivo?, esExtranjero?,
-// aplicaIEA?, modalidadIEA? }. Motivo obligatorio si el monto resultante de
-// la línea se aparta del tarifario congelado al crearla
+// aplicaIEA?, modalidadIEA?, tipo? }. `tipo` ('principal' por default, o
+// 'prioridad_innovadores' — TAREA 28) elige CUÁL línea de este caso ajustar,
+// cuando hay dos (mismo caseId). Motivo obligatorio si el monto resultante
+// de la línea se aparta del tarifario congelado al crearla
 // (tarifarioHonorarios/tarifarioTasas) — igual si no había categoría
 // resuelta (tarifario 0/0: cualquier monto que el admin ponga a mano es, por
 // definición, un apartamiento).
@@ -300,8 +347,9 @@ router.patch('/:id/lineas/:caseId', requireAuth, requirePermission('quotes.edit'
       return res.status(400).json({ error: `Solo se puede ajustar una cotización en 'borrador' (esta está '${data.estado}').` });
     }
 
-    const idx = data.lineas.findIndex(l => l.caseId === req.params.caseId);
-    if (idx === -1) return res.status(404).json({ error: 'Ese caso no está en esta cotización' });
+    const tipoLinea = req.body.tipo || 'principal';
+    const idx = data.lineas.findIndex(l => l.caseId === req.params.caseId && (l.tipo || 'principal') === tipoLinea);
+    if (idx === -1) return res.status(404).json({ error: 'Ese caso no está en esta cotización (o no tiene una línea de ese tipo)' });
 
     const linea = data.lineas[idx];
     const { honorariosFarmazed, tasasOficiales, motivo, esExtranjero, aplicaIEA, modalidadIEA } = req.body;

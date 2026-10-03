@@ -195,7 +195,10 @@ router.patch('/:id', requireAuth, async (req, res) => {
     // esInnovador (TAREA 26, §H.9-2 sobre la auditoría checklist vs
     // matrices): lo confirma Farmazed en fase_03, junto con vía/categoría —
     // Zelky también lo usa en precios ("Prioridad ... innovadores").
-    const ADMIN_FIELDS  = ['status', 'assignedTo', 'asignados', 'priority', 'notes', 'faddi', 'product', 'entities', 'monografia', 'tipoSolicitud', 'tipoRegistro', 'tipoMedicamento', 'esInnovador', 'vencimiento'];
+    // representacion (TAREA 28, §H.11 — Zelky ronda 2): 'titular_directo' |
+    // 'casa_matriz_distribuidor', también lo confirma Farmazed en fase_03 —
+    // de él dependen los formularios F1/F2.
+    const ADMIN_FIELDS  = ['status', 'assignedTo', 'asignados', 'priority', 'notes', 'faddi', 'product', 'entities', 'monografia', 'tipoSolicitud', 'tipoRegistro', 'tipoMedicamento', 'esInnovador', 'representacion', 'vencimiento'];
     const CLIENT_FIELDS = ['product', 'entities', 'monografia', 'tipoSolicitud', 'tipoRegistro', 'tipoMedicamento'];
     // TAREA 16(b): faddi tracking y notas internas son de staff+admin, nunca
     // del cliente — ya estaban en ADMIN_FIELDS; faltaba en STAFF_FIELDS
@@ -205,7 +208,7 @@ router.patch('/:id', requireAuth, async (req, res) => {
     // ("Tipo de registro sanitario y ruta de registro", §H.8) es
     // responsabilidad de Farmazed, no del cliente (cases.edit_via_categoria
     // en la tabla de permisos).
-    const STAFF_FIELDS  = ['status', 'notes', 'faddi', 'tipoRegistro', 'tipoMedicamento', 'esInnovador'];
+    const STAFF_FIELDS  = ['status', 'notes', 'faddi', 'tipoRegistro', 'tipoMedicamento', 'esInnovador', 'representacion'];
     const allowed        = isAdmin ? ADMIN_FIELDS : isStaff ? STAFF_FIELDS : CLIENT_FIELDS;
 
     const update = { updatedAt: admin.firestore.Timestamp.now() };

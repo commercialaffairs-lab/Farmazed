@@ -184,16 +184,11 @@ const MED_VARIABLE_BY_SUBTYPE = {
     { id: 'estudios_clinicos_hue', faddiCode: '15.22', name: 'Estudios clínicos (Huérfanos)',    required: false, condition: 'Según disponibilidad — Arts. 107-108 D.E. 27/2024', faddiStep: 15, description: 'Resumen clínico disponible. Declaración notarial de países con registro.' },
     { id: 'declaracion_paises',    faddiCode: 'PENDIENTE_VERIFICAR', name: 'Declaración notarial de países con registro', required: true, condition: 'Obligatorio para huérfanos', faddiStep: 15, description: 'Declaración notarial indicando los países donde está registrado el producto. faddiCode pendiente de confirmar en FADDI (antes 15.14, colisión con "otros_docs"/"aprobacion_arr").' },
   ],
-  'Vacuna': [
-    // ⚠️ Pendiente de verificar con el PM: las matrices auditadas no
-    // mencionan explícitamente si Vacuna requiere cert_analisis/muestra/
-    // metodo_analisis/contrato_fabricacion. No se incluyen aquí para no
-    // asumir un requisito regulatorio sin fuente — confirmar antes de
-    // producción si Vacuna necesita alguno de estos. recibo_iea ya no
-    // depende del subtipo, se agrega igual para todos en getChecklist.
-    { id: 'estudios_clinicos_vac', faddiCode: '15.22', name: 'Estudios clínicos (Vacuna)', required: true, condition: 'Obligatorio para vacunas', faddiStep: 15, description: 'Datos clínicos de eficacia e inmunogenicidad.' },
-    { id: 'estudios_noclinicos_vac',faddiCode: '15.23', name: 'Estudios No clínicos (Vacuna)', required: true, condition: 'Obligatorio para vacunas', faddiStep: 15, description: 'Estudios preclínicos de seguridad.' },
-  ],
+  // TAREA 28 (§H.11, Zelky ronda 2): "Vacuna = Biológicos" — no es una
+  // categoría aparte, mismos requisitos (MED_BIO_DOCS) que Biológicos y
+  // Biotecnológicos. Reemplaza la lista propia de TAREA 21 (⚠️ pendiente de
+  // verificar — ya no hace falta, Zelky lo confirmó).
+  'Vacuna': MED_BIO_DOCS,
   // ─── Subtipos agregados en la auditoría 2026-08-26 (antes ausentes — Gap estructural) ───
   'Radiofármaco': [
     // metodo_analisis NO aplica; muestra es condicional (Bug 3/6). recibo_iea
@@ -387,8 +382,9 @@ function getChecklist(tramiteType, options = {}) {
         // TAREA 25 (§H.9, decisión 4 — matriz BIO ítem BIO-07, sección
         // Abreviado): declaración jurada de identidad de fabricación y
         // formulación, distinta del expediente ARR (aprobacion_arr) — solo
-        // Biológicos/Biotecnológicos, solo Abreviado.
-        if (tipoMedicamento.some(t => ['Biológicos', 'Biotecnológicos'].includes(t)) && !docs.find(d => d.id === 'declaracion_identidad_abreviado')) {
+        // Biológicos/Biotecnológicos, solo Abreviado. TAREA 28 (§H.11):
+        // Vacuna = Biológicos, entra en el mismo check.
+        if (tipoMedicamento.some(t => ['Biológicos', 'Biotecnológicos', 'Vacuna'].includes(t)) && !docs.find(d => d.id === 'declaracion_identidad_abreviado')) {
           docs.push(DOC_DECLARACION_IDENTIDAD_ABREVIADO);
         }
       }

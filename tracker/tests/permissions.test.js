@@ -470,6 +470,25 @@ describe('cases.edit_via_categoria — TAREA 26', () => {
     assert.ok(doc);
     assert.equal(doc.required, true);
   });
+
+  // TAREA 28 (§H.11): representacion entra en el mismo PATCH/permiso.
+  test('analista SÍ puede confirmar representacion, y los formularios del caso lo reflejan', async () => {
+    const r1 = await api('analista', 'PATCH', '/api/cases/case-docs-test', { representacion: 'titular_directo' });
+    assert.equal(r1.status, 200);
+    assert.equal(r1.json.representacion, 'titular_directo');
+
+    const f1 = await api('admin', 'GET', '/api/cases/case-docs-test/formularios');
+    assert.ok(f1.json.aplicables.some(f => f.id === 'form-01'), 'form-01 debería aplicar con titular_directo');
+    assert.ok(!f1.json.aplicables.some(f => f.id === 'form-02'));
+    assert.ok(f1.json.aplicables.some(f => f.id === 'form-03'), 'form-03 aplica siempre');
+    assert.ok(f1.json.aplicables.some(f => f.id === 'form-10'), 'form-10 aplica a todo registro nuevo');
+
+    const r2 = await api('analista', 'PATCH', '/api/cases/case-docs-test', { representacion: 'casa_matriz_distribuidor' });
+    assert.equal(r2.status, 200);
+    const f2 = await api('admin', 'GET', '/api/cases/case-docs-test/formularios');
+    assert.ok(f2.json.aplicables.some(f => f.id === 'form-02'), 'form-02 debería aplicar con casa_matriz_distribuidor');
+    assert.ok(!f2.json.aplicables.some(f => f.id === 'form-01'));
+  });
 });
 
 // ═══ cases.delete / documents.delete — TAREA 16(b) ═════════════════════════════
@@ -542,7 +561,7 @@ describe('formularios.read', () => {
   });
 
   test('GET /api/cases/:id/formularios filtra por tipoRegistro + tipoMedicamento del caso', async () => {
-    // case-formularios-test: Abreviado + Suplementos.
+    // case-formularios-test: Abreviado + Suplementos, representacion sin confirmar.
     const { status, json } = await api('cliente_titular', 'GET', '/api/cases/case-formularios-test/formularios');
     assert.equal(status, 200);
     const idsAplicables = json.aplicables.map(f => f.id);
@@ -551,8 +570,13 @@ describe('formularios.read', () => {
     assert.ok(idsAplicables.includes('form-11'), 'form-11 (Suplementos) debería aplicar');
     assert.ok(idsAplicables.includes('form-12'), 'form-12 (Suplementos) debería aplicar');
     assert.ok(!idsAplicables.includes('form-09'), 'form-09 (Reconocimiento Mutuo) NO debería aplicar');
+    // TAREA 28 (§H.11): F3 aplica siempre y F10 a todo registro nuevo — ya
+    // no son "por_confirmar" (antes sí, antes de que Zelky confirmara su
+    // condición real).
+    assert.ok(idsAplicables.includes('form-03'), 'form-03 aplica siempre');
+    assert.ok(idsAplicables.includes('form-10'), 'form-10 aplica a todo registro nuevo');
     const idsPorConfirmar = json.porConfirmar.map(f => f.id);
-    assert.deepEqual(idsPorConfirmar.sort(), ['form-01', 'form-02', 'form-03', 'form-10']);
+    assert.deepEqual(idsPorConfirmar.sort(), ['form-01', 'form-02']); // representacion sin confirmar en este caso
   });
 
   test('titular_beta NO puede leer los formularios de un caso de otra empresa', async () => {
@@ -674,5 +698,73 @@ describe('quotes.* — borrador automático, ajuste, envío, aceptación', () =>
     const g3 = await api('admin', 'GET', '/api/cases/case-quote-test-3');
     assert.equal(g3.json.status, 'fase_05');
     assert.equal(g3.json.caseCode, 'FZ-MED-ABR-2026-0087');
+  });
+});
+
+// ═══ "Prioridad innovadores" — línea EXTRA de la cotización, TAREA 28
+// (§H.11): cargo adicional (no reemplaza la principal) cuando esInnovador y
+// la categoría es SQ/Biológicos/Biotecnológicos, en Abreviado ════════════════
+describe('Cotización — línea extra de "Prioridad innovadores" (TAREA 28)', () => {
+  test('fase_03 -> fase_04 de un caso Abreviado+SQ+esInnovador=true crea 2 líneas (principal + extra)', async () => {
+    const patch = await api('admin', 'PATCH', '/api/cases/case-prioridad-innovadores-test', { status: 'fase_04' });
+    assert.equal(patch.status, 200);
+
+    const { json } = await api('admin', 'GET', '/api/quotes');
+    const quote = json.quotes.find(q => q.orgId === 'org-beta' && q.estado === 'borrador' && q.caseIds.includes('case-prioridad-innovadores-test'));
+    assert.ok(quote, 'debería existir un borrador de org-beta con case-prioridad-innovadores-test');
+
+    const lineasDelCaso = quote.lineas.filter(l => l.caseId === 'case-prioridad-innovadores-test');
+    assert.equal(lineasDelCaso.length, 2, 'principal + prioridad_innovadores');
+
+    const principal = lineasDelCaso.find(l => (l.tipo || 'principal') === 'principal');
+    const extra      = lineasDelCaso.find(l => l.tipo === 'prioridad_innovadores');
+    assert.ok(principal);
+    assert.ok(extra);
+    assert.equal(principal.categoriaPrecio, 'med_abreviado_sintesis_24sep');
+    assert.equal(extra.categoriaPrecio, 'med_abreviado_prioridad_innovadores_24sep');
+    assert.equal(extra.honorariosFarmazed, 1855);
+    assert.equal(extra.tasasOficiales, 2525);
+    assert.equal(extra.ajustado, true); // provisional desde que se crea
+    assert.match(extra.motivoAjuste, /provisional/i);
+  });
+
+  test('el admin puede ajustar la línea extra por separado (PATCH .../lineas/:caseId con tipo:"prioridad_innovadores")', async () => {
+    const { json } = await api('admin', 'GET', '/api/quotes');
+    const quote = json.quotes.find(q => q.orgId === 'org-beta' && q.estado === 'borrador' && q.caseIds.includes('case-prioridad-innovadores-test'));
+
+    const ajuste = await api('admin', 'PATCH', `/api/quotes/${quote.id}/lineas/case-prioridad-innovadores-test`, {
+      tipo: 'prioridad_innovadores', honorariosFarmazed: 0, tasasOficiales: 0, motivo: 'No corresponde para este caso — se revisó y se descarta',
+    });
+    assert.equal(ajuste.status, 200);
+    const extra = ajuste.json.lineas.find(l => l.caseId === 'case-prioridad-innovadores-test' && l.tipo === 'prioridad_innovadores');
+    assert.equal(extra.monto, 0);
+
+    // La línea principal sigue intacta — el PATCH con tipo distinto no la tocó.
+    const principal = ajuste.json.lineas.find(l => l.caseId === 'case-prioridad-innovadores-test' && (l.tipo || 'principal') === 'principal');
+    assert.equal(principal.categoriaPrecio, 'med_abreviado_sintesis_24sep');
+    assert.equal(principal.ajustado, false);
+  });
+
+  // Ajuste del PM tras la entrega: "Vacuna = Biológicos" (§H.11) también
+  // aplica aquí — Zelky no la excluyó de "Prioridad innovadores", solo no
+  // la nombró en la primera ronda.
+  test('Vacuna+esInnovador=true también dispara la línea extra (Vacuna = Biológicos, §H.11)', async () => {
+    const patch = await api('admin', 'PATCH', '/api/cases/case-prioridad-innovadores-vacuna-test', { status: 'fase_04' });
+    assert.equal(patch.status, 200);
+
+    const { json } = await api('admin', 'GET', '/api/quotes');
+    const quote = json.quotes.find(q => q.orgId === 'org-beta' && q.estado === 'borrador' && q.caseIds.includes('case-prioridad-innovadores-vacuna-test'));
+    assert.ok(quote, 'debería existir un borrador de org-beta con case-prioridad-innovadores-vacuna-test');
+
+    const lineasDelCaso = quote.lineas.filter(l => l.caseId === 'case-prioridad-innovadores-vacuna-test');
+    assert.equal(lineasDelCaso.length, 2, 'principal + prioridad_innovadores');
+
+    const principal = lineasDelCaso.find(l => (l.tipo || 'principal') === 'principal');
+    const extra      = lineasDelCaso.find(l => l.tipo === 'prioridad_innovadores');
+    assert.ok(principal);
+    assert.ok(extra);
+    assert.equal(principal.categoriaPrecio, 'med_abreviado_biologicos_24sep'); // Vacuna = Biológicos
+    assert.equal(extra.categoriaPrecio, 'med_abreviado_prioridad_innovadores_24sep');
+    assert.equal(extra.ajustado, true);
   });
 });
