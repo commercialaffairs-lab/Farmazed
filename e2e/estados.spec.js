@@ -9,6 +9,7 @@
 // los emuladores + tracker + frontend ya arriba y las env vars FZ_*.
 
 const { test, expect } = require('@playwright/test');
+const { enviarLogin, esperarAnimaciones } = require('./_esperas');
 const path = require('path');
 const fs   = require('fs');
 
@@ -34,8 +35,7 @@ async function login(page, email, password) {
   await page.goto('/login.html');
   await page.fill('#usuario', email);
   await page.fill('#password', password);
-  await page.click('button[type="submit"]');
-  await page.waitForURL(/(dashboard|client-dashboard)\.html/, { timeout: 15000 });
+  await enviarLogin(page, /(dashboard|client-dashboard|admin\/casos|admin\/bandeja)\.html/, 15000);
 }
 
 test.describe('Máquina de 21 estados (13 fases, §H.8/TAREA 21)', () => {
@@ -58,6 +58,7 @@ test.describe('Máquina de 21 estados (13 fases, §H.8/TAREA 21)', () => {
   });
 
   test('admin avanza, confirma fase 8 (dos partes), subsana, override bloqueado, historial; cliente ve el cambio', async ({ page }) => {
+    test.setTimeout(120000); // recorrido largo (13 fases + historial + 3 viewports): 45 s no alcanza con el host cargado
     // ── 1. Login admin ──────────────────────────────────────────────────
     await login(page, 'admin@farmazed.test', 'Farmazed123!');
     await shot(page, 'admin-login-ok');
@@ -191,18 +192,18 @@ test.describe('Máquina de 21 estados (13 fases, §H.8/TAREA 21)', () => {
     await page.mouse.move(700, 400);
 
     // ── 14. Responsive: 1280 (default), 1440 y 390px ─────────────────────
-    await page.waitForTimeout(400); // deja terminar la transición CSS del sidebar
+    await esperarAnimaciones(page); // deja terminar la transición CSS del sidebar
     await shot(page, 'cliente-ve-fase-real-1280');
 
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.mouse.move(700, 400);
-    await page.waitForTimeout(400);
+    await esperarAnimaciones(page);
     await expect(productCard).toBeVisible();
     await shot(page, 'cliente-ve-fase-real-1440');
 
     await page.setViewportSize({ width: 390, height: 844 });
     await page.mouse.move(200, 400);
-    await page.waitForTimeout(400);
+    await esperarAnimaciones(page);
     await expect(page.locator('#productos-list', { hasText: 'Analgen Test Visual' })).toBeVisible();
     await shot(page, 'cliente-ve-fase-real-390');
 

@@ -10,6 +10,7 @@
 // Corre con: ./e2e/run.sh checklist_recibo_iea.spec.js
 
 const { test, expect } = require('@playwright/test');
+const { enviarLogin, guardarEstado } = require('./_esperas');
 const path = require('path');
 const fs   = require('fs');
 
@@ -28,8 +29,7 @@ async function login(page, email, password) {
   await page.goto('/login.html');
   await page.fill('#usuario', email);
   await page.fill('#password', password);
-  await page.click('button[type="submit"]');
-  await page.waitForURL(/(dashboard|client-dashboard)\.html/, { timeout: 15000 });
+  await enviarLogin(page, /(dashboard|client-dashboard|admin\/casos|admin\/bandeja)\.html/, 15000);
 }
 
 // TAREA 26: logout() hace signOut()+`window.location.href` DENTRO de
@@ -42,7 +42,7 @@ async function login(page, email, password) {
 // ocurrió, no que evaluate() haya podido devolver su valor.
 async function logout(page) {
   await Promise.all([
-    page.waitForURL(/login\.html/, { timeout: 10000 }),
+    page.waitForURL(/login\.html/, { timeout: 10000, waitUntil: 'commit' }),
     page.evaluate(async () => {
       const { logout } = await import('/portal/js/auth.js');
       await logout();
@@ -50,12 +50,6 @@ async function logout(page) {
   ]);
 }
 
-async function guardarEstado(page, to) {
-  await page.selectOption('#status-select', to);
-  await page.click('#btn-save-status');
-  await expect(page.locator('#status-select')).toHaveValue(to, { timeout: 10000 });
-  await page.waitForTimeout(300);
-}
 
 // El "(opcional)" al lado del nombre lo pinta admin/expediente.html solo
 // cuando `!item.required` (ver render de #docs-list) — es el indicador que

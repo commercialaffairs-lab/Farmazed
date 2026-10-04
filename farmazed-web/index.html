@@ -407,7 +407,7 @@
                     <li class="fz-plan-na">Compilación de dossier</li>
                     <li class="fz-plan-na">Trámite ante DNFD</li>
                 </ul>
-                <a href="#contacto" class="fz-plan-btn">Solicitar</a>
+                <a href="/registro.html?plan=consulta" class="fz-plan-btn">Solicitar</a>
             </div>
 
             <div class="fz-plan fz-plan-featured">
@@ -425,7 +425,7 @@
                     <li>Seguimiento hasta obtención del registro</li>
                     <li>Cronograma de renovaciones</li>
                 </ul>
-                <a href="#contacto" class="fz-plan-btn">Solicitar</a>
+                <a href="/registro.html?plan=registro" class="fz-plan-btn">Solicitar</a>
             </div>
 
             <div class="fz-plan">
@@ -442,7 +442,7 @@
                     <li>Informes mensuales de avance</li>
                     <li>Soporte regulatorio continuo</li>
                 </ul>
-                <a href="#contacto" class="fz-plan-btn">Solicitar</a>
+                <a href="/registro.html?plan=empresarial" class="fz-plan-btn">Solicitar</a>
             </div>
 
         </div>
@@ -536,6 +536,50 @@
 
 <!-- Farmazed JS -->
 <script src="js/main.js"></script>
+
+<!-- TAREA 34 (§H.15): "Enviar consulta" del hero crea un lead SIN cuenta
+     (Fase 1, primer contacto) — el jQuery de arriba (script.js) le sigue
+     apuntando a appointment.php, que no existe, y falla en silencio (igual
+     que antes de esta tarea, "hoy sin acción"); esto es un listener
+     INDEPENDIENTE, no se tocó ese archivo de vendor. -->
+<script type="module">
+  import { API_BASE } from './portal/js/config.js';
+  // click en #submit_contact2, NO submit del form: el jQuery de vendor
+  // (src/wecare/js/script.js) ya tiene su PROPIO listener de click en este
+  // mismo botón que llama e.preventDefault() — eso cancela la acción por
+  // defecto del click (enviar el form), así que el evento 'submit' nunca
+  // llega a dispararse. Un segundo addEventListener('click', ...) en el
+  // MISMO botón sí se ejecuta igual (preventDefault de un listener no
+  // frena a los demás).
+  document.getElementById('submit_contact2').addEventListener('click', async (e) => {
+    e.preventDefault();
+    const msg = document.getElementById('msg2');
+    const nombre  = document.getElementById('nombre').value.trim();
+    const empresa = document.getElementById('empresa').value.trim();
+    const correo  = document.getElementById('email').value.trim();
+    const tipoProducto = document.getElementById('tipo').value.trim();
+    if (!nombre || !correo) {
+      msg.className = 'message error'; msg.textContent = 'Nombre y correo son obligatorios.'; msg.style.display = 'block';
+      return;
+    }
+    try {
+      const res = await fetch(`${API_BASE}/api/contact-leads`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nombre, empresa, correo, tipoProducto }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+      document.getElementById('contact-form2').reset();
+      msg.className = 'message success';
+      msg.textContent = 'Consulta enviada — te contactaremos pronto.';
+      msg.style.display = 'block';
+    } catch (err) {
+      msg.className = 'message error';
+      msg.textContent = err.message;
+      msg.style.display = 'block';
+    }
+  });
+</script>
 
 </body>
 </html>

@@ -9,6 +9,8 @@
 // Corre con: ./e2e/run.sh paquete_iea.spec.js (o ./e2e/run.sh para todos)
 
 const { test, expect } = require('@playwright/test');
+const { enviarLogin, completarCaptacionSiHaceFalta } = require('./_esperas');
+const { crearTitularVerificado } = require('./_cuentas');
 const { PDFDocument }  = require('pdf-lib');
 const path = require('path');
 const fs   = require('fs');
@@ -28,8 +30,7 @@ async function login(page, email, password) {
   await page.goto('/login.html');
   await page.fill('#usuario', email);
   await page.fill('#password', password);
-  await page.click('button[type="submit"]');
-  await page.waitForURL(/(dashboard|client-dashboard)\.html/, { timeout: 15000 });
+  await enviarLogin(page, /(dashboard|client-dashboard|admin\/casos|admin\/bandeja)\.html/, 15000);
 }
 
 // TAREA 26: waitForURL en paralelo con el evaluate (no después) — la
@@ -41,7 +42,7 @@ async function login(page, email, password) {
 // ocurrió.
 async function logout(page) {
   await Promise.all([
-    page.waitForURL(/login\.html/, { timeout: 10000 }),
+    page.waitForURL(/login\.html/, { timeout: 10000, waitUntil: 'commit' }),
     page.evaluate(async () => {
       const { logout } = await import('/portal/js/auth.js');
       await logout();
@@ -84,11 +85,11 @@ test.describe('R13 — conteo de páginas del paquete IEA', () => {
     const clientEmail = `iea.e2e.${Date.now()}@farmazed.test`;
     const clientPass  = 'Farmazed123!';
 
-    await page.goto('/login.html');
-    await page.evaluate(({ email, password }) => {
-      import('/portal/js/auth.js').then(m => m.register(email, password, 'IEA E2E'));
-    }, { email: clientEmail, password: clientPass });
-    await page.waitForURL(/client-dashboard\.html/, { timeout: 15000 });
+    // El registro abierto exige verificar el correo y completar la captación (lo cubre registro.spec.js):
+    // aquí se crea el titular ya verificado y con empresa, y se entra por el login normal.
+    await crearTitularVerificado(clientEmail, clientPass, 'IEA E2E');
+    await login(page, clientEmail, clientPass);
+    await completarCaptacionSiHaceFalta(page);
 
     await page.locator('a.nav-link', { hasText: 'Solicitar Registro' }).click();
     await page.click('button:has-text("Iniciar solicitud")');

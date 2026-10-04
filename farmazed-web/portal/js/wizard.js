@@ -2,7 +2,7 @@
  * Farmazed — New Case Wizard (5 steps)
  * Handles step navigation, checklist rendering, and file upload (native fetch).
  */
-import { requireLogin } from './auth.js';
+import { esc, requireLogin } from './auth.js';
 import api from './api.js';
 
 // ── State ─────────────────────────────────────────────────────────────────────
@@ -130,7 +130,7 @@ function toast(msg, type = 'success') {
   const el = document.createElement('div');
   el.className = `toast align-items-center text-bg-${type} border-0 show position-fixed bottom-0 end-0 m-3`;
   el.style.zIndex = 9999;
-  el.innerHTML = `<div class="d-flex"><div class="toast-body">${msg}</div>
+  el.innerHTML = `<div class="d-flex"><div class="toast-body">${esc(msg)}</div>
     <button type="button" class="btn-close btn-close-white me-2 m-auto" onclick="this.closest('.toast').remove()"></button></div>`;
   document.body.appendChild(el);
   setTimeout(() => el.remove(), 5000);
@@ -335,7 +335,7 @@ async function renderChecklist() {
 
     updateNextButtonState();
   } catch (err) {
-    container.innerHTML = `<div class="alert alert-danger">${err.message}</div>`;
+    container.innerHTML = `<div class="alert alert-danger">${esc(err.message)}</div>`;
   }
 }
 
@@ -371,7 +371,7 @@ function renderProgressBar({ uploaded, total, percent }) {
 function renderDocGroup(title, docs, collapsed = false) {
   return `
     <div class="doc-group mb-4">
-      <h6 class="text-muted fw-bold mb-3 text-uppercase small">${title}</h6>
+      <h6 class="text-muted fw-bold mb-3 text-uppercase small">${esc(title)}</h6>
       ${docs.map(d => renderDocCard(d)).join('')}
     </div>`;
 }
@@ -392,18 +392,18 @@ function renderDocCard(doc) {
   const isFarmazedDoc  = doc.responsable === 'farmazed';
 
   return `
-    <div class="doc-card card mb-2 border-0 shadow-sm" id="doc-${doc.id}">
+    <div class="doc-card card mb-2 border-0 shadow-sm" id="doc-${esc(doc.id)}">
       <div class="card-body py-2 px-3 d-flex align-items-start gap-3">
         <div class="doc-status-icon fs-5 mt-1">${isPhysicalOnly ? '📍' : (icons[status] || '⬜')}</div>
         <div class="flex-grow-1">
           <div class="d-flex align-items-center gap-2 flex-wrap">
-            <span class="fw-semibold small">${doc.faddiCode} — ${doc.name}</span>
+            <span class="fw-semibold small">${esc(doc.faddiCode)} — ${esc(doc.name)}</span>
             ${doc.required ? '<span class="badge bg-danger-subtle text-danger border border-danger-subtle small">Obligatorio</span>' : '<span class="badge bg-secondary-subtle text-secondary border small">Opcional</span>'}
-            ${!isPhysicalOnly ? `<span class="badge bg-${badge[status] || 'secondary'} small">${status}</span>` : ''}
+            ${!isPhysicalOnly ? `<span class="badge bg-${badge[status] || 'secondary'} small">${esc(status)}</span>` : ''}
           </div>
-          <div class="text-muted small mt-1">${doc.description}</div>
-          ${up?.file ? `<div class="small text-success mt-1">📎 ${up.file.name}</div>` : ''}
-          ${doc.condition ? `<div class="small text-warning-emphasis mt-1">⚡ ${doc.condition}</div>` : ''}
+          <div class="text-muted small mt-1">${esc(doc.description)}</div>
+          ${up?.file ? `<div class="small text-success mt-1">📎 ${esc(up.file.name)}</div>` : ''}
+          ${doc.condition ? `<div class="small text-warning-emphasis mt-1">⚡ ${esc(doc.condition)}</div>` : ''}
           ${isPhysicalOnly ? `<div class="small text-info mt-1">📍 Este documento se presenta físicamente en DNFD, no se carga en FADDI. Farmazed coordinará la entrega.</div>` : ''}
           ${isFarmazedDoc ? `<div class="small text-primary mt-1">🏢 Este documento lo aporta Farmazed — no necesitas subirlo tú, y no bloquea tu avance.</div>` : ''}
         </div>
@@ -415,7 +415,7 @@ function renderDocCard(doc) {
             : status === 'uploaded' || status === 'approved'
             ? '<span class="text-success small">✓ Subido</span>'
             : `<label class="btn btn-sm btn-outline-primary" style="cursor:pointer">
-                 <input type="file" class="d-none" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" data-docid="${doc.id}">
+                 <input type="file" class="d-none" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" data-docid="${esc(doc.id)}">
                  ${status === 'pending_upload' ? '<span class="spinner-border spinner-border-sm"></span>' : '📎 Subir'}
                </label>`}
         </div>
@@ -447,7 +447,7 @@ async function uploadDoc(faddiDocId, file, docMeta) {
     toast(`❌ Error al subir ${docMeta?.name}: ${err.message}`, 'danger');
     if (card) card.querySelector('.doc-upload-action').innerHTML =
       `<label class="btn btn-sm btn-outline-danger" style="cursor:pointer">
-         <input type="file" class="d-none" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" data-docid="${faddiDocId}">
+         <input type="file" class="d-none" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" data-docid="${esc(faddiDocId)}">
          Reintentar
        </label>`;
   } finally {
@@ -488,7 +488,7 @@ async function renderConfirmation() {
   if (missing.length) {
     missingEl.innerHTML = `<div class="alert alert-warning">
       <strong>⚠️ Documentos obligatorios faltantes (${missing.length}):</strong>
-      <ul class="mb-0 mt-2">${missing.map(d => `<li>${d.faddiCode} — ${d.name}</li>`).join('')}</ul>
+      <ul class="mb-0 mt-2">${missing.map(d => `<li>${esc(d.faddiCode)} — ${esc(d.name)}</li>`).join('')}</ul>
       <p class="mb-0 mt-2 small">Puedes enviar ahora y subir los documentos faltantes luego, o regresar al Paso 4.</p>
     </div>`;
   } else {

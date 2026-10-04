@@ -4788,3 +4788,1429 @@ vez. La corrí ahora, aislada, sin ese límite de tiempo: pasó limpia. Total
 real confirmado: **19/19** (no todos en una sola corrida continua, por la
 carga del host, pero cada uno individualmente verificado con el código
 actual).
+
+## TAREA 29 — Rick autoriza commit y push de la ronda Zelky 2 (§H.12) — 3-oct
+
+Orden de Rick vía Dandy, verificada por el PM con `pm-order-check farmazed`
+(PM_COMMENTS §H.12). Sin deploy. Mismos controles que TAREA 27.
+
+- Pre-stage: 94 archivos modificados/nuevos, ninguno >1 MB; revisado
+  `git status --short --ignored=matching` — los 22 archivos ignorados son
+  todos material de referencia ya conocido (PSDs, PDFs, docx fuera de
+  `formularios/`), nada indebido a punto de entrar.
+- `gitleaks git --staged`: **0 hallazgos** (el diff de esta ronda no toca
+  las líneas de `PM_COMMENTS.md` con las claves viejas rotadas de TAREA 27 —
+  esas ya están en un commit anterior, no en este stage).
+- 4 commits por bloque, todos con título `Rick: ...` (instrucción literal
+  de la orden) y `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`:
+  1. `3cb5ed2` — backend (`tracker/`: representación, Vacuna=Biológicos,
+     precios sin fila propia, prioridad innovadores + los 3 archivos de
+     test nuevos y las pruebas agregadas a `permissions.test.js`).
+  2. `79a9534` — front admin/cliente (select de representación en
+     `expediente.html`, línea extra en `cotizaciones.html`,
+     `client-dashboard.html`, `admin/formularios.html`).
+  3. `fd858c7` — specs e2e (`formularios.spec.js`) + reintento de arranque
+     del tracker (`e2e/run.sh`) + capturas regeneradas por las corridas de
+     verificación.
+  4. `bde53bb` — documentación (`ENTREGA_E1_E3.md`, `handover.md`,
+     `PM_COMMENTS.md` §H.11/§H.12, `organizacion/09_TABLA_PERMISOS.md`).
+- `git push origin main` — mismo redirect de la URL vieja que TAREA 27,
+  funciona igual. Verificado: `git status` limpio, `git ls-remote origin
+  main` == `git rev-parse main` (`bde53bb...`).
+- Sin deploy, sin migraciones, sin tocar `PRICING_TABLE` en prod.
+
+## TAREA 30 — Demo a mano para Rick (`demo_local.sh`) — 3-oct
+
+Rick quiere probar el estado actual a mano desde Argus, por tunel SSH. Nuevo
+`demo_local.sh` (raíz del repo) — ver DEV_LOCAL.md ("Demo a mano para Rick")
+para el detalle completo. Resumen:
+
+- Levanta emuladores + seed completo (`seed_emulador` + `seed_roles` +
+  `seed_pricing_24sep`) + tracker (`PRICING_TABLE=24sep`) + frontend
+  (`:8092`), y se queda corriendo hasta Ctrl-C (no se apaga solo como
+  `e2e/run.sh`). Corriendo en una sesión `tmux` llamada `farmazed-demo`
+  (`tmux attach -t farmazed-demo` para verla; Ctrl-C ahí apaga todo).
+- El puerto del tracker nunca es fijo (8080 ocupado en Patch) — el script
+  genera `farmazed-web/demo.html` (no se commitea, se borra al salir) que
+  fija `fzApiPort` en localStorage y redirige a `login.html`, para que Rick
+  entre con una sola URL sin que le importe el puerto real.
+- **Ajuste del mismo día, pedido por el PM tras ver la demo corriendo**: (1)
+  `login.html` mandaba a los 3 roles de staff (analista/abogado/regente) al
+  portal del CLIENTE — solo distinguía admin de "todo lo demás". Corregido
+  (`destinoSegunRol()`, usa `isAdmin()`/`isStaff()` de `auth.js`, que ya
+  existían): admin → `admin/casos.html` (el panel v2 real — NO
+  `dashboard.html`, que es solo la especificación de diseño, sin conectar a
+  los flujos reales, ver CLAUDE.md), staff → `admin/bandeja.html`, cliente
+  → `client-dashboard.html` sin cambio. Aplicado en caliente (frontend
+  estático, solo recargar) — no hizo falta reiniciar la demo. Arreglé
+  también la regex compartida de `login()` en los 11 specs de `e2e/`
+  (esperaban `dashboard|client-dashboard`, le agregué
+  `admin/casos|admin/bandeja`) para que no se rompa el `waitForURL` de login
+  de admin/staff en la próxima corrida de Playwright — sintaxis verificada
+  (`node --check` en los 11), pero **no corrí la suite completa de e2e**
+  porque usa los mismos puertos fijos (`:8092`, `:9099`) que la demo que
+  tiene que seguir corriendo — pendiente correrla cuando ya no haga falta
+  mantener la demo viva, o si el PM prefiere que la pare un momento para
+  verificar ahora, decirlo. (2) Faltaba el puerto `:9199` (Storage emulator)
+  en la línea de `ssh -L` que imprime el script — los links de "Descargar"
+  de documentos apuntan directo ahí (`tracker/services/storage.js`, el
+  emulador no firma URLs reales). Agregado.
+- Verificación: `curl` a los 4 health-checks (tracker, frontend x2, Auth
+  emulator) en `200`; login real (REST del Auth emulator, sin navegador)
+  para admin-e3/titular-alfa/analista — los 3 con `idToken`, y
+  `GET /api/cases` filtra correcto por rol/org; sin token, `401`. Después
+  del ajuste de `login.html`, un script de Playwright aparte (navegador
+  real, contra la demo ya corriendo, sin tocarla) confirmó el destino
+  correcto para los 5 roles.
+- Sin commit (lo pide Rick si hace falta), sin deploy.
+
+## TAREA 31 — CORS del tracker: `localhost` vs `127.0.0.1` (urgente) — 3-oct
+
+Rick probó la demo desde Argus por túnel SSH y falló: el tracker solo
+aceptaba `Origin: http://localhost:8092` fijo; con `127.0.0.1:8092` (como
+le resolvió el túnel) o cualquier otro puerto, el preflight no traía
+`Access-Control-Allow-Origin`. Confirmado con `curl -X OPTIONS` antes de
+tocar nada (ver detalle completo en DEV_LOCAL.md, sección "CORS del tracker
+en modo emulador").
+
+- `tracker/index.js`: `cors({ origin: [...] })` (array fijo) ->
+  `cors({ origin: (origin, cb) => ... })` (función). Fuera del emulador
+  (sin `FIRESTORE_EMULATOR_HOST`), exactamente la misma allowlist de
+  siempre — producción sin cambios. Solo en modo emulador acepta cualquier
+  `http://localhost:<puerto>` o `http://127.0.0.1:<puerto>`.
+- Revisé lo demás que pidió el PM: los emuladores de Auth/Storage ya
+  reflejan cualquier origen (no tenían el problema); `demo.html`/
+  `login.html` solo usan rutas relativas en sus redirects, no saltan de
+  host. Sí encontré un salto real en `portal/js/config.js`: `API_BASE`
+  armaba la URL con `localhost` fijo sin importar el alias con el que se
+  cargó la página — si la página está en `127.0.0.1` pero pide la API en
+  `localhost`, el `Origin` que manda el navegador (el de la página) es el
+  que no calzaba con lo que el tracker esperaba. Cambiado a
+  `window.location.hostname` (dentro de `IS_LOCAL`, sin tocar producción).
+- Reinicio en caliente: solo el proceso del tracker (leí su `/proc/<pid>/environ`
+  antes de matarlo para relanzarlo con la MISMA config exacta, no adivinada)
+  — los emuladores (con el seed completo) siguieron corriendo, confirmado
+  que `GET /api/cases` de admin sigue devolviendo los mismos 38 casos tras
+  el restart.
+- Verificado: preflight con ambos orígenes (`localhost`/`127.0.0.1`) ahora
+  trae la cabecera correcta; un origen ajeno sigue sin ella (no se abrió de
+  más); verificación lógica aparte de la función de origen (6 combinaciones
+  prod/emulador × fijo/random/ajeno); login real con Playwright (navegador
+  real) entrando por `http://127.0.0.1:8092/demo.html` — login de admin,
+  aterriza en `admin/casos.html`, 38 casos cargados, sin errores de CORS en
+  consola; repetido por `localhost` (cliente) para confirmar que el caso
+  original no se rompió.
+- Demo sigue viva en `tmux farmazed-demo`. Sin commit, sin deploy.
+
+## TAREA 32 — Registro abierto de clientes nuevos (PM_COMMENTS §H.13) — 3-oct
+
+Reemplaza el supuesto de §H.4 ("sin registro abierto") — la invitación sigue
+existiendo para miembros/empleados (invitations.js, sin tocar), esto es la
+puerta nueva para un titular que llega solo. Corrido en una instancia
+aislada de emuladores+tracker+frontend (ver DEV_LOCAL.md, "Probar algo sin
+tocar una demo que ya está corriendo") — la demo de Rick en
+`tmux farmazed-demo` no se tocó en ningún momento, verificado antes/durante/
+después.
+
+### (a) Registro + verificación de correo obligatoria
+
+- `tracker/routes/register.js` (nuevo, `POST /api/register`, público):
+  crea la empresa (`orgs`) y el usuario Firebase (`admin.auth().createUser`,
+  `emailVerified:false`) en un solo paso; fija `role:'cliente_titular'` +
+  `orgId` por `setCustomUserClaims` SIEMPRE del lado del servidor — el
+  endpoint nunca lee `req.body.role` ni `req.body.orgId`, así que no hay
+  forma de escalar rol ni de pegarse a una empresa ajena mandándolo en el
+  body (probado explícito). Rate limit básico en memoria por IP (5 cada 10
+  min, mismo criterio de extracción de IP que la ruta legacy de QR en
+  `index.js`) — no sobrevive un restart ni es defensa distribuida, "básico"
+  como pidió el PM. Validación manual (estilo del resto del archivo, no
+  `express-validator` aunque está en `package.json` — para no mezclar
+  convenciones de validación en el mismo código base).
+- `farmazed-web/registro.html` (nuevo): el form público, link "Crear
+  cuenta" agregado en `login.html`. Tras el POST exitoso, hace `login()` +
+  `sendEmailVerification()` del SDK de cliente (el admin SDK no manda
+  correos) — en el emulador, el link de verificación sale en su propia API
+  REST (`GET /emulator/v1/projects/.../oobCodes`), nunca un correo real.
+- **Gate de verificación — decisión de diseño, NO en el backend**: vive
+  entero en el front (`requireVerifiedLogin()`, nueva en `auth.js`, usada
+  por las 9 páginas protegidas en vez de `requireLogin` — dashboards,
+  wizard indirectamente, todo `admin/*.html`) — si no está verificado,
+  redirige a `farmazed-web/verificar-correo.html` (nuevo: reenviar correo /
+  "ya verifiqué, continuar" / cerrar sesión). Consideré además bloquearlo
+  en `requireAuth` (backend) para que no se pueda saltar llamando la API
+  directo, pero lo descarté: cualquier cuenta real ya existente en
+  producción cuyo `emailVerified` nunca se haya fijado explícitamente a
+  `true` quedaría bloqueada el día que esto se despliegue, y es un riesgo
+  que no me corresponde asumir sin que Rick lo sepa. Si se quiere ese
+  refuerzo en el backend también, decirlo aparte — no es gratis.
+  Para que el gate nuevo no rompiera lo que ya funcionaba: las cuentas por
+  invitación quedan `emailVerified:true` automáticas al aceptar
+  (`invitations.js`, Farmazed ya vetó ese correo al invitar) y las cuentas
+  semilla (`seed_emulador.js`, `seed_roles.js`) también — si no, la demo Y
+  toda la suite de e2e existente habrían quedado bloqueadas por este mismo
+  cambio.
+
+### (b) Captación de información preliminar (Fase 2 Zelky)
+
+`PATCH /api/orgs/mine/captacion` (nuevo, en `orgs.js`) — un solo endpoint
+sirve para la pantalla bloqueante de primer ingreso Y para "editar después
+desde Mi Empresa" (mismo botón reabre el mismo form, `window.__fzAbrirCaptacion`,
+`client-dashboard.html`): "se pide una sola vez" es una decisión de UI (el
+front solo MUESTRA el overlay si `org.captacion` no existe), no una
+inmutabilidad en el backend. Los 6 campos de §H.13 literal (país y nombre
+del fabricante como UN campo de texto — así vino la pregunta de Zelky;
+categoría(s) de producto, subconjunto validado contra `TRAMITE_TYPES` de
+`faddi_checklists.js`; número de productos por categoría; registro previo
+ante autoridad reconocida; cliente nuevo o ya registrado en Panamá;
+modificación en curso). Permiso nuevo `orgs.edit_captacion`
+(cliente_titular + admin — el miembro no puede, y no debería quedar
+bloqueado por algo que no puede completar, así que el overlay de primer
+ingreso solo se dispara si el rol es titular).
+
+### (c) Lead en la bandeja de staff
+
+`GET /api/orgs/leads` + `POST /api/orgs/:orgId/leads/revisar` (nuevo,
+`orgs.js`), permiso nuevo `orgs.read_leads` (staff + admin, mismo permiso
+para ver y marcar — es triage liviano, no una confirmación con separación
+de roles como fase_08). `admin/bandeja.html` ganó una card "Clientes
+nuevos — revisar captación" arriba de la tabla de casos (los leads no
+tienen caso todavía, por eso no son una fila de esa tabla).
+
+### (d) Permisos, tests, spec e2e
+
+- `organizacion/09_TABLA_PERMISOS.md` regenerado (`generate_permissions_doc.js`)
+  por los 2 permisos nuevos.
+- `tracker/tests/registro_tarea32.test.js` (nuevo, 13 tests): registro
+  normal, no puede escalar rol ni pegarse a otra empresa, correo duplicado
+  409, campos faltantes 400, rate limit 429 al 6to intento; captación:
+  miembro no puede (403), categoría inválida 400, titular completa y
+  `GET /api/me/org` la refleja, editar después actualiza sin duplicar,
+  staff no puede completarla (403); leads: titular no puede verlos (403),
+  staff los ve, admin marca revisado y desaparece.
+- `e2e/registro.spec.js` (nuevo): recorrido completo real en navegador —
+  registro -> intento de entrar sin verificar (bloqueado en 2 puntos:
+  login.html Y navegación directa a client-dashboard.html) -> confirma el
+  correo vía el oobLink del emulador de Auth (simula el clic real) ->
+  entra -> capta la pantalla bloqueante de primer ingreso -> la llena ->
+  recargar NO la vuelve a mostrar -> aparece editable en Mi Empresa ->
+  logout -> login como analista -> ve el lead nuevo en su bandeja.
+- Para que el spec nuevo pudiera correr contra una instancia de Auth en un
+  puerto DISTINTO al de siempre (9099, el de la demo) hizo falta un cambio
+  chico adicional: `auth.js` tenía `connectAuthEmulator` con el puerto fijo
+  a mano — ahora usa `localAuthPort()` (nueva en `config.js`, mismo
+  mecanismo que `fzApiPort`/`localApiPort()` de TAREA 26/30), default
+  `9099` si no se toca — ningún spec viejo ni la demo necesitan cambiar
+  nada. Ver DEV_LOCAL.md para la receta completa de correr pruebas en una
+  instancia aislada sin tocar una demo que ya está corriendo.
+
+### Verificación
+
+Suite backend completa (156 tests: 80 permissions + 13 registro_tarea32 +
+32 checklist/formularios puros + 4 precios + 4 paquete_iea + 12
+transition_gates + 6 payment_concepts + 5 migration) — **156/156, 0
+fallos**, contra la instancia aislada (puertos 8070/9198/8190/9298,
+`firebase.test-ports.json` temporal, borrado al terminar). `e2e/registro.spec.js`
+corrido 2 veces (la primera encontró el problema real de arriba —
+`connectAuthEmulator` con puerto fijo— la segunda, con el fix, pasó
+limpio). Demo de Rick verificada viva antes/durante/después (curl a sus 3
+puertos), nunca reiniciada ni tocada.
+
+### Qué NO se hizo / decisiones que puede querer revisar el PM
+
+- No se tocó `invitations.js` más allá de agregar `emailVerified:true` al
+  aceptar — la invitación sigue funcionando exactamente igual.
+- Sin commit ni deploy — instrucción explícita de esta ronda.
+
+### Ajuste del mismo día — refuerzo del gate de verificación en el backend
+
+El PM confirmó el riesgo que señalé (verificación solo en frontend se
+salta llamando la API directo) y pidió reforzarla, pero SOLO para cuentas
+del registro abierto, para no arriesgar cuentas reales ya existentes:
+
+- `tracker/routes/register.js`: el `setCustomUserClaims` ahora incluye
+  `origen: 'registro'` (además de `role`/`orgId` de siempre).
+- `tracker/middleware/auth.js` (`requireAuth`): si el token decodificado
+  trae `origen === 'registro'` y `email_verified === false`, 403
+  ("Verifica tu correo antes de continuar.") — ANTES de llegar a
+  `req.user`/`next()`, así que ningún endpoint autenticado es alcanzable.
+  Cuentas de invitación/semilla/legacy nunca tienen el claim `origen`, no
+  las toca. Dejé un `EXEMPT_PATHS` (vacío hoy, documentado) por si en el
+  futuro aparece un endpoint que SÍ necesite ser alcanzable sin verificar
+  — hoy no hay ninguno (reenviar el correo es un SDK call directo a
+  Firebase, no pasa por el tracker).
+- 3 tests nuevos en `registro_tarea32.test.js` (ahora 16 en total):
+  cuenta registrada sin verificar -> 403 creando un caso; la misma, ya
+  verificada -> 201 normal; cuenta legacy/invitación (sin el claim) -> 201,
+  sin verse afectada.
+- **Bug propio que encontré al verificar**: el archivo de test ya hacía 7+
+  llamadas a `/api/register` desde la misma IP de loopback, y el rate
+  limit es 5/10min — el archivo se autobloqueaba a partir de cierto punto
+  (`429` en vez del código que de verdad se estaba probando). Arreglado
+  dándole a cada llamada (salvo la del propio test de rate limit) una IP
+  sintética distinta vía `X-Forwarded-For` — más realista además (en la
+  vida real cada registro viene de una IP distinta).
+- Verificado: 16/16 en `registro_tarea32.test.js`, más 102/102 del resto
+  de la suite backend (permissions 80, paquete_iea 4, transition_gates 12,
+  payment_concepts 6) sin regresiones — confirma que el refuerzo no afecta
+  ningún endpoint para cuentas que no sean del registro abierto. Mismo
+  método de instancia aislada que el resto de TAREA 32 (ver DEV_LOCAL.md)
+  — la demo de Rick en `tmux farmazed-demo` sigue sin tocarse, confirmado
+  antes/durante/después otra vez.
+- **IMPORTANTE — instrucción explícita del PM**: el `/api/register` nuevo
+  (y el refuerzo de este ajuste) YA están en el código, pero el tracker de
+  la demo de Rick sigue corriendo con el código VIEJO (sin estos cambios)
+  — **no reiniciar ese tracker hasta que el PM lo pida**. Los HTML nuevos
+  (`registro.html`, `verificar-correo.html`, `demo.html`) ya los sirve el
+  frontend estático de la demo (es estático, no necesita reinicio), pero
+  si Rick hace clic en "Crear cuenta" ahora mismo, el POST a
+  `/api/register` le va a dar 404 contra ese tracker viejo — es esperado,
+  no es un bug, hasta que el PM autorice el reinicio.
+
+## TAREA 33 — Suscripción + pago en línea con PayPal (PM_COMMENTS §H.14) — 3-oct
+
+Dos cobros separados (decisión de Rick): plan recurrente de "uso de la
+plataforma" + pago de cada cotización. Por PayPal se cobra TODO junto
+(honorarios+tasa DNFD+MEF+IEA en un solo cargo); Farmazed emite después los
+cheques separados a cada autoridad — por eso hizo falta poder reconstruir
+esa separación desde el cargo único (ver (a) abajo).
+
+### (a) Proveedor intercambiable — `tracker/services/payments/`
+
+- `index.js`: `getProvider()` — PayPal real SOLO si
+  `PAYPAL_CLIENT_ID`+`PAYPAL_CLIENT_SECRET`+`PAYPAL_ENV` están los 3 en el
+  entorno; si falta cualquiera, `mock`. Nunca a medias.
+- `mock.js`: estado en memoria, aprueba todo de una (sin app sandbox no hay
+  checkout real al que redirigir — `approveUrl` siempre `null`, es la señal
+  de "sin redirect real"). Es el único probado de verdad en esta tarea.
+- `paypal.js`: REST v2 (Orders) + v1 (Subscriptions, Notifications) con
+  `fetch` nativo, OAuth `client_credentials` cacheado. Escrito contra la
+  documentación oficial, **sin smoke-test real** — Rick no ha creado la app
+  en developer.paypal.com todavía.
+- `tracker/.env.example` — agregar ahí `PAYPAL_CLIENT_ID`/`_SECRET`/`_ENV`/
+  `_WEBHOOK_ID` como placeholders cuando Rick tenga las credenciales reales;
+  **nunca** en el repo ni en `.env` versionado.
+
+### (b) Desglose por concepto — extensión necesaria del modelo de cotización
+
+El modelo de línea de `quotes.js` solo tenía 2 buckets
+(`honorariosFarmazed`/`tasasOficiales`) — no bastaba para repartir un cargo
+único de PayPal en los pagos por CONCEPTO que ya entiende `payments.js`
+(honorarios/tasa_dnfd/mef/iea). Agregado `desgloseConceptos()` en
+`tracker/utils/pricing_desglose.js` (partición exacta de `TASAS_KEYS`:
+tasa_dnfd = refrendo_cnf+tasa_dnfd_servicio+tasa_dnfd_tramite, mef=tasa_mef,
+iea=iea) y guardado en cada línea (`tarifarioConceptos` congelado,
+`conceptos` efectivo — el admin puede pisarlo a mano en el PATCH de
+ajuste, opcional). La línea extra de "Prioridad innovadores" (TAREA 28) va
+TODA a `honorarios` (es cargo de Farmazed, no tasa oficial — y Zelky ya
+avisó que podría duplicar las tasas de la principal).
+
+`conceptosRequeridosFase05()` (la regla de qué conceptos exige el gate) se
+movió de `services/transitions.js` a `tracker/utils/conceptos_fase05.js`
+— `quotes.js` también la necesita (para saber qué pagos crear al capturar)
+y `transitions.js` ya depende de `quotes.js`; importarla al revés desde
+`quotes.js` hubiera sido un require circular.
+
+### (c) Plan recurrente — `tracker/routes/subscription.js`
+
+UN plan (no una lista — así lo pidió el PM), doc único `meta/plan_suscripcion`.
+Montos **sin hardcodear** — el admin los define en `admin/precios.html`
+(nueva card arriba del tarifario). El titular se suscribe desde Mi Empresa
+(`client-dashboard.html`); estado (activa/pendiente/cancelada) vive en
+`orgs/{orgId}.suscripcion` — **no bloquea ningún trámite** (ningún gate de
+`transitions.js` la consulta, instrucción explícita). Permisos nuevos:
+`subscription.manage_plan` (admin), `subscription.subscribe` (cliente_titular).
+
+### (d) Pago de la cotización aceptada — `tracker/routes/quotes.js`
+
+`POST /:id/pago/crear-orden` + `POST /:id/pago/capturar` (permiso nuevo
+`quotes.pay`, solo cliente_titular — mismo criterio que `quotes.accept`).
+El monto **SIEMPRE** se calcula en el servidor desde `recomputeTotal(data.lineas)`
+— ni `crear-orden` ni `capturar` leen un monto del body; cualquier campo que
+el cliente mande ahí se ignora (probado explícito). Al capturar: se verifica
+`status/orderId/amount/currency` contra lo que el PROVEEDOR devuelve Y
+contra lo que el servidor calculó al crear la orden — cualquier discrepancia
+aborta sin crear pagos, queda para revisión manual. Por cada caso de la
+cotización, `createConceptPayment()` (nueva, `routes/payments.js`, mismo
+tipo de registro que ya entiende `hasConceptPayment()` pero sin comprobante
+manual) crea un pago por cada concepto de `conceptosRequeridosFase05(principal)`
+— el gate de fase_05 se destraba por el camino normal, sin tocarlo. Idempotente
+(`pagoPaypal.estado:'capturada'` en la cotización) — capturar 2 veces no
+duplica.
+
+**Bug propio encontrado y arreglado**: el chequeo de idempotencia corría
+ANTES de validar el `orderId` del body — una cotización ya capturada
+devolvía "éxito" para CUALQUIER `orderId` que alguien mandara. Reordenado:
+el `orderId` se valida siempre primero.
+
+### (e) Webhook — `tracker/routes/webhooks.js`
+
+`POST /api/webhooks/paypal`, listo, **sin uso real en local** (no hay URL
+pública). `paypal.js.verifyWebhookSignature()` falla cerrado sin
+`PAYPAL_WEBHOOK_ID` configurado; `mock.verifyWebhookSignature()` siempre da
+`true` (no hay nada real que falsificar en el mock) — probado cada rama por
+separado.
+
+### UI
+
+`admin/precios.html`: card "Plan de suscripción" (nombre/monto/período).
+`client-dashboard.html`: Mi Empresa gana el estado de suscripción +
+suscribir/cancelar; Cotización gana "Pagar con PayPal" en una cotización
+aceptada sin pagar (mock captura directo; si algún día hay `approveUrl` real
+de PayPal, redirige ahí — rama sin probar contra PayPal de verdad).
+
+### Tests y verificación
+
+`tracker/tests/pagos_paypal_tarea33.test.js` (19 tests, contra el tracker
+real + emulador, proveedor SIEMPRE mock): plan (admin sí/cliente no/período
+inválido/lectura pública), suscripción (miembro no/titular sí/doble-409/
+cancelar), pago completo (monto del cliente ignorado, miembro no puede,
+capturar antes de crear-orden, orderId equivocado sin crear pagos, monto
+corrompido en Firestore directo -> capturar rechaza sin crear pagos —
+simulado así porque la cotización 'aceptada' ya no se puede editar por la
+API, no hay otra forma de probar esa verificación de servidor —, captura
+real crea los conceptos correctos, fase_05 se destraba por el gate normal,
+doble captura idempotente, crear-orden sobre cotización pagada -> 409),
+webhook (mock 200, paypal.js falla cerrado sin webhook id). **19/19 en
+verde**, más el resto de la suite backend (permissions 80, paquete_iea 4,
+transition_gates 12, payment_concepts 6, migration 5, registro_tarea32 16,
+checklist/formularios/precios puros 36) sin regresiones.
+
+`e2e/pago_paypal.spec.js` (Playwright, mock), 2 tests: (1) admin define el
+plan -> titular se suscribe desde Mi Empresa; (2) flujo completo fase_04 ->
+cotización enviada -> aceptada -> pagada con PayPal -> fase_05 destrabado
+por el admin vía la UI normal de expediente.html. Caso dedicado
+`case-pago-paypal-test` (seed_roles.js, org Beta) para no interferir con
+quotes.spec.js.
+
+**Estado real de la verificación — no es 100% limpio todavía, siendo
+honesto:**
+- **Test 1 (suscripción): confirmado en verde**, corrida aislada completa.
+- **Test 2 (pago de cotización): la lógica de negocio que prueba ya está
+  100% confirmada** por otros dos caminos — `pagos_paypal_tarea33.test.js`
+  (19/19, incluyendo la MISMA secuencia crear-orden/capturar/conceptos/
+  idempotencia) y la verificación manual con `curl` que hice antes de
+  escribir el spec (documentada arriba). Pero el spec de Playwright EN SÍ
+  todavía no terminó una corrida limpia: encontré y arreglé 3 problemas
+  reales del arnés de prueba (ninguno del producto) de forma iterativa —
+  1) olvidé fijar `fzAuthPort`, el navegador se conectaba al Auth emulator
+  de la DEMO de Rick (puerto 9099 default) en vez de mi instancia aislada
+  (9198) — sin impacto en la demo, fue solo lectura (sign-in); 2) la
+  pantalla bloqueante de captación (TAREA 32) interceptaba clics en el
+  primer ingreso del titular, agregué un helper que la completa vía API
+  si aparece; 3) el sidebar fijo del template queda visualmente encima del
+  botón "Aceptar" un instante mientras el contenido recién inyectado
+  asienta layout — `click({force:true})` empeoraba esto (sigue siendo un
+  click de mouse en esas coordenadas, terminaba abriendo "Mi Empresa" en
+  vez de aceptar); cambiado a `dispatchEvent('click')` (dispara el evento
+  directo en el botón, sin pasar por qué está encima visualmente). Antes
+  de poder confirmar que el fix #3 deja la corrida limpia, el sistema mató
+  el proceso en background por memoria crítica del host (swap al 100%,
+  confirmado con `free -h` — **no es un fallo de la prueba ni del
+  producto**, y no lo reinicié por mi cuenta como indica la instrucción
+  del propio sistema). Pendiente: una corrida más cuando el host tenga
+  memoria libre, para la confirmación final de test 2. No bloquea el cierre
+  de esta tarea dado que la lógica ya está probada por los otros 2 caminos
+  — lo marco explícito para que el PM decida si hace falta esperar esa
+  confirmación o no.
+
+Todo esto corrido en una instancia aislada (ver DEV_LOCAL.md) — la demo de
+Rick en `tmux farmazed-demo` no se tocó en ningún momento (verificado antes/
+durante/después de cada intento).
+
+### Qué NO se hizo / queda pendiente de que Rick decida
+
+- Montos del plan recurrente: sin definir (Rick/Zelky) — el admin los pone
+  cuando los tenga, nada hardcodeado.
+- Comisión de PayPal: no se suma al cliente (pendiente de que Rick lo
+  confirme como decisión comercial, instrucción explícita de no inventar).
+- `paypal.js` nunca se probó contra la sandbox real — en cuanto Rick cree
+  la app en developer.paypal.com, hace falta un smoke-test real antes de
+  confiar en esa rama en producción.
+- Sin commit ni deploy — instrucción explícita.
+
+### TAREA 34 en cola
+
+3 flujos de alta desde los planes del landing (§H.15) — usa los 2 rieles de
+pago de esta tarea (Plan Registro -> pago de cotización con PayPal, Plan
+Empresarial -> suscripción al plan recurrente). El PM confirma cuando
+entregue esta.
+
+## TAREA 34 — Tres flujos de alta desde los planes del landing (PM_COMMENTS §H.15) — 3-oct
+
+Los 3 botones "Solicitar" del landing (`index.html`) ya no van a `#contacto`
+— van a `registro.html?plan=consulta|registro|empresarial`. Común a los 3:
+registro (§H.13) con el plan guardado en la empresa → verificación →
+captación (§H.13) → bienvenida y nav según el plan.
+
+### (a) Plan guardado al registrarse + "Enviar consulta" sin cuenta
+
+- `register.js`: acepta `plan` en el body, valida contra
+  `['consulta','registro','empresarial']`, **default 'consulta'** si falta
+  o es inválido (nunca se inventa otro default) — se guarda en `orgs.plan`.
+- `PATCH /api/orgs/mine/plan` (nuevo, `orgs.js`, permiso `orgs.set_plan`,
+  cliente_titular): "el cliente puede pedir subir de plan" — sin
+  restricción de qué transición vale, no se pidió ninguna. Usado por el
+  CTA "Contratar el registro" (Consulta->Registro) y por "Subir de plan"
+  en Mi Empresa.
+- `tracker/routes/contact_leads.js` (nuevo): `POST /api/contact-leads`
+  (público, rate limit básico igual que `register.js`) — el form
+  "Enviar consulta" del hero (`index.html`, `contact-form2`) crea un lead
+  **sin cuenta**. Ese jQuery de vendor seguía apuntando a `appointment.php`
+  (no existe, fallaba en silencio) — agregué un listener INDEPENDIENTE
+  (módulo ES, no se tocó el archivo de vendor) que llama este endpoint.
+  `GET /api/contact-leads` (staff/admin, permiso nuevo `contact_leads.read`
+  — DISTINTO de `orgs.read_leads` de TAREA 32, que son empresas que YA
+  tienen cuenta y captación). `POST /:id/invitar` (admin) reusa
+  `invitations.js` (le agregué `router.createInvitation` exportado para no
+  duplicar la lógica) — crea la empresa + invitación con el correo del
+  lead y lo marca `invitado`.
+
+### (b) Plan Consulta — diagnóstico
+
+- `PUT /api/orgs/:orgId/diagnostico` (nuevo, `orgs.js`, permiso nuevo
+  `orgs.edit_diagnostico`, staff+admin): clasificación, ruta recomendada,
+  requisitos aplicables, estimado de tiempos y costos — vive en la EMPRESA
+  (no en un caso, "sin dossier ni trámite" todavía). Lectura: ya viene en
+  `GET /api/me/org` (spread completo, como captación/suscripción).
+- UI staff: `admin/empresas.html` — cada fila de empresa con `plan='consulta'`
+  tiene un botón "Cargar/Editar diagnóstico" que despliega un form inline
+  (sin un router de detalle nuevo, mismo criterio liviano que `verMiembros`).
+- UI cliente: `client-dashboard.html`, módulo nuevo "Diagnóstico" (nav
+  visible solo si `org.plan==='consulta'`) — lo muestra, y si existe, el
+  CTA "Contratar el registro" llama `PATCH /orgs/mine/plan` con
+  `plan:'registro'`.
+
+### (c) Plan Registro
+
+Es el wizard + cotización + pago con PayPal que **ya existían** (TAREAS
+18/33) — lo único nuevo es que `?plan=registro` queda guardado y la
+bienvenida menciona "Solicitar Registro" directo. Sin endpoints nuevos.
+
+### (d) Plan Empresarial
+
+- `tracker/routes/empresarial.js` (nuevo): `POST /solicitar` (titular,
+  permiso nuevo `empresarial.solicitar`) — productos estimados + necesidades
+  (modificaciones/etiquetado/informes), guarda
+  `orgs.propuestaEmpresarial.estado='solicitada'`. `PUT /:orgId/condiciones`
+  (admin, permiso nuevo `empresarial.manage`) — monto/período + gestor de
+  cuenta (**valida que el uid sea un analista real**, no cualquier uid);
+  crea un plan PROPIO de esa empresa en el proveedor de pagos (NO el plan
+  global de `subscription.js` — "a convenir" es por empresa). `POST /aceptar`
+  (titular) — se suscribe al plan de SU propuesta (mismo mecanismo de
+  `provider.createSubscription` que TAREA 33, mismo campo
+  `orgs.suscripcion` resultante — de cara al resto del sistema es la misma
+  cosa, no importa qué plan la originó).
+- UI staff: `admin/empresas.html` — fila con `plan==='empresarial'` y
+  propuesta `'solicitada'` muestra "Definir condiciones" (form inline,
+  select de gestor poblado con los analistas reales vía `GET /api/employees`).
+- UI cliente: `client-dashboard.html`, módulo nuevo "Informes de avance"
+  (nav visible si `org.plan==='empresarial'`) — solicitud/estado/aceptar,
+  y debajo, la tabla de TODOS los casos de la empresa con su fase (mismo
+  `GET /api/cases`, ya filtra por `orgId` del lado del servidor).
+
+### Permisos y tests
+
+6 permisos nuevos (`orgs.set_plan`, `orgs.edit_diagnostico`,
+`contact_leads.read`, `empresarial.solicitar`, `empresarial.manage`) +
+`09_TABLA_PERMISOS.md` regenerado. `tracker/tests/planes_landing_tarea34.test.js`
+(21 tests): registro con plan válido/inválido/ausente, subir de plan
+(miembro no puede, plan inválido 400, titular sí), diagnóstico (cliente no
+puede, falta un campo, staff lo carga y el cliente lo ve), lead sin cuenta
+(POST público, rate limit, staff no-cliente lo ve, invitar crea
+org+invitación y desaparece de la lista), Plan Empresarial completo
+(miembro no puede solicitar, solicitar duplicado 409, aceptar antes de
+condiciones 400, condiciones con gestor que no es analista 400, condiciones
+válidas, miembro no puede definir condiciones, aceptar crea la suscripción).
+
+e2e: 2 specs nuevos, **escritos pero NO corridos todavía** —
+`e2e/plan_consulta.spec.js` (registro->verificación->captación->diagnóstico
+cargado por staff->cliente lo ve->Contratar el registro; más el lead del
+hero->invitar) y `e2e/plan_empresarial.spec.js` (registro->solicitud->
+condiciones->aceptar->Informes de avance). Siguen los mismos patrones ya
+verificados en TAREA 32/33 (`fzAuthPort`, el helper de captación,
+`dispatchEvent('click')` en vez de `click`/`force` por el sidebar fijo que
+intercepta clics — ver la nota de TAREA 33 sobre ese bug de arnés).
+
+### Verificación — honesto: el backend NO se pudo correr contra un emulador real esta ronda
+
+El código está completo, con sintaxis validada (`node --check` en todo
+`tracker/`) y revisado con cuidado, pero el host (Patch) estuvo en un
+estado de carga MUCHO peor que el de TAREA 33 durante toda esta tarea —
+`load average` visto hasta **31.86** (vs. 11-20 antes), swap prácticamente
+agotado (`free -h`: a veces menos de 400Mi de RAM libre y menos de 1MB de
+swap libre de 8GB) — ni siquiera los emuladores de Firebase lograron
+arrancar completo en 2 intentos (Firestore sí, Auth/Storage nunca
+reportaron listos, igual que el síntoma ya documentado en TAREA 26/28).
+Ninguno de los 2 intentos fue por una instancia mía sin apagar — de hecho
+encontré y mate un proceso HUÉRFANO MÍO (tracker aislado de un intento
+anterior de esta misma tarea, puerto 8070, apuntando a un emulador que ya
+había matado — ~97MB de RAM sin ningún propósito) antes de reiniciar el
+tracker de la demo, buena práctica que no había hecho tan explícita antes.
+
+No forcé más intentos — ni el test de backend (`planes_landing_tarea34.test.js`)
+ni los 2 specs e2e se corrieron contra un emulador real esta ronda. Lo que
+SÍ verifiqué, contra el tracker de la DEMO (ya reiniciado con el código
+nuevo, ver abajo): `/health`, CORS en ambos orígenes, login real de admin,
+`GET /api/cases` (38 casos, el seed real de la demo intacto),
+`POST /api/register` con `plan:'empresarial'` (201), `GET /api/subscription/plan`
+(200, `plan:null` porque la demo nunca tuvo un plan global configurado —
+correcto, no un error), `GET /api/contact-leads` (200, lista vacía),
+`GET /api/me/org` con una cuenta sin `orgId` (400 limpio, no 500) — ningún
+endpoint nuevo rompe el arranque ni devuelve 500 en estos chequeos básicos,
+pero esto NO es lo mismo que la suite completa de 21 tests contra datos de
+prueba controlados. Pendiente: correr `planes_landing_tarea34.test.js` y
+los 2 e2e cuando el host lo permita.
+
+### Reinicio del tracker de la demo (instrucción explícita)
+
+Mismo procedimiento que la vez pasada: identifiqué el PID real (no el
+huérfano) por su `/proc/<pid>/environ`, lo mate, y lo relancé con el MISMO
+entorno exacto (`PRICING_TABLE=24sep`, puerto 8081, mismas env del
+emulador). Arrancó bien (tardó un poco más en responder al primer `/health`
+por la carga del host, nada más). Los emuladores de la demo (puerto 9099/
+8090/9199, corriendo desde TAREA 30) nunca se tocaron — confirmado que
+siguen siendo el MISMO proceso de siempre, no algo que haya reiniciado.
+
+### Guía de prueba para Rick (los 3 planes + el lead del hero)
+
+Túneles SSH necesarios desde Argus — los 4 de siempre (`8092` frontend,
+`9099` Auth emulator, `8081` tracker, `9199` Storage) **más uno nuevo si
+quiere verificar el correo desde la UI del emulador en vez de con
+"Reenviar correo"/"Ya verifiqué, continuar"**: `4040` (Emulator UI).
+
+**Plan Consulta:**
+1. `http://localhost:8092/index.html` → "Planes y Precios" → "Solicitar"
+   bajo Plan Consulta → crea la cuenta → verifica el correo → completa la
+   captación (pantalla bloqueante, una sola vez).
+2. Ve el mensaje "Farmazed está preparando tu diagnóstico" y el nav
+   "Diagnóstico" (vacío todavía).
+3. Logout. Entra como `analista@farmazed.test` / `Farmazed123!` →
+   `/admin/empresas.html` → busca la empresa que acabas de crear → "Cargar
+   diagnóstico" → llena los 5 campos → Guardar.
+4. Logout. Vuelve a entrar como el cliente → "Diagnóstico" → ya se ve lo
+   que cargó el analista → botón "Contratar el registro".
+5. Confirma que ahora "Solicitar Registro" está disponible (el plan subió).
+
+**Plan Registro:** mismo botón "Solicitar" bajo Plan Registro →
+registro/verificación/captación → directo a "Solicitar Registro" (el
+wizard de siempre) → cotización → "Pagar con PayPal" (TAREA 33, mock).
+
+**Plan Empresarial:**
+1. "Solicitar" bajo Plan Empresarial → registro/verificación/captación.
+2. Nav "Informes de avance" → llena "Solicitud de propuesta" (productos
+   estimados + necesidades) → Enviar.
+3. Logout. Como admin → `/admin/empresas.html` → esa empresa ahora tiene
+   "Definir condiciones" → monto, período, gestor de cuenta (el selector
+   solo lista analistas reales) → Guardar.
+4. Logout. Como el cliente → "Informes de avance" → ve las condiciones →
+   "Aceptar y suscribirme" → queda "Suscripción activa" + la tabla de
+   todos los casos de la empresa.
+
+**Nota — 2 cosas separadas que se parecen:** el botón "Suscribirme" de **Mi
+Empresa** (TAREA 33) sigue existiendo para CUALQUIER empresa, al plan
+GLOBAL que el admin define en `/admin/precios.html` — es un riel
+independiente del Plan Empresarial de esta tarea (que es a-convenir, por
+empresa). No es un bug que convivan los dos, es el diseño del PM; aviso
+por si genera confusión al probar.
+
+**Lead sin cuenta:** `index.html`, el formulario "Solicitar Diagnóstico
+Regulatorio" debajo del slider (NO el de la sección de planes) → llenar y
+"ENVIAR CONSULTA" → como staff/admin, `/admin/bandeja.html` → card
+"Consultas del sitio (sin cuenta)" → "Invitar a crear cuenta".
+
+### Qué NO se hizo
+
+- Sin commit ni deploy — instrucción explícita.
+
+### Actualización — verificación parcial completada (3-oct, noche)
+
+El host bajó lo suficiente (load 1-min de 2.17, swap liberó ~157Mi) para
+retomar. Orden pedido por el PM: backend completo primero, después los 3
+e2e pendientes de a uno.
+
+- **Backend: 198/198, 0 fallos** — las 2 suites nuevas
+  (`pagos_paypal_tarea33.test.js` 19/19, `planes_landing_tarea34.test.js`
+  20/20) más todo el resto (permissions 80, registro_tarea32 16,
+  paquete_iea 4, transition_gates 12, payment_concepts 6, checklist/
+  formularios/precios puros 32+4, migration 5) sin ninguna regresión.
+- **e2e `pago_paypal.spec.js` (TAREA 33): 2/2 confirmados** (en corridas
+  separadas — el primero completo, el segundo aislado tras limpiar
+  cotizaciones/pagos viejos del mismo caso fixture que había dejado la
+  corrida del backend justo antes; mismo patrón de "fixtures compartidos
+  entre test files" ya documentado antes, no un bug nuevo).
+- **e2e `plan_consulta.spec.js`: 3 bugs reales encontrados y arreglados en
+  el arnés de prueba** (ninguno del producto), todavía SIN una corrida
+  limpia completa — la última intentona la mató el sistema por memoria
+  crítica del host (no por el test; instrucción explícita de no
+  reintentarla sola):
+  1. El formulario del hero (`contact-form2`) nunca disparaba mi listener:
+     lo until até al `submit` del form, pero el jQuery de vendor
+     (`script.js`) ya tiene su PROPIO listener de `click` en el botón que
+     llama `preventDefault()` — eso cancela la acción por defecto del
+     click (enviar el form) ANTES de que el evento `submit` llegue a
+     dispararse. Arreglado: mi listener ahora escucha `click` en el mismo
+     botón (`#submit_contact2`), no `submit` en el form — un segundo
+     `addEventListener('click', ...)` en el mismo elemento SÍ se ejecuta
+     igual (el `preventDefault()` de un listener no frena a los demás).
+     **Este bug también existía fuera de la prueba** — el formulario del
+     hero en producción tampoco habría funcionado nunca con el listener
+     original.
+  2. `page.once('dialog', ...)` sobre un prompt específico reventaba con
+     "Cannot accept dialog which is already handled" porque el listener
+     GLOBAL del `beforeEach` (`page.on('dialog', d => d.accept())`) ya lo
+     había resuelto primero (vacío, sin el texto que necesitaba el
+     prompt). Arreglado: un solo listener global que mira `dialog.type()`
+     y contesta con el valor correcto si es un `prompt`.
+  3. El nombre de empresa de la prueba era fijo (`'E2E Consulta Co'`) —
+     reintentos anteriores (fallidos) ya habían dejado más de una empresa
+     con ese nombre en Firestore, y el locator sin `.first()` rompía en
+     "strict mode violation" al encontrar más de una fila. Arreglado:
+     nombre único por corrida (`Date.now()`), mismo criterio que ya usan
+     los correos de prueba.
+  4. (No es un bug, solo un ajuste de locator) `getByText('diagnóstico
+     regulatorio')` a nivel de página rompía en strict mode porque el
+     prototipo del módulo Resumen YA tiene esa frase en otro texto
+     estático — acotado a `#bienvenida-text` específicamente.
+- **e2e `plan_empresarial.spec.js`: todavía sin intentar correrlo** — se le
+  aplicó preventivamente el mismo fix del punto de verificación de correo
+  (ver abajo) por las dudas, pero no hubo tiempo de una corrida real antes
+  de que el host volviera a subir.
+- **Hallazgo transversal (afecta a los 2 specs nuevos, ya arreglado en
+  ambos)**: el patrón `confirmarCorreo() -> goto('/login.html') ->
+  waitForURL(verificar-correo.html)` que SÍ funcionó siempre en
+  `registro.spec.js` (TAREA 32) no es 100% determinista — al restaurar la
+  sesión persistida, Firebase a veces ya trae `emailVerified` fresco del
+  servidor (sin pasar por la pantalla intermedia) y a veces no; no hay
+  control real sobre ese timing desde el test. Arreglado aceptando
+  CUALQUIERA de los 2 destinos (`verificar-correo` o `client-dashboard`
+  directo) en vez de exigir uno específico — el punto de estos 2 specs es
+  el flujo de cada plan, no la mecánica exacta de la verificación (eso ya
+  lo prueba a fondo `registro.spec.js`).
+
+## 2026-10-03 — TAREA 34: verificación completa (backend + e2e), host ya estable
+
+Orden pedido por el PM ("backend completo, luego los e2e pendientes de a
+uno... apagando tu instancia aislada al terminar") ejecutado de punta a
+punta con el host ya en condiciones normales (load <2, swap liberándose).
+Resultado final, TODO VERDE:
+
+- **Backend**: 198/198 (sin regresiones) — incluye
+  `pagos_paypal_tarea33.test.js` 19/19 y `planes_landing_tarea34.test.js`
+  20/20, confirmados de nuevo en esta corrida.
+- **`e2e/pago_paypal.spec.js`**: 2/2 (TAREA 33, quedaba pendiente desde la
+  ronda anterior por el host).
+- **`e2e/plan_consulta.spec.js`**: 2/2. Bug real encontrado y corregido en
+  el camino: `requireVerifiedLogin()` (`portal/js/auth.js`) dejaba pasar al
+  usuario con `user.emailVerified===true` pero el ID TOKEN cacheado seguía
+  con el claim viejo `email_verified:false` — cualquier llamada a la API
+  justo después de entrar (sin pasar por el botón "Ya verifiqué,
+  continuar") daba 403 del gate de TAREA 32 aunque la pantalla ya hubiera
+  dejado pasar. Fix: `await user.getIdToken(true)` justo después de
+  confirmar `emailVerified`. Además: el hero `#submit_contact2` nunca
+  enviaba el form porque el jQuery de vendor ya hacía `preventDefault()` en
+  el `click` del mismo botón, cancelando el `submit` antes de que mi
+  listener (atado a `submit`) pudiera correr — fix: atar el listener nuevo
+  al `click` del botón, no al `submit` del form (bug de producción real,
+  preexistente, no solo de la prueba). También: `admin/empresas.html` es
+  admin-only por SU PROPIO gate de página (`isAdmin()`), aunque el permiso
+  de backend `orgs.edit_diagnostico` sí admite cualquier staff — hoy solo
+  admin puede llegar a "Cargar diagnóstico" por la UI; si Rick quiere que
+  analista/abogado/regente también entren a esa página hace falta tocar el
+  gate de `empresas.html` (no se tocó, fuera de alcance de la 34). Y un
+  último bug de carrera en el propio spec (no de producto): el botón
+  "Contratar el registro" hace `window.location.reload()` de la MISMA url
+  (sigue en `client-dashboard.html`) — `waitForURL` con ese mismo regex
+  resolvía de inmediato porque la url actual ya calzaba, sin esperar el
+  reload real, y el `page.evaluate()` siguiente caía en medio de la
+  navegación real ("Execution context was destroyed"). Fix: esperar
+  `page.waitForEvent('load')` armado ANTES del `dispatchEvent('click')`,
+  en paralelo (mismo patrón TAREA 26 de otros specs).
+- **`e2e/plan_empresarial.spec.js`**: 1/1, primera corrida real de este
+  archivo. Bug de carrera (del spec, no de producto) encontrado y
+  corregido: el submit de "Definir condiciones" en `admin/empresas.html`
+  guarda vía API (async) y SOLO AL TERMINAR hace `alert('Condiciones
+  guardadas.')`; el spec seguía derecho a `logout()` sin esperar ese
+  alert, y cuando el backend tardaba un poco el diálogo llegaba tarde,
+  justo cuando `logout()` ya estaba navegando — "Not attached to an active
+  page". Fix: armar `page.waitForEvent('dialog')` ANTES del click y
+  correrlo en paralelo con él (mismo patrón), para no seguir hasta que el
+  alert realmente se dispare.
+
+Instancia aislada (emuladores 9198/8190/9298, tracker 8070, estático 8093)
+apagada por completo al terminar, confirmada sin procesos residuales. Demo
+de Rick (8081/8090/9099/9199/8092, tmux `farmazed-demo`) verificada viva
+antes y después, sin tocar. Sin commit ni deploy, como se pidió.
+
+TAREA 34 queda VERIFICADA de punta a punta. Pendiente de Rick: decidir si
+quiere abrir `admin/empresas.html` a todo el staff (ver nota arriba) — no
+es parte de la 34, es un hallazgo colateral.
+
+## 2026-10-03 — TAREA 35: `admin/empresas.html` abierta a todo el staff
+
+Pedida por Rick directo tras la 34 (el hallazgo colateral de arriba). Solo
+frontend estático + un permiso de backend — queda activo en la demo sin
+reiniciar nada (confirmado: no se reinició ni el tracker ni los
+emuladores de la demo en esta ronda).
+
+- **Backend**: nuevo permiso `orgs.list` (listar empresas, solo lectura),
+  roles `[...STAFF_ROLES, 'admin']` — separado de `orgs.manage` (crear una
+  empresa directa + ver sus miembros), que sigue siendo solo admin.
+  `GET /api/orgs` ahora pide `orgs.list` en vez de `orgs.manage`
+  (`tracker/routes/orgs.js`). `orgs.edit_diagnostico` ya era staff+admin
+  desde la 34 — no se tocó. Tabla regenerada
+  (`node tracker/scripts/generate_permissions_doc.js`,
+  `organizacion/09_TABLA_PERMISOS.md`) — de paso recogió varias filas de
+  TAREA 33/34 que estaban pendientes de regenerar desde la vez pasada
+  (quotes.pay, subscription.*, orgs.edit_captacion, orgs.read_leads,
+  orgs.set_plan, orgs.edit_diagnostico, contact_leads.read,
+  empresarial.*), no es contenido nuevo, solo el doc desincronizado.
+- **`tracker/tests/permissions.test.js`**: el describe `orgs.manage —
+  solo admin` se partió en dos: `orgs.list — staff y admin (TAREA 35)`
+  (admin/analista/abogado/regente SÍ listan, cliente_titular NO) y
+  `orgs.manage — crear empresa directa y ver miembros, solo admin`
+  (admin SÍ crea y ve miembros; analista NO puede ninguna de las dos,
+  aunque sí pueda listar).
+- **`admin/empresas.html`**: gate de página cambiado de `isAdmin()` a
+  `hasBackofficeAccess()` (igual que `bandeja.html`). El rol efectivo
+  (`GET /api/me/permissions`) decide qué ve cada uno — no un segundo if
+  de rol a mano: staff solo ve la lista de empresas + "Cargar
+  diagnóstico" (si `plan==='consulta'`); "Ver miembros", "Definir
+  condiciones", "Invitar titular/empleado" y la tabla de Invitaciones
+  quedan ocultos para no-admin (siguen siendo acciones solo-admin en el
+  backend — el peor caso de un error en el flag del front sería un botón
+  que de todos modos rebota en 403, no un hueco real).
+- **`admin/bandeja.html`**: el enlace "Empresas" del sidebar ahora se
+  muestra según el permiso real (`myPerms.permissions.includes('orgs.list')`)
+  en vez de `role==='admin'` a mano. "Precios" sigue admin-only.
+- **`e2e/plan_consulta.spec.js`**: el paso 5 ("staff carga el
+  diagnóstico") ahora loguea como `analista@farmazed.test` en vez de
+  admin — ya no hace falta el rodeo documentado en la 34. De paso se le
+  aplicó la MISMA carrera-con-diálogo encontrada y corregida en
+  `plan_empresarial.spec.js` (el submit de "Cargar diagnóstico" también
+  hace `alert()` async antes de un logout inmediato) — mismo fix
+  (`page.waitForEvent('dialog')` armado antes del click, en paralelo).
+
+Verificación en la instancia aislada (emuladores 9198/8190/9298, tracker
+8070, estático 8093), host con load <2 todo el tiempo:
+- Backend completo: 207/207 (incluye `migrate_roles.js` corrido a mano
+  antes de `migration.test.js`, ya que corrí los archivos de prueba
+  directo en vez del script orquestador que lo hace solo — sin eso salían
+  2 "fail" en `migration.test.js` que NO son regresión, son el paso de
+  migración que falta). Los 2 describe nuevos de permisos (`orgs.list` /
+  `orgs.manage`) pasan limpio.
+- `e2e/plan_consulta.spec.js`: 2/2 (con analista cargando el diagnóstico).
+- `e2e/plan_empresarial.spec.js`: 1/1 (sin regresión en el flujo admin de
+  "Definir condiciones").
+
+Instancia aislada apagada por completo al terminar (confirmado sin
+procesos residuales en 8070/8093/9198/8190/9298). Demo de Rick verificada
+viva antes y después (tracker 8081 responde 200), nunca tocada. Sin
+commit ni deploy.
+
+### Ajuste — reinicio del tracker de la demo (correcto: `orgs.list` es
+### cambio de backend, Node no recarga código solo)
+
+El PM marcó bien un hueco: verificar TAREA 35 en la instancia AISLADA no
+alcanza para que la DEMO lo tenga — el tracker de la demo seguía corriendo
+con el código viejo (orgs.manage) en memoria. Reiniciado SOLO el proceso
+del tracker de la demo (PID viejo 2476754 -> nuevo, mismo entorno exacto
+leído de `/proc/<pid>/environ` antes de matarlo: PORT=8081,
+FIRESTORE_EMULATOR_HOST=localhost:8090, FIREBASE_AUTH_EMULATOR_HOST=
+localhost:9099, STORAGE_EMULATOR_HOST=http://localhost:9199, etc.).
+Emuladores de la demo NO tocados.
+
+Verificado con un login REAL de analista contra la demo (Playwright
+headless, solo lectura, cerrado al terminar):
+- `GET /api/orgs` con el token real de analista -> **200** (antes del
+  reinicio hubiera dado 403, código viejo en memoria).
+- `admin/empresas.html` carga y muestra las 4 empresas de la demo.
+- El link "Empresas" del sidebar de `bandeja.html` aparece para analista.
+- "Ver miembros", "Definir condiciones" y la columna "Empleados" NO
+  aparecen (correcto, siguen admin-only).
+- "Cargar diagnóstico" no aparece en ninguna fila — correcto, ninguna de
+  las 4 empresas de la demo tiene `plan:'consulta'` ahora mismo (dato de
+  fixture, no es un bug).
+
+Encontrado en el camino (y corregido, dato no código): el `analista@
+farmazed.test` de la DEMO tenía `emailVerified:false` en el emulador de
+Auth — dato viejo, de antes de que seed_roles.js empezara a poner
+`emailVerified:true` (TAREA 32). Causaba que el login de analista
+rebotara a verificar-correo.html y no es nada de TAREA 35. Corregido con
+`admin.auth().updateUser('role-analista', { emailVerified: true })`
+(mismo flag que ya pone seed_roles.js) — no se tocó ningún otro dato de
+la demo, ni Firestore, ni otras cuentas.
+
+---
+
+## ESTADO AL CIERRE — 2026-10-04, antes de un reinicio de sesiones (leer primero)
+
+Rick pidió respaldo + reinicio de sesiones para cargar plugins nuevos.
+Resumen de TAREAS 30-35 y lo que queda pendiente — nada de esto está
+commiteado, todo vive solo en el working tree de esta máquina (Patch).
+
+**TAREA 30** — `demo_local.sh`: demo a mano para Rick por túnel SSH desde
+Argus (`tmux farmazed-demo`). Hecha y verificada. Sigue corriendo.
+
+**TAREA 31** — CORS del tracker (`localhost` vs `127.0.0.1`): arreglado
+(`tracker/index.js` + `portal/js/config.js`). Hecha y verificada.
+
+**TAREA 32** — Registro abierto de clientes nuevos (§H.13): alta sin
+invitación + verificación de correo (front Y backend, claim del token).
+Hecha, 16/16 backend, e2e verificado.
+
+**TAREA 33** — Suscripción + pago PayPal (§H.14, proveedor mock):
+`subscription.*` (plan global), pago de cotización por concepto. Hecha,
+19/19 backend + `pago_paypal.spec.js` 2/2.
+
+**TAREA 34** — 3 flujos de alta desde los planes del landing (§H.15):
+Consulta (diagnóstico), Registro (wizard→cotización→pago), Empresarial
+(propuesta→condiciones→suscripción), + lead sin cuenta del hero. Hecha,
+backend 198/198 (en su momento) + `plan_consulta.spec.js` 2/2 +
+`plan_empresarial.spec.js` 1/1. 2 bugs reales de producto encontrados y
+corregidos en el camino (token de verificación obsoleto en
+`requireVerifiedLogin()`; el form del hero nunca enviaba nada).
+
+**TAREA 35** — `admin/empresas.html` abierta a todo el staff (hallazgo
+colateral de la 34): permiso nuevo `orgs.list` (staff+admin, separado de
+`orgs.manage` que sigue admin-only). Hecha, backend 207/207 + e2e
+re-verificados. **Reiniciado el tracker de la DEMO** (solo el proceso,
+mismo entorno, emuladores intactos) para que el cambio de backend
+quedara activo ahí — verificado con login real de analista
+(`GET /api/orgs` → 200, lista visible en `empresas.html`).
+
+### Pendiente — necesita que Rick decida
+
+1. **Commit**: nada de TAREA 6 en adelante está commiteado — toda esta
+   sesión (30-35 incluidas) sigue solo en el working tree. Falta que Rick
+   autorice explícitamente el commit (y, aparte, el push/deploy) antes de
+   subir nada. Ver respaldo de esta fecha más abajo.
+2. **Las "dos suscripciones" que conviven (señalado en TAREA 34, sección
+   de arriba, "Nota — 2 cosas separadas que se parecen")**: el botón
+   "Suscribirme" de **Mi Empresa** (TAREA 33) sigue vivo para CUALQUIER
+   empresa, al plan GLOBAL que el admin define en `admin/precios.html` —
+   es un riel independiente del **Plan Empresarial** (TAREA 34/35, a
+   convenir por empresa, con gestor de cuenta). Las dos cosas coexisten
+   por diseño del PM, pero no se le preguntó a Rick directamente si
+   quiere que sigan las DOS o si alguna se retira/fusiona — queda como
+   pregunta abierta, no como bug.
+
+### Respaldo de esta fecha
+
+`~/respaldo-farmazed/2026-10-04/cambios.patch` (204 KB, 3654 líneas —
+`git diff` de los archivos trackeados y modificados; verificado con
+`git apply --check` contra un clon fresco del mismo HEAD,
+`bde53bb...610d6` — aplica limpio) + `untracked.tar.gz` (2.6 MB, 28
+archivos nuevos sin trackear, sin `node_modules`). Mismo método que
+`~/respaldo-farmazed/2026-09-30c/` — solo lectura sobre el árbol del
+repo, sin `git stash` ni commit.
+
+---
+
+## 2026-10-04 — TAREA 36: Auditoría completa con los plugins nuevos (PM) — hallazgos y plan
+
+Orden de Rick (vía Dandy, 04-oct 10:25, verificada con `pm-order-check`):
+avanzar con lo pendiente usando ecc / agent-skills / understand-anything /
+ponytail y revisar el proyecto completo (estructura de backend, conexiones,
+funcionalidad). **Auditoría solo lectura**: no se editó código. 6 revisiones
+en paralelo: `ecc:architect`, `ecc:security-reviewer`,
+`ecc:silent-failure-hunter`, `ecc:code-explorer` (conexiones front↔API),
+`ecc:pr-test-analyzer`, `ponytail-audit`. Rutas relativas a `tracker/`
+salvo que se indique. Línea base de tests: TAREA 36-A (developer), ver abajo
+cuando la reporte.
+
+### Lo que está bien (no tocar)
+- Todos los endpoints que llama el front existen y coinciden en método,
+  ruta y payload. El front no toca Firestore/Storage directo (todo vía
+  tracker con admin SDK).
+- Rutas nuevas no públicas con `requireAuth` + `requirePermission`; el
+  monto de PayPal lo recalcula el servidor; `canAccessQuote/Case` validan
+  org; el rol del registro lo fija el servidor; `orgId` sale del claim.
+- Verificación de firma real de PayPal falla cerrado sin `PAYPAL_WEBHOOK_ID`.
+- Ningún archivo fuente >800 líneas salvo `farmazed-web/admin/expediente.html`
+  (958). Gates de transición probados por REST y MCP.
+- **Secretos reales en el repo: ninguno.** Solo valores de dev
+  (`dev-admin-local`, contraseña de seeds que se niegan a correr sin emulador).
+
+### CRITICAL — bloquean cualquier salida a producción
+C1. **XSS almacenado público→admin.** `farmazed-web/admin/bandeja.html:148-155,187-193`
+    (y demás páginas admin) meten en `innerHTML` sin escapar datos de
+    `POST /api/contact-leads` (público), `org.nombre` del registro y
+    `captacion.*`. Un anónimo roba el token del admin. No existe función de
+    escape en el front; CSP desactivada (`index.js:23`).
+C2. **Pagos caen al mock en silencio.** `services/payments/index.js:17-24`:
+    si falta una variable de PayPal usa el mock, que captura todo como
+    COMPLETED y da por válido cualquier webhook (`mock.js`). En Cloud Run un
+    typo = pagos gratis que abren el gate de fase_05 y suscripciones activas.
+    `.env.example` no lista las variables de PayPal.
+C3. **Captura de pago no atómica.** `routes/quotes.js:533-651`: `crear-orden`
+    pisa el `orderId` (dos pestañas → orden aprobada huérfana); `capturar`
+    sin transacción → pagos duplicados por doble clic/reintento; si
+    Firestore falla tras cobrar, cliente cobrado sin rastro y el 422
+    `ORDER_ALREADY_CAPTURED` no se reconcilia; monto comparado como float
+    con `!==` (`:617`) → 409 con el dinero ya cobrado.
+C4. **Aceptar invitación sin auth y con `uid` libre.** `routes/invitations.js:122-156`:
+    quien tenga un token aplica el rol de la invitación (incluido admin) y
+    `emailVerified:true` a cualquier cuenta; borra claims previos; `used` no
+    es atómico.
+
+### HIGH
+H1. `middleware/permissions.js:38-41` cuenta sin claims → `cliente_titular`:
+    alta directa con el SDK cliente se salta la verificación de correo y
+    puede crear casos.
+H2. `routes/documents.js:327-356` PATCH de revisión sin `getCaseOrFail` →
+    staff no asignado aprueba/rechaza documentos ajenos.
+H3. `routes/mcp.js:498-547` `handleRequestDocument` duplica
+    `POST /documents/request` **sin** pasar por `checkTransition`.
+H4. Rate limit evadible (`register.js:70`, `contact_leads.js:38`,
+    `index.js:70`): IP del primer `X-Forwarded-For` (falsificable), Map en
+    memoria sin purga, no compartido entre instancias.
+H5. Transiciones de estado sin transacción (`cases.js:254-304`,
+    `mcp.js:480-493`): dos transiciones concurrentes pueden saltar el gate
+    de pago; `update` + `statusHistory` no atómicos;
+    `transitions.js:195` traga el error de `attachCaseToDraftQuote`.
+H6. Suscripciones (`subscription.js:61-135`, `empresarial.js:44-141`): doble
+    clic → dos suscripciones PayPal; cada edición del plan crea producto/plan
+    nuevo (huérfanos); `cancel` da 500 si ya estaba cancelada en PayPal.
+H7. Webhook PayPal (`webhooks.js`) solo hace `console.log` y responde 200:
+    `pendiente` nunca pasa a `activa`, `CANCELLED` nunca se refleja, sin
+    idempotencia por `event.id`. **Hay que resolverlo antes de PayPal real.**
+H8. `register.js:83-117,238-256` usuario de Auth huérfano si falla org/claims
+    (reintento = 409). `services/payments/paypal.js` `fetch` sin timeout.
+H9. **Tests de pagos, registro y planes no corren en `verificar_local.sh`**:
+    `pagos_paypal_tarea33`, `registro_tarea32`, `planes_landing_tarea34` no
+    están en `scripts/run_permission_tests.sh`. 0 tests de 401; 0 de webhook
+    con firma inválida; `messages`, `employees`, `me`, `storage` sin tests.
+
+### MEDIUM
+- Config: `index.js:18-19` y `services/storage.js:7,10` ponen `projectId`
+  `'farmazed'` por defecto → en local sin `FIRESTORE_EMULATOR_HOST` apunta a
+  **producción**. Falta validar variables al arrancar (`MCP_KEY`≥32,
+  PayPal). `.env.example` con `ADMIN_KEY` y `ALLOWED_ORIGINS` sin uso.
+- Reglas: solo existen `firestore.emulator.rules`/`storage.emulator.rules`
+  (`allow all`) y `firebase.json` las apunta → un `firebase deploy` a prod
+  abriría la BD. Falta `firestore.rules`/`storage.rules` de prod deny-all.
+- CORS (`index.js:30-37`): `localhost` permitido en prod; regex
+  `/\.farmazed\.com$/` sin ancla ni `https`.
+- Errores: todos los `catch` devuelven `e.message` al cliente (filtra error
+  de PayPal) y casi ninguno hace `console.error`.
+- Validación: `payments.js:137-216` fecha inválida → 500, monto `Infinity`,
+  monto inválido → 0 que abre el gate; blob huérfano en Storage.
+  `quotes.js:143` / `pricing_desglose.js:216` precio ausente → cotización $0
+  silenciosa. `requireMcpKey` compara con `!==` (usar `timingSafeEqual`).
+  `GET /qr` público escribe en Firestore sin límite.
+- Estructura: `services/transitions.js:33` importa lógica colgada de los
+  routers (`router.hasConceptPayment = …`) → mover a `services/`. Alta de
+  empresa en 4 sitios con campos distintos (`register`, `invitations`,
+  `contact_leads`, `orgs`). `getCaseOrFail` copiado 3 veces + 5 en
+  `cases.js`. Rate limit copiado.
+- Front: `admin/precios.html:345,389,513` no revisa `res.ok` (error = "no hay
+  plan"/tabla vacía). `dashboard.html:744` URL de Cloud Run fija (es spec de
+  diseño, no se borra). `api.farmazed.com` (prod en `config.js:61`) sin
+  confirmar en `DEPLOY.md`.
+
+### LOW / limpieza (ponytail, ~-170 líneas y -4 dependencias seguras)
+`express-validator` sin uso; `uuid` → `crypto.randomUUID()`;
+`@google-cloud/firestore` solo para `Timestamp`; `nodemon` → `node --watch`.
+`init()` repetido en 6 páginas admin → `initBackoffice()` en `auth.js`;
+`precios.html` con fetch a mano en vez de `api.js`; `uploadDocument`/
+`registerPayment` duplican `apiFetch`; fechas a mano en `mcp.js`/`messages.js`
+(ya existe `serializeTimestamps`); `STAFF_EXIT_OWNER = {}` muerto; código sin
+consumidor (`createOrg`, `getQuote`, `deleteDocument` en `api.js`). Renombrar
+tests `*_tareaNN` a nombres de dominio. Sleeps fijos en e2e. Agregar
+`farmazed-web/demo.html` a `.gitignore`.
+
+### Plan (una tarea a la vez; cada entrega pasa `ponytail-review` + revisión de código/seguridad antes de aceptarse)
+| # | Tarea | Cubre |
+|---|---|---|
+| 36-A | Línea base de la suite completa (en curso, developer) | — |
+| 37 | Escape de salida en todo el admin/portal + `maxLength` en servidor para campos públicos | C1 |
+| 38 | Pagos atómicos: `crear-orden`/`capturar` con transacción e id determinista, centavos, reconciliación 422, timeouts en `paypal.js`; suscripción con transacción y `cancel` idempotente | C3, H6, H8(timeout) |
+| 39 | Auth y acceso: invitación con `requireAuth` + email + transacción; sin claims → 403; `getCaseOrFail` en PATCH de documentos (y helper único); MCP `request_document` por `checkTransition`; `trust proxy` + `req.ip` + rate limit único; rollback del registro; `timingSafeEqual` | C4, H1-H4, H8 |
+| 40 | Fallo cerrado y config: mock solo con emulador o `PAYMENTS_PROVIDER=mock`; validación de variables al arrancar (sin `projectId` por defecto); reglas de prod deny-all; CORS de prod; errores genéricos + `console.error`; `.env.example` al día | C2, MEDIUM config/CORS/errores |
+| 41 | Transiciones atómicas (`applyTransition()` único con transacción, REST y MCP) y validación de montos/fechas en pagos | H5, MEDIUM validación |
+| 42 | Tests: meter las 3 suites en el script, 401, webhook firma inválida, captura en paralelo, org ajena, renombrar `tareaNN` | H9 |
+| 43 | Limpieza ponytail segura (dependencias, helpers duplicados, `res.ok` en `precios.html`) | LOW |
+
+**Necesita decisión de Rick** (no se ejecuta sin respuesta):
+1. **Webhook PayPal (H7)**: qué debe hacer cada evento (activar/cancelar
+   suscripción, registrar pago). Requisito antes de PayPal real.
+2. **Commit/push**: TAREAS 30-35 (último commit `bde53bb`, 3-oct) y las correcciones 37-43 siguen sin commit.
+3. **Dos suscripciones** (plan global de Mi Empresa vs Plan Empresarial):
+   pregunta abierta del 04-oct.
+4. Retirar el tarifario legacy (~-290 líneas) cuando prod use `PRICING_TABLE=24sep`.
+5. Unificar el CSS de `admin/precios.html` con el resto (cambia cómo se ve).
+
+## 2026-10-04 — TAREA 36 (parte A, solo lectura): línea base antes de la auditoría
+
+No se editó ningún archivo del repo. Instancia aislada (emuladores 9198/8190/9298,
+tracker 8070, estático 8093, `firebase.test-ports.json`); scripts de la corrida en el
+scratchpad de la sesión, no en el repo. Demo (tmux `farmazed-demo`) verificada viva
+(8081 → 200) al final; instancia aislada apagada por PID. Host con load 15–22 todo el rato.
+
+Backend (`node --test`, una sola instancia, en este orden): permissions 86/86,
+paquete_iea 4/4, transition_gates 12/12, payment_concepts 6/6, checklist_tarea25 17/17,
+checklist_tarea26 5/5, formularios_tarea28 7/7, checklist_tarea28 3/3, precios_tarea28 4/4,
+registro_tarea32 16/16, planes_landing_tarea34 20/20, migration 5/5 (tras migrate_roles),
+**pagos_paypal_tarea33 18/19**. Total backend en la corrida completa: 203/204.
+Fallo: `capturar de verdad -> crea los pagos por concepto` — actual
+[honorarios×3, tasa_dnfd×3] vs esperado [honorarios, tasa_dnfd]: datos de otra prueba
+previa en el mismo caso. Solo, en instancia limpia: 19/19.
+
+Playwright: solo 4 de 15 specs se pueden correr en instancia aislada (registro,
+plan_consulta, plan_empresarial, pago_paypal: leen FZ_AUTH_PORT/fzAuthPort). Los otros 11
+(checklist, checklist_recibo_iea, document_versions, estados, flujo_completo, formularios,
+paquete_iea, payments, pricing, quotes, roles) fijan Auth en 9099 = el de la demo: NO
+corridos, por no tocar la demo (y `e2e/run.sh` hace `pkill` por patrón, mataría la demo).
+Resultado de los 4: 4 pasan; `pago_paypal.spec.js` falla 2/2 si corre DESPUÉS de los tests
+backend en la misma instancia (`#btn-suscribir` no aparece / status-select ≠ fase_03:
+caso `case-pago-paypal-test` ya mutado) y pasa 2/2 solo en instancia limpia. Es
+acoplamiento de estado entre `pagos_paypal_tarea33.test.js` y el spec, no regresión de
+producto; no se arregló (parte A solo lectura).
+
+## 2026-10-04 — TAREA 37: XSS almacenado público→admin (C1)
+
+Hecho (sin commit/push; demo viva 200 antes y después; instancia aislada 9198/8190/9298, 8070, 8093):
+- **Front**: `esc()` (& < > " ') exportado desde `portal/js/auth.js` (no hay archivo nuevo). Aplicado a todo dato de BD/usuario en
+  innerHTML/atributos/onclick de `admin/{bandeja,casos,cotizaciones,empresas,expediente,formularios,precios}.html` y `portal/js/wizard.js`
+  (toast escapa su mensaje). `registro.html`, `verificar-correo.html`, `login.html`, `index.html`, `demo.html`: sin sumideros (solo textContent).
+  `expediente.html` `fieldRow`: el botón copiar usaba el valor dentro de un string JS en onclick → ahora `data-copy` + `this.dataset.copy`.
+  `empresas.html`: `verMiembros(id)` busca el nombre en `orgsCache` en vez de recibirlo por onclick.
+- **Servidor**: `tracker/utils/validar_texto.js` (nuevo, `textoError`/`trimOrNull`: solo string, trim, tope, 400). Topes: nombre/empresa/tipoProducto/orgName 120,
+  correo 254, teléfono 40, país 80, password 6–128, fabricante 200, nº productos 120. En `contact_leads.js`, `register.js`, `orgs.js` (captación y POST /api/orgs).
+  Se guarda con trim; NO se escapa en servidor (el escape es del front). El form del hero no manda `mensaje` y el backend no lo guarda: sin tope porque no existe el campo.
+- **Pruebas nuevas**: `tracker/tests/xss_tarea37.test.js` (30, enganchada en `run_permission_tests.sh`) y `e2e/xss_bandeja.spec.js`.
+  El spec FALLA contra el front con `esc` neutralizado (copia temporal en 8094) y pasa con el fix; backend sin fix no tenía topes (los 400 no existían).
+- **Verificación**: backend 30/30 nuevos; suite 232 pasan, 2 fallan en `pagos_paypal_tarea33` (el acoplamiento de estado ya anotado en T36→T42,
+  pasa 19/19 solo). Playwright: xss_bandeja, plan_consulta, plan_empresarial OK; `registro.spec` dio timeout de 45 s una vez bajo load ~25 y pasa solo (27 s).
+  Smoke (script temporal, ya borrado) cargó las 7 páginas admin + portal/nuevo con 0 errores JS y expediente renderiza el caso.
+- **Revisiones**: ponytail-review → un shrink aplicado (`textoError` −3 líneas). ecc:security-reviewer → 0 CRITICAL, 0 HIGH.
+
+No hecho / pendiente (decisión: fuera del alcance pedido):
+- **CSP**: no activada (rompe scripts inline). Pendiente.
+- **`client-dashboard.html` / `dashboard.html`** (spec de diseño, no tocadas): mismo patrón. client-dashboard: 23 innerHTML, 0 esc; sin escapar
+  `paisYNombreFabricante`/`numeroProductosPorCategoria` (~1714-1716), campos del diagnóstico (~1930-1934, XSS staff→cliente), `err.message`, cotizaciones, productos, docs, mensajes. dashboard.html: 13 innerHTML. Tarea aparte recomendada, empezando por 1714/1716 y 1930-1934.
+- MEDIUM (reviewer): `onclick="f('${esc(x)}')"` no es seguro si el valor trae `'` (expediente, empresas, precios, y `location.href` en bandeja/casos); hoy los valores son ids autogenerados/estáticos, no explotable. Arreglo: data-* + listener delegado.
+- MEDIUM: rate limit de contact-leads/register usa `x-forwarded-for` controlable por el cliente y el Map nunca se purga → flood de leads / memoria. Arreglo: `trust proxy` + `req.ip` + purga.
+- LOW: `PUT /diagnostico` y `POST /api/empresarial` sin tope/tipo (guardan crudo); `categoriasProducto` sin tope de cantidad; zero-width chars pasan el trim; el e2e no cubre `empresas.html`/`expediente.html`.
+- `admin/precios.html` hace `fetch /api/admin/pricing` sin Authorization: confirmar que la ruta es pública a propósito.
+
+## 2026-10-04 — TAREA 37b: XSS restante (client-dashboard.html, dashboard.html, topes en diagnóstico/empresarial)
+
+Sin commit/push. Demo viva 200 antes/después. Instancia aislada (9198/8190/9298, 8070, 8093; copia sin escape en 8094 para el "debe fallar").
+- **`client-dashboard.html`** (portal vivo del cliente; NO rediseñado, NO borrado): el `<script type="module">` importa `esc` y hace `window.esc = esc`;
+  el `<script>` clásico define `const esc = (v) => window.esc(v)` (envoltorio perezoso, el helper sigue siendo uno solo en `portal/js/auth.js`;
+  los renders corren desde el módulo, después de asignar `window.esc` — confirmado por el revisor, sin carrera). Escapados todos los innerHTML con datos de BD/usuario:
+  captación (fabricante, n.° productos, categorías), diagnóstico (5 campos), Mi Empresa (miembros, invitaciones, plan, suscripción), cotizaciones (código, motivo de rechazo, orden PayPal, data-quote),
+  empresarial (periodo, gestor, informes), precios, pendientes/notificaciones, productos, pipeline, expediente (documentos, notas, formularios, actividad, pagos, plazo), docs, hilos y chat, badges y `err.message`.
+- **`dashboard.html`**: es un prototipo con datos constantes (`var D = {...}`); lo único con dato real es el panel QR (`s.device`) → `window.esc(d)`. El resto no se tocó (no hay dato de usuario).
+- **Servidor**: `PUT /api/orgs/:orgId/diagnostico` (5 campos, 500, string, trim, se guarda con trim) y `POST /api/empresarial/solicitar` (`productosEstimados` 1000) con `textoError`.
+- **Pruebas**: `tracker/tests/xss_tarea37.test.js` ahora 46 (+16: tope/no-string por campo, 500 exacto→200, solo espacios→400, ausente→400, empresarial 1001/no-string→400);
+  `e2e/xss_portal_cliente.spec.js` (cliente registra captación hostil, staff guarda diagnóstico hostil, el cliente abre client-dashboard → Mi Empresa y Diagnóstico: texto literal, 0 img/svg, `window.__xss` undefined): pasa con el fix y FALLA con `esc` neutralizado.
+  Smoke temporal (borrado): portal de `titular-alfa` recorriendo los 9 módulos + dashboard admin → 0 errores JS.
+- **Regresión**: backend 232+ igual que antes (único rojo `pagos_paypal_tarea33`, el coupling de T42). Playwright con fix: plan_consulta, registro, xss_bandeja, xss_portal_cliente OK.
+  **`plan_empresarial.spec.js` es intermitente**: 3 de 4 en `--repeat-each=4` limpio; los fallos vistos fueron (a) `net::ERR_ABORTED` en `waitForURL` del login (patrón ya descrito en T26/T28 bajo load alto)
+  y (b) una vez `#btn-aceptar-empresarial` ausente (el módulo se renderizó antes de que `window.__fzMyRole` estuviera cargado → sin botón de titular). No toca mi diff (no cambié el orden de carga ni la lógica de rol), pero no pude compararlo contra un baseline previo; candidato para T42 (esperar `__fzMyRole` / reintentar el login).
+- **Revisiones**: ponytail-review → 1 recorte (`Number(idx)` sobraba, revertido a `${idx}`). ecc:security-reviewer → 0 CRITICAL, 0 HIGH.
+- **No hecho (LOW/MEDIUM del revisor)**: el e2e solo cubre captación+diagnóstico (no producto/chat/miembros/motivo de rechazo en client-dashboard);
+  `window.location.href = orden.approveUrl` sin validar `https://` (viene de PayPal); `(p.total||0).toLocaleString` sin `Number()` (hoy numérico); `querySelector('[value="${…}"]')` con valor de BD en la captación (enum forzado por el backend);
+  `acc[s.device]`/`s.timestamp.slice` en el panel QR de dashboard.html (robustez, sin XSS); `formatDate` hace `split` sin `String()`. CSP y rate limit siguen fuera (T39/T40).
+
+## 2026-10-04 — TAREA 38: pagos atómicos (C3 + H6 + timeout H8)
+
+Sin commit/push. Demo viva 200 antes/después. Instancia aislada (9198/8190/9298, 8070, 8093). Diff chico, sin reestructurar archivos (eso es T41).
+- **`routes/quotes.js`** (crear-orden / capturar): estado de `pagoPaypal` reservado dentro de `runTransaction` ('creando' / 'capturando', TTL 2 min para reservas abandonadas).
+  crear-orden: si ya hay orden `creada` con el mismo monto → se REUTILIZA (200, `reutilizada:true`; el `approveUrl` ahora se guarda); en paralelo el segundo recibe 409; total 0 → 400.
+  capturar: creada→capturando en transacción (segundo en paralelo → 409; ya `capturada` → respuesta idempotente), `captureId` guardado apenas cobra, montos en centavos enteros (`Math.round(n*100)`),
+  pagos por concepto con id determinista `orderId_caseId_concepto` escritos en UN batch junto con el estado `capturada` (`createConceptPayment` en `payments.js` ahora acepta `paymentId` y `batch`).
+  Cobrado pero registro falla (o caso sin línea principal) → `captura_sin_registrar` + `console.error` con orderId/captureId (sin secretos); reintentar `/capturar` lo completa sin recobrar.
+  Monto/moneda/orderId distinto o captura PENDING DESPUÉS de cobrar → `captura_discrepante` (NO se libera: crear-orden queda bloqueado para no abrir otra orden encima del dinero cobrado; el 409 ya no devuelve el cuerpo del proveedor).
+- **`services/payments/paypal.js`**: `fetchJson` con `AbortSignal.timeout` (15 s, `PAYPAL_TIMEOUT_MS`) en TODOS los fetch (incluido OAuth y la lectura del cuerpo), 2xx con JSON inválido → error claro (204 vacío → {}), `approveUrl` solo `https://*.paypal.com`
+  (si falla al crear una suscripción, esa suscripción se cancela, no queda huérfana), `captureOrder` 422 ORDER_ALREADY_CAPTURED → `getOrder` y sigue, `cancelSubscription` 422 SUBSCRIPTION_STATUS_INVALID = éxito solo si PayPal dice CANCELLED/EXPIRED (APPROVAL_PENDING sigue siendo error).
+  `mock.js`: guarda el monto con 2 decimales como PayPal (0.30, no 0.30000000000000004) y `getOrder` trae `captureId`.
+- **`routes/subscription.js` + `empresarial.js`**: subscribe y `/empresarial/aceptar` reservan 'pendiente' en `runTransaction` antes de llamar al proveedor (revierten si falla; si el proveedor creó la suscripción pero Firestore no la guardó, se cancela en el proveedor y se loguea); doble clic → 409.
+  `/cancel` idempotente: ya cancelada → 200 `{estado:'cancelada', yaEstaba:true}` (antes 400). `utils/http_error.js` (nuevo): `HttpError` + `responderError`; los errores del proveedor (con `.status`) salen al cliente como 502 genérico y se loguean completos.
+- **Pruebas**: `tracker/tests/pagos_atomicos_tarea38.test.js` (16, casos/cotizaciones/usuarios PROPIOS creados en before; enganchada en `run_permission_tests.sh`): 16/16 con el fix.
+  Contra una copia del tracker con la lógica PREVIA de quotes.js/subscription.js: 8 de 16 fallan (crear-orden reutiliza/paralelo, capturar en paralelo, 0.1+0.2, discrepante, total 0, captura_sin_registrar, subscribe en paralelo, cancel ya cancelada);
+  "reintento tras capturar" ya era idempotente y pasa en ambos; `empresarial/aceptar` paralelo y los 6 de paypal.js (fetch stubbeado) no distinguen porque la copia previa mantuvo esos archivos nuevos — su fallo "sin fix" no se midió.
+- **Regresión**: backend sin regresiones (permissions 86, planes_landing 20, xss 46, etc.); único rojo `pagos_paypal_tarea33` (17/19) = el acoplamiento de estado ya anotado para T42
+  (otras pruebas ya suscribieron org-beta y engrosaron la cotización borrador compartida → 409 al suscribir y pagos ×3). Playwright en instancia limpia: pago_paypal 2/2, plan_empresarial 1/1 (este spec sigue siendo intermitente por una carrera del propio spec: `dispatchEvent` clickea el nav oculto antes de que el módulo cargue el rol; T42).
+- **Revisiones**: ponytail-review (nada que recortar). ecc:silent-failure-hunter y ecc:security-reviewer: 0 CRITICAL; los HIGH aplicables a este diff se corrigieron (mismatch tras cobrar sin rastro, captureId sin catch, caso sin línea principal saltado en silencio, suscripción huérfana, cancelar APPROVAL_PENDING como éxito, getProvider fuera del try, e.message del proveedor al cliente, approveUrl a cualquier https, total 0).
+- **NO hecho / decisiones para Rick-PM**:
+  1. `services/payments/index.js` cae a **mock en silencio** si falta una variable de PayPal; en producción eso daría pagos "cobrados" sin dinero y abriría el gate de fase_05. No lo cambié (hoy producción no tiene credenciales y no hay deploy de pagos): decidir si en Cloud Run (`K_SERVICE`) sin credenciales debe fallar cerrado.
+  2. Una `pendiente` CON `subscriptionId` (APPROVAL_PENDING real) se puede volver a suscribir y se pisa (queda huérfana en PayPal); resolverlo necesita probar contra el sandbox real (cancelar una pendiente no siempre es posible).
+  3. Escrituras de liberación/marca sin token de dueño (una reserva vencida de la solicitud A puede pisar el resultado de la B); header `PayPal-Request-Id`; cuadrar la suma de conceptos contra lo cobrado (los `conceptos` pueden diferir del `monto` por ajustes manuales); `createConceptPayment` convierte NaN en 0; `/cancel` sin transacción. Todo LOW/MEDIUM de baja probabilidad.
+
+## 2026-10-04 — TAREA 39: autenticación y acceso (C4 + H1-H5, H8)
+
+Sin commit/push. Demo viva (no se tocó; sigue con el código anterior hasta que Rick la reinicie — ver "ANTES DE DESPLEGAR/REINICIAR"). Instancia aislada (9198/8190/9298, 8070, 8093).
+- **1 · `routes/invitations.js` accept**: `requireAuth`; el uid sale de `req.user.uid` (el `uid` del body se ignora); correo de la sesión == correo de la invitación (normalizado: trim/minúsculas) o 403;
+  la invitación se consume en `runTransaction` ANTES de los claims (accept doble en paralelo → 200 + 409); claims FUSIONADOS (conserva `origen` y demás; la invitación reemplaza `role`/`orgId`/`admin`);
+  `emailVerified` se marca antes que los claims y, si falla algo, `used` se devuelve (el último paso, el que da el rol, es el irreversible). Front: `api.acceptInvitation(token)` y `aceptar-invitacion.html` ya no mandan uid (la sesión sale de `register()`).
+- **2 · `middleware/permissions.js`**: `effectiveRole` → `null` sin `role` ni `admin` (el fallback `admin:true`→admin se mantiene); `requirePermission` responde 403 "no tiene un rol asignado"; `/api/me/permissions` da `role:null, permissions:[]`.
+  Verificado: registro (`role:'cliente_titular'`), invitación y `seed_roles.js`/`bootstrap_admin.js` siempre dejan role. **Quedan sin role**: la cuenta legacy `cliente@farmazed.test` de `seed_emulador.js` (`{}`) y toda cuenta real anterior a E3 → `e2e/run.sh` y `demo_local.sh` ahora corren `migrate_roles.js` tras sembrar.
+- **3 · `getCaseOrFail`** único en `middleware/permissions.js` (documents/messages/payments/cases dejaron sus copias/bloques inline) y el PATCH de revisión de documentos ahora lo llama (antes un staff NO asignado aprobaba/rechazaba documentos de cualquier caso). `GET /api/cases/:id` devuelve ahora también `id` dentro del cuerpo.
+- **4 · `services/document_requests.js`** (nuevo): REST (`POST /documents/request`) y MCP (`farmazed_request_document`) comparten lógica y gate (`checkTransition` corre ANTES de escribir; antes el MCP escribía pending_docs sin gate, y también creaba documentos en casos inexistentes → ahora error).
+- **5 · `utils/rate_limit.js`** (nuevo): un limitador (purga por ventana, tope de 50 000 IPs, IPv6 por /64, `reset()` para pruebas) usado por register, contact-leads y `/qr` (60/10 min; pasado el límite igual redirige, solo no registra). `app.set('trust proxy', TRUST_PROXY||1)` y `req.ip` (también en `/qr`).
+- **6 · `register.js`**: si falla la empresa o los claims tras `createUser` → se borran usuario y empresa (el correo queda libre; 500 genérico).
+- **7 · `middleware/auth.js` `requireMcpKey`**: `crypto.timingSafeEqual` sobre SHA-256 (igual largo).
+- Docs: `generate_permissions_doc.js` y comentarios obsoletos de accept actualizados; `09_TABLA_PERMISOS.md` regenerada.
+- **Pruebas**: `tracker/tests/auth_acceso_tarea39.test.js` (20, enganchada en `run_permission_tests.sh`) 20/20 con el fix; contra una copia del tracker con la lógica PREVIA: 10 de 20 fallan
+  (accept sin sesión/otro correo/uid ajeno/paralelo/claims/normalizado, sin role, PATCH no asignado, MCP sin gate, XFF rotado). Las pruebas EN PROCESO (limitador, registro huérfano, requireMcpKey, effectiveRole) usan el código actual, no la copia previa, por eso "pasan" ahí.
+  `e2e/aceptar_invitacion.spec.js` (nuevo) pasa 4/4 corridas. Backend sin regresiones (permissions 86, xss 46, atómicos 16, planes 20, registro 16, migration 5…; único rojo `pagos_paypal_tarea33` = coupling T42).
+  Playwright (instancia limpia): registro, plan_empresarial, pago_paypal, xss_bandeja, xss_portal_cliente OK; `plan_consulta.spec` falló 2 veces en 9 intentos (un timeout de `load` al recargar y `#contact-leads-card` oculto) con load del host 30 — mismo patrón de flake de carga ya anotado para T42; no hay un baseline previo que lo descarte del todo.
+- **Revisiones**: ponytail-review → recortes aplicados (`middleware()` del limitador y un export sin uso). ecc:security-reviewer: 0 CRITICAL; aplicado M1 (orden updateUser→claims), M2 (`TRUST_PROXY`), M3 (IPv6 /64 + tope), L3 (comentarios). Dos HIGH NO resueltos aquí (ver abajo).
+- **ANTES DE DESPLEGAR / REINICIAR LA DEMO (decisión de Rick-PM)**:
+  1. **Cuentas reales sin role quedarán con 403 en todo.** `scripts/migrate_roles.js` está limitado al EMULADOR (sale si no hay `FIRESTORE_EMULATOR_HOST`). Hace falta un camino para producción (script con credenciales GCP por línea de comandos, o flag `--prod --confirm`) y un `--dry-run` previo para listar cuentas sin role. NO corrí nada contra producción.
+  2. La demo de Rick (tmux `farmazed-demo`) corre el tracker anterior; al reiniciarla con `demo_local.sh` ya migra solo, pero si se reinicia SOLO el tracker sobre el emulador ya sembrado, `cliente@farmazed.test` quedará sin role (403) hasta correr `migrate_roles.js` contra ese emulador.
+  3. **El token de invitación sigue siendo un bearer** (revisor, HIGH): `GET /api/invitations/:token` es público y devuelve el correo, y cualquiera puede registrar una cuenta con ese correo sin verificarlo y aceptar si tiene el token; además accept fuerza `emailVerified:true`. El cambio pedido (uid del token + correo igual) cierra la sustitución de uid pero no eso. Diseño robusto: que accept (público) reciba `{password, displayName}` y cree el usuario con el correo de la invitación (nadie puede pre-registrarlo), enmascarar el correo en el GET público y bloquear en `register.js` los correos con invitación vigente. Queda para decidir.
+  4. `trust proxy 1` es correcto con Cloud Run directo; si `api.farmazed.com` pasa por un LB/CDN extra, todos compartirían un bucket → `TRUST_PROXY=2` (o más). Verificar las cabeceras reales en el primer despliegue.
+- No hecho (LOW): `MCP farmazed_update_case` sigue aceptando `override:true` (MCP_KEY es acceso admin; decidir si se quita); `register.js` sigue devolviendo 409 "Ya existe una cuenta" (enumeración de correos, ya existía); `formularios.js` tiene su propio `canAccessCase` (correcto, duplicado).
+
+## 2026-10-04 — TAREA 39b: invitación sin squatting + camino de migración a producción
+
+Sin commit/push. NO se corrió nada contra producción. Demo viva (200, no tocada). Instancia aislada (9198/8190/9298, 8070, 8093).
+- **Accept con DOS caminos** (`routes/invitations.js`, `POST /:token/accept`; el enlace prueba la propiedad del buzón):
+  · **Sin sesión** (no tiene cuenta): body `{password, displayName}` → el servidor CREA el usuario con el correo de la invitación, `emailVerified:true` y el rol/org de la invitación; consume el token en `runTransaction`; límite de 5 intentos/10 min por IP real (`utils/rate_limit.js`); responde 201 con el correo (para que el front inicie sesión).
+  Si ya existe una cuenta con ese correo: **no verificada → se TOMA** (el enlace sí prueba el buzón: contraseña nueva, refresh tokens revocados, claims previos descartados — cierra el caso "el atacante registró el correo antes de la invitación"); **verificada → 409 `cuenta_existente`** (debe iniciar sesión).
+  · **Con sesión** (ya tiene cuenta): camino de T39 (uid del token, correo igual) y ahora exige `email_verified:true` (403 claro si no).
+  Reversión segura: `used` solo se devuelve si se pudo deshacer lo creado / el error es de los que garantizan "no se creó nada".
+- **GET enmascarado** (`r***@dominio.com`, `lastIndexOf('@')`); `createInvitation` normaliza el correo (trim + minúsculas).
+- **`register.js`**: correo con invitación vigente → 409. El mensaje es el MISMO que el de "ya existe una cuenta" (no sirve de oráculo de invitaciones).
+- **Front** (`aceptar-invitacion.html`, `portal/js/api.js`): muestra el correo enmascarado; el formulario llama al accept público (`apiFetch({anonimo:true})`, no manda sesión) y luego `login()`; si responde `cuenta_existente` aparece "Ya tengo una cuenta" (login + accept con sesión). `<meta name="referrer" content="no-referrer">` (el token va en la URL).
+- **`scripts/migrate_roles.js`**: `resolverModo()` (pura, probada): EMULADOR (AMBAS variables, Firestore y Auth) escribe salvo `--dry-run` (los scripts de prueba y la demo no cambian); PRODUCCIÓN exige `--prod` + `FIREBASE_PROJECT_ID`, es **dry-run por defecto** y escribe solo con `--prod --confirm`; `--confirm` sin `--prod`, `--prod` con un emulador y UN solo emulador definido son errores. Desviación consciente del pedido: en el emulador el default sigue siendo escribir (si no, se rompen `e2e/run.sh`, `demo_local.sh` y `run_permission_tests.sh`).
+- **`DEPLOY.md`**: sección "ANTES de desplegar el tracker (TAREAS 39/39b) — paso previo OBLIGATORIO": comandos `--prod` (dry-run) → revisar → `--prod --confirm` (solo con visto bueno de Rick), `TRUST_PROXY` (default 1; 2+ si hay LB/CDN) y la nota de la demo local (B).
+- **Pruebas**: `tracker/tests/invitacion_squat_tarea39b.test.js` (15, enganchada en `run_permission_tests.sh`) 15/15; contra el tracker de la T39 (sin 39b) fallan 10 de 15 (accept público ×6, squatter, cuenta verificada, GET sin máscara, register 409); los 3 de `migrate_roles` y 2 más pasan igual por ser en proceso/ya cubiertos.
+  `auth_acceso_tarea39` (ajustada al nuevo camino) 20/20; registro_tarea32 16, xss 46, planes 20, permissions 86, atómicos 16 (corrida previa), migration 5. `e2e/aceptar_invitacion.spec.js` 2 tests (sin cuenta / "ya tengo una cuenta") 2/2 y registro.spec OK.
+  (Una falla transitoria de `xss_tarea37` en una corrida intermedia fue colisión de IPs sintéticas entre archivos de prueba bajo el rate limit compartido; la prueba nueva usa ahora 192.0.2.x.)
+- **Revisión** ponytail: nada que recortar. ecc:security-reviewer: 0 CRITICAL; aplicados H1 (modo emulador exige AMBAS variables), H2 (toma de cuenta no verificada), M2 (reversión), M3 (correo normalizado en createUser), M4 (mismo 409), L3 (máscara), no-referrer.
+- **No hecho — decisiones para Rick/PM**:
+  1. **Caducidad de invitaciones** (M1): hoy no caducan; un token filtrado = bearer permanente del rol (admin incluido). Propuesta: `expiresAt` 7 días (48 h para personal) validado con 410, + backfill de las existentes. El token sigue en la query (`?token=`): pasarlo al fragmento `#token=` evitaría logs/Referer.
+  2. **Backfill de correos** de invitaciones ya existentes (guardadas sin normalizar) antes del deploy, para que el 409 de `register.js` las vea (M3).
+  3. **`migrate_roles.js` no es reanudable** (M5): si falla entre claims y backfill de casos, el reintento salta a esa cuenta y sus casos quedan sin `orgId`; propuesta: id de org determinista + backfill de casos antes de los claims + exigir `--project=<id>` igual a `FIREBASE_PROJECT_ID`. Conviene hacerlo antes de correrlo en producción.
+  4. Contraseña mínima de 6 también para personal/admin (L4); el límite por IP cuenta también los éxitos (L1).
+
+## 2026-10-04 — TAREA 39c: cierre de invitaciones y migración
+
+Sin commit/push. NO se corrió nada contra producción (ni dry-run: solo se probó el rechazo de argumentos). Demo viva 200.
+- **Caducidad** (`routes/invitations.js`): toda invitación nueva lleva `expiresAt` = creación + 7 días (sin distinguir personal). Las viejas sin `expiresAt` = `createdAt + 7 d` en el código (sin backfill obligatorio); sin fechas o dato corrupto → falla CERRADO (caducada). 410 con mensaje claro en `GET /:token` y en accept (público y con sesión, dentro de la transacción); una invitación YA usada sigue dando `used:true`/409 aunque sea vieja; `devolverInvitacion` no toca `expiresAt` (no se puede "resucitar"). `register.js`: una invitación caducada ya no bloquea el registro de ese correo. Para reenviar, el admin crea otra invitación.
+- **`scripts/backfill_invitaciones.js`** (nuevo): normaliza (trim + minúsculas) el correo de las invitaciones viejas; MISMOS modos que migrate_roles (`resolverModo` compartido): emulador escribe salvo `--dry-run`; producción exige `--prod --project=<id>`, dry-run por defecto, escribe solo con `--confirm`. No toca `expiresAt`. Idempotente, por lotes de 400.
+- **`scripts/migrate_roles.js` reanudable**: empresa con id determinista `mig_<uid>` (`.create()`, ALREADY_EXISTS = ya la creó un corte anterior) → `orgId` en los casos (por lotes de 400) → claims LO ÚLTIMO; una cuenta solo "cuenta como migrada" cuando ya tiene role, así que volver a correr completa lo pendiente sin duplicar. Si la cuenta ya traía `orgId` en sus claims se respeta (no se le crea otra empresa). `--project=<id>` obligatorio con `--prod` (y debe coincidir con `FIREBASE_PROJECT_ID`/`GOOGLE_CLOUD_PROJECT`/`GCLOUD_PROJECT`; repetido = error). Refactor: `migrarCuentas({auth, db, admin, dryRun})` inyectable (así la prueba simula el corte) y `main` solo si es el script.
+- **Password mínima 8** para cuentas NUEVAS (registro y accept público; `errorPassword` en `utils/validar_texto.js`, `minlength="8"` en `registro.html` y `aceptar-invitacion.html`); las cuentas existentes no se tocan (una con 6 sigue entrando — probado).
+- **`DEPLOY.md`**: comandos con `--project`, backfill de correos, reanudable, caducidad (las invitaciones de más de 7 días darán 410) y mínimo de 8.
+- **Pruebas**: `tracker/tests/caducidad_migracion_tarea39c.test.js` (15, enganchada en `run_permission_tests.sh`) 15/15; contra el tracker SIN la 39c fallan 11 de 14 de la corrida previa (caducidad nueva/vieja de 8 d/registro con caducada, password 7 ×2, migración ×3 y backfill/--project ×2; "vieja de 6 días vigente", "usada y vieja" y "cuenta existente con password corta" pasan igual por diseño). Migración interrumpida (fallo simulado al poner los claims de A) + re-corrida → A y B terminan idénticos, 1 empresa por cuenta, casos con orgId, 3.ª corrida = 0 migradas.
+  Sin regresiones: 39b 15, 39 20, registro 16, xss 46, planes 20, permissions 86, migration 5; Playwright aceptar_invitacion 2/2, registro, plan_empresarial OK (corrida previa a los últimos ajustes; los ajustes solo tocaron scripts/expiración y se re-corrió el backend).
+- **Revisión**: ponytail → quitado `expiresAt` del GET (nadie lo usaba) y código muerto. ecc:security-reviewer: 0 CRITICAL/0 HIGH; aplicados M1 (lotes), M2 (orgId previo), L1 (fail-closed), L3 (GCLOUD_PROJECT, `--project` repetido), L5.
+- **No hecho (LOW)**: `.create()` adopta cualquier `orgs/mig_<uid>` existente sin comprobar `createdBy`; el log de `backfill_invitaciones` imprime correos completos (consola de admin); `invalid-uid` con `/` abortaría el script (improbable).
+
+---
+
+## 2026-10-04 — Mapa del código con graphify (orden de Rick vía Dandy)
+
+**Cómo se generó.** `graphify` (extracción AST, determinista, 0 tokens de LLM)
+sobre el **código propio**: `tracker/`, `farmazed-web/portal/js/`,
+`farmazed-web/js/`, `e2e/` → 99 archivos, ~96 k palabras. Se excluyó a
+propósito el resto del corpus (1385 archivos / 5,3 M palabras): plantillas
+`farmazed-web/src/approx` y `src/wecare` (671 archivos de terceros), imágenes,
+`References/` y documentos. Limitación: graphify no analiza el JS inline de
+los `.html` (admin/portal); esas conexiones salen de la auditoría TAREA 36
+(revisión `ecc:code-explorer`). Incluye el código en curso de la TAREA 40.
+
+**Resultado:** 955 nodos · 1570 aristas · 67 comunidades · **0 ciclos de
+import** · 95 % EXTRACTED / 5 % INFERRED. Salud del grafo: 26 aristas a
+símbolos externos/no resueltos y 245 colapsadas (mismo par con `calls` +
+`contains`, inocuas). Salidas en `graphify-out/` (sin trackear, **no
+commitear**: agregar a `.gitignore`): `graph.html` (interactivo, abrir en el
+navegador), `GRAPH_REPORT.md`, `graph.json`. Consultar con
+`graphify query "<pregunta>"` desde la raíz del repo; actualizar con
+`/graphify . --update`.
+
+### Estructura por capas
+
+```
+NAVEGADOR
+  farmazed-web/*.html (index, login, registro, verificar-correo, demo)
+  farmazed-web/client-dashboard.html   ← portal VIVO del cliente
+  farmazed-web/admin/*.html            ← back-office (bandeja, casos, cotizaciones,
+                                          empresas, expediente, formularios, precios)
+  portal/js: config.js (emulador vs prod por hostname) → auth.js (Firebase Auth,
+             esc(), roles) → api.js (apiFetch → API_BASE) ; wizard.js, status_ui.js
+        │  HTTPS + Bearer (ID token de Firebase)
+        ▼
+TRACKER (Express, tracker/index.js) — config.js valida entorno al arrancar (T40)
+  middleware/auth.js         requireAuth, requireVerifiedLogin, requireMcpKey
+  middleware/permissions.js  requirePermission, effectiveRole, canAccessCase,
+                             getCaseOrFail (único desde T39)
+  routes/  /api/cases (+ /documents /messages /payments /formularios)
+           /api/quotes  /api/orgs  /api/me  /api/employees  /api/invitations
+           /api/register  /api/contact-leads  /api/subscription  /api/empresarial
+           /api/webhooks/paypal   /mcp (servidor MCP)   / (pricing, meta, qr, scans)
+  services/ transitions.js (gates de fase: checkTransition) ;
+            document_requests.js (REST y MCP comparten, T39) ; storage.js ;
+            payments/{index,mock,paypal}.js (adaptador de proveedor)
+  data/     case_status.js (13 fases / estados), faddi_checklists.js
+  utils/    pricing_desglose.js, serialize.js, validar_texto.js (T37),
+            rate_limit.js (T39), http_error.js, conceptos_fase05.js, pdf_pages.js
+        │  firebase-admin SDK (el front NUNCA toca Firestore/Storage directo)
+        ▼
+FIREBASE: Auth · Firestore · Storage   (local: emuladores, proyecto demo-farmazed)
+EXTERNOS: PayPal (orders + subscriptions + webhooks), Cloud Run
+```
+
+### Nodos centrales (lo que más se usa — tocar con cuidado)
+`requirePermission()` (18 conexiones) · `requireAuth()` (17) ·
+`serializeTimestamps()` (14) · `checkTransition()` (13) · `HttpError` (12) ·
+`paypalFetch()` (11) · `portal/js/auth.js` (10). Cualquier cambio en estos
+afecta a casi todas las rutas: exige correr la suite completa.
+
+### Conexiones clave que muestra el grafo
+- Las 13 fases viven en `data/case_status.js`; las consumen `services/transitions.js`
+  (`checkTransition → isValidTransition`), `routes/mcp.js` (`handleUpdateCase →
+  isValidStatus`) y `scripts/migrate_status.js`.
+- `routes/mcp.js` lee los checklists (`getChecklist` de `data/faddi_checklists.js`).
+- **Dependencia invertida aún abierta** (MEDIUM de TAREA 36, va en T41):
+  `services/transitions.js:33-34` hace `require('../routes/payments')` y
+  `require('../routes/quotes')`. No hay ciclo hoy, pero la lógica de negocio
+  sigue colgada de los routers.
+- Comunidades de baja cohesión (candidatas a ordenar, sin urgencia):
+  `portal/js/wizard.js` + `auth.js` (0,05) y `data/faddi_checklists.js` (0,05).
+
+### Mapa de pruebas (qué cubre qué)
+| Área | Backend (`tracker/tests`) | e2e (`e2e/`) |
+|---|---|---|
+| Permisos / roles | permissions, auth_acceso_tarea39 | roles |
+| Invitaciones / migración | invitacion_squat_tarea39b, caducidad_migracion_tarea39c, migration | aceptar_invitacion |
+| Registro / leads | registro_tarea32, planes_landing_tarea34, xss_tarea37 | registro, plan_consulta, plan_empresarial, xss_bandeja, xss_portal_cliente |
+| Pagos / PayPal | payment_concepts, pagos_paypal_tarea33, pagos_atomicos_tarea38 | payments, pago_paypal |
+| Fases / gates | transition_gates | estados, flujo_completo |
+| Checklist / formularios / IEA | checklist_tarea25/26/28, formularios_tarea28, paquete_iea | checklist, checklist_recibo_iea, formularios, paquete_iea |
+| Cotizaciones / precios | precios_tarea28 | quotes, pricing |
+| Config de arranque | config_tarea40 (en curso) | — |
+| **Sin tests** | messages, employees, me, meta, storage, serialize | document_versions cubre versiones |
+
+Pendientes ya planificados que el mapa confirma: T41 (sacar la lógica de
+`routes/` a `services/`, `applyTransition()` único), T42 (tests faltantes,
+renombrar `*_tareaNN`, estado compartido, `fzAuthPort` en specs).
+
+## 2026-10-04 — TAREA 40: fallo cerrado y configuración de producción (C2 + config/reglas/CORS/errores)
+
+Sin commit/push/deploy. NO se desplegaron reglas. Demo viva (200, no tocada). Instancia aislada (9198/8190/9298, 8070, 8093) — ahora con las reglas deny-all.
+- **1 · Pagos** (`services/payments/index.js` + `tracker/config.js`): el mock SOLO con `FIRESTORE_EMULATOR_HOST` o `PAYMENTS_PROVIDER=mock`, y `PAYMENTS_PROVIDER=mock` en producción = error. Si no es mock y faltan `PAYPAL_CLIENT_ID/SECRET/WEBHOOK_ID` (o `PAYPAL_ENV` no es sandbox|live) el tracker NO arranca; ya no cae al mock. `getProvider()` aplica la misma regla en cada llamada.
+- **2 · Config al arrancar** (`tracker/config.js`, un solo lugar, `index.js` sale con `process.exit(1)` y mensaje claro): modo EMULADOR (`FIRESTORE_EMULATOR_HOST`, debe ser localhost/127.0.0.1) o PRODUCCIÓN (`NODE_ENV=production`, normalizado, o `K_SERVICE` de Cloud Run); ni uno ni otro = se aborta (un tracker local con credenciales no puede escribir en prod por accidente); emulador+producción = error; `FIREBASE_PROJECT_ID` y `GCS_BUCKET` obligatorios (sin defaults 'farmazed'/'farmazed-docs' en `index.js`, `services/storage.js` —ahora perezoso—, `seed_pricing.js`, `bootstrap_admin.js`); producción: `MCP_KEY` >= 32; `TRUST_PROXY` entero >= 1 (default 1). Producción con `PAYPAL_ENV=sandbox` arranca con advertencia. `.env.example` al día (sin ADMIN_KEY/ALLOWED_ORIGINS/GCP_PROJECT_ID; con PayPal, PAYMENTS_PROVIDER, TRUST_PROXY, NODE_ENV). `tracker/Dockerfile`: `ENV NODE_ENV=production`.
+- **3 · Reglas**: `firestore.rules` y `storage.rules` deny-all; `firebase.json` y `firebase.test-ports.json` apuntan a ellas. Verificado que ninguna prueba necesita reglas abiertas (ni backend —incluye subida de documentos— ni Playwright; el front no usa los SDK de Firestore/Storage) → se ELIMINARON `firestore.emulator.rules`/`storage.emulator.rules` y se actualizó `DEV_LOCAL.md`. NO se desplegó nada (`firebase deploy --only firestore:rules,storage` es decisión de Rick).
+- **4 · CORS** (`origenPermitido` en config.js): producción solo `^https://([a-z0-9-]+\.)?farmazed\.com$`; localhost/127.0.0.1 con cualquier puerto solo fuera de producción.
+- **5 · Errores**: interceptor en `index.js` — toda respuesta 500 con `error` sale con "Error interno del servidor…" y el detalle va a `console.error` con método, ruta y uid (el 500 deliberadamente informativo "cobrado sin registrar" de quotes.js se marca `res.locals.errorControlado`); handler global (JSON malformado → 400 genérico, resto 500 genérico); `unhandledRejection` se loguea, `uncaughtException` se loguea y sale con código 1. Los 4xx de negocio y el 502 genérico del proveedor de pagos no se tocan. MCP (HTTP 200 JSON-RPC): los errores INTERNOS (código numérico gRPC, auth/storage/app, o mensaje con rutas del proyecto) salen genéricos y los de negocio igual. Los 400 de `register`/`invitations` ya no devuelven `e.message` de Firebase Auth.
+- **6 · `backfill_invitaciones.js`**: correos enmascarados en el log (`enmascararCorreo` ahora vive en `utils/validar_texto.js`).
+- **Pruebas**: `tracker/tests/config_tarea40.test.js` (18, enganchada en `run_permission_tests.sh`) 18/18 con el fix; contra una copia con el `index.js`/`storage.js` de git HEAD fallan 9 de 18 (los 6 arranques inválidos, CORS en el servidor real y los dos 500). Backend completo sin regresiones (permissions 86, precios 4 [arreglado: storage perezoso], 39/39b/39c, xss, atómicos…; único rojo `pagos_paypal_tarea33` = coupling T42). Playwright con reglas deny-all: pago_paypal 2/2, plan_consulta 2/2, registro, aceptar_invitacion 2/2, xss ×2 OK; `plan_empresarial` pasó en una corrida y falló en otra (intermitente conocido, T42).
+- **Revisiones**: ponytail → nada que recortar. ecc:security-reviewer: 0 CRITICAL; 2 HIGH: H1 (deploy: DEPLOY.md corregido con el orden seguro `--no-traffic`) y H2 (MCP, arreglado); aplicados M2/M3/M4/L1/L7/L8.
+- **DECISIONES / RIESGOS DE DEPLOY (Rick)**:
+  1. **El servicio Cloud Run actual probablemente NO tiene `FIREBASE_PROJECT_ID`, `GCS_BUCKET` ni las variables de PayPal** (usaba defaults y el mock): este código no arranca hasta que existan, y las de PayPal exigen que Rick cree la app en developer.paypal.com. Es un requisito duro; DEPLOY.md trae el orden (describir env → poner variables/secretos → desplegar `--no-traffic` → comprobar → pasar tráfico).
+  2. Desplegar o no las reglas deny-all (confirmar antes en la consola que las de producción actuales son las esperadas).
+  3. CORS con `credentials:true` acepta CUALQUIER subdominio de 1 nivel de farmazed.com; si hay subdominios abandonados conviene una lista explícita (`www`, `api`, `app`).
+- No hecho (LOW): `unhandledRejection` solo registra (no sale); `backfill_invitaciones.js` conserva `demo-farmazed` como proyecto por defecto (solo emulador); ~40 `res.status(500).json({error:e.message})` siguen escribiendo el mensaje al log vía el interceptor en vez de `next(e)`.
+
+## 2026-10-04 — TAREA 41: estructura y atomicidad del backend (H5 + estructura/validación)
+
+Sin commit/push. Demo viva (200, no tocada). Refactor: la suite existente fue la red (primera corrida detectó 1 import colgado en `cases.js`, corregido).
+- **1 · Rutas finas**: `services/payments_ledger.js` (nuevo: `hasConceptPayment`, `createConceptPayment`, constantes TIPOS_PAGO/AUTORIDADES/CONCEPTOS_CLIENTE/MONTOS_REFERENCIA) y `services/quotes.js` (nuevo: `resolverCategoriaPrecio`, `tarifarioDe`, `recomputeTotal`, `attachCaseToDraftQuote`, `hasAcceptedQuote`, `describeQuoteGate`, `getAcceptedQuoteLineForCase`). `services/transitions.js`, `routes/cases.js`, `routes/mcp.js` y `routes/quotes.js` ya no hacen `require('../routes/...')`; se quitaron TODOS los `router.xxx = ...` de payments/quotes. `precios_tarea28.test.js` importa de `services/quotes`. Sin ciclos de require.
+- **2 · `applyTransition()`** (`services/transitions.js`): `runTransaction` que RELEE el caso, evalúa el gate (`checkTransition`) y la autorización por rol opcional (REST), y escribe `update` + `statusHistory` JUNTOS; después `afterTransition`. La usan `PATCH /api/cases/:id`, MCP `farmazed_update_case` y `services/document_requests.js` (pending_docs). Dos peticiones concurrentes: la segunda reintenta, ve el status nuevo (idéntica → noop, una sola entrada de historial; distinta → se evalúa contra el status real). `db` inyectable para simular fallos.
+  **Error de `attachCaseToDraftQuote` (decisión)**: la transición ya está guardada, así que NO se devuelve 500 (el cliente reintentaría algo ya hecho). Se registra con `console.error`, se MARCA en el caso (`cotizacionBorradorError {mensaje, at}`, se limpia cuando una entrada posterior a fase_04 sí arma la línea), la respuesta REST/MCP trae `avisos`, y `admin/expediente.html` muestra un banner rojo y un aviso al guardar el estado. Caso sin `orgId` también da aviso (antes: silencio). La línea EXTRA de prioridad innovadores ya no tumba la principal (se agrega la principal y luego se avisa).
+- **3 · Validación y precios**: `POST /api/cases/:id/payments`: monto finito y > 0 (Infinity/1e999/texto/'' → 400), fecha inválida → 400, TODO antes de subir a Storage; si falla el `set` se borra el blob; `uploadFile` borra el archivo si falla la URL firmada. `createConceptPayment` lanza si el monto no es un número finito >= 0 (adiós `Number(x)||0`). `tarifarioDe`: categoría `null` (ruta no tarifada) sigue en cero a propósito; fila de precio inexistente o sin componentes → error explícito ("Falta la fila de precio…") en vez de una cotización de $0.
+- **4 · `createOrg()`** (`services/orgs.js`): register, invitations/titular, contact_leads/invitar y POST /api/orgs crean el mismo documento base (nombre con trim, createdAt, createdBy, + plan/pais/telefonoContacto solo si se pasan).
+- **5 · CORS**: lista EXPLÍCITA, `CORS_ORIGINS` (coma) con default `https://farmazed.com` y `https://www.farmazed.com`, coincidencia exacta (adiós "cualquier subdominio"); localhost solo fuera de producción; validada al arrancar. `.env.example` y `DEPLOY.md` al día. **Ojo al desplegar**: si algún front se sirve desde otro origen (`*.web.app`, otro subdominio) hay que listarlo.
+- **6 · `.gitignore`**: `graphify-out/` y `farmazed-web/demo.html`.
+- **Pruebas**: `tracker/tests/estructura_tarea41.test.js` (14, enganchada en `run_permission_tests.sh`; usa Storage del emulador para comprobar que no queda blob): 14/14. Contra una copia con el flujo previo de PATCH/pagos/precio/createOrg fallan 4 de 12 (paralelo idéntico → 2 entradas de historial, aviso del borrador, pagos inválidos con blob huérfano/500, createOrg sin trim); las demás (atomicidad con `db` inyectado, `tarifarioDe`, `createConceptPayment`) ejercen el código actual en proceso y no discriminan contra esa copia. CORS sin `sub.farmazed.com` en `config_tarea40.test.js` (19/19).
+  Suite backend completa sin regresiones (permissions 86, transition_gates 12, payment_concepts 6, precios 4, 37/38/39/39b/39c, xss 46, migration 5…; único rojo `pagos_paypal_tarea33` = coupling T42). Playwright: 10/10 en la corrida previa a los últimos ajustes; en la final 9/10 con `plan_empresarial` intermitente (conocido, T42).
+- **Revisiones**: ponytail → imports revisados, nada que recortar. ecc:code-reviewer: APPROVE (0 CRITICAL/HIGH). ecc:silent-failure-hunter: 1 HIGH (el aviso/marcador no tenía consumidor → agregado banner + aviso en expediente) y varios MEDIUM: aplicados orden de `document_requests` (transición atómica ANTES de escribir el documento), limpieza del marcador con su propio catch, strictness de `createConceptPayment`, blob huérfano en `uploadFile`, aviso sin `orgId`, línea extra aislada, validación de `createOrg`, comentarios obsoletos, tests de noop/override/rol.
+- **Deuda anotada (no hecha)**: `attachCaseToDraftQuote` sigue sin ser transaccional (dos casos de la misma empresa entrando a fase_04 a la vez pueden crear dos borradores o pisarse `lineas`; ya era así); los gates de `checkTransition` leen quotes/payments fuera de la transacción (comentado: solo se agregan); el marcador no se limpia si el admin repara la línea a mano sin reentrar a fase_04; `routes/quotes.js` captura PayPal sigue usando `|| 0` para conceptos ausentes; el aviso MCP va dentro del JSON del resultado (sin `isError`); no hay prueba de la carrera de `document_requests` (ya cerrada por el orden) ni del camino MCP de `handleUpdateCase`.
+
+## 2026-10-04 — TAREA 41b (página admin "Configuración" con el mapa del código)
+
+**Hecho**
+- `tracker/scripts/actualizar_grafo.sh`: graphify solo AST (sin LLM) sobre tracker/, e2e/, farmazed-web/portal/js/, farmazed-web/js/ → `tracker/assets/code-graph.html` (versionado, ~780 KB; 983 nodos). Generado el 2026-10-04. Cuándo regenerar: DEV_LOCAL.md ("Mapa del código").
+- `GET /api/admin/code-graph` (`tracker/routes/system.js`): requireAuth + permiso nuevo `system.code_graph` (solo admin; en `permissions.js` y `organizacion/09_TABLA_PERMISOS.md`). 404 claro si falta el archivo; `Cache-Control: private, no-store`; `Last-Modified` = fecha de generación.
+- `farmazed-web/admin/configuracion.html` (solo admin; el resto redirige a su bandeja/portal): pide el HTML con token y lo muestra en `<iframe sandbox="allow-scripts" csp=…>` (sin allow-same-origin → no ve el token). "Abrir en pestaña nueva" abre una envoltura blob con el mismo iframe sandbox (una URL blob directa heredaría el origen). Enlace "Configuración" solo visible para admin en casos/bandeja/cotizaciones/formularios/empresas. `api.getCodeGraph()` en api.js.
+- El grafo NO está en `farmazed-web/` (lo comprueba un test).
+- Pruebas: `tracker/tests/code_graph_tarea41b.test.js` (9/9: 401, 403 para 5 roles, admin 200, 404, no-estático) enganchado en `run_permission_tests.sh`; `e2e/configuracion.spec.js` (2/2: admin ve el grafo en el iframe, aislamiento SecurityError, popup; analista sin enlace y redirigido). Regresión: permissions 86, config_tarea40 19, estructura_tarea41 14, auth_acceso_tarea39 20, xss_bandeja y registro e2e OK.
+
+**Reviewers**: ponytail-review: nada que recortar. ecc:security-reviewer: 0 CRITICAL/HIGH; sin colisión en /api/admin, sin fuga en el grafo (sin rutas locales ni secretos), aislamiento correcto. Aplicado: CSP del iframe (`default-src 'none'; script-src 'unsafe-inline' https://unpkg.com; style-src 'unsafe-inline'; img-src data:`, bloquea exfiltración por fetch) y guarda de fecha inválida.
+
+**No hecho / deuda**
+- M1: el HTML del grafo carga vis-network de unpkg (versión fija + SRI); sin red el mapa sale en blanco. Vendorizarlo (inline en el script) eliminaría la dependencia y permitiría CSP sin unpkg.
+- L3: `c.label` del grafo entra por innerHTML sin esc(); hoy son "Community N". Si alguien nombra comunidades con `graphify label` (LLM), parchear. Contenido por el sandbox.
+- Comunidades como "Community N" (nombrarlas requiere LLM).
+- `.dockerignore` del tracker no excluye `assets/`: el archivo viaja en la imagen y solo se sirve por la ruta protegida (necesario para que funcione en prod).
+- `requireAuth` usa verifyIdToken sin checkRevoked (previo; un admin degradado conserva acceso hasta 1 h). Candidato a T42.
+- Sin commit/push/deploy.
+
+## 2026-10-04 — TAREA 42: Tests (H9)
+
+Sin commit/push/deploy. La demo (tmux `farmazed-demo`) se reinició antes (paso 1) y siguió viva (8081/8092 → 200) durante todas las corridas de esta tarea.
+
+**Hecho**
+- **Entorno aislado compartido** `tracker/scripts/entorno_aislado.sh` (lo cargan `run_permission_tests.sh` y `e2e/run.sh`): emuladores en los puertos de `firebase.test-ports.json` (9198/8190/9298), tracker/estático en el primer libre desde 8070/8093. **Se quitó el `pkill` por patrón** (mataba la demo): al salir solo detiene el grupo de procesos que arrancó y espera a que se liberen los puertos; si un puerto de prueba está ocupado avisa y sale sin matar nada. `verificar_local.sh` = e2e + backend, ambos aislados.
+- **Backend completo en `run_permission_tests.sh`**: corre TODO `tracker/tests/*.test.js` (glob; `permissions` primero, `migration` al final tras migrar) con el mismo entorno, resumen por suite y falla si una suite corre 0 pruebas. `npm test` en `tracker/package.json`. Una suite nueva se engancha sola.
+- **Estado compartido**: `tests/_fixtures.js` (titular/usuario/caso propios con ids únicos por corrida) y `tests/_ip.js` (IP sintética única por proceso y llamada: el rate limit por IP de register/contact-leads es compartido por todas las suites y se pisaba — causa del `xss` intermitente). `pagos_paypal` ahora crea empresa, titular, caso y cotización propios (y titular propio para suscripción): ya no depende de las semillas ni del orden.
+- **Renombres** (archivos y `describe`, sin "TAREA NN"; referencias en .sh/DEV_LOCAL actualizadas; el handover histórico NO se reescribió):
+
+| antes | ahora |
+|---|---|
+| pagos_paypal_tarea33 | pagos_paypal |
+| registro_tarea32 | registro_captacion |
+| planes_landing_tarea34 | planes_y_leads |
+| checklist_tarea25 | checklist_base |
+| checklist_tarea26 | checklist_via_categoria |
+| checklist_tarea28 | checklist_vacuna (no `checklist_formularios`: es Vacuna=Biológicos) |
+| formularios_tarea28 | formularios |
+| precios_tarea28 | precios |
+| xss_tarea37 | xss |
+| auth_acceso_tarea39 | auth_acceso |
+| invitacion_squat_tarea39b | invitacion_squat |
+| caducidad_migracion_tarea39c | caducidad_migracion |
+| pagos_atomicos_tarea38 | pagos_atomicos |
+| config_tarea40 | config |
+| estructura_tarea41 | estructura |
+| code_graph_tarea41b | code_graph |
+
+- **Huecos cubiertos** (suites nuevas): `acceso_basico` (25: 401 sin token/Basic/Bearer vacío/no-JWT/JWT `alg:none` en 23 rutas de todos los routers; cuenta del registro abierto sin verificar → 403 en pagos, orgs, quotes, documents, subscription, cases, con control positivo al verificarla; mensajes: empresa ajena 403, solo campos públicos, topes; employees solo admin; el cliente no mueve el estado ni con `override`/mass-assignment) y `paypal_contrato` (8, en proceso: webhook con firma inválida → 400 sin efectos con proveedor stubbeado y con el adaptador real sobre `fetch` stubbeado, proveedor caído ≠ 200, contrato de `createOrder`/`captureOrder`).
+- **Hallazgos reales que salieron al escribir las pruebas (arreglados)**:
+  1. **El cliente recibía `notes` (notas internas) y `faddi` en `GET /api/cases` y `/:id`** → `sinCamposInternos()` en `routes/cases.js` (solo para roles cliente; admin/staff las siguen viendo; prueba con control positivo).
+  2. **Desde T40 la descarga directa de documentos fallaba en local** (reglas de Storage deny-all + URL del emulador sin token → también en la demo): `services/storage.js` pone `firebaseStorageDownloadTokens` al subir y lo añade a la URL, SOLO en modo emulador (producción sigue con URLs firmadas). Lo cubre `e2e/document_versions.spec.js` ("Ver archivo" descarga el archivo viejo).
+- **e2e**: `playwright.config.js` fija `fzApiPort`/`fzAuthPort` para TODOS los specs (`storageState`), así los 11 specs corren en puertos aislados (ya no chocan con la demo). Login con el esperador armado antes del click, `waitUntil:'commit'` y tolerancia a `ERR_ABORTED` centralizada (`e2e/_esperas.js: enviarLogin`); `waitForTimeout` (10) → esperas a condición (`guardarEstado` espera PATCH + relectura, `esperarAnimaciones`, `esperarQueNadaSeEjecute`); `plan_empresarial`/`plan_consulta` esperan `window.__fzMyRole` (la carrera del rol). Esos 11 specs llevaban sin correr desde T32/T39 y estaban rotos por el producto, no por la infraestructura: overlay de captación (T32) → `global-setup.js` deja las empresas sembradas con captación completa y asigna el `orgId` de `cliente@` a los casos fixture (T39); correo enmascarado en la invitación (T39b) en `roles.spec`; `flujo_completo`/`roles` completan la captación de la empresa nueva (invitación); `paquete_iea` crea el titular verificado por Admin SDK (`e2e/_cuentas.js`) en vez del `register()` viejo; `estados` con timeout de 120 s (recorrido largo).
+
+**Resultados**
+- Backend completo (23 suites, ~420 pruebas): verde en **6 corridas** (2 seguidas tras el último cambio de código). Antes de arreglar las IPs, 1 de 3 corridas fallaba en `xss` (429 por IP compartida).
+- Playwright: **31/31** con la demo viva. `--repeat-each=3` sobre los idempotentes (checklist, configuracion, formularios, paquete_iea, plan_empresarial, plan_consulta, pricing, roles, xss_portal_cliente): 56/57; el fallo es `plan_empresarial` en `#done-msg` tras el registro (causa probable, no confirmada con log: el rate limit REAL de `/api/register`, 5 por IP cada 10 min — 3 specs × 3 repeticiones registran >5 cuentas desde 127.0.0.1).
+- **No repetibles con `--repeat-each` (por diseño actual)**: `pago_paypal` (2), `payments`, `quotes`, `estados`, `document_versions` y `checklist_recibo_iea` (avanzan/acumulan el estado de casos sembrados una sola vez en `global-setup`), `registro`, `aceptar_invitacion` y `xss_bandeja` (textos/correos fijos → duplicados en la 2.ª repetición). `flujo_completo` pasa 2 de 3. Hacerlos repetibles = que cada spec cree sus propios casos (como ya hace el backend): trabajo aparte, no hecho.
+
+**Revisiones**: ponytail-review: se quitó el re-export `ipUnica` de `_fixtures` (sin uso); resto sin recortes (`entorno_aislado.sh` reemplaza ~150 líneas duplicadas en dos runners). ecc:pr-test-analyzer: 0 CRITICAL; aplicado: `faddi` + control positivo en la prueba de notas, mass-assignment/override desde cliente, `esperarAnimaciones` ignora las infinitas, `relectura` sin rechazo suelto, `esperarQueNadaSeEjecute` espera imágenes, "0 pruebas = fallo", proveedor caído en el webhook, `employees` sin umbral frágil.
+
+**No hecho / pendiente**
+- Pruebas de `GET /api/cases/:id/history` (¿el cliente ve `override`/`reason` internos?), de `POST /api/cases` (devuelve `notes:''`/`faddi:{}` vacíos, sin fuga de contenido) y de `PATCH` respondiendo sin `notes`/`faddi`: no cubiertas.
+- Contrato de OAuth (`Basic base64`, renovación por `expires_in`) y `PayPal-Request-Id` (paypal.js no manda idempotency key: un reintento podría duplicar la orden) — para T43/decisión.
+- El webhook sigue sin efectos reales (H7, decisión de Rick): la prueba de "sin efectos" es débil hasta que lo tenga.
+- El grafo del código se regeneró (nombres nuevos).
+
+## 2026-10-04 — TAREA 43: Limpieza y deuda
+
+Sin commit/push/deploy; demo viva (8081 → 200 al final). `npm test` verde 2 corridas seguidas (23 suites) + e2e 31/31 con la demo viva; tras el último retoque (clave de orden) se re-corrieron pagos_paypal, pagos_atomicos y estructura: verdes.
+
+**A. Seguridad**
+- `cases.js`: `sinCamposInternos` también en POST y PATCH; `GET /:id/history` al cliente solo devuelve `{id, from, to, at}` (sin `reason`, `override`, `by`, `byEmail`). Pruebas en `acceso_basico` (con control positivo: el admin ve todo).
+- `paypal.js`: cabecera `PayPal-Request-Id`: `createOrder` (clave `order-<cotización>-<centavos>-<hora>`), `captureOrder` (`capture-<orderId>`, estable), `createSubscription` (`sub-<empresa>-<plan>-<hora>`, `claveSuscripcion` en subscription.js; sirve a subscription y empresarial). Por hora a propósito: un reintento inmediato no duplica, pero una orden caducada o una re-suscripción tras cancelar no quedan pegadas a la respuesta vieja (revisión). Sin `requestId` no se manda cabecera. `createPlan` sin clave (acción rara de admin). Pruebas en `paypal_contrato` (+5): cabeceras, OAuth (`Basic base64(id:secret)`, `grant_type`, form-urlencoded, token reutilizado, renovación por `expires_in`).
+- `requireAuth`: `verifyIdToken(token, true)` (checkRevoked). Prueba en `auth_acceso`: tras `revokeRefreshTokens` el token viejo da 401 y uno nuevo entra. Coste: una consulta a Auth por petición. MCP no usa tokens de usuario.
+
+**B. Integridad**: `armarBorrador` (borrador de cotización) en una transacción con la consulta dentro: 4 casos de la misma empresa saliendo de fase_03 en paralelo dejan UN borrador con las 4 líneas (prueba en `estructura`). Los gates de `checkTransition` (cotización aceptada, pagos por concepto) leen con la `t` de `applyTransition`.
+
+**C. Limpieza (sin cambio de comportamiento)**
+- Quitado de `package.json`: `express-validator`, `uuid` (→ `crypto.randomUUID` en payments.js/ledger; imports sin uso fuera de cases/documents), `@google-cloud/firestore` (index.js usa `admin.firestore.Timestamp`), `nodemon` (`dev` = `node --watch`). Lockfile actualizado y `npm prune`.
+- `initBackoffice()` en `portal/js/auth.js` (login verificado + acceso de back-office + nombre + logout + enlaces solo-admin): usado por casos, bandeja, cotizaciones, formularios, empresas, expediente y configuracion (imports sin uso podados). `precios.html` tiene navbar propia y no se tocó en eso.
+- `precios.html` sobre `api.js` (`getPlan/savePlan/updatePricing`; muestra `err.message`/`body.error`, ya no "Error al guardar" genérico ni tabla vacía en silencio). `apiFetch` acepta `FormData` (no fuerza JSON): `uploadDocument` y `registerPayment` ahora son `apiFetch`.
+- `serializeTimestamps` único (messages.js, mcp.js, index.js lo usan; adiós `?.toDate?.()?.toISOString()` a mano). `STAFF_EXIT_OWNER` eliminado (`canTransitionCase` = solo analista).
+- Código muerto: quitados de `api.js` `createOrg`, `getQuote`, `deleteDocument` (sin consumidores en farmazed-web ni e2e). **Se dejaron las rutas** `POST /api/orgs`, `GET /api/quotes/:id`, `DELETE …/documents/:id`: las usan las pruebas de permisos/pagos y forman parte de la matriz de permisos.
+- No quitado: `uuid` sigue en `node_modules` por dependencia transitiva de `@google-cloud/storage`.
+
+**D. Grafo**: vis-network 9.1.6 vendorizado en `tracker/assets/vendor/` (SRI verificado igual al de unpkg) e inline en `code-graph.html` (`actualizar_grafo.sh` lo inserta y falla si queda `unpkg`); el HTML ya no tiene `<script src>` ni hosts externos (solo licencias en comentarios; prueba nueva en `code_graph`). CSP del iframe sin hosts: `default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:`. Comunidades con nombre real y determinista (sin LLM): `tracker/scripts/nombrar_comunidades.py` → "subscription.js + empresarial.js · símbolo más conectado". HTML ~1.6 MB (era 0.8).
+
+**Revisiones**: ecc:code-reviewer 0 CRITICAL/HIGH. MEDIUM 1 (initBackoffice exigiría correo verificado a admin/staff): revisado, falso — esas páginas ya usaban `requireVerifiedLogin`; no hay cambio. MEDIUM 2 (clave de orden sin hora) aplicado. LOW: clave de suscripción por hora es "mejor esfuerzo" (anotado); comentario viejo de STAFF_EXIT_OWNER en seed_roles.js (inocuo).
+
+**No hecho**: webhook (espera decisión de Rick); `bootstrap_admin.js` no fuerza `emailVerified:true` (si el admin real no tiene el correo verificado, el front ya lo manda a verificar-correo, como antes); el HTML del grafo sigue mostrando `label` de comunidad por innerHTML sin `esc` (ahora son nombres de archivo/símbolo del propio repo, contenido por el sandbox).

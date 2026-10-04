@@ -7,6 +7,7 @@
 // Corre con: ./e2e/run.sh quotes.spec.js (o ./e2e/run.sh para todos)
 
 const { test, expect } = require('@playwright/test');
+const { enviarLogin, guardarEstado } = require('./_esperas');
 const path = require('path');
 const fs   = require('fs');
 
@@ -25,8 +26,7 @@ async function login(page, email, password) {
   await page.goto('/login.html');
   await page.fill('#usuario', email);
   await page.fill('#password', password);
-  await page.click('button[type="submit"]');
-  await page.waitForURL(/(dashboard|client-dashboard)\.html/, { timeout: 15000 });
+  await enviarLogin(page, /(dashboard|client-dashboard|admin\/casos|admin\/bandeja)\.html/, 15000);
 }
 
 // TAREA 26: waitForURL en paralelo con el evaluate (no después) — si se
@@ -38,7 +38,7 @@ async function login(page, email, password) {
 // que la navegación de verdad ocurrió.
 async function logout(page) {
   await Promise.all([
-    page.waitForURL(/login\.html/, { timeout: 10000 }),
+    page.waitForURL(/login\.html/, { timeout: 10000, waitUntil: 'commit' }),
     page.evaluate(async () => {
       const { logout } = await import('/portal/js/auth.js');
       await logout();
@@ -69,12 +69,6 @@ const CASE_CODES = {
 // abortar (net::ERR_ABORTED — visto 3 veces corriendo la suite completa,
 // nunca corriendo este spec solo). `guardarEstado()` centraliza el
 // select+click+espera y dejo un margen después del alert antes de navegar.
-async function guardarEstado(page, to) {
-  await page.selectOption('#status-select', to);
-  await page.click('#btn-save-status');
-  await expect(page.locator('#status-select')).toHaveValue(to, { timeout: 10000 });
-  await page.waitForTimeout(300); // deja asentar el diálogo antes del próximo goto()
-}
 
 test.describe('R5/R12 — cotización agrupa 3 casos de una empresa', () => {
   test.beforeEach(async ({ page }) => {
@@ -110,8 +104,9 @@ test.describe('R5/R12 — cotización agrupa 3 casos de una empresa', () => {
     // al recargar, así que se verifica releyendo la cotización.
     const linea1 = card.locator('.linea-row[data-case="case-quote-test-1"]');
     await linea1.locator('.inp-honorarios').fill('1300');
+    const alerta = page.waitForEvent('dialog'); // el alert de error no navega; lo acepta page.on('dialog')
     await linea1.locator('.btn-guardar-linea').click();
-    await page.waitForTimeout(500); // el alert de error no navega — deja tiempo al dialog handler
+    await alerta;
     await page.reload();
     const linea1b = page.locator('.quote-card', { hasText: 'Laboratorios Alfa' }).locator('.linea-row[data-case="case-quote-test-1"]');
     await expect(linea1b.locator('.inp-honorarios')).toHaveValue('2055', { timeout: 10000 }); // sin cambio — el ajuste sin motivo no se aplicó

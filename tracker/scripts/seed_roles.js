@@ -44,12 +44,14 @@ const USERS = [
 ];
 
 async function upsertUser({ uid, email, name, role, orgId }) {
+  // TAREA 32: emailVerified:true — cuentas de prueba, no pasan por el
+  // registro abierto (ver seed_emulador.js para la misma nota completa).
   try {
     await auth.getUser(uid);
-    await auth.updateUser(uid, { email, password: PASSWORD, displayName: name });
+    await auth.updateUser(uid, { email, password: PASSWORD, displayName: name, emailVerified: true });
   } catch (e) {
     if (e.code === 'auth/user-not-found') {
-      await auth.createUser({ uid, email, password: PASSWORD, displayName: name });
+      await auth.createUser({ uid, email, password: PASSWORD, displayName: name, emailVerified: true });
     } else {
       throw e;
     }
@@ -245,6 +247,16 @@ async function main() {
     tipoRegistro: 'Abreviado', tipoMedicamento: ['Vacuna'], esInnovador: true,
     orgId: ORG_BETA, clientId: 'role-titular-beta', clientEmail: 'titular-beta@farmazed.test', clientName: 'Titular Beta',
     asignados: { analista: null, abogado: null, regente: null }, product: { nombreComercial: 'Producto Prioridad Innovadores Vacuna Test' },
+  }));
+
+  // TAREA 33 (§H.14): caso dedicado para el flujo de pago con PayPal
+  // (mock) — org Beta, Regular + Síntesis Química (categoría con fila
+  // propia en el tarifario, montos > 0 en honorarios/tasa_dnfd/mef/iea).
+  await db.collection('cases').doc('case-pago-paypal-test').set(baseCase({
+    status: 'fase_03', caseCode: 'FZ-MED-REG-2026-0117',
+    tipoRegistro: 'Regular', tipoMedicamento: ['Síntesis Química'],
+    orgId: ORG_BETA, clientId: 'role-titular-beta', clientEmail: 'titular-beta@farmazed.test', clientName: 'Titular Beta',
+    asignados: { analista: null, abogado: null, regente: null }, product: { nombreComercial: 'Producto Pago PayPal Test' },
   }));
 
   // Caso de org Beta — para el 403 cruzado (titular/miembro de Alfa no debe verlo).

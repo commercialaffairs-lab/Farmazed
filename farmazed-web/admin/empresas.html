@@ -33,6 +33,7 @@
   <a href="/admin/empresas.html" class="active"><i class="bi bi-building me-2"></i>Empresas</a>
   <a href="/admin/precios.html"><i class="bi bi-cash-coin me-2"></i>Precios</a>
   <div class="section-label">Sistema</div>
+  <a href="/admin/configuracion.html" id="nav-configuracion" style="display:none"><i class="bi bi-gear me-2"></i>Configuración</a>
   <a href="#" id="sidebar-logout"><i class="bi bi-box-arrow-left me-2"></i>Cerrar Sesión</a>
 </div>
 
@@ -52,7 +53,7 @@
           <div id="orgs-list" class="p-2"><div class="text-muted small p-2">Cargando…</div></div>
         </div>
 
-        <div class="card border-0 shadow-sm mb-4 p-3">
+        <div class="card border-0 shadow-sm mb-4 p-3" id="invitar-titular-card">
           <div class="fw-semibold small mb-2">Invitar titular (crea empresa nueva)</div>
           <form id="form-invitar-titular">
             <input type="email" class="form-control form-control-sm mb-2" id="titular-email" placeholder="Correo del titular" required>
@@ -63,7 +64,7 @@
       </div>
 
       <!-- Empleados -->
-      <div class="col-lg-6">
+      <div class="col-lg-6" id="empleados-col">
         <div class="card border-0 shadow-sm mb-4">
           <div class="card-header bg-white fw-semibold small">Empleados Farmazed</div>
           <div id="employees-list" class="p-2"><div class="text-muted small p-2">Cargando…</div></div>
@@ -85,7 +86,7 @@
       </div>
     </div>
 
-    <div class="card border-0 shadow-sm">
+    <div class="card border-0 shadow-sm" id="invitaciones-card">
       <div class="card-header bg-white fw-semibold small">Invitaciones</div>
       <div class="table-responsive">
         <table class="table table-sm mb-0" id="invitations-table">
@@ -107,38 +108,150 @@
 </div>
 
 <script type="module">
-  import { requireLogin, isAdmin, logout } from '../portal/js/auth.js';
+  import { initBackoffice, esc, logout } from '../portal/js/auth.js';
   import api from '../portal/js/api.js';
 
   let orgsCache = [];
+  let employeesCache = []; // TAREA 34 (§H.15): para el select de "gestor de cuenta" (analista)
+  // TAREA 35: esta página ya no es admin-only — el staff (analista/abogado/
+  // regente) entra para "Cargar diagnóstico" (Plan Consulta). Qué botones/
+  // paneles ve cada uno sale de sus permisos reales (GET /api/me/permissions),
+  // no de un segundo if de rol hardcodeado aquí — "ver miembros", "definir
+  // condiciones", invitar titular/empleado y la tabla de invitaciones siguen
+  // siendo acciones de backend solo-admin (orgs.manage/empresarial.manage/
+  // invitations.*), así que si esta variable estuviera mal el peor caso es
+  // un botón que igual rebota en 403, no un hueco de seguridad.
+  let isUserAdmin = false;
 
   async function init() {
-    const user = await requireLogin('/login.html');
-    if (!(await isAdmin())) { window.location.href = '/client-dashboard.html'; return; }
-    document.getElementById('user-name').textContent = user.displayName || user.email;
-    document.getElementById('sidebar-logout').addEventListener('click', logout);
+    const sesion = await initBackoffice();
+    if (!sesion) return;
+    isUserAdmin = sesion.admin;
 
-    await Promise.all([loadOrgs(), loadEmployees(), loadInvitations()]);
+    if (!isUserAdmin) {
+      // El staff solo necesita la lista de empresas (para llegar a "Cargar
+      // diagnóstico") — employees.list e invitations.read son admin-only en
+      // el backend, pedirlos igual solo daría un 403 que no hace falta.
+      document.getElementById('empleados-col').style.display = 'none';
+      document.getElementById('invitaciones-card').style.display = 'none';
+      document.getElementById('invitar-titular-card').style.display = 'none';
+      await loadOrgs();
+    } else {
+      await Promise.all([loadOrgs(), loadEmployees(), loadInvitations()]);
+    }
     document.getElementById('loading').classList.add('d-none');
     document.getElementById('content').style.display = 'block';
   }
 
+  // TAREA 34 (§H.15): plan de cada empresa + acciones del staff según el
+  // plan — Diagnóstico (Consulta) / Definir condiciones (Empresarial, solo
+  // si ya hay una solicitud 'solicitada'). Panel inline, toggle por fila
+  // (mismo criterio liviano que `verMiembros`, sin un router de detalle).
+  const PLAN_LABEL = { consulta: 'Consulta', registro: 'Registro', empresarial: 'Empresarial' };
   async function loadOrgs() {
     const { orgs } = await api.getOrgs();
     orgsCache = orgs;
     document.getElementById('orgs-list').innerHTML = orgs.length
-      ? orgs.map(o => `
-        <div class="d-flex align-items-center justify-content-between border-bottom py-2 px-2">
-          <div>
-            <div class="small fw-semibold">${o.nombre}</div>
-            <div class="text-muted" style="font-size:.7rem">${o.id}</div>
+      ? orgs.map(o => {
+          const plan = o.plan;
+          const propuesta = o.propuestaEmpresarial;
+          const diagnosticoBtn = plan === 'consulta'
+            ? `<button class="btn btn-xs btn-outline-primary btn-sm py-0 px-2 small" onclick="toggleDiagnostico('${esc(o.id)}')">${o.diagnostico ? 'Editar diagnóstico' : 'Cargar diagnóstico'}</button>`
+            : '';
+          // "Definir condiciones" (empresarial.manage) y "Ver miembros"
+          // (orgs.manage) son acciones solo-admin en el backend — el staff
+          // solo llega hasta "Cargar diagnóstico" (orgs.edit_diagnostico).
+          const condicionesBtn = isUserAdmin && plan === 'empresarial' && propuesta?.estado === 'solicitada'
+            ? `<button class="btn btn-xs btn-outline-warning btn-sm py-0 px-2 small" onclick="toggleCondiciones('${esc(o.id)}')">Definir condiciones</button>`
+            : '';
+          const miembrosBtn = isUserAdmin
+            ? `<button class="btn btn-xs btn-outline-secondary btn-sm py-0 px-2 small" onclick="verMiembros('${esc(o.id)}')">Ver miembros</button>`
+            : '';
+          return `
+        <div class="border-bottom py-2 px-2">
+          <div class="d-flex align-items-center justify-content-between">
+            <div>
+              <div class="small fw-semibold">${esc(o.nombre)} ${plan ? `<span class="badge bg-secondary-subtle text-secondary border ms-1">${esc(PLAN_LABEL[plan] || plan)}</span>` : ''}</div>
+              <div class="text-muted" style="font-size:.7rem">${esc(o.id)}</div>
+            </div>
+            <div class="d-flex gap-1">
+              ${diagnosticoBtn}
+              ${condicionesBtn}
+              ${miembrosBtn}
+            </div>
           </div>
-          <button class="btn btn-xs btn-outline-secondary btn-sm py-0 px-2 small" onclick="verMiembros('${o.id}','${o.nombre.replace(/'/g,"\\'")}')">Ver miembros</button>
-        </div>`).join('')
+          <div id="panel-${esc(o.id)}" class="mt-2 d-none"></div>
+        </div>`;
+        }).join('')
       : '<div class="text-muted small p-2">Sin empresas todavía.</div>';
   }
 
-  window.verMiembros = async (orgId, nombre) => {
+  window.toggleDiagnostico = (orgId) => {
+    const org = orgsCache.find(o => o.id === orgId);
+    const panel = document.getElementById(`panel-${orgId}`);
+    if (!panel.classList.contains('d-none')) { panel.classList.add('d-none'); panel.innerHTML = ''; return; }
+    const d = org.diagnostico || {};
+    panel.innerHTML = `
+      <form class="card card-body p-2" id="form-diagnostico-${esc(orgId)}">
+        <input class="form-control form-control-sm mb-1" name="clasificacion" placeholder="Clasificación del producto" value="${esc(d.clasificacion)}" required>
+        <input class="form-control form-control-sm mb-1" name="rutaRecomendada" placeholder="Ruta recomendada" value="${esc(d.rutaRecomendada)}" required>
+        <input class="form-control form-control-sm mb-1" name="requisitosAplicables" placeholder="Requisitos aplicables" value="${esc(d.requisitosAplicables)}" required>
+        <input class="form-control form-control-sm mb-1" name="estimadoTiempos" placeholder="Estimado de tiempos" value="${esc(d.estimadoTiempos)}" required>
+        <input class="form-control form-control-sm mb-2" name="estimadoCostos" placeholder="Estimado de costos oficiales" value="${esc(d.estimadoCostos)}" required>
+        <button type="submit" class="btn btn-sm btn-primary">Guardar diagnóstico</button>
+      </form>`;
+    panel.classList.remove('d-none');
+    document.getElementById(`form-diagnostico-${orgId}`).addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      try {
+        await api.saveDiagnostico(orgId, Object.fromEntries(fd));
+        alert('Diagnóstico guardado.');
+        panel.classList.add('d-none'); panel.innerHTML = '';
+        loadOrgs();
+      } catch (err) { alert('Error: ' + err.message); }
+    });
+  };
+
+  window.toggleCondiciones = (orgId) => {
+    const org = orgsCache.find(o => o.id === orgId);
+    const panel = document.getElementById(`panel-${orgId}`);
+    if (!panel.classList.contains('d-none')) { panel.classList.add('d-none'); panel.innerHTML = ''; return; }
+    const p = org.propuestaEmpresarial;
+    const analistas = employeesCache.filter(e => e.role === 'analista');
+    panel.innerHTML = `
+      <div class="card card-body p-2">
+        <p class="small text-muted mb-2"><strong>Productos estimados:</strong> ${esc(p.productosEstimados)}<br>
+          <strong>Necesidades:</strong> ${['modificaciones','etiquetado','informes'].filter(k => p.necesidades?.[k]).join(', ') || '(ninguna marcada)'}</p>
+        <form id="form-condiciones-${esc(orgId)}">
+          <input class="form-control form-control-sm mb-1" name="monto" type="number" step="0.01" min="0.01" placeholder="Monto (USD)" required>
+          <select class="form-select form-select-sm mb-1" name="periodo" required>
+            <option value="mensual">Mensual</option><option value="anual">Anual</option>
+          </select>
+          <select class="form-select form-select-sm mb-2" name="gestorCuenta" required>
+            <option value="">Gestor de cuenta (analista)…</option>
+            ${analistas.map(a => `<option value="${esc(a.uid)}">${esc(a.email)}</option>`).join('')}
+          </select>
+          <button type="submit" class="btn btn-sm btn-primary">Guardar condiciones</button>
+        </form>
+      </div>`;
+    panel.classList.remove('d-none');
+    document.getElementById(`form-condiciones-${orgId}`).addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      try {
+        await api.definirCondicionesEmpresarial(orgId, {
+          monto: Number(fd.get('monto')), periodo: fd.get('periodo'), gestorCuenta: fd.get('gestorCuenta'),
+        });
+        alert('Condiciones guardadas.');
+        panel.classList.add('d-none'); panel.innerHTML = '';
+        loadOrgs();
+      } catch (err) { alert('Error: ' + err.message); }
+    });
+  };
+
+  window.verMiembros = async (orgId) => {
+    const nombre = orgsCache.find(o => o.id === orgId)?.nombre || orgId;
     try {
       const { members } = await api.getOrgMembers(orgId);
       const lista = members.length
@@ -150,11 +263,12 @@
 
   async function loadEmployees() {
     const { employees } = await api.getEmployees();
+    employeesCache = employees;
     document.getElementById('employees-list').innerHTML = employees.length
       ? employees.map(e => `
         <div class="d-flex align-items-center justify-content-between border-bottom py-2 px-2">
-          <div class="small">${e.email}</div>
-          <span class="badge bg-secondary-subtle text-secondary border">${e.role}</span>
+          <div class="small">${esc(e.email)}</div>
+          <span class="badge bg-secondary-subtle text-secondary border">${esc(e.role)}</span>
         </div>`).join('')
       : '<div class="text-muted small p-2">Sin empleados todavía.</div>';
   }
@@ -165,14 +279,14 @@
     document.getElementById('invitations-tbody').innerHTML = invitations.length
       ? invitations.map(inv => `
         <tr>
-          <td class="small ps-3">${inv.email}</td>
-          <td class="small">${inv.role}</td>
-          <td class="small">${inv.orgId ? orgName(inv.orgId) : '—'}</td>
+          <td class="small ps-3">${esc(inv.email)}</td>
+          <td class="small">${esc(inv.role)}</td>
+          <td class="small">${inv.orgId ? esc(orgName(inv.orgId)) : '—'}</td>
           <td>${inv.used
             ? '<span class="badge bg-success-subtle text-success border">Usada</span>'
             : '<span class="badge bg-warning-subtle text-warning border">Pendiente</span>'}</td>
           <td class="small font-monospace text-truncate" style="max-width:220px">
-            ${inv.used ? '—' : `/aceptar-invitacion.html?token=${inv.id}`}
+            ${inv.used ? '—' : `/aceptar-invitacion.html?token=${esc(inv.id)}`}
           </td>
         </tr>`).join('')
       : '<tr><td colspan="5" class="text-center text-muted py-3">Sin invitaciones todavía.</td></tr>';

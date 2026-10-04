@@ -270,6 +270,27 @@
     ⚠️ <strong>Nota:</strong> Estos precios se muestran como costo estimado en el portal del cliente. Farmazed emite cotización formal antes de iniciar cada trámite.
   </div>
 
+  <!-- TAREA 33 (§H.14): plan recurrente de "costo por uso de la plataforma" —
+       separado del tarifario de arriba (eso es por trámite; esto es mensual/
+       anual, fijo, por empresa). -->
+  <div class="notice" style="background:#fff;border:1px solid var(--border);">
+    <h2 style="font-size:1rem;margin-bottom:8px;">Plan de suscripción (uso de la plataforma)</h2>
+    <p id="plan-actual" class="subtitle" style="margin-bottom:12px;">Cargando…</p>
+    <form id="form-plan" style="display:flex;gap:8px;flex-wrap:wrap;align-items:end;">
+      <div><label style="font-size:.78rem;display:block;">Nombre</label>
+        <input type="text" id="plan-nombre" required style="padding:6px;border:1px solid var(--input-border);border-radius:4px;"></div>
+      <div><label style="font-size:.78rem;display:block;">Monto (USD)</label>
+        <input type="number" id="plan-monto" min="0.01" step="0.01" required style="padding:6px;border:1px solid var(--input-border);border-radius:4px;width:110px;"></div>
+      <div><label style="font-size:.78rem;display:block;">Período</label>
+        <select id="plan-periodo" style="padding:6px;border:1px solid var(--input-border);border-radius:4px;">
+          <option value="mensual">Mensual</option>
+          <option value="anual">Anual</option>
+        </select></div>
+      <button type="submit" style="padding:7px 16px;background:var(--accent);color:#fff;border:none;border-radius:4px;cursor:pointer;">Guardar plan</button>
+    </form>
+    <div id="plan-msg" style="font-size:.82rem;margin-top:6px;"></div>
+  </div>
+
   <div id="loading">
     <div class="spinner"></div>
     Cargando tarifas…
@@ -283,7 +304,8 @@
   // valor compartido) a la sesión real de Firebase con rol admin — mismo
   // patrón que casos.html/expediente.html. API_BASE ya no se repite a mano
   // aquí, sale de auth.js.
-  import { requireLogin, isAdmin, logout, getToken, API_BASE } from '../portal/js/auth.js';
+  import { esc, requireVerifiedLogin, isAdmin, logout } from '../portal/js/auth.js';
+  import api from '../portal/js/api.js';
 
   const COMPONENT_LABELS = {
     honorarios_farmazed:   'Honorarios Farmazed',
@@ -308,22 +330,61 @@
 
   // ── Auth + init ─────────────────────────────────────────────────────────────
   async function init() {
-    const user = await requireLogin('/login.html');
+    const user = await requireVerifiedLogin('/login.html');
+    if (!user) return; // en camino a verificar-correo.html
     if (!(await isAdmin())) { window.location.href = '/client-dashboard.html'; return; }
     document.getElementById('nav-user').textContent = user.displayName || user.email;
     loadPricing();
+    loadPlan();
   }
+
+  // TAREA 33 (§H.14): plan recurrente — el proveedor (PayPal real o mock)
+  // sale de `services/payments/index.js` en el servidor; acá solo se
+  // manda nombre/monto/período, nunca un planId a mano.
+  async function loadPlan() {
+    try {
+      const { plan } = await api.getPlan();
+      document.getElementById('plan-actual').textContent = plan
+        ? `Actual: ${plan.nombre} — $${plan.monto} / ${plan.periodo} (proveedor: ${plan.proveedor})`
+        : 'Todavía no hay un plan configurado.';
+      if (plan) {
+        document.getElementById('plan-nombre').value = plan.nombre;
+        document.getElementById('plan-monto').value = plan.monto;
+        document.getElementById('plan-periodo').value = plan.periodo;
+      }
+    } catch (err) {
+      document.getElementById('plan-actual').textContent = `Error al cargar el plan: ${err.message}`;
+    }
+  }
+
+  document.getElementById('form-plan').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const msg = document.getElementById('plan-msg');
+    msg.textContent = '';
+    try {
+      await api.savePlan({
+        nombre: document.getElementById('plan-nombre').value.trim(),
+        monto: Number(document.getElementById('plan-monto').value),
+        periodo: document.getElementById('plan-periodo').value,
+      });
+      msg.style.color = 'var(--success)';
+      msg.textContent = 'Plan guardado.';
+      loadPlan();
+    } catch (err) {
+      msg.style.color = 'var(--danger)';
+      msg.textContent = err.message;
+    }
+  });
 
   // ── Load ────────────────────────────────────────────────────────────────────
   async function loadPricing() {
     try {
-      const res = await fetch(`${API_BASE}/api/admin/pricing`);
-      const data = await res.json();
+      const data = await api.getPricing();
       allPricing = data.pricing || [];
       renderPricing(allPricing);
     } catch (err) {
       document.getElementById('loading').innerHTML =
-        '<p style="color:var(--danger)">Error al cargar los precios. Verifica la conexión con la API.</p>';
+        `<p style="color:var(--danger)">Error al cargar los precios: ${esc(err.message)}</p>`;
     }
   }
 
@@ -342,7 +403,7 @@
       return `
         <div class="grupo-section">
           <div class="grupo-header" onclick="toggleGrupo(this)">
-            ${grupo}
+            ${esc(grupo)}
             <span class="count">${items.length}</span>
             <span class="toggle">▾</span>
           </div>
@@ -361,37 +422,37 @@
         <div class="input-wrap">
           <span class="prefix">B/.</span>
           <input type="number" min="0" step="1"
-            data-key="${k}" data-id="${item.id}"
+            data-key="${k}" data-id="${esc(item.id)}"
             value="${comps[k] || 0}"
-            oninput="recomputeTotal('${item.id}')" />
+            oninput="recomputeTotal('${esc(item.id)}')" />
         </div>
       </div>`).join('');
 
     return `
-      <div class="price-card" id="card-${item.id}">
+      <div class="price-card" id="card-${esc(item.id)}">
         <div class="card-top">
-          <div class="tramite-name">${item.name}</div>
-          <div class="total-display" id="total-${item.id}">
+          <div class="tramite-name">${esc(item.name)}</div>
+          <div class="total-display" id="total-${esc(item.id)}">
             B/. ${(item.total || 0).toLocaleString('es-PA')}
             <span>total</span>
           </div>
         </div>
-        <div class="desglose-row" id="desglose-${item.id}">
+        <div class="desglose-row" id="desglose-${esc(item.id)}">
           <div class="item honorarios">
             <span class="label">Honorarios Farmazed</span>
-            <span class="amount" id="desglose-honorarios-${item.id}">B/. ${(item.honorariosFarmazed || 0).toLocaleString('es-PA')}</span>
+            <span class="amount" id="desglose-honorarios-${esc(item.id)}">B/. ${(item.honorariosFarmazed || 0).toLocaleString('es-PA')}</span>
           </div>
           <div class="item tasas">
             <span class="label">Tasas oficiales</span>
-            <span class="amount" id="desglose-tasas-${item.id}">B/. ${(item.tasasOficiales || 0).toLocaleString('es-PA')}</span>
+            <span class="amount" id="desglose-tasas-${esc(item.id)}">B/. ${(item.tasasOficiales || 0).toLocaleString('es-PA')}</span>
           </div>
         </div>
         <div class="components-grid">${fieldsHtml}</div>
         <div class="card-footer">
           <input class="notes-input" placeholder="Notas internas (opcional)"
-            id="notes-${item.id}" value="${item.notes || ''}" />
-          <button class="save-btn" onclick="saveCategory('${item.id}')">Guardar</button>
-          <span class="feedback" id="fb-${item.id}"></span>
+            id="notes-${esc(item.id)}" value="${esc(item.notes)}" />
+          <button class="save-btn" onclick="saveCategory('${esc(item.id)}')">Guardar</button>
+          <span class="feedback" id="fb-${esc(item.id)}"></span>
         </div>
       </div>`;
   }
@@ -431,23 +492,13 @@
     fb.style.display = 'none';
 
     try {
-      const token = await getToken();
-      const res = await fetch(`${API_BASE}/api/admin/pricing/${categoryId}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ components, notes })
-      });
-
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      await api.updatePricing(categoryId, { components, notes });
 
       fb.className = 'feedback success';
       fb.textContent = '✓ Guardado';
     } catch (err) {
       fb.className = 'feedback error';
-      fb.textContent = '✗ Error al guardar';
+      fb.textContent = `✗ ${err.message}`;
       console.error(err);
     } finally {
       btn.disabled = false;

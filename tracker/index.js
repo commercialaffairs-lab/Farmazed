@@ -6,32 +6,75 @@ const express  = require('express');
 const cors     = require('cors');
 const helmet   = require('helmet');
 const admin    = require('firebase-admin');
-const { Firestore } = require('@google-cloud/firestore');
 const { requireAuth, requireAdmin } = require('./middleware/auth');
 const { requirePermission } = require('./middleware/permissions');
+const { crearLimitador } = require('./utils/rate_limit');
+const { serializeTimestamps } = require('./utils/serialize');
+const { obtenerConfig, origenPermitido } = require('./config');
+
+// TAREA 40: ningún proceso malogrado se queda "a medias" sin que nadie se entere.
+process.on('unhandledRejection', (razon) => console.error('[unhandledRejection]', razon));
+process.on('uncaughtException', (err) => { console.error('[uncaughtException]', err); process.exit(1); });
+
+// TAREA 40: la configuración se valida UNA vez, al arrancar (tracker/config.js):
+// sin proyecto/bucket por defecto, sin apuntar a producción por accidente desde un
+// entorno local, y con pagos reales + MCP_KEY fuerte en producción. Si algo falta,
+// el proceso sale con un mensaje claro en vez de arrancar mal configurado.
+let config;
+try {
+  config = obtenerConfig();
+} catch (e) {
+  console.error(`❌ ${e.message}`);
+  process.exit(1);
+}
+
+if (config.produccion && process.env.PAYPAL_ENV === 'sandbox') {
+  console.warn('[config] ⚠️  producción con PAYPAL_ENV=sandbox: los cobros NO son reales (pero sí abren el gate de fase_05).');
+}
 
 // Firebase Admin init — credentials via attached service account (Cloud Run)
 // or GOOGLE_APPLICATION_CREDENTIALS env var (local dev).
-// FIREBASE_PROJECT_ID solo se usa en dev local contra los emuladores
-// (ver DEV_LOCAL.md) — sin la env var, se comporta igual que antes en prod.
-admin.initializeApp({
-  projectId:     process.env.FIREBASE_PROJECT_ID || 'farmazed',
-  storageBucket: process.env.GCS_BUCKET || 'farmazed-docs',
-});
+admin.initializeApp({ projectId: config.projectId, storageBucket: config.bucket });
 
 const app = express();
 app.use(helmet({ contentSecurityPolicy: false }));
+
+// CORS (TAREA 40/41): producción solo los orígenes de la LISTA explícita (CORS_ORIGINS; default
+// https://farmazed.com y https://www.farmazed.com — sin comodines de subdominio). Fuera de
+// producción (= emulador) se acepta además cualquier puerto de localhost/127.0.0.1:
+// el del frontend/tracker varía según qué esté libre en Patch esa corrida (TAREA 31).
+// Ver origenPermitido() en tracker/config.js.
 app.use(cors({
-  origin: [
-    'https://farmazed.com',
-    'https://www.farmazed.com',
-    /\.farmazed\.com$/,
-    'http://localhost:8092',
-    'http://localhost:3000',
-  ],
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true); // same-origin, curl, server-to-server: sin header Origin.
+    callback(null, origenPermitido(origin, config));
+  },
   credentials: true,
 }));
+// TAREA 39: Cloud Run pone UN balanceador delante — con trust proxy 1, req.ip es la
+// IP que ese balanceador agregó (la real), no el x-forwarded-for que mande el cliente.
+app.set('trust proxy', config.trustProxy); // TRUST_PROXY (default 1); si delante hay más saltos (LB/CDN), 2...
 app.use(express.json({ limit: '1mb' }));
+
+// TAREA 40 — errores 500 genéricos. Las rutas atrapan sus errores y responden
+// `{ error: e.message }`: ese texto puede traer detalles internos (rutas de Firestore,
+// el cuerpo de una respuesta de PayPal con su debug_id…). Toda respuesta 500 con
+// `error` sale con un mensaje genérico y el detalle va al log del servidor con la ruta
+// y el usuario. Los 4xx con mensaje de negocio (y el 502 ya genérico del proveedor de
+// pagos) no se tocan; una respuesta 500 deliberadamente informativa se marca con
+// `res.locals.errorControlado = true`.
+const MENSAJE_500 = 'Error interno del servidor. Si se repite, contacta a Farmazed.';
+app.use((req, res, next) => {
+  const json = res.json.bind(res);
+  res.json = (cuerpo) => {
+    if (res.statusCode === 500 && !res.locals.errorControlado && cuerpo && typeof cuerpo === 'object' && 'error' in cuerpo) {
+      console.error('[500]', req.method, req.originalUrl, { uid: req.user?.uid || null, error: cuerpo.error });
+      return json({ error: MENSAJE_500 });
+    }
+    return json(cuerpo);
+  };
+  next();
+});
 
 // Health
 app.get('/',       (req, res) => res.json({ service: 'farmazed-api', version: '2.0.0', status: 'ok' }));
@@ -47,11 +90,16 @@ function detectDevice(ua) {
   return 'desktop';
 }
 
+// TAREA 39: endpoint público que escribe en Firestore en cada visita — mismo
+// limitador que register/contact-leads (por IP real, req.ip). Pasado el límite
+// igual redirige, solo deja de registrar el escaneo.
+const qrLimitador = crearLimitador({ ventanaMs: 10 * 60 * 1000, max: 60 });
 app.get('/qr', async (req, res) => {
   try {
-    const ua  = req.headers['user-agent'] || '';
-    const ip  = (req.headers['x-forwarded-for'] || req.ip || '').split(',')[0].trim();
-    await db.collection('qr_scans').add({ timestamp: Firestore.Timestamp.now(), ip, device: detectDevice(ua), ua });
+    if (!qrLimitador.estaLimitado(req.ip)) {
+      const ua = req.headers['user-agent'] || '';
+      await db.collection('qr_scans').add({ timestamp: admin.firestore.Timestamp.now(), ip: req.ip, device: detectDevice(ua), ua });
+    }
   } catch (e) { console.error('QR log error:', e.message); }
   res.redirect(302, REDIRECT_URL);
 });
@@ -62,7 +110,7 @@ app.get('/api/scans', requireAuth, requireAdmin, async (req, res) => {
     const snap  = await db.collection('qr_scans').orderBy('timestamp', 'desc').limit(1000).get();
     const scans = snap.docs.map(d => {
       const data = d.data();
-      return { id: d.id, timestamp: data.timestamp.toDate().toISOString(), ip: data.ip, device: data.device };
+      return { id: d.id, timestamp: serializeTimestamps(data.timestamp), ip: data.ip, device: data.device };
     });
     res.json({ total: scans.length, scans });
   } catch (e) { console.error('Firestore read error:', e.message); res.status(500).json({ error: e.message }); }
@@ -115,6 +163,7 @@ const employeesRouter   = require('./routes/employees');
 const meRouter          = require('./routes/me');
 const formulariosRouter = require('./routes/formularios');
 const quotesRouter      = require('./routes/quotes');
+const registerRouter    = require('./routes/register');
 
 app.use('/api/cases', casesRouter);
 app.use('/api/cases/:caseId/documents', documentsRouter);
@@ -133,6 +182,12 @@ app.use('/api/orgs',         orgsRouter);
 app.use('/api/invitations',  invitationsRouter);
 app.use('/api/employees',    employeesRouter);
 app.use('/api/me',           meRouter);
+app.use('/api/register',     registerRouter); // TAREA 32: registro abierto, público
+app.use('/api/subscription', require('./routes/subscription')); // TAREA 33: plan recurrente §H.14
+app.use('/api/webhooks/paypal', require('./routes/webhooks'));  // TAREA 33: listo, sin uso en local
+app.use('/api/contact-leads', require('./routes/contact_leads')); // TAREA 34: leads sin cuenta, §H.15
+app.use('/api/admin', require('./routes/system'));                // TAREA 41b: Configuración del admin (mapa del código)
+app.use('/api/empresarial', require('./routes/empresarial'));     // TAREA 34: Plan Empresarial, §H.15
 
 // ── MCP Server for Claude Cowork ──────────────────────────────────────────────
 const mcpRouter = require('./routes/mcp');
@@ -148,7 +203,12 @@ app.use('/', metaRouter);
 
 // ── 404 + global error ────────────────────────────────────────────────────────
 app.use((req, res) => res.status(404).json({ error: `Not found: ${req.method} ${req.path}` }));
-app.use((err, req, res, next) => { console.error(err); res.status(500).json({ error: err.message }); });
+// Errores que llegan hasta aquí (throw síncrono, next(err), JSON malformado del body).
+app.use((err, req, res, next) => {
+  const status = err.status >= 400 && err.status < 500 ? err.status : 500;
+  console.error(`[${status}]`, req.method, req.originalUrl, { uid: req.user?.uid || null }, err);
+  res.status(status).json({ error: status === 500 ? MENSAJE_500 : 'Petición inválida.' });
+});
 
 const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => {

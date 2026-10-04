@@ -37,6 +37,7 @@
   <a href="/admin/empresas.html" id="nav-empresas" style="display:none"><i class="bi bi-building me-2"></i>Empresas</a>
   <a href="/admin/precios.html" id="nav-precios" style="display:none"><i class="bi bi-cash-coin me-2"></i>Precios</a>
   <div class="section-label">Sistema</div>
+  <a href="/admin/configuracion.html" id="nav-configuracion" style="display:none"><i class="bi bi-gear me-2"></i>Configuración</a>
   <a href="#" id="sidebar-logout"><i class="bi bi-box-arrow-left me-2"></i>Cerrar Sesión</a>
 </div>
 
@@ -49,6 +50,22 @@
 
   <div class="p-4">
     <p class="text-muted small mb-3" id="rol-intro"></p>
+
+    <!-- TAREA 32 (§H.13): leads de registro abierto — empresas con captación
+         completada que Farmazed todavía no revisó. Visible para staff y
+         admin (orgs.read_leads), no son expedientes (no tienen caso
+         todavía) — card aparte, arriba de la bandeja de casos. -->
+    <div class="card border-0 shadow-sm mb-3 d-none" id="leads-card">
+      <div class="card-header bg-white fw-semibold small">Clientes nuevos — revisar captación</div>
+      <div class="list-group list-group-flush" id="leads-list"></div>
+    </div>
+
+    <!-- TAREA 34 (§H.15): "Enviar consulta" del hero — SIN cuenta todavía
+         (a diferencia de la card de arriba). -->
+    <div class="card border-0 shadow-sm mb-3 d-none" id="contact-leads-card">
+      <div class="card-header bg-white fw-semibold small">Consultas del sitio (sin cuenta)</div>
+      <div class="list-group list-group-flush" id="contact-leads-list"></div>
+    </div>
 
     <div class="card border-0 shadow-sm">
       <div class="table-responsive">
@@ -72,7 +89,7 @@
 </div>
 
 <script type="module">
-  import { requireLogin, hasBackofficeAccess, isAdmin, logout } from '../portal/js/auth.js';
+  import { initBackoffice, esc, logout } from '../portal/js/auth.js';
   import api from '../portal/js/api.js';
   import { getFullMeta } from '../portal/js/status_ui.js';
 
@@ -87,16 +104,16 @@
   let statusMeta, role;
 
   async function init() {
-    const user = await requireLogin('/login.html');
-    if (!(await hasBackofficeAccess())) { window.location.href = '/client-dashboard.html'; return; }
-    document.getElementById('user-name').textContent = user.displayName || user.email;
-    document.getElementById('sidebar-logout').addEventListener('click', logout);
+    if (!(await initBackoffice())) return;
 
     const myPerms = await api.getMyPermissions();
     role = myPerms.role;
-    if (role === 'admin') {
+    // TAREA 35: "Empresas" ahora también es para el staff (necesita llegar
+    // a "Cargar diagnóstico") — se muestra según el permiso real
+    // (orgs.list), no hardcodeado a role==='admin'. "Precios" sigue siendo
+    // solo admin.
+    if (myPerms.permissions.includes('orgs.list')) {
       document.getElementById('nav-empresas').style.display = '';
-      document.getElementById('nav-precios').style.display = '';
     }
     document.getElementById('rol-intro').textContent = {
       analista: 'Casos asignados a ti — avanzas todas las fases secuenciales, y la fase 8 (cuando las dos confirmaciones ya estén) y la fase 10.',
@@ -107,6 +124,88 @@
 
     statusMeta = await getFullMeta();
     await loadBandeja();
+    await loadLeads(); // TAREA 32 (§H.13) — "Clientes nuevos — revisar captación"
+    await loadContactLeads(); // TAREA 34 (§H.15) — "Enviar consulta" del hero, sin cuenta
+  }
+
+  // TAREA 32 (§H.13): leads de registro abierto, todavía sin caso — por eso
+  // es una card aparte y no una fila de #bandeja-table (esa tabla es de
+  // CASOS). orgs.read_leads ya cubre staff+admin, por eso no hay otro check
+  // de rol acá (si el permiso 403, el catch lo oculta silencioso).
+  async function loadLeads() {
+    try {
+      const { leads } = await api.getLeads();
+      const card = document.getElementById('leads-card');
+      const list = document.getElementById('leads-list');
+      if (!leads.length) { card.classList.add('d-none'); return; }
+
+      list.innerHTML = leads.map(org => `
+        <div class="list-group-item d-flex justify-content-between align-items-center" data-org-id="${esc(org.id)}">
+          <div>
+            <span class="badge bg-warning text-dark me-2">Cliente nuevo</span>
+            <strong class="small">${esc(org.nombre)}</strong>
+            <span class="text-muted small"> — ${esc(org.captacion.paisYNombreFabricante)}, ${esc((org.captacion.categoriasProducto || []).join('/'))}</span>
+          </div>
+          <button class="btn btn-sm btn-outline-secondary btn-marcar-revisado">Marcar revisado</button>
+        </div>`).join('');
+
+      list.querySelectorAll('.btn-marcar-revisado').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          const row = e.target.closest('[data-org-id]');
+          btn.disabled = true;
+          try {
+            await api.marcarLeadRevisado(row.dataset.orgId);
+            row.remove();
+            if (!list.children.length) card.classList.add('d-none');
+          } catch (err) {
+            btn.disabled = false;
+            alert(err.message);
+          }
+        });
+      });
+
+      card.classList.remove('d-none');
+    } catch (e) { /* sin permiso o sin leads — no romper el resto de la bandeja */ }
+  }
+
+  // TAREA 34 (§H.15): "Enviar consulta" del hero — sin cuenta, por eso
+  // "Invitar a crear cuenta" (pide el nombre de la empresa y crea
+  // org+invitación con el correo del lead, reusa invitations.js).
+  async function loadContactLeads() {
+    try {
+      const { leads } = await api.getContactLeads();
+      const card = document.getElementById('contact-leads-card');
+      const list = document.getElementById('contact-leads-list');
+      if (!leads.length) { card.classList.add('d-none'); return; }
+
+      list.innerHTML = leads.map(l => `
+        <div class="list-group-item d-flex justify-content-between align-items-center" data-lead-id="${esc(l.id)}">
+          <div>
+            <strong class="small">${esc(l.nombre)}</strong>
+            <span class="text-muted small"> — ${esc(l.correo)}${l.empresa ? `, ${esc(l.empresa)}` : ''}${l.tipoProducto ? ` (${esc(l.tipoProducto)})` : ''}</span>
+          </div>
+          <button class="btn btn-sm btn-outline-primary btn-invitar-lead">Invitar a crear cuenta</button>
+        </div>`).join('');
+
+      list.querySelectorAll('.btn-invitar-lead').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          const row = e.target.closest('[data-lead-id]');
+          const orgName = prompt('Nombre de la empresa para esta invitación:');
+          if (!orgName) return;
+          btn.disabled = true;
+          try {
+            await api.invitarContactLead(row.dataset.leadId, orgName);
+            row.remove();
+            if (!list.children.length) card.classList.add('d-none');
+          } catch (err) {
+            btn.disabled = false;
+            alert(err.message);
+          }
+        });
+      });
+
+      card.classList.remove('d-none');
+    } catch (e) { /* sin permiso o sin leads — no romper el resto de la bandeja */ }
   }
 
   async function loadBandeja() {
@@ -123,7 +222,7 @@
 
       renderTable(rows);
     } catch (e) {
-      document.getElementById('bandeja-tbody').innerHTML = `<tr><td colspan="5" class="text-danger text-center py-4">${e.message}</td></tr>`;
+      document.getElementById('bandeja-tbody').innerHTML = `<tr><td colspan="5" class="text-danger text-center py-4">${esc(e.message)}</td></tr>`;
     }
   }
 
@@ -175,16 +274,16 @@
       const faseLabel = statusMeta.statuses.includes(c.status) ? (statusMeta.meta[c.status]?.label || c.status) : `${c.status} (sin migrar)`;
       const acciones = accionPendiente(c, docsPendientes);
       const accionesHtml = acciones.map(a =>
-        `<span class="badge ${a.actionable ? 'accion-actionable' : 'accion-waiting'} d-block mb-1 text-start">${a.texto}</span>`
+        `<span class="badge ${a.actionable ? 'accion-actionable' : 'accion-waiting'} d-block mb-1 text-start">${esc(a.texto)}</span>`
       ).join('');
 
-      return `<tr class="bandeja-row" onclick="window.location.href='/admin/expediente.html?id=${c.id}'">
+      return `<tr class="bandeja-row" onclick="window.location.href='/admin/expediente.html?id=${encodeURIComponent(c.id)}'">
         <td class="ps-4 py-3">
-          <div class="fw-semibold small">${c.productName || '(sin nombre)'}</div>
-          <div class="text-muted" style="font-size:.72rem">${c.caseCode || c.id}</div>
+          <div class="fw-semibold small">${esc(c.productName || '(sin nombre)')}</div>
+          <div class="text-muted" style="font-size:.72rem">${esc(c.caseCode || c.id)}</div>
         </td>
-        <td class="small text-muted">${c.clientEmail || '—'}</td>
-        <td><span class="badge bg-secondary rounded-pill">${faseLabel}</span></td>
+        <td class="small text-muted">${esc(c.clientEmail || '—')}</td>
+        <td><span class="badge bg-secondary rounded-pill">${esc(faseLabel)}</span></td>
         <td>${accionesHtml}</td>
         <td><i class="bi bi-chevron-right text-muted"></i></td>
       </tr>`;

@@ -1,5 +1,5 @@
 /**
- * checklist_tarea26.test.js — TAREA 26 parte 2 (PM_COMMENTS §H.9-2, sobre
+ * checklist_via_categoria.test.js — TAREA 26 parte 2 (PM_COMMENTS §H.9-2, sobre
  * organizacion/11_AUDITORIA_CHECKLIST_MATRICES.md): los 2 FALTA de Síntesis
  * Química que dependían de un campo "innovador" que el caso no tenía. Ahora
  * existe `esInnovador` (lo confirma el staff en fase_03,
@@ -15,7 +15,7 @@ function byId(checklist, id) {
   return checklist.find(d => d.id === id);
 }
 
-describe('TAREA 26 — esInnovador (matriz SQ ítems 33/34)', () => {
+describe('esInnovador (matriz SQ ítems 33/34)', () => {
   test('sin confirmar (esInnovador undefined): "por confirmar", no obligatorio', () => {
     const cl = getChecklist('medicamentos', { tipoRegistro: 'Regular', tipoMedicamento: ['Síntesis Química'] });
     for (const id of ['estudios_clinicos_sq', 'resumen_seguridad_sq']) {

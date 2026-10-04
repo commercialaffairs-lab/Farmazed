@@ -399,9 +399,15 @@ tr:hover td { background: #fafcff; }
 
 <!-- ══════════════════ AUTH GATE (real Firebase — the one substitution vs. the prototype) ══════════════════ -->
 <script type="module">
-  import { requireLogin, logout as fbLogout, isAdmin, getToken } from './portal/js/auth.js';
+  import { esc, requireVerifiedLogin, logout as fbLogout, isAdmin, getToken } from './portal/js/auth.js';
+  window.esc = esc; // lo usa loadQR() (script clásico) para el dato de scans (T37b)
 
-  const user = await requireLogin('login.html');
+  // TAREA 32: IIFE async para poder cortar temprano (`return`) si el correo
+  // no está verificado — un módulo ES no permite `return` en su nivel
+  // superior, solo dentro de una función.
+  (async () => {
+  const user = await requireVerifiedLogin('login.html');
+  if (!user) return; // en camino a verificar-correo.html
   if (!(await isAdmin())) {
     window.location.href = 'client-dashboard.html';
   } else {
@@ -414,6 +420,7 @@ tr:hover td { background: #fafcff; }
     window.__fzGetToken = getToken;
     window.loadQR();   // the classic script's first call ran before the session existed
   }
+  })();
 </script>
 
 <script>
@@ -762,7 +769,7 @@ async function loadQR() {
       document.getElementById('qr-devices').innerHTML = Object.entries(devices)
         .sort((a,b) => b[1]-a[1])
         .map(([d,c]) => `<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:0.5px solid #f0f0f0;">
-          <span>${icons[d]||'🖥'} ${d}</span><strong>${c}</strong></div>`).join('') || '<span style="color:#9ca3af;">Sin datos</span>';
+          <span>${icons[d]||'🖥'} ${window.esc(d)}</span><strong>${c}</strong></div>`).join('') || '<span style="color:#9ca3af;">Sin datos</span>';
 
       // Recent 5
       document.getElementById('qr-recent').innerHTML = scans.slice(0,5)

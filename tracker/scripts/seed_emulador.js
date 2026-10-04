@@ -47,12 +47,15 @@ const CLIENT_UID   = 'seed-client-uid';
 const CLIENT_EMAIL = 'cliente@farmazed.test';
 
 async function upsertAuthUser(uid, email, displayName, isAdmin) {
+  // TAREA 32: emailVerified:true — son cuentas de prueba/semilla, no pasan
+  // por el registro abierto; sin esto, requireVerifiedLogin (portal/js/auth.js)
+  // las mandaría a /verificar-correo.html en vez de dejarlas entrar.
   try {
     await auth.getUser(uid);
-    await auth.updateUser(uid, { email, password: SEED_PASSWORD, displayName });
+    await auth.updateUser(uid, { email, password: SEED_PASSWORD, displayName, emailVerified: true });
   } catch (e) {
     if (e.code === 'auth/user-not-found') {
-      await auth.createUser({ uid, email, password: SEED_PASSWORD, displayName });
+      await auth.createUser({ uid, email, password: SEED_PASSWORD, displayName, emailVerified: true });
     } else {
       throw e;
     }

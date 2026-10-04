@@ -37,6 +37,7 @@
   <a href="/admin/empresas.html" id="nav-empresas" style="display:none"><i class="bi bi-building me-2"></i>Empresas</a>
   <a href="#"><i class="bi bi-qr-code me-2"></i>QR Scans</a>
   <div class="section-label">Sistema</div>
+  <a href="/admin/configuracion.html" id="nav-configuracion" style="display:none"><i class="bi bi-gear me-2"></i>Configuración</a>
   <a href="#" id="sidebar-logout"><i class="bi bi-box-arrow-left me-2"></i>Cerrar Sesión</a>
 </div>
 
@@ -91,7 +92,7 @@
 </div>
 
 <script type="module">
-  import { requireLogin, isAdmin, hasBackofficeAccess, logout } from '../portal/js/auth.js';
+  import { initBackoffice, esc, logout } from '../portal/js/auth.js';
   import api from '../portal/js/api.js';
   import { getFullMeta, colorForCaseStatus } from '../portal/js/status_ui.js';
 
@@ -103,15 +104,10 @@
   let searchTerm   = '';
 
   async function init() {
-    const user = await requireLogin('/login.html');
-    // TAREA 15/E3 parte 2: esta pantalla ya no es solo del admin — el
-    // staff (analista/abogado/regente) también entra aquí (el backend ya
-    // filtra la lista a solo sus casos asignados); "Mi bandeja" es su vista
-    // recomendada, pero no se les bloquea esta.
-    if (!(await hasBackofficeAccess())) { window.location.href = '/client-dashboard.html'; return; }
-    document.getElementById('admin-name').textContent = user.displayName || user.email;
-    document.getElementById('sidebar-logout').addEventListener('click', logout);
-    if (await isAdmin()) document.getElementById('nav-empresas').style.display = '';
+    // TAREA 15/E3 parte 2: esta pantalla ya no es solo del admin — el staff
+    // (analista/abogado/regente) también entra aquí (el backend ya filtra la
+    // lista a solo sus casos asignados); "Mi bandeja" es su vista recomendada.
+    if (!(await initBackoffice())) return;
     statusMeta = await getFullMeta();
     await loadCases();
   }
@@ -130,7 +126,7 @@
       renderFilterChips();
       renderTable();
     } catch (e) {
-      document.getElementById('cases-tbody').innerHTML = `<tr><td colspan="8" class="text-danger text-center">${e.message}</td></tr>`;
+      document.getElementById('cases-tbody').innerHTML = `<tr><td colspan="8" class="text-danger text-center">${esc(e.message)}</td></tr>`;
     }
   }
 
@@ -142,7 +138,7 @@
     const chips = present.map(s => {
       const label = statusMeta.statuses.includes(s) ? (statusMeta.meta[s]?.label || s) : `${s} (sin migrar)`;
       const count = allCases.filter(c => c.status === s).length;
-      return `<button class="btn btn-outline-secondary filter-chip" data-status="${s}">${label} (${count})</button>`;
+      return `<button class="btn btn-outline-secondary filter-chip" data-status="${esc(s)}">${esc(label)} (${count})</button>`;
     }).join('');
     container.innerHTML = `<button class="btn btn-outline-secondary filter-chip active" data-status="">Todos</button>${chips}`;
     container.querySelectorAll('.filter-chip').forEach(btn => {
@@ -177,15 +173,15 @@
         label = `${c.status} (sin migrar)`;
       }
       const badgeClass = `bg-${colorForCaseStatus(c.status, statusMeta)}`;
-      return `<tr class="case-row" onclick="window.location.href='/admin/expediente.html?id=${c.id}'">
+      return `<tr class="case-row" onclick="window.location.href='/admin/expediente.html?id=${encodeURIComponent(c.id)}'">
         <td class="ps-4 py-3">
-          <div class="fw-semibold small">${ICON[c.tramiteType]||'📋'} ${c.productName || '(sin nombre)'}</div>
-          <div class="text-muted" style="font-size:.72rem">${c.id}</div>
+          <div class="fw-semibold small">${ICON[c.tramiteType]||'📋'} ${esc(c.productName || '(sin nombre)')}</div>
+          <div class="text-muted" style="font-size:.72rem">${esc(c.id)}</div>
         </td>
-        <td class="small">${c.tramiteType}</td>
-        <td class="small">${c.tipoRegistro||'—'}</td>
-        <td class="small text-muted">${c.clientEmail}</td>
-        <td><span class="badge ${badgeClass} rounded-pill">${label}</span></td>
+        <td class="small">${esc(c.tramiteType)}</td>
+        <td class="small">${esc(c.tipoRegistro||'—')}</td>
+        <td class="small text-muted">${esc(c.clientEmail)}</td>
+        <td><span class="badge ${badgeClass} rounded-pill">${esc(label)}</span></td>
         <td class="small">—</td>
         <td class="small text-muted">${date}</td>
         <td><i class="bi bi-chevron-right text-muted"></i></td>

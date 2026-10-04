@@ -8,6 +8,7 @@
 // e2e/global-setup.js en cada corrida.
 
 const { test, expect } = require('@playwright/test');
+const { enviarLogin } = require('./_esperas');
 const path = require('path');
 const fs   = require('fs');
 
@@ -26,8 +27,7 @@ async function login(page, email, password) {
   await page.goto('/login.html');
   await page.fill('#usuario', email);
   await page.fill('#password', password);
-  await page.click('button[type="submit"]');
-  await page.waitForURL(/(dashboard|client-dashboard)\.html/, { timeout: 15000 });
+  await enviarLogin(page, /(dashboard|client-dashboard|admin\/casos|admin\/bandeja)\.html/, 15000);
 }
 
 // TAREA 26 (esta suite flaqueaba con "Invalid or expired token" en el
@@ -43,7 +43,7 @@ async function login(page, email, password) {
 // terminado.
 async function logout(page) {
   await Promise.all([
-    page.waitForURL(/login\.html/, { timeout: 10000 }),
+    page.waitForURL(/login\.html/, { timeout: 10000, waitUntil: 'commit' }),
     page.evaluate(async () => {
       const { logout } = await import('/portal/js/auth.js');
       await logout();

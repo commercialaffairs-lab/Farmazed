@@ -37,3 +37,7 @@ e2e/playwright-report/
 
 # ── Editor (config local de cada máquina, no del proyecto) ──
 .vscode/
+
+# TAREA 41
+graphify-out/
+farmazed-web/demo.html

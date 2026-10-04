@@ -16,6 +16,7 @@
 // encontraron/arreglaron, y qué queda fuera (depende de prod o de Zelky).
 
 const { test, expect } = require('@playwright/test');
+const { enviarLogin, completarCaptacionSiHaceFalta } = require('./_esperas');
 const path = require('path');
 const fs   = require('fs');
 
@@ -34,8 +35,7 @@ async function login(page, email, password) {
   await page.goto('/login.html');
   await page.fill('#usuario', email);
   await page.fill('#password', password);
-  await page.click('button[type="submit"]');
-  await page.waitForURL(/(dashboard|client-dashboard)\.html/, { timeout: 15000 });
+  await enviarLogin(page, /(dashboard|client-dashboard|admin\/casos|admin\/bandeja)\.html/, 15000);
 }
 
 // TAREA 26 (raíz del flake documentado muchas veces en esta sesión, con
@@ -52,7 +52,7 @@ async function login(page, email, password) {
 // es que la navegación de verdad ocurrió.
 async function logout(page) {
   await Promise.all([
-    page.waitForURL(/login\.html/, { timeout: 10000 }),
+    page.waitForURL(/login\.html/, { timeout: 10000, waitUntil: 'commit' }),
     page.evaluate(async () => {
       const { logout } = await import('/portal/js/auth.js');
       await logout();
@@ -122,6 +122,7 @@ test.describe('D16 — flujo completo E2E (medicamentos, Síntesis Química, Reg
     await page.fill('#password-confirm', clientPass);
     await page.click('#btn-submit');
     await page.waitForURL(/client-dashboard\.html/, { timeout: 15000 });
+    await completarCaptacionSiHaceFalta(page); // la empresa nueva (invitación) nace sin captación
     await expect(page.locator('a.nav-link', { hasText: 'Solicitar Registro' })).toBeVisible({ timeout: 15000 });
     await shot(page, '00-cliente-registrado');
 

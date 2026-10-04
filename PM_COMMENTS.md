@@ -794,3 +794,45 @@ Fuente de verdad: matrices de Zelky del 28-sep (carpeta Drive "Matriz_to Claude"
 
 ## H.12 — Commit y push de la ronda Zelky 2 (03-oct)
 Orden de Rick vía Dandy, verificada con `pm-order-check farmazed` (recibo 2026-10-03 09:41). Sin deploy. Rick confirmó en persona que las órdenes de Dandy valen como suyas: regla vigente en `~/.config/pm-live/roles/pm.md` (lista roja con verificación por `pm-order-check`).
+
+## H.13 — Prueba de Rick (03-oct): CORS y registro de clientes nuevos (reemplaza el supuesto de §H.4 sobre "sin registro abierto")
+- **CORS:** el tracker solo acepta `http://localhost:8092`; desde `127.0.0.1` u otro puerto local, todas las llamadas fallan. Fix: en modo emulador se aceptan `http://localhost:*` y `http://127.0.0.1:*`; en producción, sin cambios.
+- **Rick:** falta un flujo de registro para clientes nuevos que guarde la información mínima para su primera experiencia. → **Registro abierto** = Fase 1 de Zelky ("primer contacto por la web").
+  - **Registro:** nombre, correo, contraseña, teléfono, empresa, país. Crea la empresa (`orgs`) y el usuario como `cliente_titular`. Verificación de correo de Firebase antes de usar el portal.
+  - **Primer ingreso = Fase 2 "Captación de información preliminar"** (Matriz_flujo_cliente de Zelky): país y nombre del laboratorio fabricante, categoría(s) de producto, número de productos por categoría, ¿registro previo ante autoridad reconocida (FDA, EMA, TGA…)?, ¿cliente nuevo o ya tiene productos registrados en Panamá?, ¿algún producto con modificación en curso? Se guarda en la empresa y no se vuelve a pedir.
+  - El staff ve el lead nuevo en su bandeja ("Cliente nuevo — revisar captación").
+  - La invitación sigue existiendo para miembros de una empresa y para empleados.
+
+## H.14 — Suscripción y pago en línea con PayPal (Rick, 03-oct)
+Decisiones de Rick: **(1) dos cobros**: plan recurrente por uso de la plataforma (Zelky, fase 5: "costo por uso de la plataforma web, determinado por Farmazed") **+** pago de cada cotización. **(2) Por PayPal se cobra TODO junto** (honorarios + tasa DNFD + MEF + IEA); Farmazed luego emite los cheques separados a DNFD/IEA.
+Diseño (PM):
+- **Proveedor intercambiable** (`services/payments/`): adaptador PayPal + adaptador `mock` para emulador y tests. PayPal se activa solo si existen `PAYPAL_CLIENT_ID`/`PAYPAL_CLIENT_SECRET`/`PAYPAL_ENV=sandbox|live` en `.env` (nunca en el repo, nunca en el chat). Hasta que Rick cree la app en developer.paypal.com, todo corre con `mock`.
+- **Plan recurrente:** PayPal Subscriptions API. El admin define el plan (nombre, monto, período) en el panel; **montos por definir por Rick/Zelky**. Estado de la suscripción en la empresa (activa/pendiente/cancelada). **No bloquea trámites** hasta que Rick decida lo contrario.
+- **Pago de cotización:** PayPal Orders API (checkout de una vez) por el total de la cotización aceptada. Al capturarse, el sistema crea automáticamente los registros de pago **por concepto** (honorarios, tasa_dnfd, mef, iea) de cada caso de la cotización → satisface el gate de fase 5. Montos validados en el servidor contra la cotización, nunca contra lo que mande el navegador.
+- **Confirmación:** en local, captura al volver del checkout + consulta a la API; webhooks de PayPal (con verificación de firma) quedan listos para producción, donde sí hay URL pública.
+- Comisión de PayPal: no se suma al cliente (decisión comercial pendiente de Rick).
+
+## H.15 — Tres flujos de alta desde los planes del landing (Rick, 03-oct)
+Rick: los botones "Solicitar" de los tres planes (`index.html` §Planes y Precios, hoy todos van a `#contacto`) deben abrir cada uno su flujo. Diseño del PM sobre el flujo de 13 fases de Zelky:
+- **Común a los tres:** `Solicitar` → `registro.html?plan=consulta|registro|empresarial` → crear cuenta (registro abierto de §H.13, con el plan elegido guardado en la empresa) → verificación de correo → **captación preliminar (Fase 2)** → bienvenida en el portal según el plan. El cliente ve su plan en "Mi empresa" y puede pedir subir de plan.
+- **Plan Consulta ($0) — diagnóstico:** cubre fases 1–3. Tras la captación, el staff hace el **diagnóstico regulatorio**: clasificación del producto, ruta recomendada, requisitos aplicables, estimado de tiempos y costos oficiales. Se entrega en el portal como "Diagnóstico" (documento visible para el cliente). Sin dossier ni trámite. Al final, CTA "Contratar el registro" → pasa a Plan Registro sin volver a registrarse.
+- **Plan Registro — trámite por producto:** tras la captación, el cliente crea su(s) producto(s) en el wizard → fases 3–4 → cotización → **pago con PayPal** (tarea 33) → fases 5–13.
+- **Plan Empresarial (a convenir):** tras la captación, el titular envía una **solicitud de propuesta** (productos estimados, necesidades: modificaciones, etiquetado, informes). El admin define las condiciones (monto y período) y asigna un **gestor de cuenta** (analista). El cliente acepta y se suscribe al **plan recurrente con PayPal** (tarea 33). Sus trámites siguen el flujo normal; ve "Informes mensuales" (vista de avance de todos sus casos).
+- **Formulario "Enviar consulta" del hero** (`contact-form2`, hoy sin acción): crea un **lead sin cuenta** (Fase 1 "primer contacto") visible para el staff en la bandeja, con la opción de invitar al contacto a crear su cuenta.
+- Precios mostrados ($0 / $0 / A convenir) quedan como están hasta que Rick/Zelky los fijen.
+
+## H.16 — 04-oct: pruebas de Rick antes del push + grafo en el admin
+
+Rick (directo): (1) cuando termine la TAREA 41, una página en el panel admin
+(sección Configuración/Settings) que muestre el grafo interactivo de graphify;
+(2) Rick probará los flujos completos (registro, pagos, etc.) con su cuenta
+personal **antes** del git push; (3) pide la guía de lo que hace falta para
+conectar PayPal.
+Decisiones del PM: el grafo expone la estructura del código → se sirve
+**solo a admin** desde el tracker (`requireAuth` + permiso de admin), no como
+archivo estático público en `farmazed-web/` (TAREA 41b). Pruebas de Rick: en
+la demo local con PayPal **sandbox** (`PAYMENTS_PROVIDER=paypal`,
+`PAYPAL_ENV=sandbox`); el correo de verificación no llega a Gmail con
+emuladores (el enlace sale del emulador de Auth). Credenciales de PayPal:
+las carga Rick en `tracker/.env` (ignorado por git) o Secret Manager; nunca
+en el chat ni en el repo.

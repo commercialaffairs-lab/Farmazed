@@ -1,9 +1,9 @@
 /**
- * checklist_tarea25.test.js — TAREA 25 (PM_COMMENTS §H.9, decisiones sobre
+ * checklist_base.test.js — TAREA 25 (PM_COMMENTS §H.9, decisiones sobre
  * organizacion/11_AUDITORIA_CHECKLIST_MATRICES.md). Prueba unitaria PURA de
  * `getChecklist()` (tracker/data/faddi_checklists.js) — no necesita
  * emulador ni servidor, la función no hace I/O. Corre con:
- *   node --test tracker/tests/checklist_tarea25.test.js
+ *   node --test tracker/tests/checklist_base.test.js
  *
  * Cubre las 5 decisiones de §H.9:
  *   1. recibo_iea depende de `aplicaIEA` (case-level), no del subtipo.
@@ -22,7 +22,7 @@ function byId(checklist, id) {
   return checklist.find(d => d.id === id);
 }
 
-describe('TAREA 25 — decisión 1: recibo_iea depende de aplicaIEA, no del subtipo', () => {
+describe('decisión 1: recibo_iea depende de aplicaIEA, no del subtipo', () => {
   test('sin cotización aceptada (aplicaIEA undefined): "por confirmar", no obligatorio', () => {
     const cl = getChecklist('medicamentos', { tipoRegistro: 'Regular', tipoMedicamento: ['Síntesis Química'] });
     const doc = byId(cl, 'recibo_iea');
@@ -53,7 +53,7 @@ describe('TAREA 25 — decisión 1: recibo_iea depende de aplicaIEA, no del subt
   });
 });
 
-describe('TAREA 25 — decisión 2: faddiCode 15.14 (3 documentos) queda PENDIENTE_VERIFICAR', () => {
+describe('decisión 2: faddiCode 15.14 (3 documentos) queda PENDIENTE_VERIFICAR', () => {
   test('otros_docs (base, siempre presente)', () => {
     const cl = getChecklist('medicamentos', { tipoRegistro: 'Regular', tipoMedicamento: ['Síntesis Química'] });
     assert.equal(byId(cl, 'otros_docs').faddiCode, 'PENDIENTE_VERIFICAR');
@@ -77,7 +77,7 @@ describe('TAREA 25 — decisión 2: faddiCode 15.14 (3 documentos) queda PENDIEN
   });
 });
 
-describe('TAREA 25 — decisión 3: Biológicos y Biotecnológicos, los MISMOS documentos', () => {
+describe('decisión 3: Biológicos y Biotecnológicos, los MISMOS documentos', () => {
   test('mismos ids, mismo required, para Regular', () => {
     const bio    = getChecklist('medicamentos', { tipoRegistro: 'Regular', tipoMedicamento: ['Biológicos'] });
     const biotec = getChecklist('medicamentos', { tipoRegistro: 'Regular', tipoMedicamento: ['Biotecnológicos'] });
@@ -106,7 +106,7 @@ describe('TAREA 25 — decisión 3: Biológicos y Biotecnológicos, los MISMOS d
   });
 });
 
-describe('TAREA 25 — decisión 4: los FALTA de la auditoría, agregados', () => {
+describe('decisión 4: los FALTA de la auditoría, agregados', () => {
   test('SQ: proteccion_datos y especificaciones_pa presentes', () => {
     const cl = getChecklist('medicamentos', { tipoRegistro: 'Regular', tipoMedicamento: ['Síntesis Química'] });
     assert.ok(byId(cl, 'proteccion_datos'));
@@ -142,7 +142,7 @@ describe('TAREA 25 — decisión 4: los FALTA de la auditoría, agregados', () =
   });
 });
 
-describe('TAREA 25 — decisión 5: los "⚠ VERIFICAR" de Zelky, opcionales con nota', () => {
+describe('decisión 5: los "⚠ VERIFICAR" de Zelky, opcionales con nota', () => {
   test('bioequivalencia (SQ-15): opcional, "Farmazed confirma si aplica"', () => {
     const cl = getChecklist('medicamentos', { tipoRegistro: 'Regular', tipoMedicamento: ['Síntesis Química'] });
     const doc = byId(cl, 'bioequivalencia');
@@ -160,7 +160,7 @@ describe('TAREA 25 — decisión 5: los "⚠ VERIFICAR" de Zelky, opcionales con
   });
 });
 
-describe('TAREA 25 — no regresión: subtipos no auditados no cambiaron de forma inesperada', () => {
+describe('no regresión: subtipos no auditados no cambiaron de forma inesperada', () => {
   test('Cosméticos/Higiénicos/Plaguicidas/Excepción/Publicidad no dependen de aplicaIEA (no son medicamentos)', () => {
     for (const tramiteType of ['cosmeticos', 'higienicos', 'plaguicidas', 'excepcion', 'publicidad']) {
       const cl = getChecklist(tramiteType, {});

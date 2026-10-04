@@ -1,19 +1,11 @@
 const { Router } = require('express');
 const admin       = require('firebase-admin');
 const { requireAuth } = require('../middleware/auth');
-const { canAccessCase, requirePermission } = require('../middleware/permissions');
+const { getCaseOrFail, requirePermission } = require('../middleware/permissions');
+const { serializeTimestamps } = require('../utils/serialize');
 
 const router = Router({ mergeParams: true }); // mergeParams to access :caseId
 const db     = () => admin.firestore();
-
-// Helper: verify case exists and user has access (same pattern as documents.js)
-async function getCaseOrFail(caseId, user, res) {
-  const snap = await db().collection('cases').doc(caseId).get();
-  if (!snap.exists) { res.status(404).json({ error: 'Case not found' }); return null; }
-  const data = snap.data();
-  if (!canAccessCase(user, data)) { res.status(403).json({ error: 'Forbidden' }); return null; }
-  return { id: snap.id, ...data };
-}
 
 // ─── GET /api/cases/:caseId/messages ───────────────────────────────────────────
 router.get('/', requireAuth, requirePermission('messages.read'), async (req, res) => {
@@ -34,7 +26,7 @@ router.get('/', requireAuth, requirePermission('messages.read'), async (req, res
         senderRole: data.senderRole,
         senderName: data.senderName,
         text:       data.text,
-        createdAt:  data.createdAt?.toDate?.()?.toISOString(),
+        createdAt:  serializeTimestamps(data.createdAt),
       };
     });
 
@@ -73,7 +65,7 @@ router.post('/', requireAuth, requirePermission('messages.send'), async (req, re
     res.status(201).json({
       id: ref.id,
       ...msgData,
-      createdAt: now.toDate().toISOString(),
+      createdAt: serializeTimestamps(now),
     });
   } catch (e) {
     res.status(500).json({ error: e.message });

@@ -29,15 +29,25 @@
  * leer sus propios casos por `clientId`). Correr `scripts/migrate_roles.js`
  * les asigna el claim `role` real — después de eso, `effectiveRole()` lee
  * ese claim directo y dejan de pasar por el fallback.
+ *
+ * TAREA 39: el fallback `admin:true → 'admin'` se mantiene, pero una cuenta sin
+ * role ni admin YA NO cae a 'cliente_titular': es `null` (403 en todo permiso).
+ * Hay que correr migrate_roles.js sobre las cuentas viejas ANTES de desplegar.
  */
+
+const admin = require('firebase-admin');
 
 const ROLES = ['cliente_titular', 'cliente_miembro', 'analista', 'abogado', 'regente', 'admin'];
 const CLIENT_ROLES = ['cliente_titular', 'cliente_miembro'];
 const STAFF_ROLES  = ['analista', 'abogado', 'regente'];
 
+// TAREA 39 (C4): una cuenta SIN `role` (y sin el claim legacy `admin`) ya no es
+// cliente_titular por defecto — es `null` y requirePermission la rechaza (403).
+// Registro e invitación siempre dejan `role` puesto, y scripts/migrate_roles.js
+// (corrido sobre las cuentas anteriores a E3) les asigna el suyo.
 function effectiveRole(user) {
   if (user.role && ROLES.includes(user.role)) return user.role;
-  return user.admin ? 'admin' : 'cliente_titular';
+  return user.admin ? 'admin' : null;
 }
 
 /**
@@ -95,21 +105,56 @@ const PERMISSIONS = {
   'quotes.edit':           { label: 'Ajustar las líneas de una cotización en borrador (R5/R12)', roles: ['admin'] },
   'quotes.send':           { label: 'Enviar una cotización al cliente (R5/R12)', roles: ['admin'] },
   'quotes.accept':         { label: 'Aceptar o rechazar una cotización enviada (R5/R12)', roles: ['cliente_titular'] },
+  // TAREA 33 (§H.14): mismo criterio que quotes.accept — quien paga es el
+  // dueño de la cuenta, no un miembro.
+  'quotes.pay':            { label: 'Pagar con PayPal una cotización aceptada (§H.14)', roles: ['cliente_titular'] },
+  // Plan recurrente de uso de la plataforma — el admin lo define/edita; el
+  // titular se suscribe/cancela para SU empresa. Ver estado en
+  // GET /api/me/org (ya devuelve el doc completo de la empresa).
+  'subscription.manage_plan': { label: 'Crear/editar el plan recurrente de suscripción', roles: ['admin'] },
+  'subscription.subscribe':   { label: 'Suscribir/cancelar la suscripción de mi empresa', roles: ['cliente_titular'] },
   'pricing.write':         { label: 'Editar el tarifario',                      roles: ['admin'] },
-  'orgs.manage':           { label: 'Crear/editar empresas',                    roles: ['admin'] },
+  // TAREA 35: listar empresas (solo lectura) ahora lo necesita el staff
+  // para llegar a "Cargar diagnóstico" en admin/empresas.html — separado de
+  // orgs.manage (crear una empresa directa y ver sus miembros, eso sigue
+  // siendo solo admin) para no abrirle de más al staff.
+  'orgs.list':             { label: 'Listar las empresas (sin crear ni ver miembros)', roles: [...STAFF_ROLES, 'admin'] },
+  'orgs.manage':           { label: 'Crear una empresa directamente y ver sus miembros', roles: ['admin'] },
   'orgs.read_members':     { label: 'Ver los miembros de una empresa',          roles: ['cliente_titular', 'cliente_miembro', 'admin'] },
+  // TAREA 32 (§H.13): "Captación de información preliminar" (Fase 2 de
+  // Zelky) — la llena el titular (es quien registró la empresa), no el
+  // miembro; admin puede corregirla a mano si hace falta.
+  'orgs.edit_captacion':   { label: 'Completar/editar la captación de información preliminar de la empresa', roles: ['cliente_titular', 'admin'] },
+  // Ver el lead nuevo en la bandeja y marcarlo revisado — mismo permiso
+  // para ambas acciones, es triage liviano, no una confirmación con
+  // separación de roles como la de fase_08.
+  'orgs.read_leads':       { label: 'Ver y marcar revisados los clientes nuevos (captación) en la bandeja', roles: [...STAFF_ROLES, 'admin'] },
   'employees.list':        { label: 'Listar empleados de Farmazed',             roles: ['admin'] },
   'invitations.create_org':      { label: 'Invitar a un titular (crea empresa)', roles: ['admin'] },
   'invitations.create_empleado': { label: 'Invitar a un empleado Farmazed',      roles: ['admin'] },
   'invitations.create_miembro':  { label: 'Invitar a un miembro de mi empresa',  roles: ['cliente_titular'] },
   'invitations.read':            { label: 'Ver el estado de las invitaciones',  roles: ['admin'] },
   'admin.set_role':              { label: 'Dar/quitar el rol admin a una cuenta existente', roles: ['admin'] },
+
+  // TAREA 34 (§H.15): tres flujos de alta desde los planes del landing.
+  'orgs.set_plan':         { label: 'Elegir/subir el plan de mi empresa (consulta/registro/empresarial)', roles: ['cliente_titular'] },
+  // El staff carga el diagnóstico (Plan Consulta) desde el expediente/empresa.
+  'orgs.edit_diagnostico': { label: 'Cargar/editar el diagnóstico regulatorio de una empresa (Plan Consulta)', roles: [...STAFF_ROLES, 'admin'] },
+  // Leads del formulario "Enviar consulta" del hero — SIN cuenta todavía,
+  // por eso es un permiso aparte de orgs.read_leads (esos ya tienen cuenta
+  // y captación completada).
+  'contact_leads.read':    { label: 'Ver los mensajes del formulario de contacto público',  roles: [...STAFF_ROLES, 'admin'] },
+  'empresarial.solicitar': { label: 'Enviar/aceptar la solicitud de propuesta del Plan Empresarial', roles: ['cliente_titular'] },
+  'empresarial.manage':    { label: 'Definir condiciones (monto/período/gestor) del Plan Empresarial', roles: ['admin'] },
+  // TAREA 41b: el grafo del código expone la ESTRUCTURA interna del backend — solo admin, nunca público.
+  'system.code_graph':     { label: 'Ver el mapa interactivo del código (página Configuración)', roles: ['admin'] },
 };
 
-// No están en la tabla, a propósito: `GET /api/invitations/:token` y
-// `POST /api/invitations/:token/accept` son PÚBLICAS y sin auth por diseño
-// (quien acepta una invitación todavía no tiene cuenta) — no hay rol que
-// pedir. `GET /api/me/permissions` tampoco: es reflexiva ("quién soy"), no
+// No están en la tabla, a propósito: `GET /api/invitations/:token` es PÚBLICA
+// (la página de aceptar necesita saber a qué correo corresponde el link) y
+// `POST /api/invitations/:token/accept` exige sesión pero NO un rol (quien
+// acepta todavía no tiene ninguno; TAREA 39: el uid sale del token y el correo
+// debe ser el de la invitación) — no hay rol que pedir. `GET /api/me/permissions` tampoco: es reflexiva ("quién soy"), no
 // una acción que se pueda permitir o no. `pricing.js` (lectura pública de
 // `GET /api/admin/pricing`) tampoco necesita permiso — los precios no son
 // secretos.
@@ -136,6 +181,9 @@ function can(role, permissionName) {
 function requirePermission(permissionName) {
   return (req, res, next) => {
     const role = effectiveRole(req.user);
+    if (!role) {
+      return res.status(403).json({ error: 'Tu cuenta no tiene un rol asignado — contacta a Farmazed.' });
+    }
     if (!can(role, permissionName)) {
       return res.status(403).json({ error: `Rol "${role}" no puede: ${PERMISSIONS[permissionName]?.label || permissionName}` });
     }
@@ -165,6 +213,21 @@ function canAccessCase(user, caseData) {
 }
 
 /**
+ * Trae el caso y verifica que existe y que el usuario tiene acceso (404 / 403
+ * ya respondidos si no). TAREA 39: UNA sola versión — antes eran copias en
+ * documents.js/messages.js/payments.js, y el PATCH de revisión de documentos
+ * no la llamaba (un staff no asignado podía aprobar/rechazar documentos de
+ * cualquier caso). Devuelve `{ id, ...data }` o `null` si ya respondió.
+ */
+async function getCaseOrFail(caseId, user, res) {
+  const snap = await admin.firestore().collection('cases').doc(caseId).get();
+  if (!snap.exists) { res.status(404).json({ error: 'Case not found' }); return null; }
+  const data = snap.data();
+  if (!canAccessCase(user, data)) { res.status(403).json({ error: 'Forbidden' }); return null; }
+  return { id: snap.id, ...data };
+}
+
+/**
  * ¿Puede este rol de STAFF (analista/abogado/regente) mover el caso de
  * `from` a `to`? El admin no pasa por aquí (bypass en cases.js/mcp.js — ya
  * puede cualquier salto válido, y override cualquiera). No decide si el
@@ -181,11 +244,7 @@ function canAccessCase(user, caseData) {
  * directamente; abogado/regente solo registran su confirmación (endpoint
  * separado, `POST /api/cases/:id/confirmaciones/fase8`).
  */
-const STAFF_EXIT_OWNER = {};
-
-function canTransitionCase(role, fromStatus) {
-  const owner = STAFF_EXIT_OWNER[fromStatus];
-  if (owner) return role === owner;
+function canTransitionCase(role) {
   return role === 'analista';
 }
 
@@ -214,6 +273,7 @@ module.exports = {
   permissionsForRole,
   requirePermission,
   canAccessCase,
+  getCaseOrFail,
   canTransitionCase,
   generateMarkdownTable,
 };

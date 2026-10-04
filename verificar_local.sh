@@ -10,7 +10,8 @@
 #      × rol (node --test nativo) + la migración de roles sobre cuentas
 #      legacy.
 #
-# SOLO CONTRA EL EMULADOR — nunca toca producción. Requiere lo mismo que ya
+# SOLO CONTRA EL EMULADOR — nunca toca producción. Corre en un entorno aislado (puertos de
+# prueba, TAREA 42): se puede ejecutar con la demo viva. Requiere lo mismo que ya
 # pedía cada script por separado (ver DEV_LOCAL.md): JDK 21+, Chromium de
 # Playwright ya cacheado.
 #

@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Verifica tu correo | Farmazed</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body {
+      min-height: 100vh; display:flex; align-items:center; justify-content:center;
+      background: linear-gradient(160deg, #0d4f80 0%, #2190d7 55%, #1572b0 100%);
+      font-family: 'Segoe UI', -apple-system, sans-serif;
+    }
+    .fz-card { background:#fff; border-radius:8px; box-shadow:0 12px 48px rgba(0,0,0,.28); width:100%; max-width:440px; margin:24px 16px; overflow:hidden; }
+    .fz-card-top { background:linear-gradient(135deg,#0d4f80,#2190d7); padding:28px 32px; text-align:center; color:#fff; }
+    .fz-card-body { padding:32px; text-align:center; }
+  </style>
+</head>
+<body>
+
+<div class="fz-card">
+  <div class="fz-card-top">
+    <div style="font-size:1.4rem;font-weight:700">Farmazed</div>
+    <div style="font-size:.8rem;opacity:.8;text-transform:uppercase;letter-spacing:.08em;margin-top:4px">Verifica tu correo</div>
+  </div>
+  <div class="fz-card-body">
+    <p class="small text-muted">
+      Te mandamos un correo a <strong id="v-email"></strong> con un link de
+      verificación. Confírmalo y vuelve a esta página.
+    </p>
+    <div id="v-msg" class="small mt-2"></div>
+    <button class="btn btn-primary w-100 mt-3" id="btn-continuar">Ya verifiqué, continuar</button>
+    <button class="btn btn-outline-secondary w-100 mt-2" id="btn-reenviar">Reenviar correo</button>
+    <button class="btn btn-link w-100 mt-2 text-muted small" id="btn-logout">Cerrar sesión</button>
+  </div>
+</div>
+
+<script type="module">
+  import { requireLogin, logout } from './portal/js/auth.js';
+  import { auth } from './portal/js/auth.js';
+  import { sendEmailVerification } from 'https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js';
+
+  function msg(text, ok) {
+    const el = document.getElementById('v-msg');
+    el.className = `small mt-2 ${ok ? 'text-success' : 'text-danger'}`;
+    el.textContent = text;
+  }
+
+  async function init() {
+    // Sin exigir verificación acá — esta ES la pantalla para el que no la
+    // tiene todavía (requireVerifiedLogin la usaría y crearía un bucle).
+    const user = await requireLogin('/login.html');
+    document.getElementById('v-email').textContent = user.email;
+
+    document.getElementById('btn-continuar').addEventListener('click', async () => {
+      await auth.currentUser.reload();
+      const result = await auth.currentUser.getIdTokenResult(true);
+      if (auth.currentUser.emailVerified) {
+        const role = result.claims.role;
+        const destino = role === 'admin' ? 'admin/casos.html'
+          : ['analista', 'abogado', 'regente'].includes(role) ? 'admin/bandeja.html'
+          : 'client-dashboard.html';
+        window.location.href = destino;
+      } else {
+        msg('Todavía no — confirma el link del correo primero.', false);
+      }
+    });
+
+    document.getElementById('btn-reenviar').addEventListener('click', async () => {
+      try {
+        await sendEmailVerification(auth.currentUser);
+        msg('Correo reenviado.', true);
+      } catch (err) {
+        msg(err.message, false);
+      }
+    });
+
+    document.getElementById('btn-logout').addEventListener('click', logout);
+  }
+
+  init();
+</script>
+</body>
+</html>

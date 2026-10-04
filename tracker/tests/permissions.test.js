@@ -219,14 +219,42 @@ describe('payments.create — solo admin', () => {
   });
 });
 
-// ═══ orgs.manage / invitations.* — solo admin (salvo invitations.create_miembro) ═
-describe('orgs.manage — solo admin', () => {
+// ═══ orgs.list / orgs.manage / invitations.* — TAREA 35: listar es staff+admin,
+// crear y ver miembros siguen siendo solo admin ═══════════════════════════════
+describe('orgs.list — staff y admin', () => {
   test('admin puede listar empresas', async () => {
     const { status } = await api('admin', 'GET', '/api/orgs');
     assert.equal(status, 200);
   });
+  test('analista puede listar empresas (necesita encontrar la empresa para cargar el diagnóstico)', async () => {
+    const { status } = await api('analista', 'GET', '/api/orgs');
+    assert.equal(status, 200);
+  });
+  test('abogado y regente también pueden listar empresas', async () => {
+    assert.equal((await api('abogado', 'GET', '/api/orgs')).status, 200);
+    assert.equal((await api('regente', 'GET', '/api/orgs')).status, 200);
+  });
   test('cliente_titular NO puede listar empresas', async () => {
     const { status } = await api('cliente_titular', 'GET', '/api/orgs');
+    assert.equal(status, 403);
+  });
+});
+
+describe('orgs.manage — crear empresa directa y ver miembros, solo admin', () => {
+  test('admin puede crear una empresa directamente', async () => {
+    const { status } = await api('admin', 'POST', '/api/orgs', { nombre: 'Empresa Directa Admin Test' });
+    assert.equal(status, 201);
+  });
+  test('analista NO puede crear una empresa directamente (sí puede listar, no crear)', async () => {
+    const { status } = await api('analista', 'POST', '/api/orgs', { nombre: 'Empresa Directa Analista Test' });
+    assert.equal(status, 403);
+  });
+  test('admin puede ver los miembros de cualquier empresa', async () => {
+    const { status } = await api('admin', 'GET', '/api/orgs/org-alfa/members');
+    assert.notEqual(status, 403);
+  });
+  test('analista NO puede ver los miembros de una empresa (sí puede listar, no entrar al detalle)', async () => {
+    const { status } = await api('analista', 'GET', '/api/orgs/org-alfa/members');
     assert.equal(status, 403);
   });
 });
@@ -433,7 +461,7 @@ describe('cases.override — solo admin', () => {
 });
 
 // ═══ cases.edit_faddi / cases.edit_notes — staff + admin, nunca cliente ════════
-describe('cases.edit_faddi / cases.edit_notes — TAREA 16(b)', () => {
+describe('cases.edit_faddi / cases.edit_notes', () => {
   test('cliente_titular NO puede editar el seguimiento FADDI ni las notas (caso no está en borrador)', async () => {
     const { status } = await api('cliente_titular', 'PATCH', '/api/cases/case-docs-test', { faddi: { expedienteNumber: 'X' }, notes: 'nota de prueba' });
     assert.equal(status, 400); // bloqueado por "no está en borrador" — el campo tampoco está en CLIENT_FIELDS
@@ -448,7 +476,7 @@ describe('cases.edit_faddi / cases.edit_notes — TAREA 16(b)', () => {
 
 // ═══ cases.edit_via_categoria — TAREA 26 (§H.9-2): fase_03 la confirma
 // Farmazed (vía + categoría + esInnovador juntos), no el cliente ═══════════════
-describe('cases.edit_via_categoria — TAREA 26', () => {
+describe('cases.edit_via_categoria', () => {
   test('cliente_titular NO puede confirmar vía/categoría/esInnovador (caso no está en borrador)', async () => {
     const { status } = await api('cliente_titular', 'PATCH', '/api/cases/case-docs-test', {
       tipoRegistro: 'Abreviado', tipoMedicamento: ['Síntesis Química'], esInnovador: true,
@@ -704,7 +732,7 @@ describe('quotes.* — borrador automático, ajuste, envío, aceptación', () =>
 // ═══ "Prioridad innovadores" — línea EXTRA de la cotización, TAREA 28
 // (§H.11): cargo adicional (no reemplaza la principal) cuando esInnovador y
 // la categoría es SQ/Biológicos/Biotecnológicos, en Abreviado ════════════════
-describe('Cotización — línea extra de "Prioridad innovadores" (TAREA 28)', () => {
+describe('Cotización — línea extra de "Prioridad innovadores"', () => {
   test('fase_03 -> fase_04 de un caso Abreviado+SQ+esInnovador=true crea 2 líneas (principal + extra)', async () => {
     const patch = await api('admin', 'PATCH', '/api/cases/case-prioridad-innovadores-test', { status: 'fase_04' });
     assert.equal(patch.status, 200);

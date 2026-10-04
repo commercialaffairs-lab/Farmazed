@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Farmazed Admin — Configuración</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <style>
+    :root { --fz-blue:#1B4F8A; --fz-navy:#0F3260; --fz-green:#3A7D44; }
+    body  { background:#f0f4fa; }
+    .sidebar { width:220px; background:var(--fz-navy); min-height:100vh; flex-shrink:0; }
+    .sidebar a { color:rgba(255,255,255,.7); text-decoration:none; display:block; padding:.6rem 1.25rem; font-size:.88rem; border-radius:6px; transition:.15s; }
+    .sidebar a:hover, .sidebar a.active { background:rgba(255,255,255,.12); color:#fff; }
+    .sidebar .section-label { color:rgba(255,255,255,.35); font-size:.68rem; text-transform:uppercase; letter-spacing:.06em; padding:.5rem 1.25rem; margin-top:.75rem; }
+    .main { flex:1; overflow-x:auto; min-width:0; }
+    .topbar { background:#fff; border-bottom:1px solid #dee2e6; padding:.75rem 1.5rem; }
+    #grafo-frame { width:100%; height:calc(100vh - 230px); min-height:560px; border:1px solid #dee2e6; border-radius:6px; background:#fff; }
+  </style>
+</head>
+<body class="d-flex">
+
+<!-- Sidebar -->
+<div class="sidebar py-3 d-flex flex-column">
+  <div class="px-4 mb-4">
+    <div style="font-family:Georgia,serif;color:#fff;font-size:1.2rem;font-weight:700">Farmazed</div>
+    <div style="color:rgba(255,255,255,.4);font-size:.72rem">Admin Panel</div>
+  </div>
+  <div class="section-label">Gestión</div>
+  <a href="/admin/casos.html"><i class="bi bi-folder2-open me-2"></i>Expedientes</a>
+  <a href="/admin/bandeja.html"><i class="bi bi-inbox me-2"></i>Mi Bandeja</a>
+  <a href="/admin/cotizaciones.html"><i class="bi bi-receipt me-2"></i>Cotizaciones</a>
+  <a href="/admin/formularios.html"><i class="bi bi-file-earmark-text me-2"></i>Formularios</a>
+  <a href="/admin/empresas.html"><i class="bi bi-building me-2"></i>Empresas</a>
+  <a href="/admin/precios.html"><i class="bi bi-cash-coin me-2"></i>Precios</a>
+  <div class="section-label">Sistema</div>
+  <a href="/admin/configuracion.html" class="active"><i class="bi bi-gear me-2"></i>Configuración</a>
+  <a href="#" id="sidebar-logout"><i class="bi bi-box-arrow-left me-2"></i>Cerrar Sesión</a>
+</div>
+
+<!-- Main -->
+<div class="main">
+  <div class="topbar d-flex align-items-center justify-content-between">
+    <h6 class="mb-0 fw-bold">Configuración</h6>
+    <span class="text-muted small" id="user-name"></span>
+  </div>
+
+  <div class="p-4" id="content" style="display:none">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-white d-flex flex-wrap align-items-center justify-content-between gap-2">
+        <div>
+          <span class="fw-semibold small">Mapa del código</span>
+          <span class="text-muted small ms-2" id="grafo-fecha"></span>
+        </div>
+        <button class="btn btn-sm btn-outline-primary" id="btn-nueva-pestana" disabled>
+          <i class="bi bi-box-arrow-up-right me-1"></i>Abrir en pestaña nueva
+        </button>
+      </div>
+      <div class="card-body">
+        <p class="text-muted small mb-3">
+          Grafo interactivo de la estructura del backend, las pruebas y el portal (generado con
+          <code>tracker/scripts/actualizar_grafo.sh</code>). Solo lo ve el administrador: expone cómo está armado el código.
+        </p>
+        <div id="grafo-estado" class="text-center py-5"><div class="spinner-border text-primary"></div></div>
+        <div id="grafo-error" class="alert alert-danger d-none"></div>
+        <iframe id="grafo-frame" title="Mapa del código" class="d-none"></iframe>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+  import { initBackoffice } from '../portal/js/auth.js';
+  import api from '../portal/js/api.js';
+
+  let grafoHtml = null;
+  // CSP del iframe: sin connect-src, no puede enviar datos a ningún host.
+  const CSP_GRAFO = "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:";
+
+  async function init() {
+    const sesion = await initBackoffice();
+    if (!sesion) return;
+    if (!sesion.admin) { window.location.href = '/admin/bandeja.html'; return; } // el staff vuelve a su bandeja
+    document.getElementById('content').style.display = '';
+    cargarGrafo();
+  }
+
+  async function cargarGrafo() {
+    const estado = document.getElementById('grafo-estado');
+    const error  = document.getElementById('grafo-error');
+    try {
+      const { html, generadoEn } = await api.getCodeGraph();
+      grafoHtml = html;
+      if (generadoEn && !isNaN(generadoEn)) document.getElementById('grafo-fecha').textContent = `· generado ${generadoEn.toLocaleString('es-PA')}`;
+
+      // El HTML del grafo trae sus propios scripts: va en un iframe SIN allow-same-origin, así corre
+      // aislado y no puede leer el token ni la sesión de esta página (ni hablar con la API como admin).
+      const frame = document.getElementById('grafo-frame');
+      frame.setAttribute('sandbox', 'allow-scripts');
+      frame.setAttribute('csp', CSP_GRAFO);
+      frame.srcdoc = html;
+      frame.classList.remove('d-none');
+      document.getElementById('btn-nueva-pestana').disabled = false;
+    } catch (e) {
+      error.textContent = e.message;
+      error.classList.remove('d-none');
+    } finally {
+      estado.classList.add('d-none');
+    }
+  }
+
+  // Pestaña nueva: una URL blob hereda el ORIGEN de esta página, así que NO se abre el grafo
+  // directo — se abre una envoltura mínima (sin scripts) con el mismo iframe sandbox.
+  document.getElementById('btn-nueva-pestana').addEventListener('click', () => {
+    if (!grafoHtml) return;
+    const srcdoc = grafoHtml.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+    const envoltura = `<!doctype html><html><head><meta charset="utf-8"><title>Mapa del código — Farmazed</title></head>`
+      + `<body style="margin:0"><iframe sandbox="allow-scripts" csp="${CSP_GRAFO}" style="border:0;width:100vw;height:100vh" srcdoc="${srcdoc}"></iframe></body></html>`;
+    const url = URL.createObjectURL(new Blob([envoltura], { type: 'text/html' }));
+    window.open(url, '_blank', 'noopener');
+    setTimeout(() => URL.revokeObjectURL(url), 60_000);
+  });
+
+  init();
+</script>
+</body>
+</html>

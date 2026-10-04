@@ -22,8 +22,10 @@ const doc = `# 09 — Tabla de permisos (E3, generada desde el código)
 Fuente de la especificación: PM_COMMENTS.md §H.4 (29-sep). Roles: ${ROLES.join(', ')}.
 
 No incluye \`GET /api/admin/pricing\` (lectura, público a propósito — los precios no son
-secretos), \`GET/POST /api/invitations/:token(/accept)\` (públicas sin auth, por diseño:
-quien acepta una invitación todavía no tiene cuenta) ni \`GET /api/me/permissions\`
+secretos), \`GET /api/invitations/:token\` (público: la página de aceptar necesita saber a qué
+correo corresponde el link), \`POST /api/invitations/:token/accept\` (desde TAREA 39 exige sesión:
+el uid sale del token y el correo de la sesión debe ser el de la invitación; una cuenta sin
+\`role\` ni \`admin\` no tiene ningún permiso) ni \`GET /api/me/permissions\`
 (reflexiva — "quién soy", no una acción que se permita o no). \`PATCH
 /api/admin/pricing/:categoryId\` SÍ está en la tabla (\`pricing.write\`) desde TAREA 15.
 

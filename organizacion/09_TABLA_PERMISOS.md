@@ -6,8 +6,10 @@
 Fuente de la especificación: PM_COMMENTS.md §H.4 (29-sep). Roles: cliente_titular, cliente_miembro, analista, abogado, regente, admin.
 
 No incluye `GET /api/admin/pricing` (lectura, público a propósito — los precios no son
-secretos), `GET/POST /api/invitations/:token(/accept)` (públicas sin auth, por diseño:
-quien acepta una invitación todavía no tiene cuenta) ni `GET /api/me/permissions`
+secretos), `GET /api/invitations/:token` (público: la página de aceptar necesita saber a qué
+correo corresponde el link), `POST /api/invitations/:token/accept` (desde TAREA 39 exige sesión:
+el uid sale del token y el correo de la sesión debe ser el de la invitación; una cuenta sin
+`role` ni `admin` no tiene ningún permiso) ni `GET /api/me/permissions`
 (reflexiva — "quién soy", no una acción que se permita o no). `PATCH
 /api/admin/pricing/:categoryId` SÍ está en la tabla (`pricing.write`) desde TAREA 15.
 
@@ -43,15 +45,27 @@ quien acepta una invitación todavía no tiene cuenta) ni `GET /api/me/permissio
 | Ajustar las líneas de una cotización en borrador (R5/R12) (`quotes.edit`) | — | — | — | — | — | ✅ |
 | Enviar una cotización al cliente (R5/R12) (`quotes.send`) | — | — | — | — | — | ✅ |
 | Aceptar o rechazar una cotización enviada (R5/R12) (`quotes.accept`) | ✅ | — | — | — | — | — |
+| Pagar con PayPal una cotización aceptada (§H.14) (`quotes.pay`) | ✅ | — | — | — | — | — |
+| Crear/editar el plan recurrente de suscripción (`subscription.manage_plan`) | — | — | — | — | — | ✅ |
+| Suscribir/cancelar la suscripción de mi empresa (`subscription.subscribe`) | ✅ | — | — | — | — | — |
 | Editar el tarifario (`pricing.write`) | — | — | — | — | — | ✅ |
-| Crear/editar empresas (`orgs.manage`) | — | — | — | — | — | ✅ |
+| Listar las empresas (sin crear ni ver miembros) (`orgs.list`) | — | — | ✅ | ✅ | ✅ | ✅ |
+| Crear una empresa directamente y ver sus miembros (`orgs.manage`) | — | — | — | — | — | ✅ |
 | Ver los miembros de una empresa (`orgs.read_members`) | ✅ | ✅ | — | — | — | ✅ |
+| Completar/editar la captación de información preliminar de la empresa (`orgs.edit_captacion`) | ✅ | — | — | — | — | ✅ |
+| Ver y marcar revisados los clientes nuevos (captación) en la bandeja (`orgs.read_leads`) | — | — | ✅ | ✅ | ✅ | ✅ |
 | Listar empleados de Farmazed (`employees.list`) | — | — | — | — | — | ✅ |
 | Invitar a un titular (crea empresa) (`invitations.create_org`) | — | — | — | — | — | ✅ |
 | Invitar a un empleado Farmazed (`invitations.create_empleado`) | — | — | — | — | — | ✅ |
 | Invitar a un miembro de mi empresa (`invitations.create_miembro`) | ✅ | — | — | — | — | — |
 | Ver el estado de las invitaciones (`invitations.read`) | — | — | — | — | — | ✅ |
 | Dar/quitar el rol admin a una cuenta existente (`admin.set_role`) | — | — | — | — | — | ✅ |
+| Elegir/subir el plan de mi empresa (consulta/registro/empresarial) (`orgs.set_plan`) | ✅ | — | — | — | — | — |
+| Cargar/editar el diagnóstico regulatorio de una empresa (Plan Consulta) (`orgs.edit_diagnostico`) | — | — | ✅ | ✅ | ✅ | ✅ |
+| Ver los mensajes del formulario de contacto público (`contact_leads.read`) | — | — | ✅ | ✅ | ✅ | ✅ |
+| Enviar/aceptar la solicitud de propuesta del Plan Empresarial (`empresarial.solicitar`) | ✅ | — | — | — | — | — |
+| Definir condiciones (monto/período/gestor) del Plan Empresarial (`empresarial.manage`) | — | — | — | — | — | ✅ |
+| Ver el mapa interactivo del código (página Configuración) (`system.code_graph`) | — | — | — | — | — | ✅ |
 
 ## Reglas adicionales (no caben en una tabla rol × endpoint, dependen del CASO)
 

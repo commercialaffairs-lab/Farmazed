@@ -1,14 +1,13 @@
 const { Router }  = require('express');
-const { v4: uuid } = require('uuid');
 const admin         = require('firebase-admin');
 const { requireAuth } = require('../middleware/auth');
 const { getChecklist } = require('../data/faddi_checklists');
 const { rechazoTramite } = require('../data/tramites_habilitados');
 const { isValidStatus, CASE_STATUSES } = require('../data/case_status');
 const { serializeTimestamps } = require('../utils/serialize');
-const { checkTransition, computeSideEffects, afterTransition } = require('../services/transitions');
-const { getAcceptedQuoteLineForCase } = require('./quotes');
-const { effectiveRole, canAccessCase, canTransitionCase, requirePermission, can, PERMISSIONS, CLIENT_ROLES, STAFF_ROLES } = require('../middleware/permissions');
+const { applyTransition } = require('../services/transitions');
+const { getAcceptedQuoteLineForCase } = require('../services/quotes');
+const { effectiveRole, getCaseOrFail, canTransitionCase, requirePermission, can, PERMISSIONS, CLIENT_ROLES, STAFF_ROLES } = require('../middleware/permissions');
 
 const router = Router();
 const db     = () => admin.firestore();
@@ -46,6 +45,14 @@ async function generateCaseCode(tramiteType, tipoRegistro) {
 
 // ─── GET /api/cases ─────────────────────────────────────────────────────────
 // Admin: all cases. Client: own cases only.
+// TAREA 42: las notas internas y el seguimiento FADDI son de staff + admin (cases.edit_notes /
+// cases.edit_faddi): al cliente no se le devuelven.
+function sinCamposInternos(data, role) {
+  if (!CLIENT_ROLES.includes(role)) return data;
+  const { notes, faddi, ...publico } = data;
+  return publico;
+}
+
 router.get('/', requireAuth, requirePermission('cases.list'), async (req, res) => {
   try {
     let query = db().collection('cases').orderBy('createdAt', 'desc');
@@ -72,7 +79,7 @@ router.get('/', requireAuth, requirePermission('cases.list'), async (req, res) =
     const snap  = await query.limit(200).get();
     const cases = snap.docs.map(d => {
       const data = d.data();
-      return { id: d.id, ...data, productName: data.product?.nombreComercial || '(sin nombre de producto)' };
+      return { id: d.id, ...sinCamposInternos(data, role), productName: data.product?.nombreComercial || '(sin nombre de producto)' };
     });
     res.json(serializeTimestamps({ total: cases.length, cases }));
   } catch (e) {
@@ -122,7 +129,7 @@ router.post('/', requireAuth, requirePermission('cases.create'), async (req, res
     };
 
     const ref = await db().collection('cases').add(caseData);
-    res.status(201).json(serializeTimestamps({ id: ref.id, ...caseData }));
+    res.status(201).json(serializeTimestamps({ id: ref.id, ...sinCamposInternos(caseData, effectiveRole(req.user)) }));
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
@@ -131,13 +138,8 @@ router.post('/', requireAuth, requirePermission('cases.create'), async (req, res
 // ─── GET /api/cases/:id ──────────────────────────────────────────────────────
 router.get('/:id', requireAuth, requirePermission('cases.read'), async (req, res) => {
   try {
-    const snap = await db().collection('cases').doc(req.params.id).get();
-    if (!snap.exists) return res.status(404).json({ error: 'Case not found' });
-
-    const data = snap.data();
-    if (!canAccessCase(req.user, data)) {
-      return res.status(403).json({ error: 'Forbidden' });
-    }
+    const data = await getCaseOrFail(req.params.id, req.user, res);
+    if (!data) return;
 
     // Include dynamic checklist
     const linea = await getAcceptedQuoteLineForCase(req.params.id);
@@ -148,7 +150,7 @@ router.get('/:id', requireAuth, requirePermission('cases.read'), async (req, res
       esInnovador:     data.esInnovador,
     });
 
-    res.json(serializeTimestamps({ id: snap.id, ...data, checklist }));
+    res.json(serializeTimestamps({ ...sinCamposInternos(data, effectiveRole(req.user)), checklist }));
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
@@ -166,13 +168,8 @@ router.patch('/:id', requireAuth, async (req, res) => {
       if (rechazo) return res.status(rechazo.status).json(rechazo.body);
     }
 
-    const snap = await db().collection('cases').doc(req.params.id).get();
-    if (!snap.exists) return res.status(404).json({ error: 'Case not found' });
-
-    const data = snap.data();
-    if (!canAccessCase(req.user, data)) {
-      return res.status(403).json({ error: 'Forbidden' });
-    }
+    const data = await getCaseOrFail(req.params.id, req.user, res);
+    if (!data) return;
 
     // E3/§H.4: 3 grupos de campos editables — admin (todo), cliente (datos
     // del caso mientras está en borrador), staff (solo status/notas, y el
@@ -235,47 +232,6 @@ router.patch('/:id', requireAuth, async (req, res) => {
       });
     }
 
-    // §H.1/§H.8: valida el SALTO, no solo que el valor exista. `override:true`
-    // (solo admin — un cliente nunca llega aqui con un status fuera de
-    // 'submitted', ver arriba) fuerza el salto y queda en
-    // cases/{id}/statusHistory para auditoria.
-    const override = isAdmin && req.body.override === true;
-    const isRealTransition = update.status !== undefined
-      && (update.status !== data.status || (update.status === 'fase_08' && data.status === 'fase_08'));
-
-    let gateResult = { ok: true, gatesSaltados: [], transitionValid: true, isFase8Recycle: false };
-
-    if (isRealTransition) {
-      // TAREA 22 (ajuste PM sobre TAREA 21): TODOS los gates de negocio
-      // (transición válida, pago, cotización, cerrado, confirmaciones de
-      // fase_08) viven en tracker/services/transitions.js — ni cases.js ni
-      // mcp.js repiten esta lógica (antes mcp.js le faltaban dos gates
-      // completos, un hueco de cumplimiento real).
-      gateResult = await checkTransition(data, req.params.id, update.status, { override, reason: req.body.reason });
-      if (!gateResult.ok) {
-        return res.status(gateResult.status).json({
-          error: gateResult.error, from: data.status, to: update.status,
-          ...(gateResult.pagoRequerido ? { pagoRequerido: gateResult.pagoRequerido } : {}),
-        });
-      }
-
-      // E3/§H.4, actualizado §H.8: dentro de staff, el analista mueve TODO
-      // el status (incluidas fase_08 y fase_10, los dos puntos de control) —
-      // abogado/regente ya no mueven status directamente, solo registran su
-      // confirmación de fase_08 (POST /confirmaciones/fase8, ver abajo). El
-      // admin no pasa por aquí (ya puede cualquier salto válido u override).
-      // Esto SÍ sigue siendo propio de REST (permiso por ROL) — MCP no
-      // tiene el concepto, por eso no vive en checkTransition().
-      if (isStaff && !canTransitionCase(role, data.status)) {
-        return res.status(403).json({
-          error: `Rol "${role}" no puede mover el caso fuera de "${data.status}" — esa confirmación es de otro rol.`,
-          from: data.status,
-        });
-      }
-
-      Object.assign(update, computeSideEffects(data, update.status, gateResult.isFase8Recycle));
-    }
-
     // vencimiento arrives as an ISO date string from the client JSON body —
     // store it as a proper Firestore Timestamp (or null to clear it).
     if (update.vencimiento !== undefined) {
@@ -284,26 +240,32 @@ router.patch('/:id', requireAuth, async (req, res) => {
         : admin.firestore.Timestamp.fromDate(new Date(update.vencimiento));
     }
 
-    await db().collection('cases').doc(req.params.id).update(update);
-
-    if (isRealTransition) {
-      const isOverride = gateResult.gatesSaltados.length > 0 && override;
-      // El motivo de cierre (fase_04 -> cerrado) se registra igual que un
-      // override, aunque no lo sea — es la única transición normal que
-      // exige `reason`.
-      const registrarMotivo = isOverride || update.status === 'cerrado';
-      await db().collection('cases').doc(req.params.id).collection('statusHistory').add({
-        from: data.status, to: update.status,
-        override: isOverride,
-        reason: registrarMotivo ? (req.body.reason || '') : null,
-        by: req.user.uid, byEmail: req.user.email,
-        at: admin.firestore.Timestamp.now(),
+    // Un cambio de status pasa SIEMPRE por applyTransition() (TAREA 41, services/
+    // transitions.js): una transacción que relee el status, verifica los gates (TAREA 22:
+    // transición válida, pago, cotización, cerrado, confirmaciones de fase_08) y escribe el
+    // update + statusHistory juntos. `override:true` (solo admin — un cliente nunca llega
+    // aquí con un status fuera de 'submitted') fuerza el salto y queda en el historial.
+    if (update.status !== undefined) {
+      const override = isAdmin && req.body.override === true;
+      const r = await applyTransition({
+        caseId: req.params.id, to: update.status, update,
+        actor: { uid: req.user.uid, email: req.user.email },
+        override, reason: req.body.reason,
+        // E3/§H.4, actualizado §H.8: dentro de staff, el analista mueve TODO el status
+        // (incluidas fase_08 y fase_10, los dos puntos de control) — abogado/regente solo
+        // registran su confirmación de fase_08 (POST /confirmaciones/fase8). El admin no pasa
+        // por aquí. Esto SÍ es propio de REST (permiso por ROL) — MCP no tiene el concepto.
+        autorizar: isStaff ? (caso) => (canTransitionCase(role, caso.status) ? null : {
+          status: 403,
+          body: { error: `Rol "${role}" no puede mover el caso fuera de "${caso.status}" — esa confirmación es de otro rol.`, from: caso.status },
+        }) : null,
       });
-
-      await afterTransition(req.params.id, data, update.status, { uid: req.user.uid, email: req.user.email });
+      if (!r.ok) return res.status(r.status).json(r.body);
+      return res.json(serializeTimestamps({ id: req.params.id, ...sinCamposInternos(r.update, role), ...(r.avisos.length ? { avisos: r.avisos } : {}) }));
     }
 
-    res.json(serializeTimestamps({ id: req.params.id, ...update }));
+    await db().collection('cases').doc(req.params.id).update(update);
+    res.json(serializeTimestamps({ id: req.params.id, ...sinCamposInternos(update, role) }));
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
@@ -328,13 +290,8 @@ router.delete('/:id', requireAuth, requirePermission('cases.delete'), async (req
 // solo el suyo.
 router.get('/:id/history', requireAuth, requirePermission('cases.read_history'), async (req, res) => {
   try {
-    const snap = await db().collection('cases').doc(req.params.id).get();
-    if (!snap.exists) return res.status(404).json({ error: 'Case not found' });
-
-    const data = snap.data();
-    if (!canAccessCase(req.user, data)) {
-      return res.status(403).json({ error: 'Forbidden' });
-    }
+    const data = await getCaseOrFail(req.params.id, req.user, res);
+    if (!data) return;
 
     const histSnap = await db()
       .collection('cases').doc(req.params.id)
@@ -342,7 +299,12 @@ router.get('/:id/history', requireAuth, requirePermission('cases.read_history'),
       .orderBy('at', 'desc')
       .get();
 
-    const history = histSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    // El cliente ve solo QUÉ cambió y CUÁNDO: motivo, override y quién (correo del staff) son internos.
+    const cliente = CLIENT_ROLES.includes(effectiveRole(req.user));
+    const history = histSnap.docs.map(d => {
+      const { from, to, at } = d.data();
+      return cliente ? { id: d.id, from, to, at } : { id: d.id, ...d.data() };
+    });
 
     res.json(serializeTimestamps({ total: history.length, history }));
   } catch (e) {
@@ -354,13 +316,8 @@ router.get('/:id/history', requireAuth, requirePermission('cases.read_history'),
 // Returns the dynamic checklist for a case (with upload status per document).
 router.get('/:id/checklist', requireAuth, requirePermission('cases.read_checklist'), async (req, res) => {
   try {
-    const snap = await db().collection('cases').doc(req.params.id).get();
-    if (!snap.exists) return res.status(404).json({ error: 'Case not found' });
-
-    const data = snap.data();
-    if (!canAccessCase(req.user, data)) {
-      return res.status(403).json({ error: 'Forbidden' });
-    }
+    const data = await getCaseOrFail(req.params.id, req.user, res);
+    if (!data) return;
 
     // Get uploaded docs
     const docsSnap = await db()
@@ -404,13 +361,8 @@ router.get('/:id/checklist', requireAuth, requirePermission('cases.read_checklis
 // abogado/regente asignado a este caso (o admin) el que confirme.
 router.post('/:id/confirmaciones/fase8', requireAuth, async (req, res) => {
   try {
-    const snap = await db().collection('cases').doc(req.params.id).get();
-    if (!snap.exists) return res.status(404).json({ error: 'Case not found' });
-
-    const data = snap.data();
-    if (!canAccessCase(req.user, data)) {
-      return res.status(403).json({ error: 'Forbidden' });
-    }
+    const data = await getCaseOrFail(req.params.id, req.user, res);
+    if (!data) return;
 
     const { tipo } = req.body;
     if (!['legal', 'tecnica'].includes(tipo)) {

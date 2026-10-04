@@ -13,14 +13,17 @@
 const { Router } = require('express');
 const admin       = require('firebase-admin');
 const { requireAuth } = require('../middleware/auth');
-const { requirePermission } = require('../middleware/permissions');
+const { requirePermission, effectiveRole } = require('../middleware/permissions');
 const { serializeTimestamps } = require('../utils/serialize');
+const { TRAMITE_TYPES } = require('../data/faddi_checklists');
+const { textoError } = require('../utils/validar_texto');
+const { createOrg } = require('../services/orgs');
 
 const router = Router();
 const db     = () => admin.firestore();
 
-// ─── GET /api/orgs (admin) ────────────────────────────────────────────────────
-router.get('/', requireAuth, requirePermission('orgs.manage'), async (req, res) => {
+// ─── GET /api/orgs (staff + admin, TAREA 35) ──────────────────────────────────
+router.get('/', requireAuth, requirePermission('orgs.list'), async (req, res) => {
   try {
     const snap = await db().collection('orgs').orderBy('createdAt', 'desc').get();
     const orgs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -36,12 +39,12 @@ router.post('/', requireAuth, requirePermission('orgs.manage'), async (req, res)
   try {
     const { nombre } = req.body;
     if (!nombre) return res.status(400).json({ error: 'nombre is required' });
+    const errorNombre = textoError('nombre', nombre, 120);
+    if (errorNombre) return res.status(400).json({ error: errorNombre });
 
-    const now = admin.firestore.Timestamp.now();
-    const orgData = { nombre, createdAt: now, createdBy: req.user.uid };
-    const ref = await db().collection('orgs').add(orgData);
+    const ref = await createOrg({ nombre, createdBy: req.user.uid });
 
-    res.status(201).json(serializeTimestamps({ id: ref.id, ...orgData }));
+    res.status(201).json(serializeTimestamps({ id: ref.id, ...(await ref.get()).data() }));
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
@@ -62,6 +65,181 @@ router.get('/:orgId/members', requireAuth, requirePermission('orgs.manage'), asy
       .map(u => ({ uid: u.uid, email: u.email, displayName: u.displayName || u.email, role: u.customClaims?.role }));
 
     res.json(serializeTimestamps({ id: orgSnap.id, ...orgSnap.data(), members }));
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ─── Captación de información preliminar (TAREA 32, §H.13, Fase 2 Zelky) ──────
+// Los 6 campos que el PM pidió, literal: país y nombre del laboratorio
+// fabricante (un solo campo de texto — así vino la pregunta de Zelky),
+// categoría(s) de producto, número de productos por categoría, ¿registro
+// previo ante autoridad reconocida?, ¿cliente nuevo o ya tiene productos
+// registrados en Panamá?, ¿algún producto con modificación en curso?
+//
+// "Se pide una sola vez" es una decisión de UI (el front solo MUESTRA la
+// pantalla bloqueante si `org.captacion` no existe todavía), no una
+// inmutabilidad del dato en el backend — el mismo PATCH sirve para la
+// primera vez y para "editar después desde Mi Empresa" (instrucción
+// explícita del PM: sí se puede editar más adelante).
+const CAPTACION_CAMPOS = [
+  'paisYNombreFabricante', 'categoriasProducto', 'numeroProductosPorCategoria',
+  'registroPrevioAutoridadReconocida', 'clienteNuevoOYaRegistrado', 'productoConModificacionEnCurso',
+];
+
+function validarCaptacion(body) {
+  const { paisYNombreFabricante, categoriasProducto, numeroProductosPorCategoria,
+          registroPrevioAutoridadReconocida, clienteNuevoOYaRegistrado, productoConModificacionEnCurso } = body;
+  const errorTexto = textoError('País y nombre del laboratorio fabricante', paisYNombreFabricante, 200)
+    || textoError('Número de productos por categoría', numeroProductosPorCategoria, 120);
+  if (errorTexto) return errorTexto;
+  if (!Array.isArray(categoriasProducto) || categoriasProducto.length === 0) {
+    return 'Selecciona al menos una categoría de producto.';
+  }
+  if (categoriasProducto.some(c => !TRAMITE_TYPES.includes(c))) {
+    return `categoriasProducto debe ser un subconjunto de: ${TRAMITE_TYPES.join(', ')}`;
+  }
+  if (typeof registroPrevioAutoridadReconocida !== 'boolean') {
+    return 'registroPrevioAutoridadReconocida debe ser true/false.';
+  }
+  if (!['nuevo', 'ya_registrado'].includes(clienteNuevoOYaRegistrado)) {
+    return `clienteNuevoOYaRegistrado debe ser 'nuevo' o 'ya_registrado'.`;
+  }
+  if (typeof productoConModificacionEnCurso !== 'boolean') {
+    return 'productoConModificacionEnCurso debe ser true/false.';
+  }
+  return null;
+}
+
+// ─── PATCH /api/orgs/mine/captacion (cliente_titular, admin) ──────────────────
+// Sin :orgId en la URL — el titular nunca manda el id de su propia empresa,
+// sale del claim (req.user.orgId), igual que invitations.js POST /miembro.
+// El admin SÍ puede mandar orgId en el body (gestión manual desde
+// admin/empresas.html) — es el único rol al que esto tiene sentido pedirle.
+router.patch('/mine/captacion', requireAuth, requirePermission('orgs.edit_captacion'), async (req, res) => {
+  try {
+    const role = effectiveRole(req.user);
+    let orgId;
+    if (role === 'admin') {
+      orgId = req.body.orgId || req.user.orgId;
+      if (!orgId) return res.status(400).json({ error: 'orgId is required (admin)' });
+    } else {
+      orgId = req.user.orgId;
+      if (!orgId) return res.status(400).json({ error: 'Tu cuenta no tiene una empresa asociada — contacta a Farmazed.' });
+    }
+
+    const errorValidacion = validarCaptacion(req.body);
+    if (errorValidacion) return res.status(400).json({ error: errorValidacion });
+
+    const orgRef  = db().collection('orgs').doc(orgId);
+    const orgSnap = await orgRef.get();
+    if (!orgSnap.exists) return res.status(404).json({ error: 'Empresa no encontrada' });
+
+    const now = admin.firestore.Timestamp.now();
+    const yaExistia = !!orgSnap.data().captacion;
+    const captacion = {};
+    for (const campo of CAPTACION_CAMPOS) {
+      const v = req.body[campo];
+      captacion[campo] = typeof v === 'string' ? v.trim() : v;
+    }
+    captacion.revisadoPorFarmazed = yaExistia ? (orgSnap.data().captacion.revisadoPorFarmazed ?? false) : false;
+    captacion.completadaPor = req.user.uid;
+    captacion.completadaEn  = yaExistia ? orgSnap.data().captacion.completadaEn : now;
+    captacion.actualizadaEn = now;
+
+    await orgRef.update({ captacion });
+    res.json(serializeTimestamps({ id: orgId, captacion }));
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ─── GET /api/orgs/leads (staff, admin) ───────────────────────────────────────
+// "Cliente nuevo — revisar captación" en la bandeja: empresas con la
+// captación ya completada pero que Farmazed todavía no marcó como revisada.
+router.get('/leads', requireAuth, requirePermission('orgs.read_leads'), async (req, res) => {
+  try {
+    const snap = await db().collection('orgs').where('captacion.revisadoPorFarmazed', '==', false).get();
+    const leads = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    res.json(serializeTimestamps({ total: leads.length, leads }));
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ─── POST /api/orgs/:orgId/leads/revisar (staff, admin) ───────────────────────
+router.post('/:orgId/leads/revisar', requireAuth, requirePermission('orgs.read_leads'), async (req, res) => {
+  try {
+    const orgRef  = db().collection('orgs').doc(req.params.orgId);
+    const orgSnap = await orgRef.get();
+    if (!orgSnap.exists) return res.status(404).json({ error: 'Empresa no encontrada' });
+    if (!orgSnap.data().captacion) return res.status(400).json({ error: 'Esta empresa todavía no tiene captación completada.' });
+
+    await orgRef.update({
+      'captacion.revisadoPorFarmazed': true,
+      'captacion.revisadoPor':         req.user.uid,
+      'captacion.revisadoEn':          admin.firestore.Timestamp.now(),
+    });
+    res.json({ revisado: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ─── PATCH /api/orgs/mine/plan (cliente_titular) — TAREA 34, §H.15 ────────────
+// El titular elige/sube de plan — "puede pedir subir de plan" (instrucción
+// literal). Sin restricción de qué transición vale (no se especificó
+// ninguna) — el CTA "Contratar el registro" (Plan Consulta -> Registro) y
+// "aceptar la propuesta" (Empresarial) usan este mismo endpoint.
+const PLANES = ['consulta', 'registro', 'empresarial'];
+router.patch('/mine/plan', requireAuth, requirePermission('orgs.set_plan'), async (req, res) => {
+  try {
+    if (!req.user.orgId) return res.status(400).json({ error: 'Tu cuenta no tiene una empresa asociada — contacta a Farmazed.' });
+    const { plan } = req.body;
+    if (!PLANES.includes(plan)) {
+      return res.status(400).json({ error: `plan inválido: "${plan}". Válidos: ${PLANES.join(', ')}`, validos: PLANES });
+    }
+    await db().collection('orgs').doc(req.user.orgId).update({ plan });
+    res.json({ plan });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ─── Diagnóstico regulatorio (Plan Consulta) — TAREA 34, §H.15 ────────────────
+// "El staff hace el diagnóstico regulatorio: clasificación del producto,
+// ruta recomendada, requisitos aplicables, estimado de tiempos y costos
+// oficiales. Se entrega en el portal como 'Diagnóstico'." Vive en la EMPRESA
+// (no en un caso — "sin dossier ni trámite", Plan Consulta no crea casos).
+const DIAGNOSTICO_CAMPOS = ['clasificacion', 'rutaRecomendada', 'requisitosAplicables', 'estimadoTiempos', 'estimadoCostos'];
+
+function validarDiagnostico(body) {
+  for (const campo of DIAGNOSTICO_CAMPOS) {
+    const error = textoError(campo, body[campo], 500);
+    if (error) return error;
+  }
+  return null;
+}
+
+// ─── PUT /api/orgs/:orgId/diagnostico (staff, admin) ──────────────────────────
+router.put('/:orgId/diagnostico', requireAuth, requirePermission('orgs.edit_diagnostico'), async (req, res) => {
+  try {
+    const errorValidacion = validarDiagnostico(req.body || {});
+    if (errorValidacion) return res.status(400).json({ error: errorValidacion });
+
+    const orgRef  = db().collection('orgs').doc(req.params.orgId);
+    const orgSnap = await orgRef.get();
+    if (!orgSnap.exists) return res.status(404).json({ error: 'Empresa no encontrada' });
+
+    const now = admin.firestore.Timestamp.now();
+    const diagnostico = {};
+    for (const campo of DIAGNOSTICO_CAMPOS) diagnostico[campo] = req.body[campo].trim();
+    diagnostico.creadoPor = req.user.uid;
+    diagnostico.creadoEn  = orgSnap.data().diagnostico?.creadoEn || now;
+    diagnostico.actualizadoEn = now;
+
+    await orgRef.update({ diagnostico });
+    res.json(serializeTimestamps({ id: req.params.orgId, diagnostico }));
   } catch (e) {
     res.status(500).json({ error: e.message });
   }

@@ -5,21 +5,16 @@
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
-    "dev": "nodemon index.js"
+    "dev": "node --watch index.js",
+    "test": "bash scripts/run_permission_tests.sh"
   },
   "dependencies": {
-    "@google-cloud/firestore": "^7.3.0",
     "@google-cloud/storage": "^7.7.0",
     "cors": "^2.8.5",
     "express": "^4.18.3",
-    "express-validator": "^7.1.0",
     "firebase-admin": "^12.1.0",
     "helmet": "^7.1.0",
     "multer": "^1.4.5-lts.1",
-    "pdf-lib": "^1.17.1",
-    "uuid": "^9.0.0"
-  },
-  "devDependencies": {
-    "nodemon": "^3.1.0"
+    "pdf-lib": "^1.17.1"
   }
 }

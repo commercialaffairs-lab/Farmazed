@@ -1,16 +1,16 @@
 /**
- * checklist_tarea28.test.js — TAREA 28 (PM_COMMENTS §H.11, respuestas de
+ * checklist_vacuna.test.js — TAREA 28 (PM_COMMENTS §H.11, respuestas de
  * Zelky ronda 2): "Vacuna = Biológicos" — no es categoría aparte, mismos
  * requisitos del checklist (MED_BIO_DOCS). Prueba unitaria PURA sobre
  * `getChecklist()` (tracker/data/faddi_checklists.js) — sin emulador ni
- * HTTP. Corre con: node --test tracker/tests/checklist_tarea28.test.js
+ * HTTP. Corre con: node --test tracker/tests/checklist_vacuna.test.js
  */
 
 const { test, describe } = require('node:test');
 const assert = require('node:assert/strict');
 const { getChecklist } = require('../data/faddi_checklists');
 
-describe('TAREA 28 — Vacuna = Biológicos (mismo checklist)', () => {
+describe('Vacuna = Biológicos (mismo checklist)', () => {
   test('Regular: Vacuna tiene exactamente los mismos documentos que Biológicos', () => {
     const vacuna = getChecklist('medicamentos', { tipoRegistro: 'Regular', tipoMedicamento: ['Vacuna'] });
     const bio    = getChecklist('medicamentos', { tipoRegistro: 'Regular', tipoMedicamento: ['Biológicos'] });

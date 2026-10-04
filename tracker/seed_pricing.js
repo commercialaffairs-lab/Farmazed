@@ -19,7 +19,7 @@ const admin = require('firebase-admin');
 if (!admin.apps.length) {
   admin.initializeApp({
     credential: admin.credential.applicationDefault(),
-    projectId: process.env.FIREBASE_PROJECT_ID || 'farmazed'
+    projectId: process.env.FIREBASE_PROJECT_ID || (() => { throw new Error('FIREBASE_PROJECT_ID es obligatorio (no hay proyecto por defecto).'); })()
   });
 }
 const db = admin.firestore();

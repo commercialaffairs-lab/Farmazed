@@ -1,13 +1,12 @@
 const { Router }   = require('express');
 const multer        = require('multer');
-const { v4: uuid }  = require('uuid');
 const admin         = require('firebase-admin');
 const { requireAuth } = require('../middleware/auth');
 const { uploadFile, getSignedUrl, deleteFile } = require('../services/storage');
 const { isValidDocStatus, DOC_STATUSES, PENDING_DOCS } = require('../data/case_status');
 const { serializeTimestamps } = require('../utils/serialize');
-const { checkTransition } = require('../services/transitions');
-const { effectiveRole, canAccessCase, requirePermission } = require('../middleware/permissions');
+const { solicitarDocumento } = require('../services/document_requests');
+const { effectiveRole, getCaseOrFail, requirePermission } = require('../middleware/permissions');
 const { countPdfPages } = require('../utils/pdf_pages');
 const { LIMITE_PAGINAS, IEA_DOC_IDS } = require('../data/paquete_iea');
 
@@ -17,15 +16,6 @@ const upload  = multer({
   storage: multer.memoryStorage(),
   limits:  { fileSize: 52 * 1024 * 1024 }, // 52 MB (slightly above 50 MB limit)
 });
-
-// Helper: verify case exists and user has access
-async function getCaseOrFail(caseId, user, res) {
-  const snap = await db().collection('cases').doc(caseId).get();
-  if (!snap.exists) { res.status(404).json({ error: 'Case not found' }); return null; }
-  const data = snap.data();
-  if (!canAccessCase(user, data)) { res.status(403).json({ error: 'Forbidden' }); return null; }
-  return { id: snap.id, ...data };
-}
 
 // ─── GET /api/cases/:caseId/documents ────────────────────────────────────────
 router.get('/', requireAuth, requirePermission('documents.read'), async (req, res) => {
@@ -185,51 +175,16 @@ router.post('/request', requireAuth, requirePermission('documents.request'), asy
     const { faddiDocId, message } = req.body;
     if (!faddiDocId) return res.status(400).json({ error: 'faddiDocId is required' });
 
-    const now = admin.firestore.Timestamp.now();
-    const docsCol = db().collection('cases').doc(req.params.caseId).collection('documents');
-    const existing = await docsCol.where('faddiDocId', '==', faddiDocId).limit(1).get();
-
-    if (!existing.empty) {
-      await existing.docs[0].ref.update({
-        status: 'requested', reviewNotes: message || '',
-        reviewedBy: req.user.email, reviewedAt: now,
-      });
-    } else {
-      await docsCol.add({
-        faddiDocId, faddiCode: '', faddiDocName: '', faddiStep: 0,
-        fileName: '(pendiente)', fileSize: 0, mimeType: '', storagePath: '',
-        status: 'requested', reviewNotes: message || '',
-        uploadedAt: now, uploadedBy: 'admin',
-      });
-    }
-
-    // TAREA 22 (ajuste PM sobre TAREA 21): entrar a pending_docs pasa por
-    // los MISMOS gates que cualquier otra transición (checkTransition,
-    // tracker/services/transitions.js) — antes esta ruta escribía el status
-    // directo, sin pasar por ningún gate (a diferencia de cases.js, que sí
-    // los tenía). En la práctica solo el gate de pago puede llegar a
-    // aplicar aquí (los demás son específicos de otros orígenes/destinos);
+    // TAREA 22 (ajuste PM sobre TAREA 21): entrar a pending_docs pasa por los
+    // MISMOS gates que cualquier otra transición (checkTransition). TAREA 39:
+    // esa lógica vive en services/document_requests.js y la comparte el MCP;
     // `override`/`reason` en el body, solo-admin, igual que en cases.js.
-    const isAdmin = effectiveRole(req.user) === 'admin';
-    const override = isAdmin && req.body.override === true;
-    const gateResult = await checkTransition(caseData, req.params.caseId, PENDING_DOCS, { override, reason: req.body.reason });
-    if (!gateResult.ok) {
-      return res.status(gateResult.status).json({ error: gateResult.error, from: caseData.status, to: PENDING_DOCS });
-    }
-
-    await db().collection('cases').doc(req.params.caseId).update({ status: PENDING_DOCS, updatedAt: now });
-
-    // Entrar a pending_docs es siempre valido desde cualquier fase
-    // (isValidTransition — §H.1), pero se registra igual para el historial
-    // de auditoria de las 3 rutas de escritura.
-    if (caseData.status !== PENDING_DOCS) {
-      const isOverride = gateResult.gatesSaltados.length > 0 && override;
-      await db().collection('cases').doc(req.params.caseId).collection('statusHistory').add({
-        from: caseData.status, to: PENDING_DOCS, override: isOverride,
-        reason: isOverride ? (req.body.reason || '') : null,
-        by: req.user.uid, byEmail: req.user.email, at: now,
-      });
-    }
+    const override = effectiveRole(req.user) === 'admin' && req.body.override === true;
+    const r = await solicitarDocumento({
+      caseId: req.params.caseId, caseData, faddiDocId, message, override, reason: req.body.reason,
+      actor: { uid: req.user.uid, email: req.user.email, revisor: req.user.email },
+    });
+    if (!r.ok) return res.status(r.status).json({ error: r.error, from: caseData.status, to: PENDING_DOCS });
 
     res.json({ requested: true, faddiDocId });
   } catch (e) {
@@ -326,6 +281,11 @@ router.get('/:docId/versions', requireAuth, requirePermission('documents.read'),
 // Update status (uploaded|reviewing|approved|rejected) and review notes
 router.patch('/:docId', requireAuth, requirePermission('documents.review'), async (req, res) => {
   try {
+    // TAREA 39: antes no había chequeo por caso — cualquier staff (también uno NO
+    // asignado a este caso) podía aprobar/rechazar sus documentos.
+    const caseData = await getCaseOrFail(req.params.caseId, req.user, res);
+    if (!caseData) return;
+
     const ref = db()
       .collection('cases').doc(req.params.caseId)
       .collection('documents').doc(req.params.docId);

@@ -42,101 +42,15 @@ const { Router } = require('express');
 const admin       = require('firebase-admin');
 const { requireAuth } = require('../middleware/auth');
 const { serializeTimestamps } = require('../utils/serialize');
-const { desglose } = require('../utils/pricing_desglose');
 const { effectiveRole, CLIENT_ROLES, requirePermission } = require('../middleware/permissions');
+const { conceptosRequeridosFase05 } = require('../utils/conceptos_fase05');
+const { getProvider } = require('../services/payments');
+const { createConceptPayment } = require('../services/payments_ledger');
+const { recomputeTotal } = require('../services/quotes');
+const { HttpError, responderError } = require('../utils/http_error');
 
 const router = Router();
 const db     = () => admin.firestore();
-
-// ─── Resolución de categoría de precio (no inventa — ver TAREA 17/H.6 para
-// el mismo criterio aplicado a formularios) ──────────────────────────────────
-// Fuente de los ids: tracker/seed_pricing.js (única copia — si un id cambia
-// ahí, hay que actualizarlo aquí). Hoy `seed_pricing.js` solo tiene filas de
-// `medicamentos` (grupo "Registros Nuevos" para Nuevo Registro, que es lo
-// único que crea el wizard — ver H.6 sobre el gap de "Renovación"). Un
-// trámite/subtipo sin fila propia en el tarifario devuelve `null` — el admin
-// lo completa a mano en la cotización, nunca se le asigna un precio a
-// ciegas.
-// TAREA 23 (§H.8, Precios): el xlsx del 24-sep separó varias categorías que
-// seed_pricing.js (prod, 12-sep) traía combinadas en una sola fila —p.ej.
-// Mutuo Acuerdo vs WLA WHO, o Suplementos/Homeopático/Radiofármaco, antes 1
-// sola categoría "med_abreviado_suplemento". Ese tarifario más fino
-// (`_24sep`) SOLO existe sembrado en el emulador (seed_pricing_24sep.js — ver
-// organizacion/10_DIFF_PRECIOS_24SEP.md); producción sigue con los ids viejos
-// de seed_pricing.js hasta que Rick apruebe promoverlo.
-//
-// Ajuste del PM tras TAREA 23: cuál tarifario está ACTIVO es una decisión de
-// NEGOCIO (que Rick aprueba), no algo que deba inferirse de si esto corre
-// contra el emulador o no — antes esta función miraba
-// `FIRESTORE_EMULATOR_HOST`, que ata la decisión al entorno técnico. Ahora es
-// una variable explícita: `PRICING_TABLE=24sep` activa el tarifario nuevo;
-// cualquier otro valor (incluido no definida) usa el de siempre. Rick lo
-// enciende en producción con un solo cambio de variable de entorno cuando
-// apruebe el tarifario del 24-sep — ver ENTREGA_E1_E3.md, plan de deploy.
-const TARIFARIO_24SEP = process.env.PRICING_TABLE === '24sep';
-
-// TAREA 26 (§H.9-2) dejó "Prioridad innovadores" sin mapear por ambigüedad
-// (¿reemplaza la categoría del subtipo o es un cargo adicional? ¿excluyente
-// de las demás filas de Abreviado?). TAREA 28 (§H.11, Zelky ronda 2): es un
-// cargo ADICIONAL (no reemplaza nada), solo para Síntesis Química,
-// Biológicos y Biotecnológicos con `esInnovador = true` — por eso NO vive
-// en `resolverCategoriaPrecio()` (que resuelve LA categoría principal, una
-// sola por línea): se agrega como línea EXTRA de la cotización en
-// `attachCaseToDraftQuote()` (ver más abajo, `lineaPrioridadInnovadores()`),
-// marcada como provisional para que el admin la revise (Zelky: la fila dice
-// "(Abreviado)" y sus tasas podrían duplicar las de la línea principal).
-function resolverCategoriaPrecio({ tramiteType, tipoRegistro, tipoMedicamento = [] }) {
-  if (tramiteType !== 'medicamentos') return null; // cosmeticos/higienicos/plaguicidas/... sin tarifario hoy.
-
-  if (tipoRegistro === 'Reconocimiento Mutuo') {
-    return TARIFARIO_24SEP ? 'med_mutuo_acuerdo_24sep' : 'med_abreviado_mutuo_acuerdo';
-  }
-  if (tipoRegistro === 'Reconocimiento WLA') {
-    return TARIFARIO_24SEP ? 'med_abreviado_wla_who_24sep' : 'med_abreviado_mutuo_acuerdo'; // combinados en prod.
-  }
-
-  if (tipoRegistro === 'Abreviado') {
-    if (tipoMedicamento.includes('Huérfanos')) return TARIFARIO_24SEP ? 'med_abreviado_huerfanos_24sep' : 'med_abreviado_huerfano';
-    if (tipoMedicamento.includes('Suplementos')) return TARIFARIO_24SEP ? 'med_abreviado_suplementos_24sep' : 'med_abreviado_suplemento';
-    if (tipoMedicamento.includes('Homeopático')) return TARIFARIO_24SEP ? 'med_abreviado_homeopaticos_24sep' : 'med_abreviado_suplemento';
-    if (tipoMedicamento.includes('Radiofármaco')) return TARIFARIO_24SEP ? 'med_abreviado_radiofarmacos_24sep' : 'med_abreviado_suplemento';
-    // TAREA 28 (§H.11): "Vacuna = Biológicos" — mismo precio, no es categoría aparte.
-    if (tipoMedicamento.some(t => ['Biológicos', 'Biotecnológicos', 'Vacuna'].includes(t))) return TARIFARIO_24SEP ? 'med_abreviado_biologicos_24sep' : 'med_abreviado_biologico';
-    if (tipoMedicamento.includes('Síntesis Química')) return TARIFARIO_24SEP ? 'med_abreviado_sintesis_24sep' : 'med_abreviado_sintesis';
-    // TAREA 28 (§H.11): Zelky confirmó — Medio de Contraste/Gas Medicinal/
-    // Productos Naturales en Abreviado quedan SIN precio a propósito ("ruta
-    // no tarifada"), no es un gap pendiente de confirmar.
-    return null;
-  }
-
-  if (tipoRegistro === 'Regular') {
-    if (tipoMedicamento.includes('Huérfanos')) return TARIFARIO_24SEP ? 'med_regular_huerfano_24sep' : 'med_regular_huerfano';
-    if (tipoMedicamento.includes('Productos Naturales')) return TARIFARIO_24SEP ? 'med_regular_naturales_24sep' : 'med_regular_natural';
-    if (tipoMedicamento.includes('Gas Medicinal')) return TARIFARIO_24SEP ? 'med_regular_gases_24sep' : 'med_regular_natural';
-    if (tipoMedicamento.includes('Medio de Contraste')) return TARIFARIO_24SEP ? 'med_regular_contraste_24sep' : 'med_regular_natural';
-    if (tipoMedicamento.includes('Síntesis Química')) return TARIFARIO_24SEP ? 'med_regular_sintesis_24sep' : 'med_regular_sintesis';
-    // TAREA 28 (§H.11): Zelky confirmó — Regular + categoría SIN fila propia
-    // (Biológicos/Biotecnológicos/Homeopático/Radiofármaco/Suplementos/
-    // Vacuna) usa la fila genérica "Procedimiento Regular" del xlsx 24-sep.
-    // Solo existe en el tarifario nuevo — en legacy (prod, sin
-    // PRICING_TABLE=24sep) sigue sin fila propia, null, como siempre.
-    if (TARIFARIO_24SEP) return 'med_regular_general_24sep';
-    return null;
-  }
-
-  return null;
-}
-
-async function tarifarioDe(categoriaPrecio) {
-  if (!categoriaPrecio) return { honorariosFarmazed: 0, tasasOficiales: 0 };
-  const snap = await db().collection('pricing').doc(categoriaPrecio).get();
-  if (!snap.exists) return { honorariosFarmazed: 0, tasasOficiales: 0 };
-  return desglose(snap.data().components);
-}
-
-function recomputeTotal(lineas) {
-  return lineas.reduce((s, l) => s + (Number(l.monto) || 0), 0);
-}
 
 function historialEntry(tipo, extra, req) {
   return {
@@ -157,144 +71,6 @@ function canAccessQuote(user, quoteData) {
   if (role === 'admin') return true;
   if (CLIENT_ROLES.includes(role)) return quoteData.orgId && quoteData.orgId === user.orgId;
   return false;
-}
-
-const CATEGORIAS_PRIORIDAD_INNOVADORES = ['Síntesis Química', 'Biológicos', 'Biotecnológicos', 'Vacuna'];
-
-/**
- * TAREA 28 (§H.11, ajuste PM tras entrega): línea EXTRA de "Prioridad
- * innovadores" — cargo adicional, no reemplaza la línea principal. Solo si
- * `esInnovador===true` y la categoría es Síntesis Química/Biológicos/
- * Biotecnológicos/Vacuna ("Vacuna = Biológicos" aplica también aquí, el PM
- * lo confirmó explícitamente). Solo existe en el tarifario 24-sep
- * (`TARIFARIO_24SEP`) — en legacy no hay fila que cobrar. `null` si no
- * corresponde.
- */
-async function lineaPrioridadInnovadores(caseData) {
-  if (!TARIFARIO_24SEP) return null;
-  if (caseData.esInnovador !== true) return null;
-  if (!(caseData.tipoMedicamento || []).some(t => CATEGORIAS_PRIORIDAD_INNOVADORES.includes(t))) return null;
-
-  const { honorariosFarmazed, tasasOficiales } = await tarifarioDe('med_abreviado_prioridad_innovadores_24sep');
-  return {
-    caseId: caseData.id, caseCode: caseData.caseCode,
-    tipo: 'prioridad_innovadores',
-    categoriaPrecio: 'med_abreviado_prioridad_innovadores_24sep',
-    tarifarioHonorarios: honorariosFarmazed, tarifarioTasas: tasasOficiales,
-    honorariosFarmazed, tasasOficiales, monto: honorariosFarmazed + tasasOficiales,
-    // Provisional desde que se crea — Zelky: la fila dice "(Abreviado)" y
-    // sus tasas podrían duplicar las de la línea principal; el admin la
-    // revisa y ajusta con motivo (PATCH /lineas/:caseId con tipo:
-    // 'prioridad_innovadores'). Si el admin la guarda sin cambiar el monto,
-    // `ajustado` vuelve a `false` — ya no hace falta seguir marcándola.
-    ajustado: true,
-    motivoAjuste: 'Línea provisional (Prioridad innovadores, Abreviado) — revisar si corresponde a este caso y si las tasas duplican las de la línea principal.',
-    esExtranjero: false, aplicaIEA: false, modalidadIEA: null,
-  };
-}
-
-// ─── R12: borrador automático — llamado desde cases.js al salir de fase_03 ──
-// hacia fase_04. Reusa el borrador 'borrador' de la empresa si ya existe uno
-// (agrega/actualiza la línea de este caso); si no, crea uno nuevo. Si el
-// caso no tiene orgId (cuenta sin migrar, TAREA 14) no hace nada — sin
-// empresa no hay a qué cotización agrupar (mismo criterio de canAccessCase
-// para cuentas legacy).
-async function attachCaseToDraftQuote(caseData, systemUser = { uid: 'sistema', email: 'sistema' }) {
-  if (!caseData.orgId) return null;
-
-  const categoriaPrecio = resolverCategoriaPrecio(caseData);
-  const { honorariosFarmazed, tasasOficiales } = await tarifarioDe(categoriaPrecio);
-  const nuevaLinea = {
-    caseId: caseData.id, caseCode: caseData.caseCode,
-    tipo: 'principal', // TAREA 28: distingue de la línea extra de "prioridad_innovadores" (mismo caseId).
-    categoriaPrecio,
-    tarifarioHonorarios: honorariosFarmazed, tarifarioTasas: tasasOficiales,
-    honorariosFarmazed, tasasOficiales, monto: honorariosFarmazed + tasasOficiales,
-    ajustado: false, motivoAjuste: null,
-    // TAREA 23 (§H.8, Pagos): de esto depende qué CONCEPTOS exige el gate de
-    // fase_05 (transitions.js) — mef solo si es extranjero, iea solo si
-    // aplica (y con qué modalidad). Por defecto false/null — el admin los
-    // marca a mano en la cotización (PATCH /lineas/:caseId), no se infieren
-    // del wizard (el caso no trae ese dato hoy).
-    esExtranjero: false, aplicaIEA: false, modalidadIEA: null,
-  };
-  const lineaExtra = await lineaPrioridadInnovadores(caseData);
-  const lineasNuevas = lineaExtra ? [nuevaLinea, lineaExtra] : [nuevaLinea];
-
-  const existente = await db().collection('quotes')
-    .where('orgId', '==', caseData.orgId)
-    .where('estado', '==', 'borrador')
-    .limit(1)
-    .get();
-
-  const now = admin.firestore.Timestamp.now();
-  const histEntry = { tipo: 'linea_agregada', caseId: caseData.id, por: systemUser.uid, porEmail: systemUser.email, at: now };
-
-  if (existente.empty) {
-    const ref = await db().collection('quotes').add({
-      orgId: caseData.orgId,
-      caseIds: [caseData.id],
-      lineas: lineasNuevas,
-      total: recomputeTotal(lineasNuevas),
-      estado: 'borrador',
-      historial: [histEntry],
-      createdAt: now, updatedAt: now,
-    });
-    return ref.id;
-  }
-
-  const doc = existente.docs[0];
-  const data = doc.data();
-  if (data.caseIds.includes(caseData.id)) return doc.id; // ya estaba (reintento idempotente)
-
-  const lineas = [...data.lineas, ...lineasNuevas];
-  await doc.ref.update({
-    caseIds: [...data.caseIds, caseData.id],
-    lineas,
-    total: recomputeTotal(lineas),
-    historial: admin.firestore.FieldValue.arrayUnion(histEntry),
-    updatedAt: now,
-  });
-  return doc.id;
-}
-
-/**
- * ¿Este caso tiene una cotización 'aceptada' que lo incluya? Gate de
- * fase_04 -> fase_05 (mismo patrón que hasRequiredPayment en payments.js).
- */
-async function hasAcceptedQuote(caseId) {
-  const snap = await db().collection('quotes')
-    .where('caseIds', 'array-contains', caseId)
-    .where('estado', '==', 'aceptada')
-    .limit(1)
-    .get();
-  return !snap.empty;
-}
-
-function describeQuoteGate() {
-  return 'cotización aceptada que incluya este caso';
-}
-
-/**
- * La línea de ESTE caso dentro de su cotización 'aceptada' — trae
- * esExtranjero/aplicaIEA/modalidadIEA, que usa el gate de fase_05
- * (transitions.js) para saber qué conceptos de pago exigir. `null` si no
- * hay cotización aceptada para el caso (mismo criterio que hasAcceptedQuote
- * — el gate de fase_04->05 ya debió haber bloqueado eso antes; si llegó
- * aquí sin cotización fue por un override).
- */
-async function getAcceptedQuoteLineForCase(caseId) {
-  const snap = await db().collection('quotes')
-    .where('caseIds', 'array-contains', caseId)
-    .where('estado', '==', 'aceptada')
-    .limit(1)
-    .get();
-  if (snap.empty) return null;
-  const data = snap.docs[0].data();
-  // TAREA 28: un caso puede tener 2 líneas (principal + "prioridad
-  // innovadores", mismo caseId) — esta función es para los gates de pago/
-  // checklist (aplicaIEA/esExtranjero), que viven en la línea PRINCIPAL.
-  return data.lineas.find(l => l.caseId === caseId && (l.tipo || 'principal') === 'principal') || null;
 }
 
 // ─── GET /api/quotes ──────────────────────────────────────────────────────────
@@ -352,7 +128,7 @@ router.patch('/:id/lineas/:caseId', requireAuth, requirePermission('quotes.edit'
     if (idx === -1) return res.status(404).json({ error: 'Ese caso no está en esta cotización (o no tiene una línea de ese tipo)' });
 
     const linea = data.lineas[idx];
-    const { honorariosFarmazed, tasasOficiales, motivo, esExtranjero, aplicaIEA, modalidadIEA } = req.body;
+    const { honorariosFarmazed, tasasOficiales, motivo, esExtranjero, aplicaIEA, modalidadIEA, conceptos } = req.body;
     const nuevoHonorarios = honorariosFarmazed !== undefined ? Number(honorariosFarmazed) : linea.honorariosFarmazed;
     const nuevoTasas      = tasasOficiales      !== undefined ? Number(tasasOficiales)      : linea.tasasOficiales;
 
@@ -383,6 +159,19 @@ router.patch('/:id/lineas/:caseId', requireAuth, requirePermission('quotes.edit'
       });
     }
 
+    // TAREA 33 (§H.14): `conceptos` es OPCIONAL — si el admin ajusta montos
+    // sin mandarlo explícito, el desglose por concepto queda como estaba
+    // (no se reescala solo; no hay una regla obvia de cómo repartir un
+    // ajuste manual entre honorarios/tasa_dnfd/mef/iea sin inventarla).
+    let nuevosConceptos = linea.conceptos;
+    if (conceptos !== undefined) {
+      const faltante = ['honorarios', 'tasa_dnfd', 'mef', 'iea'].find(k => typeof conceptos[k] !== 'number' || conceptos[k] < 0);
+      if (faltante) {
+        return res.status(400).json({ error: `conceptos.${faltante} debe ser un número >= 0` });
+      }
+      nuevosConceptos = conceptos;
+    }
+
     const lineaActualizada = {
       ...linea,
       honorariosFarmazed: nuevoHonorarios,
@@ -393,6 +182,7 @@ router.patch('/:id/lineas/:caseId', requireAuth, requirePermission('quotes.edit'
       esExtranjero: nuevoEsExtranjero,
       aplicaIEA: nuevoAplicaIEA,
       modalidadIEA: nuevaModalidadIEA,
+      conceptos: nuevosConceptos,
     };
     const lineas = [...data.lineas];
     lineas[idx] = lineaActualizada;
@@ -480,10 +270,259 @@ router.post('/:id/respond', requireAuth, requirePermission('quotes.accept'), asy
   }
 });
 
-router.resolverCategoriaPrecio       = resolverCategoriaPrecio;
-router.attachCaseToDraftQuote        = attachCaseToDraftQuote;
-router.hasAcceptedQuote              = hasAcceptedQuote;
-router.describeQuoteGate             = describeQuoteGate;
-router.getAcceptedQuoteLineForCase   = getAcceptedQuoteLineForCase;
+// ─── Pago de la cotización aceptada con PayPal (TAREA 33, §H.14) ──────────────
+// "Por PayPal se cobra TODO junto" (decisión de Rick): un solo cargo por el
+// TOTAL de la cotización (todos los casos, honorarios+tasas de cada uno);
+// al capturarse se reparten en los pagos POR CONCEPTO que el gate de
+// fase_05 ya sabe leer (hasConceptPayment, payments.js) — Farmazed emite
+// después los cheques separados a DNFD/IEA/MEF con esa referencia.
+
+// TAREA 38 (C3/H6): crear-orden y capturar son ATÓMICOS — el estado de
+// `pagoPaypal` se reserva dentro de una runTransaction ANTES de hablar con el
+// proveedor ('creando' / 'capturando'), así dos requests en paralelo (doble
+// clic, reintento del navegador) no pueden cobrar ni registrar dos veces. Una
+// reserva más vieja que RESERVA_TTL_MS se considera abandonada (el proceso
+// murió a medias) y se puede retomar.
+const RESERVA_TTL_MS = 2 * 60 * 1000;
+const aCentavos = (n) => Math.round(Number(n) * 100); // comparar dinero en enteros, no con float (0.1+0.2 !== 0.3)
+// Con alguno de estos estados puede haber dinero cobrado sin cuadrar: crear-orden
+// no abre otra orden encima (sobrescribiría el orderId cobrado).
+const ESTADOS_PAGO_A_REVISAR = ['capturando', 'captura_sin_registrar', 'captura_discrepante'];
+const reservaVigente = (pago, campo) => {
+  const t = pago?.[campo]?.toMillis?.();
+  return !!t && Date.now() - t < RESERVA_TTL_MS;
+};
+
+function verificarAccesoYEstado(user, data) {
+  if (!canAccessQuote(user, data)) throw new HttpError(403, { error: 'Forbidden' });
+  if (data.estado !== 'aceptada') {
+    throw new HttpError(400, { error: `Solo se puede pagar una cotización 'aceptada' (esta está '${data.estado}').` });
+  }
+}
+
+// ─── POST /api/quotes/:id/pago/crear-orden (cliente_titular) ─────────────────
+// Sin monto en el body — a propósito: el monto SIEMPRE se calcula en el
+// servidor desde la cotización, nunca desde lo que mande el navegador.
+// Si ya hay una orden 'creada' con el mismo monto, se REUTILIZA (no se abre
+// otra en PayPal por cada clic).
+router.post('/:id/pago/crear-orden', requireAuth, requirePermission('quotes.pay'), async (req, res) => {
+  const ref = db().collection('quotes').doc(req.params.id);
+  try {
+    const reserva = await db().runTransaction(async (t) => {
+      const snap = await t.get(ref);
+      if (!snap.exists) throw new HttpError(404, { error: 'Cotización no encontrada' });
+      const data = snap.data();
+      verificarAccesoYEstado(req.user, data);
+
+      const pago = data.pagoPaypal;
+      if (pago?.estado === 'capturada') throw new HttpError(409, { error: 'Esta cotización ya fue pagada.' });
+      if (ESTADOS_PAGO_A_REVISAR.includes(pago?.estado)) {
+        throw new HttpError(409, { error: 'Hay un pago en curso o pendiente de revisión para esta cotización — contacta a Farmazed.' });
+      }
+
+      const monto = recomputeTotal(data.lineas); // recalculado acá, nunca del body ni de data.total cacheado
+      if (!(aCentavos(monto) > 0)) throw new HttpError(400, { error: 'Esta cotización no tiene un monto a pagar.' });
+      if (pago?.estado === 'creada' && pago.orderId && aCentavos(pago.expectedAmount) === aCentavos(monto)) {
+        return { reutilizada: true, orderId: pago.orderId, approveUrl: pago.approveUrl || null, monto, data };
+      }
+      if (pago?.estado === 'creando' && reservaVigente(pago, 'reservadaEn')) {
+        throw new HttpError(409, { error: 'Ya se está creando la orden de pago — espera un momento.' });
+      }
+      t.update(ref, { pagoPaypal: { estado: 'creando', reservadaEn: admin.firestore.Timestamp.now() } });
+      return { reutilizada: false, monto, data };
+    });
+
+    if (reserva.reutilizada) {
+      return res.json({ orderId: reserva.orderId, status: 'CREATED', approveUrl: reserva.approveUrl, amount: reserva.monto, currency: 'USD', reutilizada: true });
+    }
+
+    let provider, orden;
+    const liberar = () => ref.update({ pagoPaypal: admin.firestore.FieldValue.delete() })
+      .catch(err => console.error('[quotes/pago] no se pudo liberar la reserva', { quoteId: ref.id, error: err.message }));
+    try {
+      provider = getProvider();
+      orden = await provider.createOrder({
+        amount: reserva.monto, currency: 'USD', referenceId: req.params.id,
+        // un reintento inmediato del mismo cobro no abre otra orden; por hora, para que una orden caducada no quede pegada
+        requestId: `order-${req.params.id}-${aCentavos(reserva.monto)}-${Math.floor(Date.now() / 3_600_000)}`,
+        description: `Farmazed — cotización ${req.params.id} (${reserva.data.caseIds.length} caso(s))`,
+      });
+    } catch (e) {
+      // El proveedor falló: se libera la reserva, para poder reintentar.
+      await liberar();
+      throw e;
+    }
+
+    const pagoPaypal = {
+      orderId: orden.orderId, estado: 'creada', proveedor: provider.name,
+      approveUrl: orden.approveUrl || null,
+      expectedAmount: reserva.monto, expectedCurrency: 'USD',
+      creadaEn: admin.firestore.Timestamp.now(), creadaPor: req.user.uid,
+    };
+    try {
+      await ref.update({ pagoPaypal });
+    } catch (e) {
+      console.error('[quotes/pago] orden creada en el proveedor pero no guardada', { quoteId: ref.id, orderId: orden.orderId, error: e.message });
+      await liberar();
+      throw e;
+    }
+
+    res.status(201).json(serializeTimestamps({ orderId: orden.orderId, status: orden.status, approveUrl: orden.approveUrl, amount: reserva.monto, currency: 'USD' }));
+  } catch (e) {
+    responderError(res, e);
+  }
+});
+
+// ─── POST /api/quotes/:id/pago/capturar (cliente_titular) ────────────────────
+// Body: { orderId } — tiene que ser EXACTAMENTE el que devolvió crear-orden
+// para esta misma cotización; no hay forma de capturar la orden de otra
+// cotización contra esta (se compara contra lo que el servidor guardó, no
+// contra nada que el cliente pueda inventar). Idempotente: si ya estaba
+// 'capturada', devuelve el mismo resultado sin volver a crear pagos ni
+// llamar al proveedor de nuevo. TAREA 38: la transición creada->capturando es
+// una transacción (el segundo request en paralelo recibe 409), los pagos por
+// concepto llevan id determinista y se escriben en UN batch junto con el
+// estado 'capturada', y si el cobro se hizo pero el registro falla, queda
+// 'captura_sin_registrar' (reintentar /capturar lo completa sin recobrar).
+router.post('/:id/pago/capturar', requireAuth, requirePermission('quotes.pay'), async (req, res) => {
+  const ref = db().collection('quotes').doc(req.params.id);
+  try {
+    const { orderId } = req.body;
+    const reserva = await db().runTransaction(async (t) => {
+      const snap = await t.get(ref);
+      if (!snap.exists) throw new HttpError(404, { error: 'Cotización no encontrada' });
+      const data = snap.data();
+      verificarAccesoYEstado(req.user, data);
+      if (!data.pagoPaypal) {
+        throw new HttpError(400, { error: 'Todavía no se creó una orden de pago para esta cotización — llamar primero a /pago/crear-orden.' });
+      }
+
+      // El orderId se valida ANTES de la idempotencia — si no, una cotización
+      // ya capturada devolvería "éxito" para CUALQUIER orderId que alguien
+      // mande (mismo bug que "monto manipulado": no hay que confiar en nada
+      // del cliente, ni siquiera cuando la respuesta iba a ser la misma).
+      if (!orderId || orderId !== data.pagoPaypal.orderId) {
+        throw new HttpError(400, { error: 'orderId no coincide con la orden creada para esta cotización.' });
+      }
+
+      const pago = data.pagoPaypal;
+      if (pago.estado === 'capturada') return { yaEstaba: true, pago };
+      if (pago.estado === 'capturando' && reservaVigente(pago, 'capturandoDesde')) {
+        throw new HttpError(409, { error: 'Ya hay una captura en curso para esta cotización.' });
+      }
+      t.update(ref, { 'pagoPaypal.estado': 'capturando', 'pagoPaypal.capturandoDesde': admin.firestore.Timestamp.now() });
+      return { yaEstaba: false, data, estadoPrevio: pago.estado };
+    });
+
+    if (reserva.yaEstaba) {
+      return res.json({ capturada: true, yaEstaba: true, orderId, amount: reserva.pago.expectedAmount });
+    }
+    const { data, estadoPrevio } = reserva;
+    const FieldValue = admin.firestore.FieldValue;
+    const soltar = () => ref.update({ 'pagoPaypal.estado': estadoPrevio, 'pagoPaypal.capturandoDesde': FieldValue.delete() })
+      .catch(err => console.error('[quotes/pago] no se pudo liberar la captura', { quoteId: ref.id, orderId, error: err.message }));
+
+    let resultado;
+    try {
+      resultado = await getProvider().captureOrder(orderId);
+    } catch (e) {
+      // Puede haber cobrado igual (timeout con la respuesta perdida): al
+      // volver al estado previo, reintentar /capturar lo detecta
+      // (captureOrder trata ORDER_ALREADY_CAPTURED como éxito).
+      await soltar();
+      throw e;
+    }
+    if (resultado.captureId) {
+      // Si esto falla, el captureId igual queda en el log (y en el batch final).
+      await ref.update({ 'pagoPaypal.captureId': resultado.captureId })
+        .catch(err => console.error('[quotes/pago] COBRADO, no se pudo guardar el captureId', { quoteId: ref.id, orderId, captureId: resultado.captureId, error: err.message }));
+    }
+    // Hay dinero cobrado (o en vuelo) que no cuadra: NO se libera la reserva
+    // (volver a 'creada' dejaría abrir otra orden encima y cobrar dos veces).
+    const aRevisar = async (motivo, extra) => {
+      console.error(`[quotes/pago] ${motivo} — revisar a mano`, { quoteId: ref.id, orderId, captureId: resultado.captureId || null, ...extra });
+      await ref.update({ 'pagoPaypal.estado': 'captura_discrepante', 'pagoPaypal.capturandoDesde': FieldValue.delete() })
+        .catch(err => console.error('[quotes/pago] tampoco se pudo marcar captura_discrepante', { quoteId: ref.id, orderId, error: err.message }));
+    };
+
+    // Validación en servidor — NUNCA se confía en lo que diga el cliente:
+    // el estado y el monto se verifican contra lo que el proveedor mismo
+    // devuelve Y contra lo que el servidor calculó al crear la orden
+    // (recalculado otra vez acá, por si la cotización cambió mientras
+    // tanto), en centavos enteros. Cualquier discrepancia aborta SIN crear
+    // pagos ni marcar nada como capturado — queda para revisión manual,
+    // nunca se asume lo mejor.
+    const montoActual = recomputeTotal(data.lineas);
+    if (resultado.status !== 'COMPLETED') {
+      console.error('[quotes/pago] el proveedor no completó la captura', { quoteId: ref.id, orderId, status: resultado.status });
+      await soltar();
+      return res.status(402).json({ error: `El proveedor de pagos no completó la captura (status: ${resultado.status}).` });
+    }
+    if (resultado.captureStatus && resultado.captureStatus !== 'COMPLETED') {
+      await aRevisar('la orden está COMPLETED pero la captura no', { captureStatus: resultado.captureStatus });
+      return res.status(409).json({ error: 'El pago quedó pendiente de confirmación en el proveedor — no se registró ningún pago todavía. Contacta a Farmazed.' });
+    }
+    const centavosCapturados = aCentavos(resultado.amount);
+    if (resultado.orderId !== orderId
+        || centavosCapturados !== aCentavos(data.pagoPaypal.expectedAmount)
+        || centavosCapturados !== aCentavos(montoActual)
+        || resultado.currency !== data.pagoPaypal.expectedCurrency) {
+      await aRevisar('captura con monto/moneda/orderId distinto al esperado', {
+        esperadoCentavos: aCentavos(data.pagoPaypal.expectedAmount), capturadoCentavos: centavosCapturados,
+      });
+      return res.status(409).json({
+        error: 'El monto/moneda/orderId capturado no coincide con lo esperado — no se registró ningún pago. Revisar a mano.',
+      });
+    }
+
+    const pagosCreados = [];
+    try {
+      const batch = db().batch();
+      for (const caseId of data.caseIds) {
+        const principal = data.lineas.find(l => l.caseId === caseId && (l.tipo || 'principal') === 'principal');
+        // No debería pasar — cada caseId trae su línea principal. Si pasa, no se
+        // salta en silencio: ya se cobró, así que cae en 'captura_sin_registrar'.
+        if (!principal) throw new Error(`el caso ${caseId} no tiene línea principal en la cotización`);
+        const extras = data.lineas.filter(l => l.caseId === caseId && l.tipo && l.tipo !== 'principal');
+
+        for (const concepto of conceptosRequeridosFase05(principal)) {
+          const montoConcepto = (principal.conceptos?.[concepto] || 0)
+            + extras.reduce((s, l) => s + (l.conceptos?.[concepto] || 0), 0);
+          const pago = await createConceptPayment(caseId, {
+            concepto, monto: montoConcepto, origen: 'paypal', paypalOrderId: orderId,
+            registradoPor: req.user.uid, registradoPorEmail: req.user.email,
+            paymentId: `${orderId}_${caseId}_${concepto}`, batch,
+          });
+          pagosCreados.push({ caseId, concepto, monto: montoConcepto, paymentId: pago.id });
+        }
+      }
+      batch.update(ref, {
+        'pagoPaypal.estado': 'capturada',
+        'pagoPaypal.captureId': resultado.captureId || null,
+        'pagoPaypal.capturadaEn': admin.firestore.Timestamp.now(),
+        'pagoPaypal.capturadaPor': req.user.uid,
+        'pagoPaypal.capturandoDesde': FieldValue.delete(),
+      });
+      await batch.commit();
+    } catch (e) {
+      // Ya se cobró pero no quedó registrado: nunca se pierde en silencio.
+      console.error('[quotes/pago] COBRADO SIN REGISTRAR — revisar a mano', {
+        quoteId: ref.id, orderId, captureId: resultado.captureId || null, error: e.message,
+      });
+      await ref.update({ 'pagoPaypal.estado': 'captura_sin_registrar', 'pagoPaypal.capturandoDesde': FieldValue.delete() })
+        .catch(err => console.error('[quotes/pago] tampoco se pudo marcar captura_sin_registrar', { quoteId: ref.id, orderId, error: err.message }));
+      res.locals.errorControlado = true; // 500 informativo a propósito (index.js lo deja pasar)
+      return res.status(500).json({
+        error: 'El pago se cobró pero no se pudo registrar. Reintenta /pago/capturar o contacta a Farmazed.',
+        orderId, captureId: resultado.captureId || null,
+      });
+    }
+
+    res.json(serializeTimestamps({ capturada: true, orderId, amount: resultado.amount, currency: resultado.currency, pagos: pagosCreados }));
+  } catch (e) {
+    responderError(res, e);
+  }
+});
+
 
 module.exports = router;

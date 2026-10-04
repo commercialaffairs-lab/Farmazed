@@ -93,7 +93,7 @@ before(async () => {
   adminToken = await idTokenFor('admin-e3@farmazed.test');
 });
 
-describe('Gate de fase_05 por concepto (TAREA 23) — REST, caso con esExtranjero+aplicaIEA', () => {
+describe('Gate de fase_05 por concepto ( — REST, caso con esExtranjero+aplicaIEA', () => {
   const CASE_ID = 'case-gate-pago-concepto-rest';
 
   test('sin ningún pago, bloquea y menciona los 4 conceptos', async () => {
@@ -122,7 +122,7 @@ describe('Gate de fase_05 por concepto (TAREA 23) — REST, caso con esExtranjer
   });
 });
 
-describe('Gate de fase_05 por concepto (TAREA 23) — MCP ve los MISMOS pagos que REST escribió', () => {
+describe('Gate de fase_05 por concepto ( — MCP ve los MISMOS pagos que REST escribió', () => {
   const CASE_ID = 'case-gate-pago-concepto-mcp';
 
   test('sin ningún pago, MCP bloquea y menciona los 4 conceptos', async () => {

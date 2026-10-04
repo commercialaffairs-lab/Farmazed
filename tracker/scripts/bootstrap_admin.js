@@ -33,7 +33,8 @@
 
 const admin = require('firebase-admin');
 if (!admin.apps.length) {
-  admin.initializeApp({ projectId: process.env.FIREBASE_PROJECT_ID || 'farmazed' });
+  if (!process.env.FIREBASE_PROJECT_ID) { console.error('❌ FIREBASE_PROJECT_ID es obligatorio (no hay proyecto por defecto).'); process.exit(1); }
+  admin.initializeApp({ projectId: process.env.FIREBASE_PROJECT_ID });
 }
 
 function arg(name) {

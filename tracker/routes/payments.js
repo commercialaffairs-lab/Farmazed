@@ -29,22 +29,19 @@
  *   GET  /                → lista de pagos del caso (admin: todos; cliente: los suyos)
  *   POST /                → registrar un pago (admin only), multipart con `comprobante`
  *
- * También exporta `hasConceptPayment(caseId, concepto)`, usado por
- * `tracker/services/transitions.js` para armar el gate de fase_05 (que
- * concepto exige depende de la línea de cotización aceptada del caso —
- * esExtranjero/aplicaIEA, ver quotes.js — por eso ese gate vive en
- * transitions.js y no aquí, igual que el resto de gates centralizados en
- * TAREA 22).
+ * La lógica del libro de pagos (`hasConceptPayment`, `createConceptPayment`, las constantes del
+ * modelo) vive en `tracker/services/payments_ledger.js` (TAREA 41): este archivo es solo la ruta.
  */
 
 const { Router }   = require('express');
 const multer        = require('multer');
-const { v4: uuid }  = require('uuid');
+const { randomUUID: uuid } = require('node:crypto');
 const admin         = require('firebase-admin');
 const { requireAuth } = require('../middleware/auth');
-const { uploadFile } = require('../services/storage');
+const { uploadFile, deleteFile } = require('../services/storage');
 const { serializeTimestamps } = require('../utils/serialize');
-const { canAccessCase, requirePermission } = require('../middleware/permissions');
+const { getCaseOrFail, requirePermission } = require('../middleware/permissions');
+const { TIPOS_PAGO, AUTORIDADES, CONCEPTOS_CLIENTE } = require('../services/payments_ledger');
 
 const router = Router({ mergeParams: true }); // mergeParams to access :caseId
 const db     = () => admin.firestore();
@@ -52,36 +49,6 @@ const upload = multer({
   storage: multer.memoryStorage(),
   limits:  { fileSize: 52 * 1024 * 1024 },
 });
-
-const TIPOS_PAGO = ['cliente_a_farmazed', 'farmazed_a_autoridad'];
-const AUTORIDADES = ['DNFD', 'IEA', 'CNF', 'MEF'];
-
-// TAREA 23 (§H.8, parte Pagos): cada pago cliente_a_farmazed lleva un
-// concepto — reemplaza el campo `fase` de TAREA 21/22 (fase_05/fase_13 ya
-// no describían nada real: "fase_13" es hoy "Seguimiento post-ingreso", sin
-// relación con pagos). `honorarios_saldo` es informativo — se muestra como
-// "saldo pendiente" pero ningún gate lo exige (instrucción explícita: "El
-// saldo de honorarios se registra ... pero NO bloquea").
-const CONCEPTOS_CLIENTE = ['honorarios', 'tasa_dnfd', 'mef', 'iea', 'honorarios_saldo'];
-
-// Montos oficiales — solo de referencia para la UI (el admin registra el
-// monto real del cheque, que puede diferir; nunca se valida contra esto).
-// `iea` depende de la modalidad (regular/expedita) de la línea de
-// cotización del caso, así que no tiene un solo monto fijo aquí.
-const MONTOS_REFERENCIA = {
-  tasa_dnfd: 200,
-  mef: 25,
-  iea_regular: 1500,
-  iea_expedita: 2250,
-};
-
-async function getCaseOrFail(caseId, user, res) {
-  const snap = await db().collection('cases').doc(caseId).get();
-  if (!snap.exists) { res.status(404).json({ error: 'Case not found' }); return null; }
-  const data = snap.data();
-  if (!canAccessCase(user, data)) { res.status(403).json({ error: 'Forbidden' }); return null; }
-  return { id: snap.id, ...data };
-}
 
 // ─── GET /api/cases/:caseId/payments ─────────────────────────────────────────
 router.get('/', requireAuth, requirePermission('payments.read'), async (req, res) => {
@@ -134,9 +101,15 @@ router.post('/', requireAuth, requirePermission('payments.create'), upload.singl
         validos: CONCEPTOS_CLIENTE,
       });
     }
-    const montoNum = Number(monto);
-    if (!montoNum || montoNum <= 0) {
-      return res.status(400).json({ error: 'monto es obligatorio y debe ser un numero positivo' });
+    // TAREA 41: monto finito y > 0 (antes `!montoNum` dejaba pasar Infinity y un string
+    // raro dependía de la coerción), y fecha válida — TODO se valida ANTES de subir nada a Storage.
+    const montoNum = typeof monto === 'string' ? Number(monto.trim()) : Number(monto);
+    if (!Number.isFinite(montoNum) || montoNum <= 0) {
+      return res.status(400).json({ error: 'monto es obligatorio y debe ser un numero finito mayor que 0' });
+    }
+    const fechaDate = fecha ? new Date(fecha) : null;
+    if (fechaDate && Number.isNaN(fechaDate.getTime())) {
+      return res.status(400).json({ error: 'fecha invalida: usar una fecha ISO (p. ej. 2026-10-04)' });
     }
     if (!req.file) {
       return res.status(400).json({ error: 'comprobante (archivo) es obligatorio — registro manual, sin pasarela' });
@@ -157,7 +130,7 @@ router.post('/', requireAuth, requirePermission('payments.create'), upload.singl
       autoridad: tipo === 'farmazed_a_autoridad' ? autoridad : null,
       concepto:  tipo === 'cliente_a_farmazed'   ? concepto  : null,
       monto: montoNum,
-      fecha: fecha ? admin.firestore.Timestamp.fromDate(new Date(fecha)) : now,
+      fecha: fechaDate ? admin.firestore.Timestamp.fromDate(fechaDate) : now,
       comprobanteDocId: paymentId,
       comprobantePath: storagePath,
       comprobanteFileName: req.file.originalname,
@@ -166,38 +139,20 @@ router.post('/', requireAuth, requirePermission('payments.create'), upload.singl
       createdAt: now,
     };
 
-    await db()
-      .collection('cases').doc(req.params.caseId)
-      .collection('payments').doc(paymentId).set(paymentData);
+    try {
+      await db()
+        .collection('cases').doc(req.params.caseId)
+        .collection('payments').doc(paymentId).set(paymentData);
+    } catch (e) {
+      // El registro no se pudo guardar: no se deja el comprobante huérfano en Storage.
+      await deleteFile(storagePath).catch(err => console.error('[payments] no se pudo borrar el comprobante huérfano', { storagePath, error: err.message }));
+      throw e;
+    }
 
     res.status(201).json(serializeTimestamps({ id: paymentId, ...paymentData, comprobanteUrl: signedUrl }));
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
 });
-
-/**
- * ¿Este caso tiene al menos un pago cliente_a_farmazed con este `concepto`
- * registrado? Bloque mínimo que usa `transitions.js` para armar el gate de
- * fase_05 concepto por concepto (qué concepto es obligatorio depende de la
- * línea de cotización del caso — esExtranjero/aplicaIEA — así que esa
- * decisión vive en transitions.js, no aquí).
- */
-async function hasConceptPayment(caseId, concepto) {
-  const snap = await db()
-    .collection('cases').doc(caseId)
-    .collection('payments')
-    .where('tipo', '==', 'cliente_a_farmazed')
-    .where('concepto', '==', concepto)
-    .limit(1)
-    .get();
-  return !snap.empty;
-}
-
-router.hasConceptPayment  = hasConceptPayment;
-router.TIPOS_PAGO         = TIPOS_PAGO;
-router.AUTORIDADES        = AUTORIDADES;
-router.CONCEPTOS_CLIENTE  = CONCEPTOS_CLIENTE;
-router.MONTOS_REFERENCIA  = MONTOS_REFERENCIA;
 
 module.exports = router;

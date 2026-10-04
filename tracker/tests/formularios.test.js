@@ -1,8 +1,8 @@
 /**
- * formularios_tarea28.test.js — TAREA 28 (PM_COMMENTS §H.11, respuestas de
+ * formularios.test.js — TAREA 28 (PM_COMMENTS §H.11, respuestas de
  * Zelky ronda 2, cierra §H.6). Prueba unitaria PURA de
  * `getFormulariosParaCaso()` (tracker/data/formularios.js) — no usa
- * emulador ni HTTP. Corre con: node --test tracker/tests/formularios_tarea28.test.js
+ * emulador ni HTTP. Corre con: node --test tracker/tests/formularios.test.js
  */
 
 const { test, describe } = require('node:test');
@@ -13,7 +13,7 @@ function ids(list) { return list.map(f => f.id).sort(); }
 
 const BASE = { tramiteType: 'medicamentos', tipoSolicitud: 'Nuevo Registro', tipoRegistro: 'Regular', tipoMedicamento: [] };
 
-describe('TAREA 28 — F1/F2 dependen de `representacion` (tri-estado)', () => {
+describe('F1/F2 dependen de `representacion` (tri-estado)', () => {
   test('sin representacion: F1 y F2 quedan por_confirmar, ninguno aplicable', () => {
     const r = getFormulariosParaCaso({ ...BASE });
     assert.deepEqual(ids(r.porConfirmar), ['form-01', 'form-02']);
@@ -35,7 +35,7 @@ describe('TAREA 28 — F1/F2 dependen de `representacion` (tri-estado)', () => {
   });
 });
 
-describe('TAREA 28 — F3 aplica siempre, F10 a todo registro nuevo de medicamentos', () => {
+describe('F3 aplica siempre, F10 a todo registro nuevo de medicamentos', () => {
   test('F3 aplicable en cualquier combinación de vía/subtipo', () => {
     const combos = [
       { ...BASE, tipoRegistro: 'Regular' },
@@ -60,7 +60,7 @@ describe('TAREA 28 — F3 aplica siempre, F10 a todo registro nuevo de medicamen
   });
 });
 
-describe('TAREA 28 — no regresión: los 13 formularios siguen existiendo', () => {
+describe('no regresión: los 13 formularios siguen existiendo', () => {
   test('FORMULARIOS sigue teniendo 13 entradas', () => {
     assert.equal(FORMULARIOS.length, 13);
   });

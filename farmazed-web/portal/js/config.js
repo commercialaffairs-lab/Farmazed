@@ -48,9 +48,33 @@ function localApiPort() {
   return '8080';
 }
 
+// TAREA 31: usa el MISMO hostname con el que se cargó esta página
+// (`window.location.hostname`), no un 'localhost' fijo — si alguien entra
+// por `127.0.0.1` (p.ej. un túnel SSH que resuelve así, como el de Rick
+// desde Argus), las llamadas a la API deben salir desde ese mismo origen,
+// no saltar a otro (eso rompe CORS: el navegador manda el Origin de la
+// página, no el host al que apunta el fetch — pero mezclar hosts también
+// puede fallar la resolución DNS/túnel si solo uno de los dos está
+// tuneleado). Sigue dentro de IS_LOCAL, nunca afecta producción.
 const API_BASE = IS_LOCAL
-  ? `http://localhost:${localApiPort()}`
+  ? `http://${window.location.hostname}:${localApiPort()}`
   : 'https://api.farmazed.com';   // update after deploying tracker/ to Cloud Run
+
+// TAREA 32: mismo mecanismo que `localApiPort()` arriba, pero para el
+// emulador de Auth — hacía falta cuando una corrida de pruebas necesita su
+// PROPIO emulador de Auth, en un puerto distinto al de siempre (9099), para
+// no interferir con otra corrida que ya lo esté usando (p.ej. la demo de
+// Rick en tmux farmazed-demo, TAREA 30). `auth.js` (connectAuthEmulator) es
+// el único lector — nunca afecta producción (ver IS_LOCAL ahí).
+function localAuthPort() {
+  try {
+    const fromQuery = new URLSearchParams(window.location.search).get('authPort');
+    if (fromQuery) return fromQuery;
+    const fromStorage = localStorage.getItem('fzAuthPort');
+    if (fromStorage) return fromStorage;
+  } catch (e) { /* localStorage puede fallar en modo privado — usar el default */ }
+  return '9099';
+}
 
 /**
  * Feature flags. Ver PM_COMMENTS.md §H.2 (29-sep).
@@ -76,4 +100,4 @@ const FEATURES = {
   clientePrecios: isFeatureOn('clientePrecios'),
 };
 
-export { FIREBASE_CONFIG, API_BASE, IS_LOCAL, FEATURES };
+export { FIREBASE_CONFIG, API_BASE, IS_LOCAL, FEATURES, localAuthPort };

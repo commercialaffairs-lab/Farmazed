@@ -4,6 +4,8 @@
 const { defineConfig, devices } = require('@playwright/test');
 
 const STATIC_PORT = process.env.FZ_STATIC_PORT || 8092;
+const API_PORT    = process.env.FZ_API_PORT    || '8080';
+const AUTH_PORT   = process.env.FZ_AUTH_PORT   || '9099';
 
 module.exports = defineConfig({
   testDir: '.',
@@ -16,6 +18,16 @@ module.exports = defineConfig({
   outputDir: 'test-results',
   use: {
     baseURL: `http://localhost:${STATIC_PORT}`,
+    // TAREA 42: los puertos del tracker y del emulador de Auth (config.js los lee de localStorage:
+    // fzApiPort / fzAuthPort) se fijan UNA vez, para TODOS los specs — así corren en puertos
+    // aislados, al lado de la demo, sin que cada spec tenga que acordarse de ponerlos.
+    storageState: {
+      cookies: [],
+      origins: [{ origin: `http://localhost:${STATIC_PORT}`, localStorage: [
+        { name: 'fzApiPort', value: String(API_PORT) },
+        { name: 'fzAuthPort', value: String(AUTH_PORT) },
+      ] }],
+    },
     trace: 'retain-on-failure',
   },
   projects: [

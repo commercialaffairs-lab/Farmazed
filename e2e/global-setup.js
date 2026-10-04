@@ -31,6 +31,19 @@ module.exports = async function globalSetup() {
   const db = admin.firestore();
   const now = admin.firestore.Timestamp.now();
 
+  // TAREA 32: una empresa SIN `captacion` ve una pantalla bloqueante al entrar al portal. Las
+  // empresas ya sembradas (alfa, beta, la de cliente@…) la tienen completa y revisada, para que los
+  // specs del portal no choquen con ese overlay; las cuentas que un spec crea por el registro
+  // abierto nacen sin captación y lo recorren (ver registro.spec.js, plan_empresarial.spec.js).
+  const orgs = await db.collection('orgs').get();
+  await Promise.all(orgs.docs.filter(o => !o.data().captacion).map(o => o.ref.update({
+    captacion: {
+      paisYNombreFabricante: 'Fabricante de prueba (seed e2e)', categoriasProducto: ['medicamentos'],
+      numeroProductosPorCategoria: '1', registroPrevioAutoridadReconocida: false, clienteNuevoOYaRegistrado: 'nuevo',
+      productoConModificacionEnCurso: false, revisadoPorFarmazed: true, completadaPor: 'seed-e2e', completadaEn: now, actualizadaEn: now,
+    },
+  })));
+
   await db.collection('cases').doc(TEST_CASE_ID).set({
     createdAt: now, updatedAt: now, status: 'fase_06',
     caseCode: 'FZ-MED-REG-2026-0099', tramiteType: 'medicamentos', tipoRegistro: 'Regular',
@@ -69,6 +82,13 @@ module.exports = async function globalSetup() {
     product: { nombreComercial: 'Analgen Test Versiones' },
   });
   await clearSubcollection(db, DOC_VERSION_ID, 'documents');
+
+  // TAREA 39: un cliente con empresa solo accede a los casos de SU empresa (orgId). cliente@ ya
+  // fue migrado (run.sh) a una empresa propia: los casos de estos fixtures se le asignan.
+  const cliente = await admin.auth().getUserByEmail('cliente@farmazed.test');
+  const orgCliente = cliente.customClaims?.orgId;
+  if (!orgCliente) throw new Error('global-setup.js: cliente@farmazed.test no tiene orgId — ¿se corrió migrate_roles.js (e2e/run.sh)?');
+  await Promise.all([TEST_CASE_ID, PAGO_CASE_ID, DOC_VERSION_ID].map(id => db.collection('cases').doc(id).update({ orgId: orgCliente })));
 
   console.log(`→ global-setup: ${TEST_CASE_ID} en fase_06; ${PAGO_CASE_ID} en fase_05 sin pagos; ${DOC_VERSION_ID} en fase_07 sin documentos.`);
 };

@@ -22,10 +22,11 @@ const { requireMcpKey } = require('../middleware/auth');
 const { getChecklist }  = require('../data/faddi_checklists');
 const { rechazoTramite } = require('../data/tramites_habilitados');
 const { getSignedUrl }  = require('../services/storage');
-const { CASE_STATUSES, isValidStatus, DOC_STATUSES, PENDING_DOCS } = require('../data/case_status');
+const { CASE_STATUSES, isValidStatus, DOC_STATUSES } = require('../data/case_status');
 const { serializeTimestamps } = require('../utils/serialize');
-const { checkTransition, computeSideEffects, afterTransition } = require('../services/transitions');
-const { getAcceptedQuoteLineForCase } = require('./quotes');
+const { applyTransition } = require('../services/transitions');
+const { solicitarDocumento } = require('../services/document_requests');
+const { getAcceptedQuoteLineForCase } = require('../services/quotes');
 
 const router = Router();
 const db     = () => admin.firestore();
@@ -149,8 +150,8 @@ async function handleListCases({ status, tramiteType, assignedTo, limit = 50 }) 
       clientEmail:  data.clientEmail,
       assignedTo:   data.assignedTo,
       priority:     data.priority,
-      createdAt:    data.createdAt?.toDate?.()?.toISOString(),
-      updatedAt:    data.updatedAt?.toDate?.()?.toISOString(),
+      createdAt:    serializeTimestamps(data.createdAt),
+      updatedAt:    serializeTimestamps(data.updatedAt),
     };
   });
   return { total: cases.length, cases };
@@ -185,8 +186,8 @@ async function handleGetCase({ caseId }) {
   return {
     id:   caseId,
     ...data,
-    createdAt: data.createdAt?.toDate?.()?.toISOString(),
-    updatedAt: data.updatedAt?.toDate?.()?.toISOString(),
+    createdAt: serializeTimestamps(data.createdAt),
+    updatedAt: serializeTimestamps(data.updatedAt),
     checklist: enrichedChecklist,
     documentProgress: {
       uploaded: enrichedChecklist.filter(i => i.uploadStatus).length,
@@ -213,7 +214,7 @@ async function handleListDocuments({ caseId, faddiStep, status }) {
       fileSize:     data.fileSize,
       status:       data.status,
       reviewNotes:  data.reviewNotes,
-      uploadedAt:   data.uploadedAt?.toDate?.()?.toISOString(),
+      uploadedAt:   serializeTimestamps(data.uploadedAt),
     };
   });
 }
@@ -236,7 +237,7 @@ async function handleGetDocument({ caseId, docId }) {
     status:       data.status,
     signedUrl,                          // ← Claude opens this to read the PDF
     expiresIn:    '1 hour',
-    uploadedAt:   data.uploadedAt?.toDate?.()?.toISOString(),
+    uploadedAt:   serializeTimestamps(data.uploadedAt),
   };
 }
 
@@ -446,103 +447,46 @@ async function handleUpdateCase({ caseId, status, notes, assignedTo, faddi, tram
     throw new Error(`status invalido: "${status}". Validos: ${CASE_STATUSES.join(', ')}`);
   }
 
-  let caseData = null;
-  if (status !== undefined) {
-    const snap = await db().collection('cases').doc(caseId).get();
-    if (!snap.exists) throw Object.assign(new Error('Case not found'), { rpcCode: -32602 });
-    caseData = snap.data();
-  }
-
   const update = { updatedAt: admin.firestore.Timestamp.now() };
   if (status     !== undefined) update.status     = status;
   if (notes      !== undefined) update.notes      = notes;
   if (assignedTo !== undefined) update.assignedTo = assignedTo;
   if (faddi      !== undefined) update.faddi       = faddi;
 
-  // TAREA 22 (ajuste PM sobre TAREA 21): mismos gates que cases.js (REST),
-  // vía tracker/services/transitions.js — antes esta ruta solo repetía
-  // transición+pago, sin cotización de fase_04 ni las dos confirmaciones de
-  // fase_08 (hueco de cumplimiento real: Cowork podía saltárselos). El
-  // permiso por ROL (canTransitionCase) no aplica aquí — MCP_KEY ya es
-  // acceso de nivel admin, sin usuario individual en esta capa.
-  const isRealTransition = status !== undefined
-    && (status !== caseData.status || (status === 'fase_08' && caseData.status === 'fase_08'));
-  let gateResult = { ok: true, gatesSaltados: [], isFase8Recycle: false };
-
-  if (isRealTransition) {
-    gateResult = await checkTransition(caseData, caseId, status, { override: override === true, reason });
-    if (!gateResult.ok) {
-      throw new Error(gateResult.error.replace('{"override":true}', 'override:true en la llamada MCP'));
-    }
-    Object.assign(update, computeSideEffects(caseData, status, gateResult.isFase8Recycle));
+  // TAREA 22/41: un cambio de status pasa por applyTransition() (services/transitions.js), el
+  // MISMO camino que REST: transacción que relee el status, verifica los gates (transición,
+  // pago, cotización de fase_04, confirmaciones de fase_08) y escribe update + statusHistory
+  // juntos. El permiso por ROL (canTransitionCase) no aplica aquí — MCP_KEY ya es acceso de
+  // nivel admin, sin usuario individual en esta capa.
+  if (status === undefined) {
+    await db().collection('cases').doc(caseId).update(update);
+    return { updated: true, caseId, fields: Object.keys(update) };
   }
 
-  await db().collection('cases').doc(caseId).update(update);
-
-  if (isRealTransition) {
-    const isOverride = gateResult.gatesSaltados.length > 0 && override === true;
-    const registrarMotivo = isOverride || status === 'cerrado';
-    await db().collection('cases').doc(caseId).collection('statusHistory').add({
-      from: caseData.status, to: status,
-      override: isOverride,
-      reason: registrarMotivo ? (reason || '') : null,
-      by: 'mcp', byEmail: null,
-      at: admin.firestore.Timestamp.now(),
-    });
-    await afterTransition(caseId, caseData, status, { uid: 'mcp', email: null });
+  const r = await applyTransition({
+    caseId, to: status, update, actor: { uid: 'mcp', email: null },
+    override: override === true, reason,
+  });
+  if (!r.ok) {
+    if (r.status === 404) throw Object.assign(new Error('Case not found'), { rpcCode: -32602 });
+    throw new Error(r.error.replace('{"override":true}', 'override:true en la llamada MCP'));
   }
-
-  return { updated: true, caseId, fields: Object.keys(update) };
+  return { updated: true, caseId, fields: Object.keys(r.update), ...(r.avisos.length ? { avisos: r.avisos } : {}) };
 }
 
+
 async function handleRequestDocument({ caseId, faddiDocId, message }) {
-  const now = admin.firestore.Timestamp.now();
-  // Check if doc already exists with that faddiDocId
-  const existing = await db()
-    .collection('cases').doc(caseId)
-    .collection('documents')
-    .where('faddiDocId', '==', faddiDocId)
-    .limit(1).get();
-
-  if (!existing.empty) {
-    // Update existing doc to "requested" status
-    await existing.docs[0].ref.update({ status: 'requested', reviewNotes: message, reviewedAt: now });
-  } else {
-    // Create a placeholder entry
-    await db().collection('cases').doc(caseId).collection('documents').add({
-      faddiDocId,
-      faddiCode: '',
-      faddiDocName: '',
-      faddiStep: 0,
-      fileName: '(pendiente)',
-      fileSize: 0,
-      mimeType: '',
-      storagePath: '',
-      status: 'requested',
-      reviewNotes: message,
-      uploadedAt: now,
-      uploadedBy: 'admin',
-    });
-  }
-
-  // Update case status to pending_docs. Entrar a pending_docs es siempre
-  // valido desde cualquier fase (isValidTransition — §H.1), pero se registra
-  // igual para el historial de auditoria de las 3 rutas de escritura.
   const caseSnap = await db().collection('cases').doc(caseId).get();
-  const prevStatus = caseSnap.exists ? caseSnap.data().status : null;
+  if (!caseSnap.exists) throw new Error(`Caso "${caseId}" no existe`);
 
-  await db().collection('cases').doc(caseId).update({
-    status: PENDING_DOCS,
-    updatedAt: now,
+  // TAREA 39: misma lógica y mismo gate (checkTransition) que POST
+  // /api/cases/:id/documents/request — antes esta ruta escribía pending_docs
+  // directo, sin ningún gate. Sin override: el MCP no lo ofrece aquí.
+  const r = await solicitarDocumento({
+    caseId, caseData: caseSnap.data(), faddiDocId, message,
+    actor: { uid: 'mcp', email: null },
   });
-
-  if (prevStatus !== null && prevStatus !== PENDING_DOCS) {
-    await db().collection('cases').doc(caseId).collection('statusHistory').add({
-      from: prevStatus, to: PENDING_DOCS, override: false,
-      by: 'mcp', byEmail: null, at: now,
-    });
-  }
-
+  if (!r.ok) throw new Error(r.error.replace('{"override":true}', 'override desde la API REST (admin)'));
   return { requested: true, faddiDocId, message };
 }
 
@@ -608,6 +552,15 @@ router.post('/', requireMcpKey, async (req, res) => {
         content: [{ type: 'text', text: JSON.stringify(serializeTimestamps(result), null, 2) }],
       }));
     } catch (e) {
+      // TAREA 40: este endpoint responde HTTP 200 (JSON-RPC), fuera del interceptor de 500
+      // de index.js. Los errores de NEGOCIO (Error con mensaje propio) se devuelven tal
+      // cual; los INTERNOS (gRPC/Firestore con código numérico, Firebase Auth/Storage, o
+      // un mensaje con rutas del proyecto) salen genéricos y el detalle va al log.
+      const interno = !e.rpcCode && (typeof e.code === 'number' || /^(auth|storage|app)\//.test(e.code || '') || /\b(projects|databases|documents)\//.test(e.message || ''));
+      if (interno) {
+        console.error('[mcp]', name, e);
+        return res.json(mcpError(id, -32603, 'Error interno del servidor.'));
+      }
       return res.json(mcpError(id, e.rpcCode || -32000, e.message, e.rpcData));
     }
   }

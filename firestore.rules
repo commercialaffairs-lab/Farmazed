@@ -1,0 +1,14 @@
+// Reglas de PRODUCCIÓN (TAREA 40): deny-all. El front no accede a Firestore
+// directamente — todo el acceso a datos va por el tracker (Admin SDK), que ignora
+// estas reglas. Cualquier lectura/escritura desde un cliente (SDK web, API REST con
+// una clave de la app) queda denegada. Si algún día el front necesita acceso
+// directo, se abre colección por colección con reglas por usuario/empresa — nunca
+// con `allow if true`.
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

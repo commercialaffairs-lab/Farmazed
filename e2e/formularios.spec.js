@@ -9,6 +9,7 @@
 // Corre con: ./e2e/run.sh formularios.spec.js (o ./e2e/run.sh para todos)
 
 const { test, expect } = require('@playwright/test');
+const { enviarLogin } = require('./_esperas');
 const path = require('path');
 const fs   = require('fs');
 
@@ -27,8 +28,7 @@ async function login(page, email, password) {
   await page.goto('/login.html');
   await page.fill('#usuario', email);
   await page.fill('#password', password);
-  await page.click('button[type="submit"]');
-  await page.waitForURL(/(dashboard|client-dashboard)\.html/, { timeout: 15000 });
+  await enviarLogin(page, /(dashboard|client-dashboard|admin\/casos|admin\/bandeja)\.html/, 15000);
 }
 
 test.describe('R14 — biblioteca de formularios', () => {

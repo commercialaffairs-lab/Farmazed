@@ -72,6 +72,9 @@
         <!-- §H.8 (TAREA 21): fecha límite de subsanación al entrar a observado_dnfd -->
         <div id="plazo-subsanacion-banner" class="mb-3"></div>
 
+        <!-- TAREA 41: la línea del borrador de cotización no se pudo preparar al entrar a fase_04 -->
+        <div id="cotizacion-error-banner" class="mb-3"></div>
+
         <!-- §H.8 (TAREA 21): las dos confirmaciones de fase 8 (legal=abogado, técnica/matrices=regente) -->
         <div class="card border-0 shadow-sm mb-4 d-none" id="fase8-card">
           <div class="step-header">Fase 8 — Confirmaciones</div>
@@ -283,7 +286,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script type="module">
-  import { requireLogin, hasBackofficeAccess } from '../portal/js/auth.js';
+  import { initBackoffice, esc } from '../portal/js/auth.js';
   import api from '../portal/js/api.js';
   import { getFullMeta, getDocStatusIcon, getDocStatusColor } from '../portal/js/status_ui.js';
 
@@ -320,18 +323,17 @@
   function fieldRow(label, value, faddiField = '') {
     if (!value || value === '—') return '';
     return `<div class="field-row">
-      <div class="field-label">${faddiField ? `<span class="text-primary">${faddiField}</span> — ` : ''}${label}</div>
-      <div class="field-value">${value}</div>
-      <button class="copy-btn" onclick="navigator.clipboard.writeText('${value.replace(/'/g,"\\'")}').then(()=>{this.textContent='✓';setTimeout(()=>this.textContent='📋',1200)})" title="Copiar">📋</button>
+      <div class="field-label">${faddiField ? `<span class="text-primary">${esc(faddiField)}</span> — ` : ''}${esc(label)}</div>
+      <div class="field-value">${esc(value)}</div>
+      <button class="copy-btn" data-copy="${esc(value)}" onclick="navigator.clipboard.writeText(this.dataset.copy).then(()=>{this.textContent='✓';setTimeout(()=>this.textContent='📋',1200)})" title="Copiar">📋</button>
     </div>`;
   }
 
   async function init() {
-    await requireLogin('/login.html');
     // TAREA 15/E3 parte 2: staff (analista/abogado/regente) también entra —
     // qué botones ve dentro de la página sale de GET /api/me/permissions,
     // no de este gate (que solo decide "back-office sí/no").
-    if (!(await hasBackofficeAccess())) { window.location.href = '/client-dashboard.html'; return; }
+    if (!(await initBackoffice())) return;
     if (!caseId) { window.location.href = '/admin/casos.html'; return; }
 
     try {
@@ -349,11 +351,12 @@
       renderPaymentsResumen();
       renderPaqueteIEA();
       renderPlazoSubsanacion();
+      renderCotizacionError();
       renderFase8Confirmaciones();
       renderViaCategoria();
       if (has('cases.assign')) await loadAssignCard();
     } catch (e) {
-      document.getElementById('loading').innerHTML = `<div class="alert alert-danger m-4">${e.message}</div>`;
+      document.getElementById('loading').innerHTML = `<div class="alert alert-danger m-4">${esc(e.message)}</div>`;
     }
   }
 
@@ -387,8 +390,8 @@
     const seleccionados = new Set(caseData.tipoMedicamento || []);
     document.getElementById('via-tipo-med-checks').innerHTML = TIPOS_MED_VIA.map(t => `
       <div class="form-check">
-        <input class="form-check-input via-tipo-med" type="checkbox" value="${t}" id="via-med-${t}" ${seleccionados.has(t) ? 'checked' : ''}>
-        <label class="form-check-label" for="via-med-${t}">${t}</label>
+        <input class="form-check-input via-tipo-med" type="checkbox" value="${esc(t)}" id="via-med-${esc(t)}" ${seleccionados.has(t) ? 'checked' : ''}>
+        <label class="form-check-label" for="via-med-${esc(t)}">${esc(t)}</label>
       </div>`).join('');
     document.getElementById('via-es-innovador').value =
       caseData.esInnovador === true ? 'true' : caseData.esInnovador === false ? 'false' : '';
@@ -400,14 +403,14 @@
       const { employees } = await api.getEmployees();
       const byRole = (role) => employees.filter(e => e.role === role);
       const options = (list, selectedUid) => `<option value="">— sin asignar —</option>` +
-        list.map(e => `<option value="${e.uid}" ${e.uid === selectedUid ? 'selected' : ''}>${e.email}</option>`).join('');
+        list.map(e => `<option value="${esc(e.uid)}" ${e.uid === selectedUid ? 'selected' : ''}>${esc(e.email)}</option>`).join('');
 
       const asignados = caseData.asignados || {};
       document.getElementById('assign-analista').innerHTML = options(byRole('analista'), asignados.analista);
       document.getElementById('assign-abogado').innerHTML  = options(byRole('abogado'),  asignados.abogado);
       document.getElementById('assign-regente').innerHTML  = options(byRole('regente'),  asignados.regente);
     } catch (e) {
-      document.getElementById('assign-card').innerHTML = `<div class="text-danger small">${e.message}</div>`;
+      document.getElementById('assign-card').innerHTML = `<div class="text-danger small">${esc(e.message)}</div>`;
     }
   }
 
@@ -451,7 +454,7 @@
     ];
     document.getElementById('entities-fields').innerHTML = entSections.map(s => {
       if (!s.obj || !Object.values(s.obj).some(v=>v)) return '';
-      return `<div class="mb-2"><div class="small fw-bold text-muted border-bottom pb-1 mb-1">${s.label}</div>
+      return `<div class="mb-2"><div class="small fw-bold text-muted border-bottom pb-1 mb-1">${esc(s.label)}</div>
         ${s.fields.map(([l,k]) => fieldRow(l, s.obj[k])).filter(Boolean).join('')}</div>`;
     }).join('') || '<div class="text-muted small p-3">Sin datos de empresas.</div>';
 
@@ -471,8 +474,8 @@
       // cuando hay más de 1 (v1 es el caso normal, no vale la pena mostrarlo).
       const versionBadge = doc && doc.version > 1
         ? ` <span class="badge bg-info-subtle text-info border border-info-subtle small" style="cursor:pointer"
-                  onclick="verVersiones('${caseId}','${doc.id}','${item.name.replace(/'/g,"\\'")}')"
-                  title="Ver versiones anteriores">v${doc.version} · ver versiones anteriores</span>`
+                  onclick="verVersiones('${esc(caseId)}','${esc(doc.id)}','${esc(item.name.replace(/'/g,"\\'"))}')"
+                  title="Ver versiones anteriores">v${esc(doc.version)} · ver versiones anteriores</span>`
         : '';
 
       // TAREA 15/E3 parte 2: abogado ve resaltados los docs legales, regente
@@ -488,28 +491,28 @@
       const puedeRevisar = has('documents.review') && doc && ['uploaded', 'reviewing'].includes(doc.status);
       const reviewButtons = puedeRevisar ? `
         <button class="btn btn-xs btn-outline-success btn-sm py-0 px-2 small ms-1"
-                onclick="revisarDoc('${doc.id}','approved')" title="Aprobar">✓</button>
+                onclick="revisarDoc('${esc(doc.id)}','approved')" title="Aprobar">✓</button>
         <button class="btn btn-xs btn-outline-danger btn-sm py-0 px-2 small ms-1"
-                onclick="revisarDoc('${doc.id}','rejected')" title="Rechazar">✗</button>` : '';
+                onclick="revisarDoc('${esc(doc.id)}','rejected')" title="Rechazar">✗</button>` : '';
 
       return `<div class="doc-item" ${rowStyle}>
-        <span class="doc-code">${item.faddiCode}</span>
+        <span class="doc-code">${esc(item.faddiCode)}</span>
         <span class="${getDocStatusColor(status)}">${getDocStatusIcon(status)}</span>
-        <span class="doc-name">${item.name}${!item.required ? ' <span class="text-muted" style="font-size:.7rem">(opcional)</span>' : ''}${isFarmazedDoc ? ' <span class="badge bg-primary-subtle text-primary border border-primary-subtle" style="font-size:.65rem">Tarea interna Farmazed</span>' : ''}${versionBadge}</span>
+        <span class="doc-name">${esc(item.name)}${!item.required ? ' <span class="text-muted" style="font-size:.7rem">(opcional)</span>' : ''}${isFarmazedDoc ? ' <span class="badge bg-primary-subtle text-primary border border-primary-subtle" style="font-size:.65rem">Tarea interna Farmazed</span>' : ''}${versionBadge}</span>
         ${doc ? `<a href="#" class="btn btn-xs btn-outline-primary btn-sm py-0 px-2 small"
-                    onclick="openDoc('${caseId}','${doc.id}');return false">Ver</a>${reviewButtons}` :
+                    onclick="openDoc('${esc(caseId)}','${esc(doc.id)}');return false">Ver</a>${reviewButtons}` :
           isFarmazedDoc ? `<span class="badge bg-secondary-subtle text-secondary border small">Pendiente (interno)</span>` :
                  `<button class="btn btn-xs btn-outline-warning btn-sm py-0 px-2 small"
-                    onclick="requestDoc('${item.id}','${item.name}')">Solicitar</button>`}
+                    onclick="requestDoc('${esc(item.id)}','${esc(item.name.replace(/'/g,"\\'"))}')">Solicitar</button>`}
       </div>`;
     }).join('');
 
     // Meta
     document.getElementById('case-meta').innerHTML = `
-      <div class="field-row"><div class="field-label">ID</div><div class="field-value font-monospace small">${caseId}</div></div>
-      <div class="field-row"><div class="field-label">Cliente</div><div class="field-value">${caseData.clientEmail}</div></div>
-      <div class="field-row"><div class="field-label">Tipo trámite</div><div class="field-value">${caseData.tramiteType}</div></div>
-      <div class="field-row"><div class="field-label">Tipo registro</div><div class="field-value">${caseData.tipoRegistro||'—'}</div></div>
+      <div class="field-row"><div class="field-label">ID</div><div class="field-value font-monospace small">${esc(caseId)}</div></div>
+      <div class="field-row"><div class="field-label">Cliente</div><div class="field-value">${esc(caseData.clientEmail)}</div></div>
+      <div class="field-row"><div class="field-label">Tipo trámite</div><div class="field-value">${esc(caseData.tramiteType)}</div></div>
+      <div class="field-row"><div class="field-label">Tipo registro</div><div class="field-value">${esc(caseData.tipoRegistro||'—')}</div></div>
       <div class="field-row"><div class="field-label">Docs subidos</div>
         <div class="field-value">${checklistData.progress?.uploaded||0} / ${checklistData.progress?.total||0}</div></div>`;
 
@@ -581,7 +584,7 @@
     select.innerHTML = options.map(s => {
       const label = statusMeta.meta[s]?.label || s;
       const tag   = s === current ? ' (actual)' : '';
-      return `<option value="${s}" ${s === current ? 'selected' : ''}>${label}${tag}</option>`;
+      return `<option value="${esc(s)}" ${s === current ? 'selected' : ''}>${esc(label)}${tag}</option>`;
     }).join('');
   }
 
@@ -601,14 +604,14 @@
         const date = h.at ? new Date(h.at).toLocaleString('es-PA', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' }) : '—';
         return `<div class="field-row">
           <div class="field-value">
-            ${fromLabel} → <strong>${toLabel}</strong>${h.override ? ' <span class="badge bg-warning text-dark">override</span>' : ''}
-            ${h.reason ? `<div class="text-muted" style="font-size:.72rem">Motivo: ${h.reason}</div>` : ''}
-            <div class="text-muted" style="font-size:.7rem">${date} — ${h.byEmail || h.by || '—'}</div>
+            ${esc(fromLabel)} → <strong>${esc(toLabel)}</strong>${h.override ? ' <span class="badge bg-warning text-dark">override</span>' : ''}
+            ${h.reason ? `<div class="text-muted" style="font-size:.72rem">Motivo: ${esc(h.reason)}</div>` : ''}
+            <div class="text-muted" style="font-size:.7rem">${date} — ${esc(h.byEmail || h.by || '—')}</div>
           </div>
         </div>`;
       }).join('');
     } catch (e) {
-      box.innerHTML = `<div class="text-danger">${e.message}</div>`;
+      box.innerHTML = `<div class="text-danger">${esc(e.message)}</div>`;
     }
   }
 
@@ -635,14 +638,14 @@
         const detalle = p.concepto ? (CONCEPTO_LABEL[p.concepto] || p.concepto) : (p.autoridad || '');
         return `<div class="field-row">
           <div class="field-value">
-            <strong>${TIPO_LABEL[p.tipo] || p.tipo}</strong>${detalle ? ` — ${detalle}` : ''} — B/. ${Number(p.monto).toFixed(2)}
-            <div class="text-muted" style="font-size:.72rem">${date} — registrado por ${p.registradoPorEmail || p.registradoPor}</div>
-            <button class="btn btn-xs btn-link p-0 small" onclick="verComprobante('${p.id}')">Ver comprobante</button>
+            <strong>${esc(TIPO_LABEL[p.tipo] || p.tipo)}</strong>${detalle ? ` — ${esc(detalle)}` : ''} — B/. ${Number(p.monto).toFixed(2)}
+            <div class="text-muted" style="font-size:.72rem">${date} — registrado por ${esc(p.registradoPorEmail || p.registradoPor)}</div>
+            <button class="btn btn-xs btn-link p-0 small" onclick="verComprobante('${esc(p.id)}')">Ver comprobante</button>
           </div>
         </div>`;
       }).join('');
     } catch (e) {
-      box.innerHTML = `<div class="text-danger">${e.message}</div>`;
+      box.innerHTML = `<div class="text-danger">${esc(e.message)}</div>`;
     }
   }
 
@@ -663,7 +666,7 @@
       const pagados = new Set(payments.filter(p => p.tipo === 'cliente_a_farmazed').map(p => p.concepto));
       box.innerHTML = `<div class="small mb-2">
         <div class="text-muted" style="font-size:.72rem">Conceptos requeridos para salir de fase 5:</div>
-        ${requeridos.map(c => `<span class="badge ${pagados.has(c) ? 'bg-success-subtle text-success border-success-subtle' : 'bg-warning-subtle text-warning border-warning-subtle'} border me-1">${CONCEPTO_LABEL[c]}${pagados.has(c) ? ' ✓' : ' pendiente'}</span>`).join('')}
+        ${requeridos.map(c => `<span class="badge ${pagados.has(c) ? 'bg-success-subtle text-success border-success-subtle' : 'bg-warning-subtle text-warning border-warning-subtle'} border me-1">${esc(CONCEPTO_LABEL[c])}${pagados.has(c) ? ' ✓' : ' pendiente'}</span>`).join('')}
         ${pagados.has('honorarios_saldo') ? '' : '<span class="badge bg-light text-muted border me-1">Saldo pendiente (no bloquea)</span>'}
       </div>`;
     } catch (e) {
@@ -702,12 +705,22 @@
   // fecha límite de subsanación (Art. 22 D.E. 27/2024) — Regular 3 meses,
   // Abreviado 8 días hábiles; otras vías quedan con una nota en vez de una
   // fecha inventada (ver tracker/utils/plazo_subsanacion.js).
+  // TAREA 41: si al entrar a fase_04 falló la línea del borrador de cotización (p. ej. falta
+  // la fila del tarifario), el caso queda marcado y se ve aquí — antes solo quedaba en el log.
+  function renderCotizacionError() {
+    const box = document.getElementById('cotizacion-error-banner');
+    const err = caseData.cotizacionBorradorError;
+    box.innerHTML = err
+      ? `<div class="alert alert-danger py-2 px-3 mb-0 small"><strong>Cotización pendiente:</strong> ${esc(err.mensaje)} Completa la línea a mano en Cotizaciones o corrige el tarifario.</div>`
+      : '';
+  }
+
   function renderPlazoSubsanacion() {
     const box = document.getElementById('plazo-subsanacion-banner');
     if (caseData.status !== 'observado_dnfd') { box.innerHTML = ''; return; }
     if (caseData.fechaLimiteSubsanacionNota) {
       box.innerHTML = `<div class="alert alert-secondary py-2 px-3 mb-0 small">
-        <strong>Observado por DNFD.</strong> ${caseData.fechaLimiteSubsanacionNota}
+        <strong>Observado por DNFD.</strong> ${esc(caseData.fechaLimiteSubsanacionNota)}
       </div>`;
       return;
     }
@@ -737,9 +750,9 @@
     function fila(tipo, label, dato, puede) {
       const hecha  = !!dato;
       const estado = hecha
-        ? `<span class="badge bg-success-subtle text-success border border-success-subtle">Confirmada — ${dato.byEmail || dato.by} (${new Date(dato.at).toLocaleString('es-PA', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })})</span>`
+        ? `<span class="badge bg-success-subtle text-success border border-success-subtle">Confirmada — ${esc(dato.byEmail || dato.by)} (${new Date(dato.at).toLocaleString('es-PA', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })})</span>`
         : `<span class="badge bg-warning-subtle text-warning border border-warning-subtle">Pendiente</span>`;
-      const boton = (!hecha && puede) ? `<button class="btn btn-sm btn-outline-primary btn-confirmar-fase8" data-tipo="${tipo}">Confirmar</button>` : '';
+      const boton = (!hecha && puede) ? `<button class="btn btn-sm btn-outline-primary btn-confirmar-fase8" data-tipo="${esc(tipo)}">Confirmar</button>` : '';
       return `<div class="field-row">
         <div class="field-label">${label}</div>
         <div class="field-value d-flex justify-content-between align-items-center">${estado}${boton}</div>
@@ -814,15 +827,15 @@
         const date = v.archivedAt ? new Date(v.archivedAt).toLocaleString('es-PA', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' }) : '—';
         return `<div class="field-row">
           <div class="field-value">
-            <strong>v${v.version}</strong> — ${v.fileName} — <span class="badge bg-${getDocStatusColor(v.status).replace('text-','')}-subtle">${v.status}</span>
-            ${v.reviewNotes ? `<div class="text-muted" style="font-size:.72rem">Motivo: ${v.reviewNotes}</div>` : ''}
-            <div class="text-muted" style="font-size:.7rem">Reemplazada el ${date} — subida por ${v.uploadedBy}</div>
-            ${v.signedUrl ? `<a href="${v.signedUrl}" target="_blank" class="small">Ver archivo</a>` : ''}
+            <strong>v${esc(v.version)}</strong> — ${esc(v.fileName)} — <span class="badge bg-${esc(getDocStatusColor(v.status).replace('text-',''))}-subtle">${esc(v.status)}</span>
+            ${v.reviewNotes ? `<div class="text-muted" style="font-size:.72rem">Motivo: ${esc(v.reviewNotes)}</div>` : ''}
+            <div class="text-muted" style="font-size:.7rem">Reemplazada el ${date} — subida por ${esc(v.uploadedBy)}</div>
+            ${v.signedUrl ? `<a href="${esc(v.signedUrl)}" target="_blank" class="small">Ver archivo</a>` : ''}
           </div>
         </div>`;
       }).join('');
     } catch (e) {
-      box.innerHTML = `<div class="text-danger">${e.message}</div>`;
+      box.innerHTML = `<div class="text-danger">${esc(e.message)}</div>`;
     }
   };
   window.revisarDoc = async (docId, status) => {
@@ -874,8 +887,8 @@
     try {
       const body = { status: newStatus };
       if (override) { body.override = true; body.reason = reason; }
-      await api.updateCase(caseId, body);
-      alert('Estado actualizado.');
+      const respuesta = await api.updateCase(caseId, body);
+      alert('Estado actualizado.' + (respuesta.avisos?.length ? `\n\n⚠ ${respuesta.avisos.join('\n⚠ ')}` : ''));
       caseData = await api.getCase(caseId);
       document.getElementById('override-check').checked = false;
       document.getElementById('override-reason').value = '';
@@ -884,6 +897,7 @@
       renderStatusHistory();
       renderPaqueteIEA();
       renderPlazoSubsanacion();
+      renderCotizacionError();
       renderFase8Confirmaciones();
       renderPaymentsResumen();
     } catch (e) {

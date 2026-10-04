@@ -345,6 +345,52 @@
 </head>
 <body>
 
+<!-- ══ TAREA 32 (§H.13) — Captación de información preliminar (Fase 2 Zelky).
+     Pantalla bloqueante de primer ingreso: solo se muestra si el titular
+     todavía no la completó (org.captacion no existe). Editable después
+     desde Mi Empresa — mismo formulario, mismo endpoint, ver script de
+     abajo (#form-captacion se reusa en los dos casos). ══ -->
+<div id="captacion-overlay" class="d-none" style="position:fixed;inset:0;background:rgba(15,50,96,.85);z-index:2000;display:flex;align-items:center;justify-content:center;padding:16px;overflow-y:auto;">
+  <div class="bg-white rounded shadow-lg p-4" style="max-width:560px;width:100%;margin:24px 0;">
+    <h5 class="mb-1">Captación de información preliminar</h5>
+    <p class="text-muted small mb-3" id="captacion-intro">Antes de empezar, necesitamos esta información de tu empresa (se pide una sola vez — después la puedes editar desde "Mi Empresa").</p>
+    <form id="form-captacion">
+      <div class="mb-3">
+        <label class="form-label small fw-semibold">País y nombre del laboratorio fabricante</label>
+        <input type="text" class="form-control" id="capt-fabricante" placeholder="Ej: Alemania — Laboratorios XYZ" required>
+      </div>
+      <div class="mb-3">
+        <label class="form-label small fw-semibold">Categoría(s) de producto</label>
+        <div id="capt-categorias"></div>
+      </div>
+      <div class="mb-3">
+        <label class="form-label small fw-semibold">Número de productos por categoría</label>
+        <input type="text" class="form-control" id="capt-numero-productos" placeholder="Ej: 3 medicamentos, 1 cosmético" required>
+      </div>
+      <div class="mb-3">
+        <label class="form-label small fw-semibold d-block">¿Registro previo ante autoridad reconocida (FDA, EMA, TGA…)?</label>
+        <div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="capt-registro-previo" value="si" required><label class="form-check-label small">Sí</label></div>
+        <div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="capt-registro-previo" value="no"><label class="form-check-label small">No</label></div>
+      </div>
+      <div class="mb-3">
+        <label class="form-label small fw-semibold d-block">¿Cliente nuevo o ya tiene productos registrados en Panamá?</label>
+        <div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="capt-nuevo-o-registrado" value="nuevo" required><label class="form-check-label small">Cliente nuevo</label></div>
+        <div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="capt-nuevo-o-registrado" value="ya_registrado"><label class="form-check-label small">Ya tiene productos registrados</label></div>
+      </div>
+      <div class="mb-3">
+        <label class="form-label small fw-semibold d-block">¿Algún producto con modificación en curso?</label>
+        <div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="capt-modificacion-en-curso" value="si" required><label class="form-check-label small">Sí</label></div>
+        <div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="capt-modificacion-en-curso" value="no"><label class="form-check-label small">No</label></div>
+      </div>
+      <div class="alert alert-danger d-none" id="captacion-error"></div>
+      <div class="d-flex justify-content-end gap-2">
+        <button type="button" class="btn btn-outline-secondary d-none" id="btn-captacion-cancelar">Cancelar</button>
+        <button type="submit" class="btn btn-primary" id="btn-captacion-guardar">Guardar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <!-- ══════════════════ TOPBAR ══════════════════ -->
 <div class="topbar d-print-none">
   <div class="container-fluid">
@@ -448,6 +494,18 @@
               <i class="iconoir-receipt menu-icon"></i>
               <span>Cotización</span>
               <span class="badge ms-auto" id="cotizacion-badge" style="background:var(--fz-amber);font-size:.6rem;display:none;"></span>
+            </a>
+          </li>
+          <!-- TAREA 34 (§H.15): visibles solo según org.plan — el script de
+               abajo decide cuál mostrar, ninguno aparece por default. -->
+          <li class="nav-item" id="nav-diagnostico-item" style="display:none">
+            <a class="nav-link" href="#" onclick="showModule('diagnostico',this);return false;">
+              <i class="iconoir-stethoscope menu-icon"></i><span>Diagnóstico</span>
+            </a>
+          </li>
+          <li class="nav-item" id="nav-empresarial-item" style="display:none">
+            <a class="nav-link" href="#" onclick="showModule('empresarial',this);return false;">
+              <i class="iconoir-graph-up menu-icon"></i><span>Informes de avance</span>
             </a>
           </li>
 
@@ -659,6 +717,28 @@
           <p>Agrupa todos tus trámites en curso en una sola cotización, con el desglose de honorarios Farmazed y tasas oficiales.</p>
         </div>
         <div id="cotizacion-content">
+          <div class="text-center py-4"><div class="spinner-border spinner-border-sm text-primary"></div></div>
+        </div>
+      </div>
+
+      <!-- ══ MODULE: DIAGNÓSTICO (Plan Consulta, TAREA 34 §H.15) ══ -->
+      <div class="fz-module" id="mod-diagnostico">
+        <div class="fz-mod-header">
+          <h4>Diagnóstico regulatorio</h4>
+          <p>Clasificación del producto, ruta recomendada, requisitos aplicables y un estimado de tiempos y costos oficiales — sin costo, sin trámite todavía.</p>
+        </div>
+        <div id="diagnostico-content">
+          <div class="text-center py-4"><div class="spinner-border spinner-border-sm text-primary"></div></div>
+        </div>
+      </div>
+
+      <!-- ══ MODULE: PLAN EMPRESARIAL — solicitud + informes de avance (TAREA 34 §H.15) ══ -->
+      <div class="fz-module" id="mod-empresarial">
+        <div class="fz-mod-header">
+          <h4>Plan Empresarial</h4>
+          <p>Solicitud de propuesta, condiciones a convenir con Farmazed, y el avance de todos los casos de tu empresa.</p>
+        </div>
+        <div id="empresarial-content">
           <div class="text-center py-4"><div class="spinner-border spinner-border-sm text-primary"></div></div>
         </div>
       </div>
@@ -998,10 +1078,16 @@
 <!-- render function, since type="module" is deferred regardless of source -->
 <!-- position). Fills window.DATA with real data, then calls window.renderAll(). -->
 <script type="module">
-  import { requireLogin, logout } from './portal/js/auth.js';
+  import { esc, requireVerifiedLogin, logout } from './portal/js/auth.js';
+  window.esc = esc; // el <script> clásico de abajo usa esc() para sus templates (T37b)
   import api from './portal/js/api.js';
   import { getFullMeta } from './portal/js/status_ui.js';
   import { FEATURES } from './portal/js/config.js';
+
+  // TAREA 32: envuelto en una IIFE async para poder cortar temprano
+  // (`return`) si el correo no está verificado — un módulo ES no permite
+  // `return` en su nivel superior, solo dentro de una función.
+  (async () => {
 
   // El módulo Mensajes (classic script) llama sendMessage() del chat en vivo,
   // fuera de este script — expuesto en window para que pueda llegar al API.
@@ -1017,7 +1103,8 @@
     document.getElementById('nav-precios-item').style.display = '';
   }
 
-  const user = await requireLogin('login.html');
+  const user = await requireVerifiedLogin('login.html');
+  if (!user) return; // en camino a verificar-correo.html
 
   // TAREA 15/E3 parte 2: el módulo "Mi Empresa" (classic script) necesita
   // saber si esta cuenta es titular (puede invitar) o miembro (solo ve) —
@@ -1037,6 +1124,111 @@
     medicamentos: 'Medicamentos', cosmeticos: 'Cosméticos', higienicos: 'Higiénicos',
     plaguicidas: 'Plaguicidas', excepcion: 'Excepción de Registro', publicidad: 'Publicidad',
   };
+
+  // ══ TAREA 32 (§H.13) — Captación de información preliminar ══════════════════
+  // Un solo formulario (#form-captacion, overlay en el <body>) sirve para la
+  // pantalla bloqueante de primer ingreso Y para "editar después desde Mi
+  // Empresa" (classic script más abajo, vía window.__fzAbrirCaptacion). Las
+  // categorías reusan TRAMITE_LABEL (mismas 6 de tracker/data/faddi_checklists.js
+  // TRAMITE_TYPES — el backend es quien valida esa lista, esto es solo UI).
+  document.getElementById('capt-categorias').innerHTML = Object.entries(TRAMITE_LABEL).map(([key, label]) => `
+    <div class="form-check form-check-inline">
+      <input class="form-check-input" type="checkbox" value="${esc(key)}" id="capt-cat-${esc(key)}">
+      <label class="form-check-label small" for="capt-cat-${esc(key)}">${esc(label)}</label>
+    </div>`).join('');
+
+  let onCaptacionGuardada = null;
+  window.__fzAbrirCaptacion = function abrirCaptacion(captacionExistente, { editable } = { editable: false }) {
+    const form = document.getElementById('form-captacion');
+    form.reset();
+    document.querySelectorAll('#capt-categorias input[type=checkbox]').forEach(cb => { cb.checked = false; });
+    if (captacionExistente) {
+      document.getElementById('capt-fabricante').value = captacionExistente.paisYNombreFabricante || '';
+      (captacionExistente.categoriasProducto || []).forEach(c => {
+        const cb = document.getElementById(`capt-cat-${c}`);
+        if (cb) cb.checked = true;
+      });
+      document.getElementById('capt-numero-productos').value = captacionExistente.numeroProductosPorCategoria || '';
+      const r1 = form.querySelector(`input[name="capt-registro-previo"][value="${captacionExistente.registroPrevioAutoridadReconocida ? 'si' : 'no'}"]`);
+      if (r1) r1.checked = true;
+      const r2 = form.querySelector(`input[name="capt-nuevo-o-registrado"][value="${captacionExistente.clienteNuevoOYaRegistrado}"]`);
+      if (r2) r2.checked = true;
+      const r3 = form.querySelector(`input[name="capt-modificacion-en-curso"][value="${captacionExistente.productoConModificacionEnCurso ? 'si' : 'no'}"]`);
+      if (r3) r3.checked = true;
+    }
+    document.getElementById('captacion-intro').textContent = editable
+      ? 'Edita la información de captación de tu empresa.'
+      : 'Antes de empezar, necesitamos esta información de tu empresa (se pide una sola vez — después la puedes editar desde "Mi Empresa").';
+    document.getElementById('btn-captacion-cancelar').classList.toggle('d-none', !editable);
+    document.getElementById('captacion-overlay').classList.remove('d-none');
+  };
+  window.__fzSetOnCaptacionGuardada = (fn) => { onCaptacionGuardada = fn; };
+
+  document.getElementById('btn-captacion-cancelar').addEventListener('click', () => {
+    document.getElementById('captacion-overlay').classList.add('d-none');
+  });
+
+  document.getElementById('form-captacion').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const errBox = document.getElementById('captacion-error');
+    errBox.classList.add('d-none');
+    const categoriasProducto = [...document.querySelectorAll('#capt-categorias input[type=checkbox]:checked')].map(cb => cb.value);
+    const registroPrevio      = document.querySelector('input[name="capt-registro-previo"]:checked');
+    const nuevoORegistrado    = document.querySelector('input[name="capt-nuevo-o-registrado"]:checked');
+    const modificacionEnCurso = document.querySelector('input[name="capt-modificacion-en-curso"]:checked');
+
+    if (categoriasProducto.length === 0) {
+      errBox.textContent = 'Selecciona al menos una categoría de producto.';
+      errBox.classList.remove('d-none');
+      return;
+    }
+
+    const data = {
+      paisYNombreFabricante: document.getElementById('capt-fabricante').value.trim(),
+      categoriasProducto,
+      numeroProductosPorCategoria: document.getElementById('capt-numero-productos').value.trim(),
+      registroPrevioAutoridadReconocida: registroPrevio?.value === 'si',
+      clienteNuevoOYaRegistrado: nuevoORegistrado?.value,
+      productoConModificacionEnCurso: modificacionEnCurso?.value === 'si',
+    };
+
+    const btn = document.getElementById('btn-captacion-guardar');
+    btn.disabled = true;
+    try {
+      await window.__fzApi.saveCaptacion(data);
+      document.getElementById('captacion-overlay').classList.add('d-none');
+      if (onCaptacionGuardada) { onCaptacionGuardada(); onCaptacionGuardada = null; }
+    } catch (err) {
+      errBox.textContent = err.message;
+      errBox.classList.remove('d-none');
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  // TAREA 34 (§H.15): nav de "Diagnóstico"/"Informes de avance" según
+  // org.plan — para titular Y miembro, es información de la EMPRESA, no
+  // solo de quien la registró.
+  window.__fzOrgPlan = null;
+  try {
+    const orgParaNav = await api.getMyOrg();
+    window.__fzOrgPlan = orgParaNav.plan || null;
+    if (window.__fzOrgPlan === 'consulta')    document.getElementById('nav-diagnostico-item').style.display = '';
+    if (window.__fzOrgPlan === 'empresarial') document.getElementById('nav-empresarial-item').style.display = '';
+  } catch (e) { /* sin esto, simplemente no se revela ningún nav extra */ }
+
+  // Primer ingreso — solo el titular (es quien registró la empresa; el
+  // miembro no puede editarla, ver permiso orgs.edit_captacion, y no
+  // debería quedar bloqueado por algo que no puede completar): si la
+  // empresa todavía no tiene captación, se bloquea la pantalla hasta que
+  // la llene.
+  if (myPerms.role === 'cliente_titular') {
+    try {
+      const orgInicial = await api.getMyOrg();
+      if (!orgInicial.captacion) window.__fzAbrirCaptacion(null, { editable: false });
+    } catch (e) { /* si getMyOrg falla, no bloqueamos el dashboard por esto */ }
+  }
+
   // status real (documents.js) -> badge/tab del prototipo (docBadge/filterDocs sin tocar)
   const ESTADO_MAP = { requested: 'pendiente', uploaded: 'en_revision', reviewing: 'en_revision', approved: 'aprobado', rejected: 'rechazado' };
 
@@ -1284,12 +1476,18 @@
     e.preventDefault();
     logout();
   });
+
+  })();
 </script>
 
 <!-- ══════════════════ SCRIPTS ══════════════════ -->
 <script src="src/approx/libs/bootstrap/js/bootstrap.bundle.min.js"></script>
 <script src="src/approx/js/app.js"></script>
 <script>
+// esc() lo publica el módulo de auth (window.esc, portal/js/auth.js) al cargar; los
+// renders con datos reales corren después de eso. Envoltorio perezoso para no
+// duplicar el helper.
+const esc = (v) => window.esc(v);
 // ── Data ──
 const DATA = {
   cliente: {
@@ -1339,12 +1537,12 @@ function formatDate(d) {
 function estadoBadge(e) {
   const m = {activo:['fz-badge-green','Activo'],en_tramite:['fz-badge-blue','En trámite'],bloqueado:['fz-badge-amber','Bloqueado'],vencido:['fz-badge-red','Vencido'],por_vencer:['fz-badge-amber','Por renovar'],denegado:['fz-badge-red','Denegado'],sin_migrar:['fz-badge-gray','Estado en actualización']};
   const [c,l] = m[e]||['fz-badge-gray',e];
-  return `<span class="fz-badge ${c}">${l}</span>`;
+  return `<span class="fz-badge ${c}">${esc(l)}</span>`;
 }
 function docBadge(e) {
   const m = {pendiente:['fz-badge-amber','Pendiente'],en_revision:['fz-badge-blue','En revisión'],aprobado:['fz-badge-green','Aprobado'],rechazado:['fz-badge-red','Rechazado']};
   const [c,l] = m[e]||['fz-badge-gray',e];
-  return `<span class="fz-badge ${c}">${l}</span>`;
+  return `<span class="fz-badge ${c}">${esc(l)}</span>`;
 }
 // Gap 3: las categorías del prototipo (síntesis/natural/biológico/...) no
 // existen en el backend real — remapeado a los 6 trámites reales.
@@ -1358,7 +1556,7 @@ function catBadge(tramiteType) {
     publicidad:   ['fz-badge-gray',  'Publicidad'],
   };
   const [cls,l] = m[tramiteType]||['fz-badge-gray',tramiteType];
-  return `<span class="fz-badge ${cls}">${l}</span>`;
+  return `<span class="fz-badge ${cls}">${esc(l)}</span>`;
 }
 function docActionBtn(e) {
   if (e==='pendiente')  return `<button class="btn-fz btn-fz-sm">Subir archivo</button>`;
@@ -1379,7 +1577,7 @@ function pendActionBtn(p, idx) {
     </label>`;
   }
   const m = {revisar:'Revisar y aprobar',confirmar:'Completar info',firmar:'Ver detalle'};
-  return `<button class="btn-fz btn-fz-sm">${m[p.tipo_accion]||'Ver detalle'}</button>`;
+  return `<button class="btn-fz btn-fz-sm">${esc(m[p.tipo_accion]||'Ver detalle')}</button>`;
 }
 function pendIcon(t) {
   const m = {subir:'iconoir-upload-square',revisar:'iconoir-eye',confirmar:'iconoir-edit-pencil',firmar:'iconoir-pen-tablet'};
@@ -1406,6 +1604,8 @@ function showModule(name, linkEl) {
   if (name === 'precios') loadPrecios();
   if (name === 'empresa') loadEmpresa();
   if (name === 'cotizacion') loadCotizacion();
+  if (name === 'diagnostico') loadDiagnostico();
+  if (name === 'empresarial') loadEmpresarial();
 }
 
 // D13 — carga perezosa (solo la primera vez que se abre el módulo), de solo
@@ -1424,11 +1624,11 @@ async function loadPrecios() {
 
     box.innerHTML = GRUPO_ORDER.filter(g => byGrupo[g]).map(grupo => `
       <div class="mb-4">
-        <h6 class="text-muted fw-bold text-uppercase small mb-2">${grupo}</h6>
+        <h6 class="text-muted fw-bold text-uppercase small mb-2">${esc(grupo)}</h6>
         ${byGrupo[grupo].map(p => `
           <div class="fz-price-card mb-2 p-3" style="background:#fff;border:0.5px solid var(--fz-border);border-radius:8px;">
             <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
-              <div class="fw-semibold small">${p.name}</div>
+              <div class="fw-semibold small">${esc(p.name)}</div>
               <div class="fw-bold" style="color:var(--fz-primary);">B/. ${(p.total || 0).toLocaleString('es-PA')}</div>
             </div>
             <div class="d-flex gap-4 mt-2 flex-wrap">
@@ -1446,7 +1646,7 @@ async function loadPrecios() {
 
     preciosLoaded = true;
   } catch (err) {
-    box.innerHTML = `<div class="alert alert-danger">${err.message}</div>`;
+    box.innerHTML = `<div class="alert alert-danger">${esc(err.message)}</div>`;
   }
 }
 
@@ -1461,11 +1661,36 @@ async function loadEmpresa() {
     const org = await window.__fzApi.getMyOrg();
     const esTitular = window.__fzMyRole === 'cliente_titular';
 
+    // TAREA 34 (§H.15): "el cliente ve su plan en Mi Empresa y puede pedir
+    // subir de plan" — sin restricción de qué transición vale.
+    const PLAN_LABEL = { consulta: 'Consulta ($0)', registro: 'Registro', empresarial: 'Empresarial (a convenir)' };
+    const planHtml = `
+      <p style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#9ca3af;margin-bottom:8px;">Plan actual</p>
+      <div class="small mb-2"><span class="fz-badge fz-badge-blue">${esc(PLAN_LABEL[org.plan] || 'sin definir')}</span></div>
+      ${esTitular ? `
+        <div class="d-flex gap-2 flex-wrap">
+          ${org.plan !== 'registro'    ? '<button class="btn-fz btn-fz-sm btn-fz-outline btn-subir-plan" data-plan="registro">Subir a Registro</button>' : ''}
+          ${org.plan !== 'empresarial' ? '<button class="btn-fz btn-fz-sm btn-fz-outline btn-subir-plan" data-plan="empresarial">Subir a Empresarial</button>' : ''}
+        </div>` : ''}`;
+
+    // TAREA 33 (§H.14): plan recurrente de uso de la plataforma — NO
+    // bloquea trámites (instrucción explícita), solo informativo + el
+    // botón de suscribir/cancelar para el titular.
+    const s = org.suscripcion;
+    const suscripcionHtml = `
+      <p style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#9ca3af;margin:20px 0 8px;">Suscripción (uso de la plataforma)</p>
+      <div class="small text-muted mb-2">Estado: <span class="fz-badge ${s?.estado === 'activa' ? 'fz-badge-green' : s?.estado === 'pendiente' ? 'fz-badge-amber' : 'fz-badge-blue'}">${esc(s?.estado || 'sin suscripción')}</span></div>
+      ${esTitular ? (
+        (!s || s.estado === 'cancelada')
+          ? '<button class="btn-fz btn-fz-sm" id="btn-suscribir">Suscribirme</button>'
+          : (s.estado !== 'cancelada' ? '<button class="btn-fz btn-fz-sm btn-fz-outline" id="btn-cancelar-suscripcion">Cancelar suscripción</button>' : '')
+      ) : ''}`;
+
     const miembrosHtml = org.members.map(m => `
       <div class="d-flex justify-content-between align-items-center border-bottom py-2">
         <div>
-          <div class="small fw-semibold">${m.displayName}</div>
-          <div class="text-muted" style="font-size:.72rem">${m.email}</div>
+          <div class="small fw-semibold">${esc(m.displayName)}</div>
+          <div class="text-muted" style="font-size:.72rem">${esc(m.email)}</div>
         </div>
         <span class="fz-badge fz-badge-blue">${m.role === 'cliente_titular' ? 'Titular' : 'Miembro'}</span>
       </div>`).join('');
@@ -1474,7 +1699,7 @@ async function loadEmpresa() {
       <p style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#9ca3af;margin:20px 0 8px;">Invitaciones enviadas</p>
       ${org.invitations.map(inv => `
         <div class="d-flex justify-content-between align-items-center border-bottom py-2">
-          <div class="small">${inv.email}</div>
+          <div class="small">${esc(inv.email)}</div>
           <span class="fz-badge ${inv.used ? 'fz-badge-green' : 'fz-badge-amber'}">${inv.used ? 'Activa' : 'Pendiente'}</span>
         </div>`).join('')}` : '';
 
@@ -1486,17 +1711,44 @@ async function loadEmpresa() {
       </form>
       <div id="invitar-miembro-msg" class="small mt-2"></div>` : '';
 
+    // TAREA 32 (§H.13): resumen de la captación + botón de editar — solo el
+    // titular puede editarla (orgs.edit_captacion), el miembro solo la ve.
+    const c = org.captacion;
+    const captacionHtml = c ? `
+      <p style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#9ca3af;margin-bottom:8px;">Captación de información preliminar</p>
+      <div class="small text-muted mb-1"><strong>Fabricante:</strong> ${esc(c.paisYNombreFabricante)}</div>
+      <div class="small text-muted mb-1"><strong>Categorías:</strong> ${esc((c.categoriasProducto || []).join(', '))}</div>
+      <div class="small text-muted mb-1"><strong>N.° de productos:</strong> ${esc(c.numeroProductosPorCategoria)}</div>
+      <div class="small text-muted mb-1"><strong>Registro previo (FDA/EMA/TGA…):</strong> ${c.registroPrevioAutoridadReconocida ? 'Sí' : 'No'}</div>
+      <div class="small text-muted mb-1"><strong>Cliente:</strong> ${c.clienteNuevoOYaRegistrado === 'nuevo' ? 'Nuevo' : 'Ya tiene productos registrados'}</div>
+      <div class="small text-muted mb-2"><strong>Modificación en curso:</strong> ${c.productoConModificacionEnCurso ? 'Sí' : 'No'}</div>
+      ${esTitular ? '<button class="btn-fz btn-fz-sm" id="btn-editar-captacion">Editar</button>' : ''}`
+      : (esTitular ? '<button class="btn-fz btn-fz-sm" id="btn-editar-captacion">Completar captación de información preliminar</button>' : '<p class="text-muted small">Todavía sin captación.</p>');
+
     box.innerHTML = `
       <div class="row g-3">
         <div class="col-md-7">
-          <p style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#9ca3af;margin-bottom:8px;">${org.nombre} — miembros</p>
+          <p style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#9ca3af;margin-bottom:8px;">${esc(org.nombre)} — miembros</p>
           ${miembrosHtml || '<p class="text-muted small">Sin miembros todavía.</p>'}
           ${invitacionesHtml}
         </div>
-        <div class="col-md-5">${invitarFormHtml}</div>
+        <div class="col-md-5">
+          ${invitarFormHtml}
+          <div class="mt-4">${planHtml}</div>
+          <div class="mt-4">${captacionHtml}</div>
+          <div class="mt-4">${suscripcionHtml}</div>
+        </div>
       </div>`;
 
     if (esTitular) {
+      box.querySelectorAll('.btn-subir-plan').forEach(btn => btn.addEventListener('click', async () => {
+        btn.disabled = true;
+        try {
+          await window.__fzApi.setMiPlan(btn.dataset.plan);
+          window.location.reload(); // revela el nav nuevo (Diagnóstico/Informes) sin reconstruir todo a mano
+        } catch (err) { alert('Error: ' + err.message); btn.disabled = false; }
+      }));
+
       document.getElementById('form-invitar-miembro').addEventListener('submit', async (e) => {
         e.preventDefault();
         const email = document.getElementById('miembro-email').value.trim();
@@ -1512,11 +1764,42 @@ async function loadEmpresa() {
           msg.textContent = err.message;
         }
       });
+
+      document.getElementById('btn-editar-captacion').addEventListener('click', () => {
+        window.__fzSetOnCaptacionGuardada(() => { empresaLoaded = false; loadEmpresa(); });
+        window.__fzAbrirCaptacion(c || null, { editable: true });
+      });
+
+      // TAREA 33 (§H.14): no bloquea trámites — solo informativo + la
+      // acción de suscribir/cancelar.
+      document.getElementById('btn-suscribir')?.addEventListener('click', async (e) => {
+        e.target.disabled = true;
+        try {
+          await window.__fzApi.suscribirEmpresa();
+          empresaLoaded = false;
+          loadEmpresa();
+        } catch (err) {
+          alert('Error: ' + err.message);
+          e.target.disabled = false;
+        }
+      });
+      document.getElementById('btn-cancelar-suscripcion')?.addEventListener('click', async (e) => {
+        if (!confirm('¿Cancelar la suscripción de la empresa?')) return;
+        e.target.disabled = true;
+        try {
+          await window.__fzApi.cancelarSuscripcion();
+          empresaLoaded = false;
+          loadEmpresa();
+        } catch (err) {
+          alert('Error: ' + err.message);
+          e.target.disabled = false;
+        }
+      });
     }
 
     empresaLoaded = true;
   } catch (err) {
-    box.innerHTML = `<div class="alert alert-danger">${err.message}</div>`;
+    box.innerHTML = `<div class="alert alert-danger">${esc(err.message)}</div>`;
   }
 }
 
@@ -1535,7 +1818,7 @@ async function loadCotizacion() {
     renderCotizacion(quotes.filter(q => q.estado !== 'borrador'));
     cotizacionLoaded = true;
   } catch (err) {
-    box.innerHTML = `<div class="alert alert-danger">${err.message}</div>`;
+    box.innerHTML = `<div class="alert alert-danger">${esc(err.message)}</div>`;
   }
 }
 
@@ -1548,7 +1831,7 @@ function renderCotizacion(quotes) {
     box.innerHTML = quotes.map(q => {
       const lineasHtml = q.lineas.map(l => `
         <div class="d-flex justify-content-between align-items-start border-bottom py-2">
-          <div class="small fw-semibold">${l.caseCode}${l.tipo === 'prioridad_innovadores' ? ' <span class="text-muted" style="font-size:.68rem;font-weight:400">(prioridad innovadores)</span>' : ''}</div>
+          <div class="small fw-semibold">${esc(l.caseCode)}${l.tipo === 'prioridad_innovadores' ? ' <span class="text-muted" style="font-size:.68rem;font-weight:400">(prioridad innovadores)</span>' : ''}</div>
           <div class="text-end" style="font-size:.75rem;color:#4b5563">
             <div>Honorarios Farmazed: B/. ${Number(l.honorariosFarmazed).toFixed(2)}</div>
             <div>Tasas oficiales: B/. ${Number(l.tasasOficiales).toFixed(2)}</div>
@@ -1557,20 +1840,31 @@ function renderCotizacion(quotes) {
 
       const accionesHtml = (q.estado === 'enviada' && esTitular) ? `
         <div class="d-flex gap-2 mt-3">
-          <button class="btn-fz btn-fz-sm btn-aceptar-cot" data-quote="${q.id}">Aceptar</button>
-          <button class="btn-fz btn-fz-sm btn-fz-outline btn-rechazar-cot" data-quote="${q.id}">Rechazar</button>
+          <button class="btn-fz btn-fz-sm btn-aceptar-cot" data-quote="${esc(q.id)}">Aceptar</button>
+          <button class="btn-fz btn-fz-sm btn-fz-outline btn-rechazar-cot" data-quote="${esc(q.id)}">Rechazar</button>
         </div>` : '';
+
+      // TAREA 33 (§H.14): "Pagar con PayPal" solo si ya está aceptada y
+      // todavía no se capturó un pago — el monto NUNCA sale de este botón,
+      // lo calcula el servidor desde la propia cotización.
+      const yaPagada = q.pagoPaypal?.estado === 'capturada';
+      const pagoHtml = (q.estado === 'aceptada' && esTitular) ? (
+        yaPagada
+          ? `<div class="small text-success mt-2"><i class="iconoir-check-circle"></i> Pagado con PayPal (orden ${esc(q.pagoPaypal.orderId)}).</div>`
+          : `<div class="mt-3"><button class="btn-fz btn-fz-sm btn-pagar-paypal" data-quote="${esc(q.id)}">Pagar con PayPal</button></div>`
+      ) : '';
 
       return `
         <div class="card border-0 shadow-sm mb-3">
           <div class="card-body">
             <div class="d-flex justify-content-between align-items-center mb-2">
-              <span class="fz-badge fz-badge-blue">${COTIZACION_ESTADO_LABEL[q.estado] || q.estado}</span>
+              <span class="fz-badge fz-badge-blue">${esc(COTIZACION_ESTADO_LABEL[q.estado] || q.estado)}</span>
               <span class="fw-bold">Total: B/. ${Number(q.total).toFixed(2)}</span>
             </div>
             ${lineasHtml}
-            ${q.motivoRechazo ? `<div class="text-danger small mt-2">Rechazada: ${q.motivoRechazo}</div>` : ''}
+            ${q.motivoRechazo ? `<div class="text-danger small mt-2">Rechazada: ${esc(q.motivoRechazo)}</div>` : ''}
             ${accionesHtml}
+            ${pagoHtml}
           </div>
         </div>`;
     }).join('');
@@ -1592,6 +1886,31 @@ function renderCotizacion(quotes) {
         loadCotizacion();
       } catch (e) { alert('Error: ' + e.message); }
     }));
+
+    // TAREA 33 (§H.14): sin app sandbox de PayPal todavía, `approveUrl`
+    // siempre es null (proveedor mock) — captura directo. Si algún día hay
+    // credenciales reales, approveUrl trae el checkout hospedado de PayPal
+    // y hay que ir ahí primero; dejamos la rama lista aunque no probada
+    // contra PayPal de verdad.
+    box.querySelectorAll('.btn-pagar-paypal').forEach(btn => btn.addEventListener('click', async () => {
+      const quoteId = btn.dataset.quote;
+      btn.disabled = true;
+      btn.textContent = 'Procesando…';
+      try {
+        const orden = await window.__fzApi.crearOrdenPago(quoteId);
+        if (orden.approveUrl) {
+          window.location.href = orden.approveUrl;
+          return;
+        }
+        await window.__fzApi.capturarPago(quoteId, orden.orderId);
+        cotizacionLoaded = false;
+        loadCotizacion();
+      } catch (e) {
+        alert('Error al pagar: ' + e.message);
+        btn.disabled = false;
+        btn.textContent = 'Pagar con PayPal';
+      }
+    }));
   }
 
   const pendientes = quotes.filter(q => q.estado === 'enviada').length;
@@ -1600,12 +1919,148 @@ function renderCotizacion(quotes) {
   else { badge.style.display = 'none'; }
 }
 
+// ══ TAREA 34 (§H.15) — Diagnóstico (Plan Consulta) ══════════════════════════
+// Lo carga el STAFF desde admin/empresas.html (orgs.edit_diagnostico); acá
+// solo se MUESTRA (GET /api/me/org ya lo trae) + el CTA que sube de plan.
+let diagnosticoLoaded = false;
+async function loadDiagnostico() {
+  if (diagnosticoLoaded) return;
+  const box = document.getElementById('diagnostico-content');
+  try {
+    const org = await window.__fzApi.getMyOrg();
+    const d = org.diagnostico;
+    const esTitular = window.__fzMyRole === 'cliente_titular';
+    box.innerHTML = d ? `
+      <div class="card border-0 shadow-sm">
+        <div class="card-body">
+          <p class="small text-muted mb-1"><strong>Clasificación del producto:</strong> ${esc(d.clasificacion)}</p>
+          <p class="small text-muted mb-1"><strong>Ruta recomendada:</strong> ${esc(d.rutaRecomendada)}</p>
+          <p class="small text-muted mb-1"><strong>Requisitos aplicables:</strong> ${esc(d.requisitosAplicables)}</p>
+          <p class="small text-muted mb-1"><strong>Estimado de tiempos:</strong> ${esc(d.estimadoTiempos)}</p>
+          <p class="small text-muted mb-3"><strong>Estimado de costos oficiales:</strong> ${esc(d.estimadoCostos)}</p>
+          ${esTitular ? '<button class="btn-fz" id="btn-contratar-registro">Contratar el registro</button>' : ''}
+        </div>
+      </div>`
+      : `<p class="text-muted small">Farmazed está preparando tu diagnóstico — te avisamos cuando esté listo.</p>`;
+
+    document.getElementById('btn-contratar-registro')?.addEventListener('click', async (e) => {
+      e.target.disabled = true;
+      try {
+        await window.__fzApi.setMiPlan('registro');
+        alert('¡Listo! Ya puedes crear tu producto en "Solicitar Registro".');
+        window.location.reload();
+      } catch (err) { alert('Error: ' + err.message); e.target.disabled = false; }
+    });
+    diagnosticoLoaded = true;
+  } catch (err) {
+    box.innerHTML = `<div class="alert alert-danger">${esc(err.message)}</div>`;
+  }
+}
+
+// ══ TAREA 34 (§H.15) — Plan Empresarial: solicitud + informes de avance ═════
+let empresarialLoaded = false;
+async function loadEmpresarial() {
+  if (empresarialLoaded) return;
+  const box = document.getElementById('empresarial-content');
+  const esTitular = window.__fzMyRole === 'cliente_titular';
+  try {
+    const org = await window.__fzApi.getMyOrg();
+    const p = org.propuestaEmpresarial;
+
+    let propuestaHtml;
+    if (!p) {
+      propuestaHtml = esTitular ? `
+        <div class="card border-0 shadow-sm mb-4"><div class="card-body">
+          <h6 class="mb-3">Solicitud de propuesta</h6>
+          <form id="form-propuesta">
+            <div class="mb-3">
+              <label class="form-label small">Productos estimados (cuáles y cuántos)</label>
+              <textarea class="form-control" id="prop-productos" rows="2" required></textarea>
+            </div>
+            <label class="form-label small d-block mb-1">Necesidades</label>
+            <div class="form-check"><input class="form-check-input" type="checkbox" id="prop-modificaciones"><label class="form-check-label small">Modificaciones post-registro</label></div>
+            <div class="form-check"><input class="form-check-input" type="checkbox" id="prop-etiquetado"><label class="form-check-label small">Revisión de etiquetado</label></div>
+            <div class="form-check mb-3"><input class="form-check-input" type="checkbox" id="prop-informes"><label class="form-check-label small">Informes periódicos</label></div>
+            <button type="submit" class="btn-fz btn-fz-sm">Enviar solicitud</button>
+          </form>
+        </div></div>` : '<p class="text-muted small">El titular todavía no envió la solicitud de propuesta.</p>';
+    } else if (p.estado === 'solicitada') {
+      propuestaHtml = `<div class="alert alert-info small">Solicitud enviada — Farmazed está preparando las condiciones.</div>`;
+    } else if (p.estado === 'condiciones_definidas') {
+      propuestaHtml = `
+        <div class="card border-0 shadow-sm mb-4"><div class="card-body">
+          <h6 class="mb-2">Condiciones propuestas</h6>
+          <p class="small text-muted mb-1"><strong>Monto:</strong> $${Number(p.monto).toFixed(2)} / ${esc(p.periodo)}</p>
+          <p class="small text-muted mb-3"><strong>Gestor de cuenta:</strong> ${esc(p.gestorCuentaEmail)}</p>
+          ${esTitular ? '<button class="btn-fz btn-fz-sm" id="btn-aceptar-empresarial">Aceptar y suscribirme</button>' : ''}
+        </div></div>`;
+    } else {
+      propuestaHtml = `<div class="alert alert-success small">Suscripción activa — gestor de cuenta: ${esc(p.gestorCuentaEmail)}.</div>`;
+    }
+
+    // "Informes de avance" — todos los casos de la empresa (admin/staff ya
+    // tienen esa vista; acá es la del cliente, mismo GET /api/cases, el
+    // backend ya filtra por orgId).
+    const { cases } = await window.__fzApi.listCases();
+    const filasHtml = cases.length ? cases.map(c => `
+      <tr>
+        <td class="small">${esc(c.product?.nombreComercial || c.caseCode)}</td>
+        <td class="small text-muted">${esc(c.caseCode)}</td>
+        <td><span class="badge bg-secondary-subtle text-secondary border">${esc(c.status)}</span></td>
+      </tr>`).join('') : '<tr><td colspan="3" class="text-muted small text-center py-3">Todavía no hay casos.</td></tr>';
+
+    box.innerHTML = `
+      ${propuestaHtml}
+      <h6 class="mb-2">Informes de avance — todos los casos de tu empresa</h6>
+      <div class="card border-0 shadow-sm"><div class="table-responsive">
+        <table class="table table-sm mb-0">
+          <thead class="table-light"><tr><th class="small">Producto</th><th class="small">Expediente</th><th class="small">Fase</th></tr></thead>
+          <tbody>${filasHtml}</tbody>
+        </table>
+      </div></div>`;
+
+    document.getElementById('form-propuesta')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      try {
+        await window.__fzApi.solicitarEmpresarial({
+          productosEstimados: document.getElementById('prop-productos').value.trim(),
+          necesidades: {
+            modificaciones: document.getElementById('prop-modificaciones').checked,
+            etiquetado: document.getElementById('prop-etiquetado').checked,
+            informes: document.getElementById('prop-informes').checked,
+          },
+        });
+        empresarialLoaded = false;
+        loadEmpresarial();
+      } catch (err) { alert('Error: ' + err.message); }
+    });
+    document.getElementById('btn-aceptar-empresarial')?.addEventListener('click', async (e) => {
+      e.target.disabled = true;
+      try {
+        await window.__fzApi.aceptarEmpresarial();
+        empresarialLoaded = false;
+        loadEmpresarial();
+      } catch (err) { alert('Error: ' + err.message); e.target.disabled = false; }
+    });
+    empresarialLoaded = true;
+  } catch (err) {
+    box.innerHTML = `<div class="alert alert-danger">${esc(err.message)}</div>`;
+  }
+}
+
 // ── Init topbar ──
 function initTopbar() {
   const c = DATA.cliente;
   document.getElementById('tb-empresa').textContent = c.empresa;
   document.getElementById('tb-contacto').textContent = c.contacto;
-  document.getElementById('bienvenida-text').textContent = `Bienvenido, ${c.contacto}. Aquí tienes el estado de tus trámites con Farmazed.`;
+  // TAREA 34 (§H.15): bienvenida según el plan elegido en el landing.
+  const BIENVENIDA_PLAN = {
+    consulta:    'Gracias por tu interés — ya recibimos tus datos. Farmazed está preparando tu diagnóstico regulatorio, lo verás en "Diagnóstico" en cuanto esté listo.',
+    registro:    'Ya puedes crear tu producto en "Solicitar Registro" para empezar tu trámite.',
+    empresarial: 'Envía tu solicitud de propuesta en "Informes de avance" para que Farmazed defina las condiciones de tu Plan Empresarial.',
+  };
+  const bienvenidaPlan = BIENVENIDA_PLAN[window.__fzOrgPlan] || '';
+  document.getElementById('bienvenida-text').textContent = `Bienvenido, ${c.contacto}. ${bienvenidaPlan || 'Aquí tienes el estado de tus trámites con Farmazed.'}`;
   const ini = c.contacto.split(' ').map(n=>n[0]).slice(0,2).join('').toUpperCase();
   ['tb-avatar','dd-avatar'].forEach(id => document.getElementById(id).textContent = ini);
   document.getElementById('dd-name').textContent = c.contacto;
@@ -1617,8 +2072,8 @@ function initTopbar() {
 
   let nl = DATA.pendientes.map(p => `
     <a href="#" onclick="showModule('resumen');return false;" class="dropdown-item py-2" style="white-space:normal;font-size:.75rem;">
-      <div style="font-weight:600;color:#1e293b;">${p.producto_nombre}</div>
-      <div style="color:#6b7280;font-size:.7rem;">${p.descripcion}</div>
+      <div style="font-weight:600;color:#1e293b;">${esc(p.producto_nombre)}</div>
+      <div style="color:#6b7280;font-size:.7rem;">${esc(p.descripcion)}</div>
     </a>`).join('');
   if (!nl) nl = `<div class="py-3 text-center" style="font-size:.75rem;color:#9ca3af;">Sin notificaciones pendientes</div>`;
   document.getElementById('notif-list').innerHTML = nl;
@@ -1648,15 +2103,15 @@ function renderPendientes() {
     const urg = d !== null && d <= 5;
     return `
     <div class="fz-pending-item">
-      <div class="fz-pending-icon"><i class="${pendIcon(p.tipo_accion)}"></i></div>
+      <div class="fz-pending-icon"><i class="${esc(pendIcon(p.tipo_accion))}"></i></div>
       <div style="flex:1;min-width:0;">
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px;">
-          <span class="fz-mono" style="font-size:.72rem;color:var(--fz-primary);">${p.producto_codigo}</span>
-          <span style="font-size:.78rem;font-weight:600;color:#1e293b;">${p.producto_nombre}</span>
-          <span class="fz-badge fz-badge-blue" style="font-size:.63rem;">${p.fase}</span>
+          <span class="fz-mono" style="font-size:.72rem;color:var(--fz-primary);">${esc(p.producto_codigo)}</span>
+          <span style="font-size:.78rem;font-weight:600;color:#1e293b;">${esc(p.producto_nombre)}</span>
+          <span class="fz-badge fz-badge-blue" style="font-size:.63rem;">${esc(p.fase)}</span>
         </div>
-        <p style="font-size:.78rem;color:#374151;margin:0 0 4px;">${p.descripcion}</p>
-        ${p.fecha_limite ? `<span class="fz-deadline${urg?' urgent':''}">${urg?'⚠ ':''}Límite: ${formatDate(p.fecha_limite)}</span>` : ''}
+        <p style="font-size:.78rem;color:#374151;margin:0 0 4px;">${esc(p.descripcion)}</p>
+        ${p.fecha_limite ? `<span class="fz-deadline${urg?' urgent':''}">${urg?'⚠ ':''}Límite: ${esc(formatDate(p.fecha_limite))}</span>` : ''}
       </div>
       <div style="flex-shrink:0;">${pendActionBtn(p, idx)}</div>
     </div>`;
@@ -1715,10 +2170,10 @@ function pipelineHTML(p) {
     html += `<div class="fz-phase-col">
       <div class="fz-phase-row">
         ${i>1 ? `<div class="fz-phase-line${(done||act)?' done':''}"></div>` : '<div style="flex:0;"></div>'}
-        <div class="fz-phase-dot ${dc}" title="${labels[i-1]}">${ic}</div>
+        <div class="fz-phase-dot ${dc}" title="${esc(labels[i-1])}">${ic}</div>
         ${i<N ? `<div class="fz-phase-line${done?' done':''}"></div>` : '<div style="flex:0;"></div>'}
       </div>
-      <div class="fz-phase-name ${nc}">${labels[i-1]}</div>
+      <div class="fz-phase-name ${nc}">${esc(labels[i-1])}</div>
     </div>`;
   }
   return html + '</div>';
@@ -1740,14 +2195,14 @@ function expandedHTML(p) {
   let docs = '';
   DOC_GROUP_ORDER.forEach(([key, label]) => {
     if (!byEstado[key].length) return;
-    docs += `<div class="fz-doc-phase-label">${label}</div>`;
+    docs += `<div class="fz-doc-phase-label">${esc(label)}</div>`;
     byEstado[key].forEach(d => {
       docs += `<div class="fz-doc-row">
         <div style="flex:1;">
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-            <span style="font-size:.78rem;color:#1e293b;">${d.nombre}</span>${docBadge(d.estado)}
+            <span style="font-size:.78rem;color:#1e293b;">${esc(d.nombre)}</span>${docBadge(d.estado)}
           </div>
-          ${d.nota ? `<div class="fz-rejected-note"><i class="iconoir-warning-triangle me-1"></i>${d.nota}</div>` : ''}
+          ${d.nota ? `<div class="fz-rejected-note"><i class="iconoir-warning-triangle me-1"></i>${esc(d.nota)}</div>` : ''}
         </div>
         <div style="flex-shrink:0;">${docActionBtn(d.estado)}</div>
       </div>`;
@@ -1768,18 +2223,18 @@ function expandedHTML(p) {
       <div class="fz-flat-doc">
         <i class="iconoir-page" style="font-size:1.1rem;color:${dudoso ? '#d97706' : '#9ca3af'};flex-shrink:0;"></i>
         <div class="fz-flat-doc-info">
-          <div class="fz-flat-doc-name">${f.titulo}</div>
+          <div class="fz-flat-doc-name">${esc(f.titulo)}</div>
           ${dudoso ? `<div class="text-muted" style="font-size:.7rem">Por confirmar con Farmazed si te corresponde.</div>` : ''}
         </div>
-        <a class="btn-fz btn-fz-sm" href="/formularios/${f.archivo}" download>Descargar</a>
+        <a class="btn-fz btn-fz-sm" href="/formularios/${esc(f.archivo)}" download>Descargar</a>
       </div>`;
     return aplicables.map(f => row(f, false)).join('') + porConfirmar.map(f => row(f, true)).join('');
   })();
 
   const act = p.actividad.map(a => `
     <div class="fz-activity-item">
-      <span class="fz-activity-date">${formatDate(a.fecha)}</span>
-      <span>${a.descripcion}</span>
+      <span class="fz-activity-date">${esc(formatDate(a.fecha))}</span>
+      <span>${esc(a.descripcion)}</span>
     </div>`).join('');
   // §H.8 (TAREA 21): dos pagos distintos, cada uno con su propio badge — un
   // anticipo no implica nada sobre el saldo, ni viceversa.
@@ -1802,8 +2257,8 @@ function expandedHTML(p) {
     <div class="alert alert-warning py-2 px-3 mb-3" style="font-size:.78rem;">
       <strong>DNFD solicitó correcciones.</strong>
       ${p.fechaLimiteSubsanacion
-        ? `Fecha límite para subsanar: ${formatDate(p.fechaLimiteSubsanacion)}.`
-        : (p.fechaLimiteSubsanacionNota || '')}
+        ? `Fecha límite para subsanar: ${esc(formatDate(p.fechaLimiteSubsanacion))}.`
+        : esc(p.fechaLimiteSubsanacionNota)}
     </div>` : '';
 
   return `${plazoHtml}<div class="row g-3">
@@ -1815,7 +2270,7 @@ function expandedHTML(p) {
       <p style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#9ca3af;margin-bottom:8px;">Pagos</p>
       ${Object.entries(p.pagos || {}).filter(([, v]) => v !== null).map(([k, v]) => `
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-        <span style="font-size:.78rem;color:#1e293b;">${CONCEPTO_LABEL_CLIENTE[k] || k}</span>${pagoBadge(v)}
+        <span style="font-size:.78rem;color:#1e293b;">${esc(CONCEPTO_LABEL_CLIENTE[k] || k)}</span>${pagoBadge(v)}
       </div>`).join('')}
       <p style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#9ca3af;margin:14px 0 8px;">Actividad reciente</p>${act}
     </div>
@@ -1837,19 +2292,19 @@ function renderProductos() {
     const d = daysUntil(p.vencimiento);
     const vw = d !== null && d <= 90;
     const vHtml = p.vencimiento
-      ? `<span style="font-size:.7rem;" class="${vw?'fz-text-red':''}" title="${vw?'Vence pronto':''}"> ${vw?'⚠ ':''}${formatDate(p.vencimiento)}</span>`
+      ? `<span style="font-size:.7rem;" class="${vw?'fz-text-red':''}" title="${vw?'Vence pronto':''}"> ${vw?'⚠ ':''}${esc(formatDate(p.vencimiento))}</span>`
       : `<span style="font-size:.7rem;color:#9ca3af;">En trámite</span>`;
     return `
     <div class="fz-product-card">
       <div class="fz-prod-header" onclick="toggleProd(${i})">
         <div class="fz-prod-left">
-          <div class="fz-mono" style="font-size:.7rem;color:var(--fz-primary);margin-bottom:1px;">${p.codigo}</div>
-          <div style="font-size:.85rem;font-weight:700;color:#1e293b;">${p.nombre_comercial}</div>
+          <div class="fz-mono" style="font-size:.7rem;color:var(--fz-primary);margin-bottom:1px;">${esc(p.codigo)}</div>
+          <div style="font-size:.85rem;font-weight:700;color:#1e293b;">${esc(p.nombre_comercial)}</div>
           <div style="margin-top:3px;">${catBadge(p.categoria)}</div>
         </div>
         <div class="fz-prod-center">
           ${pipelineHTML(p)}
-          <div style="font-size:.7rem;color:#6b7280;text-align:center;margin-top:2px;">${p.fase_label}</div>
+          <div style="font-size:.7rem;color:#6b7280;text-align:center;margin-top:2px;">${esc(p.fase_label)}</div>
         </div>
         <div class="fz-prod-right">
           ${vHtml}
@@ -1881,16 +2336,16 @@ function renderDocs() {
     const msg = DATA.documentos.length
       ? 'No hay documentos en esta categoría.'
       : 'Aún no tienes documentos. Aparecerán aquí cuando inicies un trámite.';
-    document.getElementById('docs-list').innerHTML = `<p style="font-size:.78rem;color:#9ca3af;text-align:center;padding:24px 0;">${msg}</p>`;
+    document.getElementById('docs-list').innerHTML = `<p style="font-size:.78rem;color:#9ca3af;text-align:center;padding:24px 0;">${esc(msg)}</p>`;
     return;
   }
   document.getElementById('docs-list').innerHTML = list.map(d => `
     <div class="fz-flat-doc">
       <i class="iconoir-page" style="font-size:1.1rem;color:#9ca3af;flex-shrink:0;"></i>
       <div class="fz-flat-doc-info">
-        <div class="fz-flat-doc-name">${d.nombre}</div>
-        <div class="fz-flat-doc-meta"><span class="fz-mono">${d.producto}</span> · ${d.fase} · ${formatDate(d.fecha)}</div>
-        ${d.nota ? `<div class="fz-rejected-note" style="margin-top:5px;"><i class="iconoir-warning-triangle me-1"></i>${d.nota}</div>` : ''}
+        <div class="fz-flat-doc-name">${esc(d.nombre)}</div>
+        <div class="fz-flat-doc-meta"><span class="fz-mono">${esc(d.producto)}</span> · ${esc(d.fase)} · ${esc(formatDate(d.fecha))}</div>
+        ${d.nota ? `<div class="fz-rejected-note" style="margin-top:5px;"><i class="iconoir-warning-triangle me-1"></i>${esc(d.nota)}</div>` : ''}
       </div>
       <div class="fz-flat-doc-actions">
         ${docBadge(d.estado)}
@@ -1924,9 +2379,9 @@ function renderThreadList() {
   document.getElementById('threads-list').innerHTML = DATA.mensajes.map((h, i) => {
     const last = h.mensajes[h.mensajes.length-1];
     return `<div class="fz-thread-item${i===activeThread?' active':''}" onclick="selectThread(${i})">
-      <div class="code">${h.producto_codigo}</div>
-      <div class="name">${h.producto_nombre}</div>
-      <div class="preview">${last ? last.texto : 'Sin mensajes todavía — escribe el primero.'}</div>
+      <div class="code">${esc(h.producto_codigo)}</div>
+      <div class="name">${esc(h.producto_nombre)}</div>
+      <div class="preview">${last ? esc(last.texto) : 'Sin mensajes todavía — escribe el primero.'}</div>
     </div>`;
   }).join('');
 }
@@ -1961,11 +2416,11 @@ function renderChatMessages() {
     const fz = remitente === 'fz';
     const ini = fz ? 'FZ' : (msg.nombre || '?').split(' ').map(n=>n[0]).slice(0,2).join('').toUpperCase();
     return `<div class="fz-chat-msg ${remitente}">
-      <div class="fz-chat-av ${remitente}">${ini}</div>
+      <div class="fz-chat-av ${remitente}">${esc(ini)}</div>
       <div>
-        <div style="font-size:.63rem;color:#9ca3af;margin-bottom:3px;${fz?'':'text-align:right;'}">${msg.nombre}</div>
-        <div class="fz-bubble">${msg.texto}</div>
-        <div class="fz-chat-time">${formatDateTime(msg.fecha_hora)}</div>
+        <div style="font-size:.63rem;color:#9ca3af;margin-bottom:3px;${fz?'':'text-align:right;'}">${esc(msg.nombre)}</div>
+        <div class="fz-bubble">${esc(msg.texto)}</div>
+        <div class="fz-chat-time">${esc(formatDateTime(msg.fecha_hora))}</div>
       </div>
     </div>`;
   }).join('');

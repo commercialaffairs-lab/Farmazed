@@ -8,6 +8,7 @@
 // + 1 usuario por rol) — independiente del seed legacy de seed_emulador.js.
 
 const { test, expect } = require('@playwright/test');
+const { enviarLogin, completarCaptacionSiHaceFalta } = require('./_esperas');
 const path = require('path');
 const fs   = require('fs');
 
@@ -27,8 +28,7 @@ async function login(page, email, password = PASSWORD) {
   await page.goto('/login.html');
   await page.fill('#usuario', email);
   await page.fill('#password', password);
-  await page.click('button[type="submit"]');
-  await page.waitForURL(/(dashboard|client-dashboard)\.html/, { timeout: 15000 });
+  await enviarLogin(page, /(dashboard|client-dashboard|admin\/casos|admin\/bandeja)\.html/, 15000);
 }
 // TAREA 26: waitForURL en paralelo con el evaluate (no después) — mismo
 // criterio en todos los specs de este directorio (ver quotes.spec.js): la
@@ -37,7 +37,7 @@ async function login(page, email, password = PASSWORD) {
 // que importa es que la navegación de verdad ocurrió.
 async function logout(page) {
   await Promise.all([
-    page.waitForURL(/login\.html/, { timeout: 10000 }),
+    page.waitForURL(/login\.html/, { timeout: 10000, waitUntil: 'commit' }),
     page.evaluate(async () => {
       const { logout } = await import('/portal/js/auth.js');
       await logout();
@@ -189,7 +189,9 @@ test.describe('TAREA 15 — cada rol ve lo suyo, no lo ajeno', () => {
 
     await page.goto(`/aceptar-invitacion.html?token=${token}`);
     await expect(page.locator('#accept-form')).toBeVisible({ timeout: 10000 });
-    await expect(page.locator('#invite-email')).toHaveValue(email);
+    // TAREA 39b: la página pública de la invitación muestra el correo ENMASCARADO (n***@dominio).
+    const [usuario, dominio] = email.split('@');
+    await expect(page.locator('#invite-email')).toHaveValue(`${usuario[0]}***@${dominio}`);
     await page.fill('#display-name', 'Nuevo Titular E2E');
     await page.fill('#password', PASSWORD);
     await page.fill('#password-confirm', PASSWORD);
@@ -197,6 +199,7 @@ test.describe('TAREA 15 — cada rol ve lo suyo, no lo ajeno', () => {
 
     await page.click('#btn-submit');
     await page.waitForURL(/client-dashboard\.html/, { timeout: 15000 });
+    await completarCaptacionSiHaceFalta(page); // la empresa nueva (invitación) nace sin captación
     await expect(page.locator('a.nav-link', { hasText: 'Mi Empresa' })).toBeVisible({ timeout: 10000 });
     await page.locator('a.nav-link', { hasText: 'Mi Empresa' }).click();
     await expect(page.getByText('Empresa E2E Invitación')).toBeVisible({ timeout: 10000 });
