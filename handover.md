@@ -6214,3 +6214,10 @@ Sin commit/push/deploy; demo viva (8081 → 200 al final). `npm test` verde 2 co
 **Revisiones**: ecc:code-reviewer 0 CRITICAL/HIGH. MEDIUM 1 (initBackoffice exigiría correo verificado a admin/staff): revisado, falso — esas páginas ya usaban `requireVerifiedLogin`; no hay cambio. MEDIUM 2 (clave de orden sin hora) aplicado. LOW: clave de suscripción por hora es "mejor esfuerzo" (anotado); comentario viejo de STAFF_EXIT_OWNER en seed_roles.js (inocuo).
 
 **No hecho**: webhook (espera decisión de Rick); `bootstrap_admin.js` no fuerza `emailVerified:true` (si el admin real no tiene el correo verificado, el front ya lo manda a verificar-correo, como antes); el HTML del grafo sigue mostrando `label` de comunidad por innerHTML sin `esc` (ahora son nombres de archivo/símbolo del propio repo, contenido por el sandbox).
+
+## SUBIDA T30–T43 (04-oct, orden directa de Rick: "sube todo")
+- Commit `09b15df` ("feat: plan T30-T43 …", 220 archivos, trailer Co-Authored-By) y push a origin/main (`bde53bb..09b15df`). Sin deploy.
+- Verificado antes: `tracker/.env`, `graphify-out/` y `farmazed-web/demo.html` ignorados y fuera del commit; escaneo de patrones de secretos (claves, tokens, URLs con clave) sin hallazgos (`.env.example` solo con marcadores `<…>`).
+- Entran los borrados de `firestore.emulator.rules`/`storage.emulator.rules` (sustituidos por `firestore.rules`/`storage.rules`, ver DEV_LOCAL.md).
+- Aviso: GitHub indica que el repo se movió a https://github.com/commercialaffairs-lab/Farmazed.git; `origin` sigue apuntando a RichoX-Hub/Farmazed (redirige). No lo cambié.
+- `git status` limpio.
