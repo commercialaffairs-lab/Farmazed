@@ -26,7 +26,7 @@ const TIPOS = {
 
 const CSS = `
 .fz-dialogo-fondo{position:fixed;inset:0;z-index:2000;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(15,50,96,.45);backdrop-filter:blur(2px);animation:fzDialogoFondo .15s ease-out}
-.fz-dialogo{width:min(460px,100%);background:#fff;border-radius:14px;box-shadow:0 20px 60px rgba(15,50,96,.35);border-top:4px solid var(--fz-dialogo-color,#1B4F8A);padding:20px 22px 18px;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;color:#1f2937;animation:fzDialogoEntra .18s cubic-bezier(.16,1,.3,1)}
+.fz-dialogo{width:min(460px,100%);background:#fff;border-radius:14px;box-shadow:inset 0 4px 0 0 var(--fz-dialogo-color,#1B4F8A),0 20px 60px rgba(15,50,96,.35);padding:24px 22px 18px;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;color:#1f2937;animation:fzDialogoEntra .18s cubic-bezier(.16,1,.3,1)}
 .fz-dialogo-cab{display:flex;align-items:center;gap:12px;margin-bottom:10px}
 .fz-dialogo-icono{flex:none;width:32px;height:32px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:15px;color:#fff;background:var(--fz-dialogo-color,#1B4F8A)}
 .fz-dialogo-titulo{margin:0;font-size:1rem;font-weight:700;letter-spacing:-.01em}
