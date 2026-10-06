@@ -239,6 +239,7 @@
           <div>
             <strong class="small">${esc(l.nombre)}</strong>
             <span class="text-muted small"> — ${esc(l.correo)}${l.empresa ? `, ${esc(l.empresa)}` : ''}${l.tipoProducto ? ` (${esc(l.tipoProducto)})` : ''}</span>
+            ${l.mensaje ? `<div class="small text-muted fst-italic mt-1">“${esc(l.mensaje)}”</div>` : ''}
           </div>
           <button class="btn btn-sm btn-outline-primary btn-invitar-lead">Invitar a crear cuenta</button>
         </div>`).join('');

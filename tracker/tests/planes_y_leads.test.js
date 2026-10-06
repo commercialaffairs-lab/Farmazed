@@ -157,6 +157,18 @@ describe('Lead sin cuenta — "Enviar consulta" del hero', () => {
     leadId = json.id;
   });
 
+  test('contacto.html: `mensaje` opcional se guarda; más de 1000 caracteres -> 400', async () => {
+    const con = await post('/api/contact-leads', {
+      nombre: 'Formulario Contacto', correo: `contacto-${Date.now()}@farmazed.test`, empresa: 'Lab Contacto', mensaje: '  Quiero registrar 3 cosméticos.  ',
+    }, { 'X-Forwarded-For': nextTestIp() });
+    assert.equal(con.status, 201, JSON.stringify(con.json));
+    assert.equal(con.json.mensaje, 'Quiero registrar 3 cosméticos.');
+    const largo = await post('/api/contact-leads', {
+      nombre: 'Largo', correo: `largo-${Date.now()}@farmazed.test`, mensaje: 'x'.repeat(1001),
+    }, { 'X-Forwarded-For': nextTestIp() });
+    assert.equal(largo.status, 400);
+  });
+
   test('rate limit básico (6to intento en la ventana -> 429)', async () => {
     const ip = nextTestIp();
     let ultimo;

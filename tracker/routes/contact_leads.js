@@ -32,10 +32,11 @@ router.post('/', async (req, res) => {
     return res.status(429).json({ error: 'Demasiados mensajes desde esta dirección. Intenta de nuevo más tarde.' });
   }
 
-  const { nombre, empresa, correo, tipoProducto } = req.body || {};
+  const { nombre, empresa, correo, tipoProducto, mensaje } = req.body || {};
   const errorTexto = textoError('El nombre', nombre, 120)
     || textoError('La empresa', empresa, 120, false)
     || textoError('El tipo de producto', tipoProducto, 120, false)
+    || textoError('El mensaje', mensaje, 1000, false) // contacto.html: texto libre, opcional
     || textoError('El correo', correo, 254);
   if (errorTexto) return res.status(400).json({ error: errorTexto });
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo.trim())) return res.status(400).json({ error: 'Correo inválido.' });
@@ -43,7 +44,7 @@ router.post('/', async (req, res) => {
   try {
     const now = admin.firestore.Timestamp.now();
     const leadData = {
-      nombre: nombre.trim(), empresa: trimOrNull(empresa), correo: correo.trim(), tipoProducto: trimOrNull(tipoProducto),
+      nombre: nombre.trim(), empresa: trimOrNull(empresa), correo: correo.trim(), tipoProducto: trimOrNull(tipoProducto), mensaje: trimOrNull(mensaje),
       invitado: false, createdAt: now,
     };
     const ref = await db().collection('contactLeads').add(leadData);

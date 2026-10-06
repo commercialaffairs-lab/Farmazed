@@ -6287,3 +6287,12 @@ Pedido de Rick: revisar el landing y mostrar la UI en móvil y PC "para que vend
 - Lección CSS: un ítem de grid con `margin: 0 auto` + `max-width` se encoge al contenido en una sola columna; hace falta `width: 100%`.
 
 No tocado: las páginas internas (`nosotros`, `blog`, `testimonios`, `contacto`) existen y cargan el mismo CSS; no se revisaron a fondo.
+
+## 2026-10-05 (noche, 2) — Páginas internas del landing a fondo
+
+- **blog.html** traía las noticias de la plantilla WeCare (LG G2, iPhone 5C, lorem ipsum, "Teeth Whitening" en la barra lateral). Ahora: 5 artículos propios (13 fases, vía regular/abreviada, papel del IEA, documentos que retrasan, cotización transparente), fechados jul–sep 2026, firmados "Equipo Farmazed", sin "Read More" muertos; barra lateral con temas + CTAs. La plantilla recortaba `.post-text` a 54px: anulado en `farmazed.css`.
+- **testimonios.html** tenía un testimonio ficticio (marcado como "historia de prueba") y el mismo relleno dental. No se publican testimonios inventados: la página pasa a ser **preguntas.html** (9 preguntas frecuentes con `<details>`, sin JS) y `testimonios.html` queda como redirección. Menú: "Testimonios" → "Preguntas frecuentes" en todas las páginas. Cuando haya testimonios reales, se rehace.
+- **nosotros.html**: banner "We Care has a wide range…" → texto Farmazed; "About Us / You are here: Home" → español; tildes y erratas en las biografías ("mas de 40 anos de esperiencia").
+- **contacto.html**: el formulario no enviaba a ningún lado (action="#", jQuery a un appointment.php inexistente). Ahora crea un lead con `POST /api/contact-leads` (mismo que el hero). **API**: campo opcional `mensaje` (≤ 1000) en `contact_leads.js`, guardado y mostrado en la bandeja; prueba en `planes_y_leads`. Envío verificado en la demo.
+- Todas las internas: "Inicio" → `index.html` (antes `login.html`), enlace "Plataforma", botón "Portal de clientes", sin Google+.
+- No tocado: `404.html` (correcto), `Propuesta_Farmazed_2026.html` y `dashboard.html` (spec de diseño, no enlazadas).
