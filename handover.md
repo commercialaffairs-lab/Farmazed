@@ -6275,3 +6275,15 @@ Sin deploy. Trabajo hecho con Rick en su PC (Windows), que no tiene Java.
 **precios.html**: grupos del tarifario 24-sep después de los fijos; grises de etiquetas a `#5f6b7a` (contraste AA).
 
 **No hecho**: e2e NO corridos tras los cambios de hoy; sin `responderDialogo` helper en e2e (ninguna prueba verifica el modal real); el mapa del código no se regeneró.
+
+## 2026-10-05 (noche) — Landing: sección "La Plataforma" y arreglos
+
+Pedido de Rick: revisar el landing y mostrar la UI en móvil y PC "para que venda". Cambios en `farmazed-web/index.html` y `css/farmazed.css`:
+- **Sección nueva `#plataforma`** (entre Metodología y Planes): copy de 4 beneficios + CTAs "Entrar al portal"/"Solicitar diagnóstico", y maquetas del portal del cliente en laptop y teléfono hechas en HTML/CSS (no capturas): se escriben a tamaño real (1000×600 y 360×640, texto ≥ 11px) y se escalan con `transform: scale(--fz-s)`, calculado por un `ResizeObserver` al ancho real de cada pantalla. Colores y componentes del portal (navy, azul, verde, badges, barra de 13 fases, fila de cotización, lista de documentos). Verificado en 1366 px y 390 px.
+- **Menú**: "Inicio" apuntaba a `login.html` en los dos menús → `#inicio`; botón **Portal de clientes** (azul marino) al final del menú principal y en la barra superior; enlace "Plataforma".
+- **Plan Registro**: mostraba **$0** (copiado del Plan Consulta) → "Por cotización". Cambio de texto comercial: confirmar con Rick.
+- Quitado el icono de Google+ (red cerrada). Los demás sociales siguen en `#` (sin cuentas definidas).
+- Etiquetas Open Graph (título, descripción, imagen H0.png, locale es_PA).
+- Lección CSS: un ítem de grid con `margin: 0 auto` + `max-width` se encoge al contenido en una sola columna; hace falta `width: 100%`.
+
+No tocado: las páginas internas (`nosotros`, `blog`, `testimonios`, `contacto`) existen y cargan el mismo CSS; no se revisaron a fondo.

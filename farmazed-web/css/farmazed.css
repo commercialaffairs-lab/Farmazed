@@ -631,3 +631,253 @@
         overflow: hidden !important;
     }
 }
+
+/* ════════════════════════════════════════
+   LA PLATAFORMA (#plataforma) — maquetas del portal en laptop y teléfono.
+   Las maquetas están escritas a tamaño real (texto >= 12px) y se reducen con
+   transform: scale(), así se leen bien al ampliar y usan los mismos colores
+   que el portal (navy #0F3260, azul #1B4F8A, verde #3A7D44).
+════════════════════════════════════════ */
+.fz-plataforma {
+    padding: 56px 30px 64px;
+    background: linear-gradient(180deg, #ffffff 0%, #eef3f9 100%);
+    overflow: hidden;
+}
+.fz-plataforma > h4 {
+    font-family: 'Oswald', sans-serif;
+    font-size: 1.5rem;
+    font-weight: 400;
+    color: #333;
+    margin: 0 0 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+.fz-plataforma-grid {
+    display: grid;
+    grid-template-columns: minmax(280px, 5fr) minmax(0, 7fr);
+    gap: 48px;
+    align-items: center;
+    margin-top: 32px;
+}
+.fz-plataforma-copy h5 {
+    font-family: 'Oswald', sans-serif;
+    font-size: 1.7rem;
+    font-weight: 400;
+    line-height: 1.2;
+    color: #0F3260;
+    margin: 0 0 14px;
+}
+.fz-plataforma-copy > p {
+    font-family: 'Open Sans', sans-serif;
+    font-size: 0.9rem;
+    line-height: 1.7;
+    color: #666;
+    margin: 0 0 22px;
+}
+.fz-plataforma-list {
+    list-style: none;
+    margin: 0 0 26px;
+    padding: 0;
+}
+.fz-plataforma-list li {
+    font-family: 'Open Sans', sans-serif;
+    font-size: 0.86rem;
+    line-height: 1.55;
+    color: #444;
+    padding: 9px 0 9px 36px;
+    position: relative;
+}
+.fz-plataforma-list li strong { color: #0F3260; }
+.fz-plataforma-list li::before {
+    content: attr(data-n);
+    position: absolute;
+    left: 0;
+    top: 10px;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: #2190d7;
+    color: #fff;
+    font-family: 'Oswald', sans-serif;
+    font-size: 0.8rem;
+    line-height: 24px;
+    text-align: center;
+}
+.fz-plataforma-ctas { display: flex; gap: 12px; flex-wrap: wrap; }
+.fz-plataforma-btn {
+    display: inline-block;
+    padding: 12px 22px;
+    font-family: 'Oswald', sans-serif;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    text-decoration: none;
+    border-radius: 2px;
+    transition: background 0.2s, color 0.2s, border-color 0.2s;
+    border: 1px solid #2190d7;
+    background: #2190d7;
+    color: #fff;
+}
+.fz-plataforma-btn:hover { background: #1572b0; border-color: #1572b0; color: #fff; text-decoration: none; }
+.fz-plataforma-btn.secundario { background: transparent; color: #1572b0; }
+.fz-plataforma-btn.secundario:hover { background: #e6f2fb; color: #1572b0; }
+.fz-plataforma-btn:focus-visible { outline: 2px solid #0F3260; outline-offset: 2px; }
+
+/* ── Composición de dispositivos ── */
+.fz-devices {
+    position: relative;
+    padding: 0 0 70px 0;
+}
+.fz-laptop {
+    position: relative;
+    margin-left: 40px;
+}
+.fz-laptop-screen {
+    position: relative;
+    background: #0b1f3a;
+    border-radius: 14px 14px 4px 4px;
+    padding: 12px 12px 14px;
+    box-shadow: 0 30px 60px -20px rgba(15, 50, 96, 0.45), 0 0 0 1px rgba(0,0,0,0.25) inset;
+}
+.fz-laptop-screen::before { /* cámara */
+    content: '';
+    position: absolute;
+    top: 4px;
+    left: 50%;
+    width: 5px;
+    height: 5px;
+    margin-left: -2px;
+    border-radius: 50%;
+    background: #28406a;
+}
+.fz-laptop-base {
+    height: 14px;
+    margin: 0 -30px;
+    background: linear-gradient(#d9dee6, #b7bfcb);
+    border-radius: 0 0 12px 12px;
+}
+.fz-laptop-base::after {
+    content: '';
+    display: block;
+    width: 90px;
+    height: 4px;
+    margin: 0 auto;
+    background: #9aa4b4;
+    border-radius: 0 0 4px 4px;
+}
+.fz-phone {
+    position: absolute;
+    left: -10px;
+    bottom: 0;
+    width: 150px;
+    background: #0b1f3a;
+    border-radius: 24px;
+    padding: 8px;
+    box-shadow: 0 24px 50px -16px rgba(15, 50, 96, 0.55), 0 0 0 1px rgba(0,0,0,0.3) inset;
+}
+.fz-phone::before { /* notch */
+    content: '';
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    width: 48px;
+    height: 10px;
+    margin-left: -24px;
+    border-radius: 0 0 8px 8px;
+    background: #0b1f3a;
+    z-index: 2;
+}
+/* pantalla con escala: el contenido se escribe a tamaño real y se reduce */
+.fz-screen {
+    position: relative;
+    overflow: hidden;
+    background: #f0f4fa;
+    border-radius: 4px;
+}
+.fz-laptop .fz-screen { aspect-ratio: 1000 / 600; }
+.fz-phone .fz-screen { aspect-ratio: 360 / 640; border-radius: 16px; }
+.fz-screen-inner {
+    position: absolute;
+    top: 0;
+    left: 0;
+    transform-origin: top left;
+    font-family: 'Open Sans', system-ui, sans-serif;
+    font-size: 14px;
+    color: #1f2937;
+}
+.fz-laptop .fz-screen-inner { width: 1000px; height: 600px; transform: scale(var(--fz-s, 0.5)); }
+.fz-phone  .fz-screen-inner { width: 360px;  height: 640px; transform: scale(var(--fz-s, 0.37)); }
+
+/* ── Interior de las maquetas (reproduce el portal del cliente) ── */
+.fz-ui-top {
+    height: 56px;
+    background: #0F3260;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 22px;
+}
+.fz-ui-top b { font-family: 'Oswald', sans-serif; font-weight: 400; font-size: 20px; letter-spacing: 0.02em; }
+.fz-ui-top span { font-size: 13px; opacity: 0.85; }
+.fz-ui-top i { display: inline-block; width: 30px; height: 30px; border-radius: 50%; background: #2190d7; margin-left: 12px; vertical-align: middle; text-align: center; line-height: 30px; font-style: normal; font-size: 12px; font-weight: 700; }
+.fz-ui-body { display: flex; height: calc(100% - 56px); }
+.fz-ui-nav { width: 190px; background: #fff; border-right: 1px solid #e3e8f0; padding: 18px 12px; }
+.fz-ui-nav span { display: block; padding: 9px 12px; margin-bottom: 4px; border-radius: 6px; font-size: 13px; color: #4b5563; }
+.fz-ui-nav span.activo { background: #e8f0fb; color: #0F3260; font-weight: 700; }
+.fz-ui-main { flex: 1; padding: 22px 26px; overflow: hidden; }
+.fz-ui-titulo { font-family: 'Oswald', sans-serif; font-size: 20px; color: #0F3260; margin: 0 0 14px; }
+.fz-ui-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 14px; }
+.fz-ui-stats div { background: #fff; border-radius: 8px; padding: 12px 14px; box-shadow: 0 1px 3px rgba(15,50,96,0.08); }
+.fz-ui-stats b { display: block; font-size: 22px; color: #0F3260; line-height: 1.1; }
+.fz-ui-stats small { font-size: 12px; color: #6b7280; }
+.fz-ui-card { background: #fff; border-radius: 8px; padding: 14px 16px; box-shadow: 0 1px 3px rgba(15,50,96,0.08); margin-bottom: 12px; }
+.fz-ui-card-h { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.fz-ui-card-h b { font-size: 14px; }
+.fz-ui-badge { font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 99px; background: #fff3cd; color: #946200; }
+.fz-ui-badge.verde { background: #e3f3e6; color: #3A7D44; }
+.fz-ui-badge.azul { background: #e8f0fb; color: #1B4F8A; }
+.fz-ui-steps { display: flex; gap: 4px; list-style: none; margin: 0 0 12px; padding: 0; }
+.fz-ui-steps li { flex: 1; height: 7px; border-radius: 99px; background: #e3e8f0; }
+.fz-ui-steps li.ok { background: #3A7D44; }
+.fz-ui-steps li.actual { background: #2190d7; }
+.fz-ui-row { display: flex; justify-content: space-between; font-size: 13px; color: #4b5563; padding: 5px 0; border-bottom: 1px solid #f0f3f7; }
+.fz-ui-row b { color: #1f2937; }
+.fz-ui-row.total { border: 0; font-size: 14px; }
+.fz-ui-row.total b { color: #0F3260; font-size: 16px; }
+.fz-ui-btn { display: inline-block; margin-top: 10px; padding: 8px 16px; border-radius: 6px; background: #1B4F8A; color: #fff; font-size: 13px; font-weight: 700; }
+.fz-ui-btn.ancho { display: block; text-align: center; }
+.fz-ui-doc { display: flex; align-items: center; gap: 10px; font-size: 13px; padding: 7px 0; border-bottom: 1px solid #f0f3f7; }
+.fz-ui-doc:last-child { border-bottom: 0; }
+.fz-ui-doc i { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+.fz-ui-doc i.ok { background: #3A7D44; }
+.fz-ui-doc i.rev { background: #2190d7; }
+.fz-ui-doc i.pend { background: #cfd8e3; }
+.fz-ui-doc small { margin-left: auto; color: #6b7280; font-size: 11px; }
+/* teléfono */
+.fz-ui-movil { padding: 16px; }
+.fz-ui-movil .fz-ui-top { border-radius: 0; margin: -16px -16px 16px; padding: 0 18px; }
+.fz-ui-tabs { display: flex; gap: 6px; margin-bottom: 14px; }
+.fz-ui-tabs span { flex: 1; text-align: center; font-size: 12px; padding: 7px 0; border-radius: 99px; background: #fff; color: #4b5563; border: 1px solid #e3e8f0; }
+.fz-ui-tabs span.activo { background: #0F3260; color: #fff; border-color: #0F3260; }
+
+@media (max-width: 900px) {
+    .fz-plataforma-grid { grid-template-columns: 1fr; gap: 36px; }
+    .fz-devices { width: 100%; max-width: 560px; margin: 0 auto; } /* width explícito: con margin auto el ítem de grid se encogería al contenido */
+}
+@media (max-width: 480px) {
+    .fz-plataforma { padding: 40px 20px 48px; }
+    .fz-laptop { margin-left: 30px; }
+    .fz-laptop-base { margin: 0 -16px; }
+    .fz-phone { width: 110px; left: -6px; }
+    .fz-devices { padding-bottom: 50px; }
+}
+
+/* ── Acceso al portal en el menú principal ── */
+#navlist > li.fz-nav-portal > a {
+    background: #0F3260; /* azul marino del portal: se distingue de la pestaña activa (#2190d7) */
+    color: #fff;
+    border-radius: 3px;
+    margin-left: 10px;
+}
+#navlist > li.fz-nav-portal > a:hover { background: #1B4F8A; color: #fff; }

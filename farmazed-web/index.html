@@ -6,6 +6,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
     <meta name="description" content="Farmazed — Servicios integrales de asuntos regulatorios farmacéuticos ante la DNFD — MINSA Panamá.">
     <title>Farmazed | Asuntos Regulatorios Farmacéuticos · Panamá</title>
+    <meta property="og:title" content="Farmazed — Asuntos Regulatorios Farmacéuticos en Panamá">
+    <meta property="og:description" content="Registro sanitario ante la DNFD — MINSA con seguimiento en línea: fases, documentos, cotización y pago desde un portal propio.">
+    <meta property="og:type" content="website">
+    <meta property="og:image" content="src/images/H0.png">
+    <meta property="og:locale" content="es_PA">
 
     <!-- ── WeCare CSS — exact same load order as wecare/index.html ── -->
     <link rel="stylesheet" href="src/wecare/css/style.css"           type="text/css" media="screen">
@@ -40,10 +45,11 @@
             </a>
             <div class="subheader2">
                 <ul>
-                    <li><a href="login.html">Inicio</a></li>
+                    <li><a href="#inicio">Inicio</a></li>
                     <li><a href="#nosotros">Nosotros</a></li>
                     <li><a href="#planes">Planes</a></li>
                     <li><a href="#contacto">Solicitar Diagnóstico</a></li>
+                    <li><a href="login.html">Portal de clientes</a></li>
                 </ul>
             </div>
         </div>
@@ -66,11 +72,12 @@
 
             <nav id="nav">
                 <ul id="navlist" class="sf-menu clearfix">
-                    <li class="current"><a href="login.html">Inicio</a>
+                    <li class="current"><a href="#inicio">Inicio</a>
                         <ul class="sub-menu">
                             <li><a href="#servicios">Nuestros Servicios</a></li>
                             <li><a href="#categorias">Categorías</a></li>
                             <li><a href="#planes">Planes y Precios</a></li>
+                            <li><a href="#plataforma">La Plataforma</a></li>
                         </ul>
                     </li>
                     <li><a href="#nosotros">Quiénes Somos</a>
@@ -91,6 +98,7 @@
                     <li><a href="#categorias">Categorías</a></li>
                     <li><a href="#planes">Planes</a></li>
                     <li><a href="#metodologia">Metodología</a></li>
+                    <li><a href="#plataforma">Plataforma</a></li>
                     <li><a href="blog.html">Blog</a></li>
                     <li><a href="testimonios.html">Testimonios</a></li>
                     <li><a href="#contacto">Contacto</a>
@@ -98,6 +106,7 @@
                             <li><a href="contacto.html">Formulario de Contacto</a></li>
                         </ul>
                     </li>
+                    <li class="fz-nav-portal"><a href="login.html">Portal de clientes</a></li>
                 </ul>
             </nav>
 
@@ -385,6 +394,98 @@
     </div>
 
 
+    <!-- La Plataforma — maquetas HTML/CSS del portal del cliente (no son capturas:
+         usan los mismos colores y componentes, escritas a tamaño real y escaladas). -->
+    <div class="fz-plataforma" id="plataforma">
+        <h4>La Plataforma</h4>
+        <div class="border"></div>
+
+        <div class="fz-plataforma-grid">
+            <div class="fz-plataforma-copy">
+                <h5>Su registro sanitario, visible en todo momento</h5>
+                <p>Cada cliente tiene un portal propio donde sigue sus trámites paso a paso, sube documentos, aprueba cotizaciones y paga en línea. Desde la computadora o desde el teléfono.</p>
+                <ul class="fz-plataforma-list">
+                    <li data-n="1"><strong>Seguimiento por fases.</strong> Las 13 etapas del registro ante la DNFD, con el estado real de cada producto.</li>
+                    <li data-n="2"><strong>Documentos sin correos perdidos.</strong> Lista oficial de requisitos, carga de archivos y revisión del equipo Farmazed.</li>
+                    <li data-n="3"><strong>Cotización transparente.</strong> Honorarios y tasas oficiales por separado, aceptación y pago seguro con PayPal.</li>
+                    <li data-n="4"><strong>Un solo canal.</strong> Mensajes con su analista dentro de cada expediente.</li>
+                </ul>
+                <div class="fz-plataforma-ctas">
+                    <a href="login.html" class="fz-plataforma-btn">Entrar al portal</a>
+                    <a href="#contacto" class="fz-plataforma-btn secundario">Solicitar diagnóstico</a>
+                </div>
+            </div>
+
+            <div class="fz-devices" aria-label="Vista del portal Farmazed en computadora y teléfono" role="img">
+                <div class="fz-laptop">
+                    <div class="fz-laptop-screen">
+                        <div class="fz-screen">
+                            <div class="fz-screen-inner" aria-hidden="true">
+                                <div class="fz-ui-top"><b>Farmazed</b><span>Laboratorios Alfa · Titular <i>LA</i></span></div>
+                                <div class="fz-ui-body">
+                                    <div class="fz-ui-nav">
+                                        <span class="activo">Resumen</span><span>Mis productos</span><span>Documentos</span><span>Cotización</span><span>Mensajes</span><span>Mi Empresa</span>
+                                    </div>
+                                    <div class="fz-ui-main">
+                                        <p class="fz-ui-titulo">Resumen de trámites</p>
+                                        <div class="fz-ui-stats">
+                                            <div><b>3</b><small>Trámites activos</small></div>
+                                            <div><b>12 / 21</b><small>Documentos aprobados</small></div>
+                                            <div><b>1</b><small>Cotización por pagar</small></div>
+                                        </div>
+                                        <div class="fz-ui-card">
+                                            <div class="fz-ui-card-h"><b>Amoxicilina 500 mg — Registro nuevo</b><span class="fz-ui-badge">Fase 5 · Pago de costos</span></div>
+                                            <ul class="fz-ui-steps"><li class="ok"></li><li class="ok"></li><li class="ok"></li><li class="ok"></li><li class="actual"></li><li></li><li></li><li></li><li></li><li></li><li></li><li></li><li></li></ul>
+                                            <div class="fz-ui-row"><span>Honorarios Farmazed</span><b>B/. 1,855.00</b></div>
+                                            <div class="fz-ui-row"><span>Tasas oficiales (DNFD, IEA)</span><b>B/. 2,275.00</b></div>
+                                            <div class="fz-ui-row total"><span>Total cotización</span><b>B/. 4,130.00</b></div>
+                                            <span class="fz-ui-btn">Pagar con PayPal</span>
+                                        </div>
+                                        <div class="fz-ui-card">
+                                            <div class="fz-ui-card-h"><b>Documentos — paso 15 FADDI</b><span class="fz-ui-badge azul">2 por revisar</span></div>
+                                            <div class="fz-ui-doc"><i class="ok"></i>Poder original<small>Aprobado</small></div>
+                                            <div class="fz-ui-doc"><i class="rev"></i>Certificado de libre venta<small>En revisión</small></div>
+                                            <div class="fz-ui-doc"><i class="pend"></i>Fórmula cuali-cuantitativa<small>Pendiente</small></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="fz-laptop-base"></div>
+                </div>
+
+                <div class="fz-phone">
+                    <div class="fz-screen">
+                        <div class="fz-screen-inner fz-ui-movil" aria-hidden="true">
+                            <div class="fz-ui-top"><b>Farmazed</b><span><i>LA</i></span></div>
+                            <div class="fz-ui-tabs"><span class="activo">Resumen</span><span>Documentos</span><span>Mensajes</span></div>
+                            <div class="fz-ui-card">
+                                <div class="fz-ui-card-h"><b>Amoxicilina 500 mg</b><span class="fz-ui-badge">Fase 5</span></div>
+                                <ul class="fz-ui-steps"><li class="ok"></li><li class="ok"></li><li class="ok"></li><li class="ok"></li><li class="actual"></li><li></li><li></li><li></li><li></li><li></li><li></li><li></li><li></li></ul>
+                                <div class="fz-ui-row total"><span>Cotización</span><b>B/. 4,130.00</b></div>
+                                <span class="fz-ui-btn ancho">Pagar con PayPal</span>
+                            </div>
+                            <div class="fz-ui-card">
+                                <div class="fz-ui-card-h"><b>Documentos</b><span class="fz-ui-badge verde">12 / 21</span></div>
+                                <div class="fz-ui-doc"><i class="ok"></i>Poder original<small>Aprobado</small></div>
+                                <div class="fz-ui-doc"><i class="rev"></i>Certificado CLV<small>En revisión</small></div>
+                                <div class="fz-ui-doc"><i class="pend"></i>Fórmula<small>Pendiente</small></div>
+                                <div class="fz-ui-doc"><i class="pend"></i>Etiquetas<small>Pendiente</small></div>
+                            </div>
+                            <div class="fz-ui-card">
+                                <div class="fz-ui-card-h"><b>Mensajes</b><span class="fz-ui-badge azul">1 nuevo</span></div>
+                                <div class="fz-ui-doc"><i class="rev"></i>Analista: "Recibimos el CLV, lo revisamos hoy."</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="clear"></div>
+    </div>
+
+
     <!-- Planes y Precios -->
     <div class="fz-planes" id="planes">
         <h4>Planes y Precios</h4>
@@ -414,7 +515,7 @@
                 <div class="fz-plan-badge">Más Solicitado</div>
                 <div class="fz-plan-header">
                     <h5>Plan Registro</h5>
-                    <div class="fz-plan-price"><strong>$0</strong></div>
+                    <div class="fz-plan-price"><strong>Por cotización</strong></div>
                 </div>
                 <ul class="fz-plan-features">
                     <li>Todo lo del Plan Consulta</li>
@@ -511,7 +612,6 @@
                 <a href="#"><img src="src/wecare/images/feed.png"  alt="RSS"></a>
                 <a href="#"><img src="src/wecare/images/tweet.png" alt="Twitter"></a>
                 <a href="#"><img src="src/wecare/images/fcb.png"   alt="Facebook"></a>
-                <a href="#"><img src="src/wecare/images/gplus.png" alt="Google+"></a>
                 <a href="#"><img src="src/wecare/images/pin.png"   alt="Pinterest"></a>
             </div>
             <div class="clear"></div>
@@ -536,6 +636,22 @@
 
 <!-- Farmazed JS -->
 <script src="js/main.js"></script>
+
+<!-- Maquetas de #plataforma: el contenido está a tamaño real (1000 px / 360 px) y se escala
+     al ancho real de cada "pantalla" — así el texto sigue siendo texto y se ve nítido. -->
+<script>
+  (function () {
+    var pantallas = document.querySelectorAll(".fz-screen");
+    if (!pantallas.length || !("ResizeObserver" in window)) return;
+    var ro = new ResizeObserver(function (entradas) {
+      entradas.forEach(function (e) {
+        var inner = e.target.querySelector(".fz-screen-inner");
+        if (inner) e.target.style.setProperty("--fz-s", (e.contentRect.width / inner.offsetWidth).toFixed(4));
+      });
+    });
+    pantallas.forEach(function (p) { ro.observe(p); });
+  })();
+</script>
 
 <!-- TAREA 34 (§H.15): "Enviar consulta" del hero crea un lead SIN cuenta
      (Fase 1, primer contacto) — el jQuery de arriba (script.js) le sigue
