@@ -20,11 +20,14 @@
  *  · CORS_ORIGINS (opcional, separados por coma): los orígenes https permitidos en
  *    producción — LISTA EXPLÍCITA, no "cualquier subdominio" (default: farmazed.com y
  *    www.farmazed.com). Un subdominio abandonado no puede llamar con credenciales.
+ *  · PORTAL_URL (opcional): origen del portal al que PayPal devuelve al cliente tras aprobar
+ *    un pago. Default: el primer origen de CORS_ORIGINS en producción; la demo local fuera de ella.
  */
 const MCP_KEY_MIN = 32;
 const ORIGENES_PROD_DEFECTO = ['https://farmazed.com', 'https://www.farmazed.com'];
 const ORIGEN_VALIDO_RE = /^https:\/\/[a-z0-9]([a-z0-9.-]*[a-z0-9])?(:\d+)?$/; // https://host[:puerto], sin ruta
 const ORIGEN_LOCAL_RE = /^http:\/\/(localhost|127\.0\.0\.1):\d+$/;
+const PORTAL_LOCAL = 'http://localhost:8092'; // el frontend de la demo (demo_local.sh, puerto fijo)
 
 class ConfigError extends Error {
   constructor(problemas) {
@@ -87,6 +90,11 @@ function cargarConfig(env = process.env) {
   if (!origenesProd.length) problemas.push('CORS_ORIGINS no puede quedar vacío (lista de orígenes https separados por coma).');
   for (const o of origenesProd) if (!ORIGEN_VALIDO_RE.test(o)) problemas.push(`CORS_ORIGINS: "${o}" no es un origen https válido (https://host[:puerto], sin ruta ni comodines).`);
 
+  const portalUrl = env.PORTAL_URL || (prod ? origenesProd[0] : PORTAL_LOCAL);
+  if (env.PORTAL_URL && !ORIGEN_VALIDO_RE.test(portalUrl) && !(!prod && ORIGEN_LOCAL_RE.test(portalUrl))) {
+    problemas.push(`PORTAL_URL: "${portalUrl}" no es un origen válido (https://host[:puerto], sin ruta; http://localhost solo fuera de producción).`);
+  }
+
   let proveedorPagos = null;
   try { proveedorPagos = resolverProveedorPagos(env); } catch (e) { problemas.push(...e.problemas); }
 
@@ -94,7 +102,7 @@ function cargarConfig(env = process.env) {
   return {
     produccion: prod, enEmulador, proveedorPagos,
     projectId: env.FIREBASE_PROJECT_ID, bucket: env.GCS_BUCKET,
-    origenesProd,
+    origenesProd, portalUrl,
     trustProxy: Number(env.TRUST_PROXY) || 1,
   };
 }

@@ -11,7 +11,9 @@
  * `GET /api/me/org` (spread completo). La suscripción resultante usa el
  * MISMO campo `orgs/{orgId}.suscripcion` que `subscription.js` (es la misma
  * cosa de cara al resto del sistema: una empresa suscrita, no importa si
- * fue al plan global o a uno empresarial a medida).
+ * fue al plan global o a uno empresarial a medida). Una empresa tiene UNA
+ * sola: aceptar teniendo activo el plan global es un cambio de plan (ver
+ * services/suscripciones.js).
  *
  * Mounts on the main Express app (index.js):
  *   app.use('/api/empresarial', empresarialRouter);
@@ -24,8 +26,8 @@ const { requirePermission } = require('../middleware/permissions');
 const { serializeTimestamps } = require('../utils/serialize');
 const { textoError } = require('../utils/validar_texto');
 const { getProvider } = require('../services/payments');
+const { suscribirEmpresa } = require('../services/suscripciones');
 const { HttpError, responderError } = require('../utils/http_error');
-const { reservarSuscripcion, liberarSuscripcion, guardarSuscripcion, claveSuscripcion } = require('./subscription');
 
 const router = Router();
 const db     = () => admin.firestore();
@@ -117,40 +119,21 @@ router.post('/aceptar', requireAuth, requirePermission('empresarial.solicitar'),
     if (!req.user.orgId) return res.status(400).json({ error: 'Tu cuenta no tiene una empresa asociada — contacta a Farmazed.' });
 
     const orgRef = db().collection('orgs').doc(req.user.orgId);
-    let propuesta;
-    const previa = await reservarSuscripcion(orgRef, (org) => {
-      propuesta = org.propuestaEmpresarial;
-      if (!propuesta || propuesta.estado !== 'condiciones_definidas') {
+    // 'aceptada' también vale: la empresa aceptó antes y ya no tiene el Plan Empresarial activo
+    // (no terminó de aprobarlo en PayPal, lo canceló o se pasó al plan global) — las condiciones
+    // acordadas siguen siendo las mismas. Con el Empresarial activo, suscribirEmpresa responde 409.
+    const suscripcion = await suscribirEmpresa(orgRef, 'empresarial', (org) => {
+      const propuesta = org.propuestaEmpresarial;
+      if (!propuesta || !['condiciones_definidas', 'aceptada'].includes(propuesta.estado)) {
         throw new HttpError(400, { error: `Todavía no hay condiciones definidas para aceptar (estado actual: ${propuesta?.estado || 'sin solicitud'}).` });
       }
-    });
-
-    let provider, subscriptionId, status, approveUrl;
-    try {
-      provider = getProvider();
-      ({ subscriptionId, status, approveUrl } = await provider.createSubscription({
-        planId: propuesta.planId, referenceId: req.user.orgId,
-        requestId: claveSuscripcion(req.user.orgId, propuesta.planId), // un reintento inmediato no crea otra suscripción
-      }));
-    } catch (e) {
-      await liberarSuscripcion(orgRef, previa);
-      throw e;
-    }
-
-    const now = admin.firestore.Timestamp.now();
-    const suscripcion = {
-      estado: status === 'ACTIVE' ? 'activa' : 'pendiente',
-      proveedor: provider.name,
-      subscriptionId, planId: propuesta.planId,
-      creadaEn: now, actualizadaEn: now,
-    };
-    await guardarSuscripcion(orgRef, provider, subscriptionId, previa, {
-      suscripcion,
+      return propuesta.planId;
+    }, (ahora) => ({
       'propuestaEmpresarial.estado': 'aceptada',
-      'propuestaEmpresarial.aceptadaEn': now,
-    });
+      'propuestaEmpresarial.aceptadaEn': ahora,
+    }));
 
-    res.status(201).json(serializeTimestamps({ ...suscripcion, approveUrl }));
+    res.status(201).json(serializeTimestamps(suscripcion));
   } catch (e) {
     responderError(res, e);
   }

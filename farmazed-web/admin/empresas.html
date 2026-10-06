@@ -109,6 +109,7 @@
 
 <script type="module">
   import { initBackoffice, esc, logout } from '../portal/js/auth.js';
+  import { avisar, confirmar, preguntar } from '../portal/js/dialogos.js';
   import api from '../portal/js/api.js';
 
   let orgsCache = [];
@@ -206,10 +207,10 @@
       const fd = new FormData(e.target);
       try {
         await api.saveDiagnostico(orgId, Object.fromEntries(fd));
-        alert('Diagnóstico guardado.');
+        await avisar('Diagnóstico guardado.');
         panel.classList.add('d-none'); panel.innerHTML = '';
         loadOrgs();
-      } catch (err) { alert('Error: ' + err.message); }
+      } catch (err) { await avisar('Error: ' + err.message); }
     });
   };
 
@@ -243,10 +244,10 @@
         await api.definirCondicionesEmpresarial(orgId, {
           monto: Number(fd.get('monto')), periodo: fd.get('periodo'), gestorCuenta: fd.get('gestorCuenta'),
         });
-        alert('Condiciones guardadas.');
+        await avisar('Condiciones guardadas.');
         panel.classList.add('d-none'); panel.innerHTML = '';
         loadOrgs();
-      } catch (err) { alert('Error: ' + err.message); }
+      } catch (err) { await avisar('Error: ' + err.message); }
     });
   };
 
@@ -257,8 +258,8 @@
       const lista = members.length
         ? members.map(m => `${m.email} (${m.role})`).join('\n')
         : '(sin miembros)';
-      alert(`Miembros de ${nombre}:\n\n${lista}`);
-    } catch (e) { alert('Error: ' + e.message); }
+      await avisar(`Miembros de ${nombre}:\n\n${lista}`);
+    } catch (e) { await avisar('Error: ' + e.message); }
   };
 
   async function loadEmployees() {
@@ -298,10 +299,10 @@
     const orgName = document.getElementById('titular-org').value.trim();
     try {
       await api.inviteTitular(email, orgName);
-      alert('Invitación de titular creada.');
+      await avisar('Invitación de titular creada.');
       e.target.reset();
       await Promise.all([loadOrgs(), loadInvitations()]);
-    } catch (err) { alert('Error: ' + err.message); }
+    } catch (err) { await avisar('Error: ' + err.message); }
   });
 
   document.getElementById('form-invitar-empleado').addEventListener('submit', async (e) => {
@@ -310,10 +311,10 @@
     const role  = document.getElementById('empleado-role').value;
     try {
       await api.inviteEmpleado(email, role);
-      alert('Invitación de empleado creada.');
+      await avisar('Invitación de empleado creada.');
       e.target.reset();
       await loadInvitations();
-    } catch (err) { alert('Error: ' + err.message); }
+    } catch (err) { await avisar('Error: ' + err.message); }
   });
 
   init();

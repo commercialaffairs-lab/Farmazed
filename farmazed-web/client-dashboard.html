@@ -1079,6 +1079,9 @@
 <!-- position). Fills window.DATA with real data, then calls window.renderAll(). -->
 <script type="module">
   import { esc, requireVerifiedLogin, logout } from './portal/js/auth.js';
+  import { avisar, confirmar, preguntar } from './portal/js/dialogos.js';
+  // El <script> clásico de abajo usa estos modales como globales (igual que esc/__fzApi).
+  Object.assign(window, { avisar, confirmar, preguntar });
   window.esc = esc; // el <script> clásico de abajo usa esc() para sus templates (T37b)
   import api from './portal/js/api.js';
   import { getFullMeta } from './portal/js/status_ui.js';
@@ -1111,6 +1114,28 @@
   // sale de GET /api/me/permissions, no de un if de rol hardcodeado aquí.
   const myPerms = await api.getMyPermissions();
   window.__fzMyRole = myPerms.role;
+
+  // Vuelta del checkout de PayPal (las URLs las fija el servidor: tracker/services/payments/index.js).
+  // En un pago, PayPal añade ?token=<orderId>: recién aquí se captura (se cobra) y se registra.
+  const retornoPaypal = new URLSearchParams(window.location.search);
+  if (retornoPaypal.get('paypal')) {
+    window.history.replaceState(null, '', window.location.pathname); // un F5 no repite nada
+    const motivo = retornoPaypal.get('paypal');
+    if (motivo === 'pago' && retornoPaypal.get('quote') && retornoPaypal.get('token')) {
+      try {
+        await api.capturarPago(retornoPaypal.get('quote'), retornoPaypal.get('token'));
+        await avisar('Pago recibido. ¡Gracias!');
+      } catch (err) {
+        await avisar('No se pudo confirmar el pago: ' + err.message + '\n\nSi PayPal ya te lo cobró, no vuelvas a pagar: contacta a Farmazed.');
+      }
+      window.showModule('cotizacion');
+    } else if (motivo === 'suscripcion') {
+      await avisar('PayPal recibió tu aprobación. La suscripción aparecerá como activa en unos minutos.');
+      window.showModule('empresa');
+    } else if (motivo === 'cancelado') {
+      await avisar('No se completó la operación en PayPal. No se hizo ningún cobro.');
+    }
+  }
 
   window.DATA.cliente = {
     empresa: 'Mi Empresa', // TODO: no company field on the user/case model yet
@@ -1676,15 +1701,25 @@ async function loadEmpresa() {
     // TAREA 33 (§H.14): plan recurrente de uso de la plataforma — NO
     // bloquea trámites (instrucción explícita), solo informativo + el
     // botón de suscribir/cancelar para el titular.
+    // Una empresa tiene UNA sola suscripción (plan global o Plan Empresarial). Pasar de una a
+    // la otra es un cambio de plan: la actual se cobra hasta el fin del ciclo ya facturado y
+    // ese día empieza a regir la nueva (services/suscripciones.js en el backend).
     const s = org.suscripcion;
+    const TIPO_PLAN = { global: 'Plan de la plataforma', empresarial: 'Plan Empresarial' };
+    const fechaCorta = (iso) => new Date(iso).toLocaleDateString('es-PA', { day: 'numeric', month: 'long', year: 'numeric' });
+    const esEmpresarial = s?.estado === 'activa' && s.tipo === 'empresarial';
+    const cambioHtml = s?.estado === 'activa' && s.anterior?.vigenteHasta && new Date(s.anterior.vigenteHasta) > new Date()
+      ? `<div class="small text-muted mb-2">Tu ${esc(TIPO_PLAN[s.anterior.tipo] || 'plan anterior')} sigue vigente hasta el ${fechaCorta(s.anterior.vigenteHasta)}; ese día empieza el ciclo de facturación del nuevo plan.</div>`
+      : org.cambioDePlan ? '<div class="small text-muted mb-2">Tienes un cambio de plan por aprobar en PayPal. Mientras tanto sigues con tu plan actual.</div>' : '';
     const suscripcionHtml = `
       <p style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#9ca3af;margin:20px 0 8px;">Suscripción (uso de la plataforma)</p>
-      <div class="small text-muted mb-2">Estado: <span class="fz-badge ${s?.estado === 'activa' ? 'fz-badge-green' : s?.estado === 'pendiente' ? 'fz-badge-amber' : 'fz-badge-blue'}">${esc(s?.estado || 'sin suscripción')}</span></div>
-      ${esTitular ? (
-        (!s || s.estado === 'cancelada')
-          ? '<button class="btn-fz btn-fz-sm" id="btn-suscribir">Suscribirme</button>'
-          : (s.estado !== 'cancelada' ? '<button class="btn-fz btn-fz-sm btn-fz-outline" id="btn-cancelar-suscripcion">Cancelar suscripción</button>' : '')
-      ) : ''}`;
+      <div class="small text-muted mb-2">Estado: <span class="fz-badge ${s?.estado === 'activa' ? 'fz-badge-green' : s?.estado === 'pendiente' ? 'fz-badge-amber' : 'fz-badge-blue'}">${esc(s?.estado || 'sin suscripción')}</span>${s?.tipo && s.estado !== 'cancelada' ? ` · ${esc(TIPO_PLAN[s.tipo] || s.tipo)}` : ''}</div>
+      ${cambioHtml}
+      ${esTitular ? `<div class="d-flex gap-2 flex-wrap">
+        ${(!s || s.estado === 'cancelada') ? '<button class="btn-fz btn-fz-sm" id="btn-suscribir">Suscribirme</button>' : ''}
+        ${esEmpresarial ? '<button class="btn-fz btn-fz-sm btn-fz-outline" id="btn-suscribir" data-cambio="1">Cambiar al plan de la plataforma</button>' : ''}
+        ${(s && s.estado !== 'cancelada') ? '<button class="btn-fz btn-fz-sm btn-fz-outline" id="btn-cancelar-suscripcion">Cancelar suscripción</button>' : ''}
+      </div>` : ''}`;
 
     const miembrosHtml = org.members.map(m => `
       <div class="d-flex justify-content-between align-items-center border-bottom py-2">
@@ -1746,7 +1781,7 @@ async function loadEmpresa() {
         try {
           await window.__fzApi.setMiPlan(btn.dataset.plan);
           window.location.reload(); // revela el nav nuevo (Diagnóstico/Informes) sin reconstruir todo a mano
-        } catch (err) { alert('Error: ' + err.message); btn.disabled = false; }
+        } catch (err) { await avisar('Error: ' + err.message); btn.disabled = false; }
       }));
 
       document.getElementById('form-invitar-miembro').addEventListener('submit', async (e) => {
@@ -1773,25 +1808,28 @@ async function loadEmpresa() {
       // TAREA 33 (§H.14): no bloquea trámites — solo informativo + la
       // acción de suscribir/cancelar.
       document.getElementById('btn-suscribir')?.addEventListener('click', async (e) => {
+        if (e.target.dataset.cambio && !(await confirmar('Tu Plan Empresarial se cobra hasta terminar el ciclo de facturación actual. Ese mismo día empieza a regir (y a cobrarse) el plan de la plataforma. ¿Hacer el cambio?'))) return;
         e.target.disabled = true;
         try {
-          await window.__fzApi.suscribirEmpresa();
+          const { approveUrl } = await window.__fzApi.suscribirEmpresa();
+          // PayPal real: el titular aprueba en el checkout de PayPal (el servidor solo entrega https://*.paypal.com).
+          if (approveUrl) { window.location.href = approveUrl; return; }
           empresaLoaded = false;
           loadEmpresa();
         } catch (err) {
-          alert('Error: ' + err.message);
+          await avisar('Error: ' + err.message);
           e.target.disabled = false;
         }
       });
       document.getElementById('btn-cancelar-suscripcion')?.addEventListener('click', async (e) => {
-        if (!confirm('¿Cancelar la suscripción de la empresa?')) return;
+        if (!(await confirmar('¿Cancelar la suscripción de la empresa?'))) return;
         e.target.disabled = true;
         try {
           await window.__fzApi.cancelarSuscripcion();
           empresaLoaded = false;
           loadEmpresa();
         } catch (err) {
-          alert('Error: ' + err.message);
+          await avisar('Error: ' + err.message);
           e.target.disabled = false;
         }
       });
@@ -1870,21 +1908,21 @@ function renderCotizacion(quotes) {
     }).join('');
 
     box.querySelectorAll('.btn-aceptar-cot').forEach(btn => btn.addEventListener('click', async () => {
-      if (!confirm('¿Aceptar esta cotización?')) return;
+      if (!(await confirmar('¿Aceptar esta cotización?'))) return;
       try {
         await window.__fzApi.respondQuote(btn.dataset.quote, 'aceptada');
         cotizacionLoaded = false;
         loadCotizacion();
-      } catch (e) { alert('Error: ' + e.message); }
+      } catch (e) { await avisar('Error: ' + e.message); }
     }));
     box.querySelectorAll('.btn-rechazar-cot').forEach(btn => btn.addEventListener('click', async () => {
-      const motivo = prompt('Motivo del rechazo:');
+      const motivo = await preguntar('Motivo del rechazo:');
       if (!motivo) return;
       try {
         await window.__fzApi.respondQuote(btn.dataset.quote, 'rechazada', motivo);
         cotizacionLoaded = false;
         loadCotizacion();
-      } catch (e) { alert('Error: ' + e.message); }
+      } catch (e) { await avisar('Error: ' + e.message); }
     }));
 
     // TAREA 33 (§H.14): sin app sandbox de PayPal todavía, `approveUrl`
@@ -1906,7 +1944,7 @@ function renderCotizacion(quotes) {
         cotizacionLoaded = false;
         loadCotizacion();
       } catch (e) {
-        alert('Error al pagar: ' + e.message);
+        await avisar('Error al pagar: ' + e.message);
         btn.disabled = false;
         btn.textContent = 'Pagar con PayPal';
       }
@@ -1947,9 +1985,9 @@ async function loadDiagnostico() {
       e.target.disabled = true;
       try {
         await window.__fzApi.setMiPlan('registro');
-        alert('¡Listo! Ya puedes crear tu producto en "Solicitar Registro".');
+        await avisar('¡Listo! Ya puedes crear tu producto en "Solicitar Registro".');
         window.location.reload();
-      } catch (err) { alert('Error: ' + err.message); e.target.disabled = false; }
+      } catch (err) { await avisar('Error: ' + err.message); e.target.disabled = false; }
     });
     diagnosticoLoaded = true;
   } catch (err) {
@@ -1986,13 +2024,19 @@ async function loadEmpresarial() {
         </div></div>` : '<p class="text-muted small">El titular todavía no envió la solicitud de propuesta.</p>';
     } else if (p.estado === 'solicitada') {
       propuestaHtml = `<div class="alert alert-info small">Solicitud enviada — Farmazed está preparando las condiciones.</div>`;
-    } else if (p.estado === 'condiciones_definidas') {
+    } else if (p.estado === 'condiciones_definidas' || !(org.suscripcion?.estado === 'activa' && org.suscripcion.tipo === 'empresarial')) {
+      // También con la propuesta ya 'aceptada' si el Plan Empresarial no está activo (no se terminó de
+      // aprobar en PayPal, se canceló o la empresa se pasó al plan de la plataforma): se puede retomar.
+      const conOtroPlan = org.suscripcion?.estado === 'activa';
+      const pendiente = org.suscripcion?.estado === 'pendiente' || org.cambioDePlan;
       propuestaHtml = `
         <div class="card border-0 shadow-sm mb-4"><div class="card-body">
           <h6 class="mb-2">Condiciones propuestas</h6>
           <p class="small text-muted mb-1"><strong>Monto:</strong> $${Number(p.monto).toFixed(2)} / ${esc(p.periodo)}</p>
           <p class="small text-muted mb-3"><strong>Gestor de cuenta:</strong> ${esc(p.gestorCuentaEmail)}</p>
-          ${esTitular ? '<button class="btn-fz btn-fz-sm" id="btn-aceptar-empresarial">Aceptar y suscribirme</button>' : ''}
+          ${conOtroPlan ? '<p class="small text-muted mb-3">Ya tienes el plan de la plataforma. Si aceptas, ese plan se cobra hasta terminar su ciclo de facturación y ese mismo día empieza el Plan Empresarial.</p>' : ''}
+          ${pendiente ? '<p class="small text-muted mb-3">Tienes una suscripción por aprobar en PayPal. Puedes volver a intentarlo desde aquí.</p>' : ''}
+          ${esTitular ? `<button class="btn-fz btn-fz-sm" id="btn-aceptar-empresarial">${conOtroPlan ? 'Aceptar y cambiar de plan' : 'Aceptar y suscribirme'}</button>` : ''}
         </div></div>`;
     } else {
       propuestaHtml = `<div class="alert alert-success small">Suscripción activa — gestor de cuenta: ${esc(p.gestorCuentaEmail)}.</div>`;
@@ -2032,15 +2076,16 @@ async function loadEmpresarial() {
         });
         empresarialLoaded = false;
         loadEmpresarial();
-      } catch (err) { alert('Error: ' + err.message); }
+      } catch (err) { await avisar('Error: ' + err.message); }
     });
     document.getElementById('btn-aceptar-empresarial')?.addEventListener('click', async (e) => {
       e.target.disabled = true;
       try {
-        await window.__fzApi.aceptarEmpresarial();
+        const { approveUrl } = await window.__fzApi.aceptarEmpresarial();
+        if (approveUrl) { window.location.href = approveUrl; return; } // PayPal real: aprobar en su checkout
         empresarialLoaded = false;
         loadEmpresarial();
-      } catch (err) { alert('Error: ' + err.message); e.target.disabled = false; }
+      } catch (err) { await avisar('Error: ' + err.message); e.target.disabled = false; }
     });
     empresarialLoaded = true;
   } catch (err) {
@@ -2142,13 +2187,13 @@ function renderPendientes() {
           const { excedido, totalPaginas, limite } = await window.__fzApi.getPaqueteIEA(p.caseId);
           if (excedido) avisoIEA = `\n\n⚠️ El paquete de documentos para el IEA lleva ${totalPaginas} páginas (límite orientativo: ${limite}). No bloquea tu solicitud — Farmazed lo revisa contigo.`;
         } catch (e) { /* informativo — si falla, no se molesta al cliente */ }
-        alert('Documento subido. Farmazed lo revisará.' + avisoIEA);
+        await avisar('Documento subido. Farmazed lo revisará.' + avisoIEA);
         // Recarga completa: misma razón que el envío del wizard (TAREA 12) —
         // es la única forma simple de traer datos frescos (el documento ya
         // no está "requested", puede que ya no haya más pendientes, etc.).
         window.location.reload();
       } catch (err) {
-        alert('Error al subir: ' + err.message);
+        await avisar('Error al subir: ' + err.message);
       }
     });
   }
@@ -2445,7 +2490,7 @@ async function sendMessage() {
     renderChatMessages();
     renderThreadList();
   } catch (err) {
-    alert('No se pudo enviar el mensaje: ' + err.message);
+    await avisar('No se pudo enviar el mensaje: ' + err.message);
   } finally {
     inp.disabled = false;
     if (btn) btn.disabled = false;

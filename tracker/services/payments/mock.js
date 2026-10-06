@@ -57,19 +57,29 @@ async function createPlan({ nombre, monto, periodo }) {
   return { planId };
 }
 
-async function createSubscription({ planId, referenceId }) {
+// Próximo cobro, como lo informa PayPal: un período después del inicio.
+function proximoCobro(inicio, periodo) {
+  const fecha = new Date(inicio);
+  if (periodo === 'anual') fecha.setUTCFullYear(fecha.getUTCFullYear() + 1);
+  else fecha.setUTCMonth(fecha.getUTCMonth() + 1);
+  return fecha.toISOString();
+}
+
+async function createSubscription({ planId, referenceId, startTime }) {
   if (!plans.has(planId)) throw new Error(`mock: plan "${planId}" no existe`);
   const subscriptionId = uuid();
   // Sin checkout real que aprobar, el mock activa la suscripción de una —
   // mismo criterio que createOrder (approveUrl null = sin redirect real).
-  subscriptions.set(subscriptionId, { planId, referenceId, status: 'ACTIVE' });
+  // Con `startTime` (cambio de plan) el primer cobro es ese día, igual que en PayPal.
+  const nextBillingTime = startTime || proximoCobro(Date.now(), plans.get(planId).periodo);
+  subscriptions.set(subscriptionId, { planId, referenceId, status: 'ACTIVE', nextBillingTime });
   return { subscriptionId, status: 'ACTIVE', approveUrl: null };
 }
 
 async function getSubscription(subscriptionId) {
   const sub = subscriptions.get(subscriptionId);
   if (!sub) throw new Error(`mock: suscripción "${subscriptionId}" no existe`);
-  return { subscriptionId, status: sub.status, planId: sub.planId };
+  return { subscriptionId, status: sub.status, planId: sub.planId, nextBillingTime: sub.status === 'ACTIVE' ? sub.nextBillingTime : null };
 }
 
 async function cancelSubscription(subscriptionId) {

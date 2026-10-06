@@ -201,6 +201,10 @@ const api = {
   suscribirEmpresa: () => apiFetch('/api/subscription/subscribe', { method: 'POST' }),
   cancelarSuscripcion: () => apiFetch('/api/subscription/cancel', { method: 'POST' }),
 
+  // ── Pagos por revisar (admin): avisos del webhook de PayPal y cambios de plan ──
+  getRevisionesPago: () => apiFetch('/api/admin/revisiones-pago'),
+  resolverRevisionPago: (id, nota) => apiFetch(`/api/admin/revisiones-pago/${encodeURIComponent(id)}/resolver`, { method: 'POST', body: JSON.stringify({ nota }) }),
+
   // ── TAREA 34 (§H.15) — planes del landing ──────────────────────────────────────
   setMiPlan: (plan) => apiFetch('/api/orgs/mine/plan', { method: 'PATCH', body: JSON.stringify({ plan }) }),
   saveDiagnostico: (orgId, data) => apiFetch(`/api/orgs/${orgId}/diagnostico`, { method: 'PUT', body: JSON.stringify(data) }),

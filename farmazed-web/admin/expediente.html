@@ -287,6 +287,7 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script type="module">
   import { initBackoffice, esc } from '../portal/js/auth.js';
+  import { avisar, confirmar, preguntar } from '../portal/js/dialogos.js';
   import api from '../portal/js/api.js';
   import { getFullMeta, getDocStatusIcon, getDocStatusColor } from '../portal/js/status_ui.js';
 
@@ -679,8 +680,8 @@
       const { payments } = await api.getPayments(caseId);
       const p = payments.find(x => x.id === paymentId);
       if (p?.comprobanteUrl) { window.open(p.comprobanteUrl, '_blank'); return; }
-      alert('No se pudo obtener el comprobante.');
-    } catch (e) { alert('Error: ' + e.message); }
+      await avisar('No se pudo obtener el comprobante.');
+    } catch (e) { await avisar('Error: ' + e.message); }
   };
 
   // R13 (TAREA 19): conteo de páginas del paquete IEA — advierte, nunca
@@ -769,8 +770,8 @@
           await api.confirmarFase8(caseId, btn.dataset.tipo);
           caseData = await api.getCase(caseId);
           await renderFase8Confirmaciones();
-          alert('Confirmación registrada.');
-        } catch (e) { alert('Error: ' + e.message); }
+          await avisar('Confirmación registrada.');
+        } catch (e) { await avisar('Error: ' + e.message); }
       });
     });
   }
@@ -797,14 +798,14 @@
         concepto:  tipo === 'cliente_a_farmazed'   ? concepto  : undefined,
         monto, fecha, comprobante,
       });
-      alert('Pago registrado.');
+      await avisar('Pago registrado.');
       e.target.reset();
       document.getElementById('pay-concepto-row').classList.remove('d-none');
       document.getElementById('pay-autoridad-row').classList.add('d-none');
       renderPayments();
       renderPaymentsResumen();
     } catch (err) {
-      alert('Error: ' + err.message);
+      await avisar('Error: ' + err.message);
     }
   });
 
@@ -813,7 +814,7 @@
     try {
       const doc = await api.getDocument(caseId, docId);
       window.open(doc.signedUrl, '_blank');
-    } catch(e) { alert('Error: ' + e.message); }
+    } catch(e) { await avisar('Error: ' + e.message); }
   };
   window.verVersiones = async (caseId, docId, name) => {
     document.getElementById('versions-doc-name').textContent = name;
@@ -841,7 +842,7 @@
   window.revisarDoc = async (docId, status) => {
     let reviewNotes = '';
     if (status === 'rejected') {
-      reviewNotes = prompt('Motivo del rechazo (el cliente lo verá):');
+      reviewNotes = await preguntar('Motivo del rechazo (el cliente lo verá):');
       if (!reviewNotes) return;
     }
     try {
@@ -849,19 +850,19 @@
       docsData = await api.listDocuments(caseId);
       render();
     } catch (e) {
-      alert('Error: ' + e.message);
+      await avisar('Error: ' + e.message);
     }
   };
   window.requestDoc = async (faddiDocId, name) => {
-    const msg = prompt(`Instrucciones para el cliente sobre "${name}":`);
+    const msg = await preguntar(`Instrucciones para el cliente sobre "${name}":`);
     if (!msg) return;
     try {
       await api.requestDocument(caseId, faddiDocId, msg);
-      alert('Solicitud enviada al cliente.');
+      await avisar('Solicitud enviada al cliente.');
       docsData = await api.listDocuments(caseId);
       render();
     } catch (e) {
-      alert('Error: ' + e.message);
+      await avisar('Error: ' + e.message);
     }
   };
 
@@ -874,21 +875,21 @@
     // §H.8 (TAREA 21): fase_08 -> fase_08 es un salto real (nuevo ciclo de
     // subsanación, se registra) — la única excepción al "no cambió".
     const isFase8Recycle = newStatus === 'fase_08' && caseData.status === 'fase_08';
-    if (newStatus === caseData.status && !isFase8Recycle) { alert('El estado no cambió.'); return; }
-    if (override && !reason) { alert('El override necesita un motivo.'); return; }
+    if (newStatus === caseData.status && !isFase8Recycle) { await avisar('El estado no cambió.'); return; }
+    if (override && !reason) { await avisar('El override necesita un motivo.'); return; }
 
     // §H.8 / TAREA 21: fase_08/10 son control de calidad — no avanzan
     // solas, piden confirmacion explicita antes de salir de ellas.
     if (statusMeta.manual.includes(caseData.status)) {
       const label = statusMeta.meta[caseData.status]?.label || caseData.status;
-      if (!confirm(`Verifique: ${label}. ¿Confirma el avance a "${statusMeta.meta[newStatus]?.label || newStatus}"?`)) return;
+      if (!(await confirmar(`Verifique: ${label}. ¿Confirma el avance a "${statusMeta.meta[newStatus]?.label || newStatus}"?`))) return;
     }
 
     try {
       const body = { status: newStatus };
       if (override) { body.override = true; body.reason = reason; }
       const respuesta = await api.updateCase(caseId, body);
-      alert('Estado actualizado.' + (respuesta.avisos?.length ? `\n\n⚠ ${respuesta.avisos.join('\n⚠ ')}` : ''));
+      await avisar('Estado actualizado.' + (respuesta.avisos?.length ? `\n\n⚠ ${respuesta.avisos.join('\n⚠ ')}` : ''));
       caseData = await api.getCase(caseId);
       document.getElementById('override-check').checked = false;
       document.getElementById('override-reason').value = '';
@@ -901,7 +902,7 @@
       renderFase8Confirmaciones();
       renderPaymentsResumen();
     } catch (e) {
-      alert('Error: ' + e.message);
+      await avisar('Error: ' + e.message);
     }
   });
 
@@ -914,9 +915,9 @@
     try {
       await api.updateCase(caseId, { asignados });
       caseData.asignados = asignados;
-      alert('Equipo actualizado.');
+      await avisar('Equipo actualizado.');
     } catch (e) {
-      alert('Error: ' + e.message);
+      await avisar('Error: ' + e.message);
     }
   });
 
@@ -936,9 +937,9 @@
       render();
       renderViaCategoria();
       checklistData = await api.getChecklist(caseId);
-      alert('Vía y categoría actualizadas.');
+      await avisar('Vía y categoría actualizadas.');
     } catch (e) {
-      alert('Error: ' + e.message);
+      await avisar('Error: ' + e.message);
     }
   });
 
@@ -949,12 +950,12 @@
       lastFaddiStatus:  document.getElementById('faddi-status').value,
       observations:     document.getElementById('faddi-obs').value,
     }});
-    alert('Info FADDI guardada.');
+    await avisar('Info FADDI guardada.');
   });
 
   document.getElementById('btn-save-notes').addEventListener('click', async () => {
     await api.updateCase(caseId, { notes: document.getElementById('admin-notes').value });
-    alert('Notas guardadas.');
+    await avisar('Notas guardadas.');
   });
 
   document.getElementById('btn-cowork').addEventListener('click', () => {

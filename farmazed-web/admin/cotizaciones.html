@@ -63,6 +63,7 @@
 
 <script type="module">
   import { initBackoffice, esc, logout } from '../portal/js/auth.js';
+  import { avisar, confirmar, preguntar } from '../portal/js/dialogos.js';
   import api from '../portal/js/api.js';
 
   const ESTADO_BADGE = {
@@ -195,17 +196,17 @@
             tipo,
           });
           await load();
-        } catch (e) { alert('Error: ' + e.message); }
+        } catch (e) { await avisar('Error: ' + e.message); }
       });
     });
 
     box.querySelectorAll('.btn-enviar').forEach(btn => {
       btn.addEventListener('click', async () => {
-        if (!confirm('¿Enviar esta cotización al cliente?')) return;
+        if (!(await confirmar('¿Enviar esta cotización al cliente?'))) return;
         try {
           await api.sendQuote(btn.dataset.quote);
           await load();
-        } catch (e) { alert('Error: ' + e.message); }
+        } catch (e) { await avisar('Error: ' + e.message); }
       });
     });
   }

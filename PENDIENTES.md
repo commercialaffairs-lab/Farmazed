@@ -25,16 +25,22 @@ Detalle técnico de cada tarea en `handover.md`. PayPal paso a paso en `PAYPAL_S
   - Se quitaron 4 dependencias sin uso y el código muerto.
   - Se unificaron las funciones repetidas.
 
+## Decisiones de Rick ya tomadas (05-oct-2026)
+
+| # | Decisión | Qué se hizo |
+|---|---|---|
+| 1 | Webhook de PayPal: se aprueba la propuesta del PM | Hecho. Tabla de eventos en `PAYPAL_SETUP.md`. Los avisos que necesitan a una persona salen en *Mi Bandeja* del admin ("Pagos por revisar"). |
+| 2 | Suscripciones: es una o la otra, y se puede cambiar de plan. La actual se cobra hasta el fin del ciclo y ese día empieza la nueva | Hecho. Detalle en `PAYPAL_SETUP.md`, "Una sola suscripción por empresa". |
+| 3 | Tarifario viejo: se retira después del deploy | Pendiente a propósito. Retirarlo cuando producción ya use `PRICING_TABLE=24sep`. |
+| 4 | `admin/precios.html`: unificar el estilo y mejorarlo | Hecho. Usa el mismo menú que el resto del admin, con buscador, filtro por grupo y aviso de cambios sin guardar. |
+
 ## Decisiones que le tocan a Rick
 
 | # | Decisión | Dónde está la propuesta |
 |---|---|---|
-| 1 | Qué hace el webhook de PayPal (hoy solo anota en el log) | `PAYPAL_SETUP.md`, "Decisión pendiente" |
-| 2 | Dos suscripciones: plan global de *Mi Empresa* vs *Plan Empresarial* (¿se excluyen?) | `handover.md`, TAREA 36 |
-| 3 | Retirar el tarifario viejo | `handover.md`, TAREA 36 |
-| 4 | Estilo (CSS) de `admin/precios.html` | `handover.md`, TAREA 36 |
 | 5 | Túnel público o deploy de prueba para que PayPal llegue al webhook | `PAYPAL_SETUP.md` §3 |
 | 6 | Proyecto Firebase de pruebas si se quieren correos de verificación reales | `PAYPAL_SETUP.md`, tabla de pruebas |
+| 7 | Si una empresa deja el Plan Empresarial, ¿conserva su gestor de cuenta y los informes? Hoy los conserva | `tracker/routes/empresarial.js` |
 
 ## Antes del deploy a producción
 
@@ -53,6 +59,11 @@ Detalle técnico de cada tarea en `handover.md`. PayPal paso a paso en `PAYPAL_S
   - `tracker/scripts/migrate_roles.js`
   - `tracker/scripts/backfill_invitaciones.js`
 - [ ] Confirmar que `api.farmazed.com` apunta al tracker.
+- [ ] En PayPal Sandbox, probar una suscripción y un cambio de plan con el webhook conectado. El código sigue la documentación de PayPal, pero nadie lo ha corrido contra PayPal real.
+
+## Mejoras pedidas por Rick (05-oct-2026)
+
+- [x] Los cuadros de confirmación y aviso del navegador (`confirm`/`alert`/`prompt`) son ahora modales con el formato de la interfaz, en el admin y en el portal del cliente (`farmazed-web/portal/js/dialogos.js`, 62 usos reemplazados).
 
 ## Deuda técnica conocida (no bloquea)
 

@@ -185,6 +185,7 @@ app.use('/api/me',           meRouter);
 app.use('/api/register',     registerRouter); // TAREA 32: registro abierto, público
 app.use('/api/subscription', require('./routes/subscription')); // TAREA 33: plan recurrente §H.14
 app.use('/api/webhooks/paypal', require('./routes/webhooks'));  // TAREA 33: listo, sin uso en local
+app.use('/api/admin/revisiones-pago', require('./routes/revisiones_pago')); // pagos por revisar (avisos del webhook)
 app.use('/api/contact-leads', require('./routes/contact_leads')); // TAREA 34: leads sin cuenta, §H.15
 app.use('/api/admin', require('./routes/system'));                // TAREA 41b: Configuración del admin (mapa del código)
 app.use('/api/empresarial', require('./routes/empresarial'));     // TAREA 34: Plan Empresarial, §H.15

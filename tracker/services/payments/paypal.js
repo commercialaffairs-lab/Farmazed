@@ -61,7 +61,7 @@ async function fetchJson(descripcion, url, options) {
 // solo se acepta https hacia *.paypal.com (nunca javascript:/data:/http: ni
 // otro dominio, aunque venga en una respuesta rara).
 function approveUrlSegura(links) {
-  const href = (links || []).find(l => l.rel === 'approve')?.href || null;
+  const href = (links || []).find(l => l.rel === 'approve' || l.rel === 'payer-action')?.href || null;
   if (!href) return null;
   let url;
   try { url = new URL(href); } catch { url = null; }
@@ -102,7 +102,13 @@ async function paypalFetch(path, options = {}) {
 // reintenta con la MISMA clave, PayPal devuelve el recurso original en vez de crear otro (y cobrar dos veces).
 const idempotente = (requestId) => (requestId ? { 'PayPal-Request-Id': requestId } : {});
 
-async function createOrder({ amount, currency, referenceId, description, requestId }) {
+// `returnUrl`/`cancelUrl`: a dónde vuelve el cliente desde el checkout de PayPal. Sin ellas se queda
+// en PayPal y el portal nunca se entera de que aprobó (la orden no se captura).
+const retorno = (returnUrl, cancelUrl, accion) => (returnUrl
+  ? { application_context: { return_url: returnUrl, cancel_url: cancelUrl, user_action: accion, shipping_preference: 'NO_SHIPPING' } }
+  : {});
+
+async function createOrder({ amount, currency, referenceId, description, requestId, returnUrl, cancelUrl }) {
   const data = await paypalFetch('/v2/checkout/orders', {
     method: 'POST',
     headers: idempotente(requestId),
@@ -113,6 +119,7 @@ async function createOrder({ amount, currency, referenceId, description, request
         description,
         amount: { currency_code: currency, value: amount.toFixed(2) },
       }],
+      ...retorno(returnUrl, cancelUrl, 'PAY_NOW'),
     }),
   });
   return { orderId: data.id, status: data.status, approveUrl: approveUrlSegura(data.links) };
@@ -180,11 +187,17 @@ async function createPlan({ nombre, monto, periodo }) {
   return { planId: plan.id };
 }
 
-async function createSubscription({ planId, referenceId, requestId }) {
+// `startTime` (ISO, futuro): el primer cobro es ese día — lo usa el cambio de plan para que la
+// suscripción nueva empiece a regir justo cuando termina el ciclo ya pagado de la anterior.
+async function createSubscription({ planId, referenceId, requestId, startTime, returnUrl, cancelUrl }) {
   const data = await paypalFetch('/v1/billing/subscriptions', {
     method: 'POST',
     headers: idempotente(requestId),
-    body: JSON.stringify({ plan_id: planId, custom_id: referenceId }),
+    body: JSON.stringify({
+      plan_id: planId, custom_id: referenceId,
+      ...(startTime ? { start_time: startTime } : {}),
+      ...retorno(returnUrl, cancelUrl, 'SUBSCRIBE_NOW'),
+    }),
   });
   let approveUrl;
   try {
@@ -199,7 +212,8 @@ async function createSubscription({ planId, referenceId, requestId }) {
 
 async function getSubscription(subscriptionId) {
   const data = await paypalFetch(`/v1/billing/subscriptions/${subscriptionId}`);
-  return { subscriptionId: data.id, status: data.status, planId: data.plan_id };
+  // nextBillingTime: fin del ciclo ya facturado (ISO) — null si PayPal no lo informa (p. ej. cancelada).
+  return { subscriptionId: data.id, status: data.status, planId: data.plan_id, nextBillingTime: data.billing_info?.next_billing_time || null };
 }
 
 async function cancelSubscription(subscriptionId) {

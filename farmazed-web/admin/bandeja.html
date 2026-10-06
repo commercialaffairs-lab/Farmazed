@@ -67,6 +67,13 @@
       <div class="list-group list-group-flush" id="contact-leads-list"></div>
     </div>
 
+    <!-- Avisos de PayPal que una persona tiene que mirar (pago fallido, reembolso,
+         cobro sin registro, suscripción anterior sin cancelar). Solo admin. -->
+    <div class="card border-0 shadow-sm mb-3 d-none" id="revisiones-card">
+      <div class="card-header bg-white fw-semibold small">Pagos por revisar</div>
+      <div class="list-group list-group-flush" id="revisiones-list"></div>
+    </div>
+
     <div class="card border-0 shadow-sm">
       <div class="table-responsive">
         <table class="table table-hover mb-0" id="bandeja-table">
@@ -90,6 +97,7 @@
 
 <script type="module">
   import { initBackoffice, esc, logout } from '../portal/js/auth.js';
+  import { avisar, confirmar, preguntar } from '../portal/js/dialogos.js';
   import api from '../portal/js/api.js';
   import { getFullMeta } from '../portal/js/status_ui.js';
 
@@ -126,6 +134,54 @@
     await loadBandeja();
     await loadLeads(); // TAREA 32 (§H.13) — "Clientes nuevos — revisar captación"
     await loadContactLeads(); // TAREA 34 (§H.15) — "Enviar consulta" del hero, sin cuenta
+    if (myPerms.permissions.includes('payments.review')) await loadRevisionesPago();
+  }
+
+  // Pagos por revisar: lo que dejó el webhook de PayPal o un cambio de plan. Marcar
+  // resuelta pide una nota corta (qué se hizo), que queda guardada con la revisión.
+  async function loadRevisionesPago() {
+    const card = document.getElementById('revisiones-card');
+    const list = document.getElementById('revisiones-list');
+    try {
+      const { revisiones } = await api.getRevisionesPago();
+      if (!revisiones.length) { card.classList.add('d-none'); return; }
+
+      list.innerHTML = revisiones.map(r => `
+        <div class="list-group-item d-flex justify-content-between align-items-start gap-3" data-revision-id="${esc(r.id)}">
+          <div>
+            <span class="badge bg-danger-subtle text-danger border border-danger-subtle me-2">PayPal</span>
+            <span class="small">${esc(r.motivo)}</span>
+            <div class="text-muted" style="font-size:.72rem">
+              ${new Date(r.creadaEn).toLocaleString('es-PA')}
+              ${r.orgId ? ` · Empresa ${esc(r.orgId)}` : ''}${r.quoteId ? ` · Cotización ${esc(r.quoteId)}` : ''}${r.recursoId ? ` · Ref. PayPal ${esc(r.recursoId)}` : ''}
+            </div>
+          </div>
+          <button class="btn btn-sm btn-outline-secondary flex-shrink-0 btn-resolver-revision">Marcar resuelta</button>
+        </div>`).join('');
+
+      list.querySelectorAll('.btn-resolver-revision').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          const row = e.target.closest('[data-revision-id]');
+          const nota = await preguntar('¿Qué se hizo? (opcional)');
+          if (nota === null) return;
+          btn.disabled = true;
+          try {
+            await api.resolverRevisionPago(row.dataset.revisionId, nota);
+            row.remove();
+            if (!list.children.length) card.classList.add('d-none');
+          } catch (err) {
+            btn.disabled = false;
+            await avisar(err.message);
+          }
+        });
+      });
+
+      card.classList.remove('d-none');
+    } catch (err) {
+      // Que falle la carga no puede parecer "no hay nada por revisar".
+      list.innerHTML = `<div class="list-group-item small text-danger">No se pudieron cargar los pagos por revisar: ${esc(err.message)}</div>`;
+      card.classList.remove('d-none');
+    }
   }
 
   // TAREA 32 (§H.13): leads de registro abierto, todavía sin caso — por eso
@@ -159,7 +215,7 @@
             if (!list.children.length) card.classList.add('d-none');
           } catch (err) {
             btn.disabled = false;
-            alert(err.message);
+            await avisar(err.message);
           }
         });
       });
@@ -190,7 +246,7 @@
       list.querySelectorAll('.btn-invitar-lead').forEach(btn => {
         btn.addEventListener('click', async (e) => {
           const row = e.target.closest('[data-lead-id]');
-          const orgName = prompt('Nombre de la empresa para esta invitación:');
+          const orgName = await preguntar('Nombre de la empresa para esta invitación:');
           if (!orgName) return;
           btn.disabled = true;
           try {
@@ -199,7 +255,7 @@
             if (!list.children.length) card.classList.add('d-none');
           } catch (err) {
             btn.disabled = false;
-            alert(err.message);
+            await avisar(err.message);
           }
         });
       });

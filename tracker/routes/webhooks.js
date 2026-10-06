@@ -1,9 +1,9 @@
 /**
- * webhooks.js — TAREA 33 (PM_COMMENTS §H.14). Webhook de PayPal — listo,
- * pero SIN uso real en local (no hay URL pública a la que PayPal pueda
- * avisar; en el emulador, el adaptador `mock` nunca manda webhooks). Queda
- * preparado para cuando haya despliegue real con una URL pública que
- * registrar en developer.paypal.com.
+ * webhooks.js — TAREA 33 (PM_COMMENTS §H.14). Webhook de PayPal. Qué hace cada
+ * evento vive en services/paypal_webhook.js (decisión de Rick, 05-oct).
+ *
+ * Sin uso real en local: no hay URL pública a la que PayPal pueda avisar, y en
+ * el emulador el adaptador `mock` nunca manda webhooks (las pruebas los simulan).
  *
  * Público (PayPal llama esto, no hay sesión de usuario) — la seguridad es
  * la verificación de firma (`verifyWebhookSignature`), no un token.
@@ -17,6 +17,7 @@
 
 const { Router } = require('express');
 const { getProvider } = require('../services/payments');
+const { procesarEvento, ReintentarEvento } = require('../services/paypal_webhook');
 
 const router = Router();
 
@@ -30,16 +31,15 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'Firma de webhook inválida o no verificable.' });
     }
 
-    // Sin acción real todavía — "listo pero sin uso en local" (instrucción
-    // explícita). Cuando haya despliegue real, acá es donde se actualizaría
-    // el estado de una suscripción (`BILLING.SUBSCRIPTION.ACTIVATED`/
-    // `.CANCELLED`) sin depender de que el cliente vuelva a visitar la
-    // página — hoy esa actualización solo pasa por la consulta directa que
-    // ya hace `subscription.js`.
-    console.log('Webhook de PayPal verificado:', req.body?.event_type || '(sin event_type)');
+    const resultado = await procesarEvento(req.body);
+    console.log('Webhook de PayPal verificado:', req.body?.event_type || '(sin event_type)', '->', resultado);
     res.status(200).json({ received: true });
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    // Sin 2xx PayPal reintenta el evento más tarde (y como no quedó anotado en
+    // `paypal_eventos`, el reintento lo procesa completo).
+    if (e instanceof ReintentarEvento) return res.status(503).json({ error: 'Evento todavía no procesable — reintentar.' });
+    console.error('[webhook paypal] no se pudo procesar', { eventId: req.body?.id, eventType: req.body?.event_type, error: e.message });
+    res.status(500).json({ error: 'No se pudo procesar el evento.' });
   }
 });
 

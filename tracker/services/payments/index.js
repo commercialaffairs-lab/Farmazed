@@ -14,7 +14,7 @@
  * falta (mock en casi todos los tests, salvo los que prueban la selección
  * del proveedor en sí).
  */
-const { resolverProveedorPagos } = require('../../config');
+const { resolverProveedorPagos, obtenerConfig } = require('../../config');
 
 function getProvider() {
   // TAREA 40: la decisión vive en tracker/config.js. El mock SOLO con emulador o
@@ -23,4 +23,16 @@ function getProvider() {
   return resolverProveedorPagos(process.env) === 'mock' ? require('./mock') : require('./paypal');
 }
 
-module.exports = { getProvider };
+/**
+ * A dónde devuelve PayPal al cliente tras aprobar (o abandonar) su checkout. Las arma SIEMPRE el
+ * servidor (nunca llegan del navegador). client-dashboard.html lee `?paypal=<motivo>` al cargar.
+ */
+function urlsDeRetorno(motivo, params = {}) {
+  const pagina = `${obtenerConfig().portalUrl}/client-dashboard.html`;
+  return {
+    returnUrl: `${pagina}?${new URLSearchParams({ paypal: motivo, ...params })}`,
+    cancelUrl: `${pagina}?paypal=cancelado`,
+  };
+}
+
+module.exports = { getProvider, urlsDeRetorno };

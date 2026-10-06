@@ -6221,3 +6221,57 @@ Sin commit/push/deploy; demo viva (8081 → 200 al final). `npm test` verde 2 co
 - Entran los borrados de `firestore.emulator.rules`/`storage.emulator.rules` (sustituidos por `firestore.rules`/`storage.rules`, ver DEV_LOCAL.md).
 - Aviso: GitHub indica que el repo se movió a https://github.com/commercialaffairs-lab/Farmazed.git; `origin` sigue apuntando a RichoX-Hub/Farmazed (redirige). No lo cambié.
 - `git status` limpio.
+
+## 2026-10-05 — Decisiones de Rick 1, 2 y 4 de PENDIENTES.md (webhook, una sola suscripción, precios.html)
+
+Sin commit/push/deploy. Rick respondió las decisiones abiertas de la TAREA 36: (1) webhook = propuesta del PM; (2) "es una o la otra", con cambio de plan: la actual se cobra hasta terminar el ciclo y ese día rige la nueva; (3) tarifario viejo: esperar al deploy (no se tocó); (4) unificar y mejorar `admin/precios.html`.
+
+**Webhook (H7)** — `services/paypal_webhook.js` (la ruta `routes/webhooks.js` queda fina):
+- ACTIVATED → `activa`; CANCELLED/EXPIRED → `cancelada`; SUSPENDED → `suspendida`; PAYMENT.FAILED → `suscripcion.pagoFallidoEn` + revisión; CAPTURE.REFUNDED/DENIED → `quotes/{id}.pagoPaypal.incidencia` + revisión; CAPTURE.COMPLETED → `pagoPaypal.conciliadoEn` (o revisión si no hay pago registrado).
+- Idempotencia: `paypal_eventos/{event.id}` se crea en la MISMA transacción que el efecto. Un evento sin `id` no se procesa (200, sin efectos).
+- CAPTURE.COMPLETED que llega mientras `/pago/capturar` todavía registra (`creando|creada|capturando`) → 503 sin anotar el evento: PayPal reintenta y entonces concilia.
+- Una suscripción `cancelada` no revive con un ACTIVATED atrasado. Un evento de una suscripción que no es la vigente de la empresa → revisión (CANCELLED/EXPIRED de una ajena se ignora).
+- Errores: 500 genérico + `console.error` (ya no devuelve `e.message`).
+
+**Pagos por revisar** — `services/revisiones_pago.js` + `routes/revisiones_pago.js` (`GET /api/admin/revisiones-pago`, `POST …/:id/resolver`), permiso nuevo `payments.review` (solo admin; `09_TABLA_PERMISOS.md` actualizado). Tarjeta en `admin/bandeja.html`; si la carga falla lo dice (no se oculta en silencio).
+
+**Una sola suscripción + cambio de plan** — `services/suscripciones.js` (los helpers que colgaban de `routes/subscription.js` se movieron ahí: las rutas ya no se importan entre sí):
+- `suscripcion.tipo` = `global|empresarial` (las viejas sin `tipo` se deducen por `planId`). Mismo tipo activo → 409.
+- Con una activa del OTRO tipo: `getSubscription().nextBillingTime` → la nueva se crea con `start_time` en esa fecha y se guarda en `orgs/{id}.cambioDePlan`; la vigente no se toca. Al activarse (webhook; el mock, al instante) pasa a `suscripcion` con `rigeDesde` y `anterior.{tipo,subscriptionId,planId,vigenteHasta}`, y la anterior se cancela en el proveedor. Si esa cancelación falla → revisión `cambio-<subscriptionId>` (si no, cobraría doble).
+- Antes, `POST /api/empresarial/aceptar` con el plan global activo PISABA la suscripción sin cancelarla en PayPal (doble cobro). Corregido por este flujo.
+- `aceptar` admite también la propuesta `aceptada` si el Empresarial no está activo (aprobación abandonada, cancelada o vuelta al global).
+- `POST /subscription/cancel` descarta también un `cambioDePlan` pendiente. Una `suspendida` que se reemplaza se cancela en el proveedor.
+- Proveedor: `createSubscription({startTime})` y `getSubscription().nextBillingTime` en `paypal.js` y `mock.js`.
+- Front (`client-dashboard.html`): tipo de plan, aviso "sigue vigente hasta el …", botón "Cambiar al plan de la plataforma", y **redirección a `approveUrl`** al suscribirse/aceptar (antes no se redirigía: con PayPal real el titular nunca habría llegado a aprobar).
+
+**`admin/precios.html`** — mismo armazón que el resto del admin (sidebar, `initBackoffice`, Bootstrap), sin handlers inline. Plan de suscripción arriba; tarifario con buscador, filtro por grupo, barra honorarios/tasas, campos agrupados y aviso de cambios sin guardar. Se conservan los selectores de `e2e/pricing.spec.js` y `e2e/pago_paypal.spec.js`.
+
+**Pruebas** — suite nueva `tests/webhook_paypal.test.js` (21). Backend completo: **24 suites en verde** (1 corrida), en un contenedor Docker (node 22 + Java 21 + emuladores) sobre una copia del repo, porque la PC de Rick no tiene Java.
+
+**No hecho / pendiente**
+- **e2e (Playwright) NO se corrió** tras estos cambios: correr `./verificar_local.sh` en Patch. Afecta sobre todo a `pricing`, `pago_paypal`, `plan_empresarial`.
+- **Nada probado contra PayPal real**: `start_time`, `billing_info.next_billing_time` y el ACTIVATED de una suscripción con inicio futuro siguen la documentación, sin smoke-test en Sandbox.
+- El mapa del código (`actualizar_grafo.sh`) no se regeneró con los archivos nuevos.
+- `precios.html` no se revisó en un navegador (sin demo en esta máquina).
+- Al dejar el Plan Empresarial la empresa conserva gestor de cuenta e informes: decisión 7 de `PENDIENTES.md`.
+- Una suscripción `pendiente` que se reemplaza sin aprobar queda en PayPal (no se puede cancelar sin aprobar); si alguien la aprueba después, el webhook la manda a revisión.
+
+## 2026-10-05 (tarde) — PayPal sandbox de punta a punta, demo en Docker y modales propios
+
+Sin deploy. Trabajo hecho con Rick en su PC (Windows), que no tiene Java.
+
+**Retorno desde PayPal (bloqueaba la prueba real)**
+- `paypal.js`: `application_context.return_url/cancel_url` en órdenes (`PAY_NOW`) y suscripciones (`SUBSCRIBE_NOW`); `approveUrlSegura` acepta también `rel: payer-action`. Sin esto el cliente aprobaba en PayPal y nunca volvía: la orden no se capturaba.
+- `services/payments/index.js: urlsDeRetorno()` (las arma el servidor, nunca el navegador) → `client-dashboard.html?paypal=pago&quote=<id>` (+ `token=<orderId>` que añade PayPal), `?paypal=suscripcion`, `?paypal=cancelado`. `config.js: portalUrl` (`PORTAL_URL`, default primer origen de CORS en prod / `http://localhost:8092` en local).
+- `client-dashboard.html`: al cargar con `?paypal=pago` llama `capturarPago(quote, token)`, limpia la URL (`replaceState`) y abre Cotización.
+- `demo_local.sh` lee SOLO `PAYMENTS_PROVIDER`/`PAYPAL_*` de `tracker/.env`; `FZ_TRACKER_PORT` fija el puerto inicial del tracker.
+
+**Demo en Docker** — `demo_docker.sh` + `docker/demo.Dockerfile` (Node 22 + Java 21 + emuladores). Copia el repo al contenedor, pone los emuladores en `0.0.0.0`, publica 8092/9099/9199/4040 y el primer puerto libre desde 8080 para el tracker (en la PC de Rick es 8081: el 8080 lo usa un Python local). Detenido el contenedor viejo `farmazed-web` (copia del proyecto en el Escritorio) que ocupaba el 8092.
+
+**Verificado con PayPal sandbox real** (cuenta Business "Farmazed", app sandbox, cuentas de prueba en PAYPAL_SETUP.md): cotización de `case-pago-paypal-test` → Pagar con PayPal → aprobación con la cuenta Personal sandbox → vuelta al portal → `pagoPaypal.estado = capturada` con `captureId`, pagos `honorarios`/`tasa_dnfd` registrados con `origen: paypal`. OAuth sandbox 200 desde el contenedor. Suscripciones y cambio de plan siguen sin prueba real (webhook no alcanzable).
+
+**Modales propios** (pedido de Rick) — `farmazed-web/portal/js/dialogos.js`: `avisar`/`confirmar`/`preguntar` (promesas, misma semántica que alert/confirm/prompt; tipo info/éxito/error deducido del texto; foco atrapado, Escape, Enter; texto por `textContent`). 62 usos reemplazados en `admin/{bandeja,cotizaciones,empresas,expediente}.html` y `client-dashboard.html` (ahí también como globales para el script clásico). Bajo Playwright (`navigator.webdriver`) se auto-resuelven salvo `window.__fzDialogosReales`; `window.__fzRespuestaDialogo` responde los prompts. e2e ajustados: `plan_consulta` (valor del prompt + espera el PUT), `plan_empresarial` (espera el PUT), `quotes` (espera el PATCH rechazado). Probado en el navegador: render, Escape→null, Aceptar→valor, Cancelar→false, páginas sin errores de consola.
+
+**precios.html**: grupos del tarifario 24-sep después de los fijos; grises de etiquetas a `#5f6b7a` (contraste AA).
+
+**No hecho**: e2e NO corridos tras los cambios de hoy; sin `responderDialogo` helper en e2e (ninguna prueba verifica el modal real); el mapa del código no se regeneró.

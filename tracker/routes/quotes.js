@@ -44,7 +44,7 @@ const { requireAuth } = require('../middleware/auth');
 const { serializeTimestamps } = require('../utils/serialize');
 const { effectiveRole, CLIENT_ROLES, requirePermission } = require('../middleware/permissions');
 const { conceptosRequeridosFase05 } = require('../utils/conceptos_fase05');
-const { getProvider } = require('../services/payments');
+const { getProvider, urlsDeRetorno } = require('../services/payments');
 const { createConceptPayment } = require('../services/payments_ledger');
 const { recomputeTotal } = require('../services/quotes');
 const { HttpError, responderError } = require('../utils/http_error');
@@ -346,6 +346,7 @@ router.post('/:id/pago/crear-orden', requireAuth, requirePermission('quotes.pay'
         // un reintento inmediato del mismo cobro no abre otra orden; por hora, para que una orden caducada no quede pegada
         requestId: `order-${req.params.id}-${aCentavos(reserva.monto)}-${Math.floor(Date.now() / 3_600_000)}`,
         description: `Farmazed — cotización ${req.params.id} (${reserva.data.caseIds.length} caso(s))`,
+        ...urlsDeRetorno('pago', { quote: req.params.id }), // PayPal le añade ?token=<orderId>
       });
     } catch (e) {
       // El proveedor falló: se libera la reserva, para poder reintentar.

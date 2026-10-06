@@ -1,526 +1,379 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Gestión de Precios — Farmazed Admin</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Farmazed Admin — Precios</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
   <style>
-    :root {
-      --bg: #f8f9fa;
-      --surface: #ffffff;
-      --border: #dee2e6;
-      --text: #212529;
-      --muted: #6c757d;
-      --accent: #0d6efd;
-      --accent-hover: #0b5ed7;
-      --success: #198754;
-      --danger: #dc3545;
-      --header-bg: #1a2a3a;
-      --header-text: #ffffff;
-      --grupo-bg: #e9ecef;
-      --input-bg: #fff;
-      --input-border: #ced4da;
-      --shadow: 0 1px 3px rgba(0,0,0,.08);
-    }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      font-size: 14px;
-      line-height: 1.5;
-    }
+    :root { --fz-blue:#1B4F8A; --fz-navy:#0F3260; --fz-green:#3A7D44; --fz-line:#e3e8f0; }
+    body  { background:#f0f4fa; }
+    .sidebar { width:220px; background:var(--fz-navy); min-height:100vh; flex-shrink:0; }
+    .sidebar a { color:rgba(255,255,255,.7); text-decoration:none; display:block; padding:.6rem 1.25rem; font-size:.88rem; border-radius:6px; transition:.15s; }
+    .sidebar a:hover, .sidebar a.active { background:rgba(255,255,255,.12); color:#fff; }
+    .sidebar .section-label { color:rgba(255,255,255,.35); font-size:.68rem; text-transform:uppercase; letter-spacing:.06em; padding:.5rem 1.25rem; margin-top:.75rem; }
+    .main { flex:1; min-width:0; }
+    .topbar { background:#fff; border-bottom:1px solid #dee2e6; padding:.75rem 1.5rem; }
+    .contenido { max-width:1080px; }
+    .eyebrow { font-size:.68rem; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:#5f6b7a; }
+    .cifra { font-variant-numeric:tabular-nums; }
 
-    /* ── Navbar ── */
-    nav {
-      background: var(--header-bg);
-      color: var(--header-text);
-      padding: 0 24px;
-      height: 56px;
-      display: flex;
-      align-items: center;
-      gap: 16px;
-    }
-    nav .brand { font-weight: 700; font-size: 16px; letter-spacing: .5px; }
-    nav .sep { opacity: .3; }
-    nav .page-title { opacity: .8; font-size: 13px; }
-    nav .spacer { flex: 1; }
-    nav .user { font-size: 12px; opacity: .7; }
-    nav .logout-btn {
-      background: rgba(255,255,255,.12);
-      border: none;
-      color: #fff;
-      padding: 4px 12px;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 12px;
-    }
-    nav .logout-btn:hover { background: rgba(255,255,255,.2); }
+    /* ── Plan de suscripción ── */
+    .plan-card { border:0; border-radius:12px; overflow:hidden; box-shadow:0 1px 2px rgba(15,50,96,.06), 0 8px 24px rgba(15,50,96,.06); }
+    .plan-resumen { background:linear-gradient(160deg, var(--fz-navy), var(--fz-blue)); color:#fff; padding:1.5rem; }
+    .plan-resumen .eyebrow { color:rgba(255,255,255,.55); }
+    .plan-precio { font-family:Georgia,serif; font-size:2.4rem; line-height:1; font-weight:700; }
+    .plan-precio small { font-family:inherit; font-size:.85rem; font-weight:400; opacity:.7; }
 
-    /* ── Layout ── */
-    .container { max-width: 1100px; margin: 0 auto; padding: 32px 24px; }
-    h1 { font-size: 20px; font-weight: 600; margin-bottom: 6px; }
-    .subtitle { color: var(--muted); font-size: 13px; margin-bottom: 28px; }
-    .notice {
-      background: #fff3cd;
-      border: 1px solid #ffc107;
-      border-radius: 6px;
-      padding: 10px 16px;
-      font-size: 13px;
-      margin-bottom: 24px;
-      color: #664d03;
-    }
+    /* ── Barra de filtros del tarifario ── */
+    .filtros { position:sticky; top:0; z-index:5; background:#f0f4fa; padding:.75rem 0; }
+    .chip { border:1px solid var(--fz-line); background:#fff; color:#4b5563; border-radius:99px; padding:.25rem .8rem; font-size:.8rem; transition:background-color .15s, color .15s, border-color .15s; }
+    .chip:hover { border-color:var(--fz-blue); color:var(--fz-blue); }
+    .chip[aria-pressed="true"] { background:var(--fz-blue); border-color:var(--fz-blue); color:#fff; }
+    .chip:focus-visible, .btn:focus-visible, .form-control:focus-visible { outline:2px solid var(--fz-blue); outline-offset:2px; box-shadow:none; }
 
-    /* ── Section accordion ── */
-    .grupo-section { margin-bottom: 24px; }
-    .grupo-header {
-      background: var(--grupo-bg);
-      border: 1px solid var(--border);
-      border-radius: 6px 6px 0 0;
-      padding: 10px 16px;
-      font-weight: 600;
-      font-size: 13px;
-      text-transform: uppercase;
-      letter-spacing: .5px;
-      color: var(--muted);
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      cursor: pointer;
-      user-select: none;
-    }
-    .grupo-header .count {
-      background: var(--muted);
-      color: #fff;
-      border-radius: 99px;
-      font-size: 11px;
-      padding: 1px 7px;
-      font-weight: 500;
-    }
-    .grupo-header .toggle { margin-left: auto; font-size: 16px; transition: transform .2s; }
-    .grupo-header.collapsed .toggle { transform: rotate(-90deg); }
-    .grupo-body { border: 1px solid var(--border); border-top: none; border-radius: 0 0 6px 6px; overflow: hidden; }
-    .grupo-body.collapsed { display: none; }
-
-    /* ── Price card ── */
-    .price-card {
-      background: var(--surface);
-      border-bottom: 1px solid var(--border);
-      padding: 16px 20px;
-      transition: background .15s;
-    }
-    .price-card:last-child { border-bottom: none; }
-    .price-card:hover { background: #f8f9ff; }
-    .card-top {
-      display: flex;
-      align-items: flex-start;
-      gap: 12px;
-      margin-bottom: 14px;
-      flex-wrap: wrap;
-    }
-    .tramite-name { font-weight: 600; font-size: 14px; flex: 1; min-width: 240px; }
-    .total-display {
-      font-size: 18px;
-      font-weight: 700;
-      color: var(--accent);
-      white-space: nowrap;
-    }
-    .total-display span { font-size: 12px; font-weight: 400; color: var(--muted); }
-
-    /* ── D13: desglose honorarios/tasas ── */
-    .desglose-row {
-      display: flex;
-      gap: 20px;
-      flex-wrap: wrap;
-      margin-bottom: 14px;
-      padding: 8px 12px;
-      background: var(--bg);
-      border-radius: 6px;
-      font-size: 13px;
-    }
-    .desglose-row .item { display: flex; flex-direction: column; }
-    .desglose-row .item .label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .3px; }
-    .desglose-row .item .amount { font-weight: 700; font-size: 15px; }
-    .desglose-row .item.honorarios .amount { color: var(--success); }
-    .desglose-row .item.tasas .amount { color: var(--accent); }
-    .desglose-row .item.no-cuadra .amount { color: var(--danger); }
-
-    /* ── Component grid ── */
-    .components-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-      gap: 10px;
-      margin-bottom: 14px;
-    }
-    .field-group label {
-      display: block;
-      font-size: 11px;
-      color: var(--muted);
-      margin-bottom: 3px;
-      font-weight: 500;
-    }
-    .field-group .input-wrap {
-      display: flex;
-      align-items: center;
-      border: 1px solid var(--input-border);
-      border-radius: 4px;
-      background: var(--input-bg);
-      overflow: hidden;
-    }
-    .field-group .prefix {
-      padding: 0 8px;
-      background: var(--grupo-bg);
-      color: var(--muted);
-      font-size: 12px;
-      height: 32px;
-      display: flex;
-      align-items: center;
-      border-right: 1px solid var(--input-border);
-    }
-    .field-group input[type="number"] {
-      border: none;
-      outline: none;
-      padding: 0 8px;
-      height: 32px;
-      width: 100%;
-      font-size: 13px;
-      background: transparent;
-      color: var(--text);
-      font-variant-numeric: tabular-nums;
-    }
-    .field-group input[type="number"]:focus { background: #f0f4ff; }
-
-    /* ── Card footer ── */
-    .card-footer {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      flex-wrap: wrap;
-    }
-    .notes-input {
-      flex: 1;
-      min-width: 200px;
-      border: 1px solid var(--input-border);
-      border-radius: 4px;
-      padding: 5px 10px;
-      font-size: 12px;
-      color: var(--muted);
-      background: var(--input-bg);
-      outline: none;
-    }
-    .notes-input:focus { border-color: var(--accent); color: var(--text); }
-    .save-btn {
-      background: var(--accent);
-      color: #fff;
-      border: none;
-      border-radius: 4px;
-      padding: 6px 18px;
-      font-size: 13px;
-      font-weight: 500;
-      cursor: pointer;
-      transition: background .15s;
-    }
-    .save-btn:hover { background: var(--accent-hover); }
-    .save-btn:disabled { background: var(--muted); cursor: not-allowed; }
-    .feedback {
-      font-size: 12px;
-      padding: 4px 10px;
-      border-radius: 4px;
-      display: none;
-    }
-    .feedback.success { display: inline-block; background: #d1e7dd; color: var(--success); }
-    .feedback.error   { display: inline-block; background: #f8d7da; color: var(--danger); }
-
-    /* ── Loading ── */
-    #loading { text-align: center; padding: 60px; color: var(--muted); }
-    .spinner {
-      width: 32px; height: 32px;
-      border: 3px solid var(--border);
-      border-top-color: var(--accent);
-      border-radius: 50%;
-      animation: spin .7s linear infinite;
-      margin: 0 auto 12px;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
-
-    @media (max-width: 600px) {
-      .components-grid { grid-template-columns: 1fr 1fr; }
-      .card-top { flex-direction: column; gap: 4px; }
-    }
+    /* ── Tarjeta de trámite ── */
+    .price-card { background:#fff; border:1px solid var(--fz-line); border-radius:12px; padding:1.1rem 1.25rem; margin-bottom:.9rem; transition:border-color .15s, box-shadow .15s; }
+    .price-card:hover { box-shadow:0 4px 16px rgba(15,50,96,.07); }
+    .price-card.sin-guardar { border-color:#e0a800; box-shadow:0 0 0 3px rgba(224,168,0,.15); }
+    .tramite-name { font-weight:600; color:#1f2937; }
+    .total-display { font-family:Georgia,serif; font-size:1.55rem; font-weight:700; color:var(--fz-navy); white-space:nowrap; line-height:1.1; }
+    .total-display span { font-family:system-ui,sans-serif; font-size:.72rem; font-weight:400; color:#5f6b7a; }
+    .reparto { display:flex; height:6px; border-radius:99px; overflow:hidden; background:var(--fz-line); }
+    .reparto i { display:block; height:100%; transition:flex-basis .2s; }
+    .reparto .h { background:var(--fz-green); }
+    .reparto .t { background:var(--fz-blue); }
+    .leyenda { font-size:.8rem; color:#4b5563; }
+    .leyenda .punto { display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:.35rem; }
+    .leyenda .amount { font-weight:700; }
+    .bloque { border-left:3px solid var(--fz-line); padding-left:.9rem; }
+    .bloque.honorarios { border-color:var(--fz-green); }
+    .bloque.tasas { border-color:var(--fz-blue); }
+    .field-group label { font-size:.72rem; color:#6b7280; margin-bottom:.15rem; }
+    .field-group .input-group-text { font-size:.75rem; color:#5f6b7a; background:#f7f9fc; }
+    .aviso-sin-guardar { display:none; font-size:.75rem; color:#946200; }
+    .sin-guardar .aviso-sin-guardar { display:inline; }
+    .feedback { font-size:.78rem; }
+    .feedback.success { color:var(--fz-green); }
+    .feedback.error { color:#b42318; }
+    @media (prefers-reduced-motion: reduce) { * { transition:none !important; } }
   </style>
 </head>
-<body>
+<body class="d-flex">
 
-<!-- Navbar -->
-<nav>
-  <span class="brand">Farmazed</span>
-  <span class="sep">|</span>
-  <span class="page-title">Gestión de Precios</span>
-  <span class="spacer"></span>
-  <span class="user" id="nav-user"></span>
-  <button class="logout-btn" onclick="logout()">Cerrar sesión</button>
-</nav>
+<!-- Sidebar -->
+<div class="sidebar py-3 d-flex flex-column">
+  <div class="px-4 mb-4">
+    <div style="font-family:Georgia,serif;color:#fff;font-size:1.2rem;font-weight:700">Farmazed</div>
+    <div style="color:rgba(255,255,255,.4);font-size:.72rem">Admin Panel</div>
+  </div>
+  <div class="section-label">Gestión</div>
+  <a href="/admin/casos.html"><i class="bi bi-folder2-open me-2"></i>Expedientes</a>
+  <a href="/admin/bandeja.html"><i class="bi bi-inbox me-2"></i>Mi Bandeja</a>
+  <a href="/admin/cotizaciones.html"><i class="bi bi-receipt me-2"></i>Cotizaciones</a>
+  <a href="/admin/formularios.html"><i class="bi bi-file-earmark-text me-2"></i>Formularios</a>
+  <a href="/admin/empresas.html" id="nav-empresas" style="display:none"><i class="bi bi-building me-2"></i>Empresas</a>
+  <a href="/admin/precios.html" id="nav-precios" class="active" style="display:none"><i class="bi bi-cash-coin me-2"></i>Precios</a>
+  <div class="section-label">Sistema</div>
+  <a href="/admin/configuracion.html" id="nav-configuracion" style="display:none"><i class="bi bi-gear me-2"></i>Configuración</a>
+  <a href="#" id="sidebar-logout"><i class="bi bi-box-arrow-left me-2"></i>Cerrar Sesión</a>
+</div>
 
-<!-- Main content -->
-<div class="container">
-  <h1>Tarifas vigentes</h1>
-  <p class="subtitle">Modifica los componentes de cada trámite individualmente. Los cambios se guardan en tiempo real y se reflejan de inmediato en el portal del cliente.</p>
-
-  <div class="notice">
-    ⚠️ <strong>Nota:</strong> Estos precios se muestran como costo estimado en el portal del cliente. Farmazed emite cotización formal antes de iniciar cada trámite.
+<!-- Main -->
+<div class="main">
+  <div class="topbar d-flex align-items-center justify-content-between">
+    <h6 class="mb-0 fw-bold">Precios</h6>
+    <span class="text-muted small" id="user-name"></span>
   </div>
 
-  <!-- TAREA 33 (§H.14): plan recurrente de "costo por uso de la plataforma" —
-       separado del tarifario de arriba (eso es por trámite; esto es mensual/
-       anual, fijo, por empresa). -->
-  <div class="notice" style="background:#fff;border:1px solid var(--border);">
-    <h2 style="font-size:1rem;margin-bottom:8px;">Plan de suscripción (uso de la plataforma)</h2>
-    <p id="plan-actual" class="subtitle" style="margin-bottom:12px;">Cargando…</p>
-    <form id="form-plan" style="display:flex;gap:8px;flex-wrap:wrap;align-items:end;">
-      <div><label style="font-size:.78rem;display:block;">Nombre</label>
-        <input type="text" id="plan-nombre" required style="padding:6px;border:1px solid var(--input-border);border-radius:4px;"></div>
-      <div><label style="font-size:.78rem;display:block;">Monto (USD)</label>
-        <input type="number" id="plan-monto" min="0.01" step="0.01" required style="padding:6px;border:1px solid var(--input-border);border-radius:4px;width:110px;"></div>
-      <div><label style="font-size:.78rem;display:block;">Período</label>
-        <select id="plan-periodo" style="padding:6px;border:1px solid var(--input-border);border-radius:4px;">
-          <option value="mensual">Mensual</option>
-          <option value="anual">Anual</option>
-        </select></div>
-      <button type="submit" style="padding:7px 16px;background:var(--accent);color:#fff;border:none;border-radius:4px;cursor:pointer;">Guardar plan</button>
-    </form>
-    <div id="plan-msg" style="font-size:.82rem;margin-top:6px;"></div>
-  </div>
+  <div class="p-4 contenido">
 
-  <div id="loading">
-    <div class="spinner"></div>
-    Cargando tarifas…
-  </div>
+    <!-- TAREA 33 (§H.14): plan recurrente de "costo por uso de la plataforma" —
+         separado del tarifario de abajo (eso es por trámite; esto es mensual/
+         anual, fijo, por empresa). -->
+    <section class="card plan-card mb-4" aria-labelledby="plan-titulo">
+      <div class="row g-0">
+        <div class="col-md-5 plan-resumen d-flex flex-column justify-content-between">
+          <div>
+            <div class="eyebrow mb-2">Plan de suscripción</div>
+            <h2 class="h6 mb-3" id="plan-titulo">Uso de la plataforma</h2>
+          </div>
+          <div>
+            <div class="plan-precio cifra" id="plan-precio">—</div>
+            <p id="plan-actual" class="small mb-0 mt-2" style="opacity:.8">Cargando…</p>
+          </div>
+        </div>
+        <div class="col-md-7 p-4 bg-white">
+          <p class="small text-muted">Lo que paga cada empresa por usar el portal, aparte de sus trámites. Las empresas con Plan Empresarial tienen el monto acordado en su propuesta.</p>
+          <form id="form-plan" class="row g-2 align-items-end">
+            <div class="col-12">
+              <label class="form-label small mb-1" for="plan-nombre">Nombre</label>
+              <input type="text" class="form-control form-control-sm" id="plan-nombre" maxlength="80" required>
+            </div>
+            <div class="col-sm-5">
+              <label class="form-label small mb-1" for="plan-monto">Monto (USD)</label>
+              <div class="input-group input-group-sm">
+                <span class="input-group-text">$</span>
+                <input type="number" class="form-control cifra" id="plan-monto" min="0.01" step="0.01" required>
+              </div>
+            </div>
+            <div class="col-sm-4">
+              <label class="form-label small mb-1" for="plan-periodo">Período</label>
+              <select class="form-select form-select-sm" id="plan-periodo">
+                <option value="mensual">Mensual</option>
+                <option value="anual">Anual</option>
+              </select>
+            </div>
+            <div class="col-sm-3 d-grid">
+              <button type="submit" class="btn btn-sm btn-primary">Guardar plan</button>
+            </div>
+          </form>
+          <div id="plan-msg" class="small mt-2" role="status"></div>
+          <p class="small text-muted mt-3 mb-0"><i class="bi bi-info-circle me-1"></i>Guardar crea un plan nuevo en el proveedor de pagos. Las empresas ya suscritas siguen con el monto con el que se suscribieron.</p>
+        </div>
+      </div>
+    </section>
 
-  <div id="content" style="display:none"></div>
+    <div class="eyebrow">Tarifario</div>
+    <h2 class="h5 mb-1">Tarifas por trámite</h2>
+    <p class="text-muted small mb-0">Cada cambio se guarda por trámite y se usa en las cotizaciones nuevas. Farmazed emite cotización formal antes de iniciar cada trámite.</p>
+
+    <div class="filtros d-none gap-2 flex-wrap align-items-center" id="filtros">
+      <div class="input-group input-group-sm" style="max-width:280px">
+        <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+        <input type="search" class="form-control" id="buscar" placeholder="Buscar trámite" aria-label="Buscar trámite">
+      </div>
+      <div class="d-flex gap-1 flex-wrap" id="chips" role="group" aria-label="Filtrar por grupo"></div>
+    </div>
+
+    <div id="loading" class="text-center py-5 text-muted small">
+      <div class="spinner-border spinner-border-sm text-primary me-2"></div>Cargando tarifas…
+    </div>
+    <div id="content" hidden></div>
+    <p id="sin-resultados" class="text-muted small text-center py-4" hidden>Ningún trámite coincide con la búsqueda.</p>
+  </div>
 </div>
 
 <script type="module">
-  // TAREA 15/E3 parte 2: migrado de `x-admin-key` (login propio, un solo
-  // valor compartido) a la sesión real de Firebase con rol admin — mismo
-  // patrón que casos.html/expediente.html. API_BASE ya no se repite a mano
-  // aquí, sale de auth.js.
-  import { esc, requireVerifiedLogin, isAdmin, logout } from '../portal/js/auth.js';
+  import { initBackoffice, esc } from '../portal/js/auth.js';
   import api from '../portal/js/api.js';
-
-  const COMPONENT_LABELS = {
-    honorarios_farmazed:   'Honorarios Farmazed',
-    honorarios_abogado:    'Honorarios Abogado',
-    gastos_adicionales:    'Gastos Adicionales',
-    refrendo_cnf:          'Refrendo CNF',
-    tasa_dnfd_servicio:    'DNFD Servicio',
-    tasa_dnfd_tramite:     'DNFD Trámite',
-    iea:                   'Análisis IEA',
-    tasa_mef:              'MEF'
-  };
-  const COMPONENT_KEYS = Object.keys(COMPONENT_LABELS);
 
   // D13 (organizacion/03_INSTRUCCIONES_DEV.md fila D13) — mismo agrupamiento
   // que tracker/routes/pricing.js:withDesglose(). El backend ya manda
   // honorariosFarmazed/tasasOficiales calculados; esto solo se usa para
   // recalcular en vivo mientras el admin edita, antes de guardar.
-  const HONORARIOS_KEYS = ['honorarios_farmazed', 'honorarios_abogado', 'gastos_adicionales'];
-  const TASAS_KEYS       = ['refrendo_cnf', 'tasa_dnfd_servicio', 'tasa_dnfd_tramite', 'iea', 'tasa_mef'];
+  const HONORARIOS = {
+    honorarios_farmazed: 'Honorarios Farmazed',
+    honorarios_abogado:  'Honorarios Abogado',
+    gastos_adicionales:  'Gastos Adicionales',
+  };
+  const TASAS = {
+    refrendo_cnf:       'Refrendo CNF',
+    tasa_dnfd_servicio: 'DNFD Servicio',
+    tasa_dnfd_tramite:  'DNFD Trámite',
+    iea:                'Análisis IEA',
+    tasa_mef:           'MEF',
+  };
+  const ORDEN_GRUPOS = ['Registros Nuevos', 'Modificaciones', 'Renovaciones'];
+  const PERIODO = { mensual: 'mes', anual: 'año' };
+  const balboas = (n) => `B/. ${Number(n || 0).toLocaleString('es-PA')}`;
+  const $ = (id) => document.getElementById(id);
 
-  let allPricing = [];
+  let grupoActivo = '';
 
-  // ── Auth + init ─────────────────────────────────────────────────────────────
   async function init() {
-    const user = await requireVerifiedLogin('/login.html');
-    if (!user) return; // en camino a verificar-correo.html
-    if (!(await isAdmin())) { window.location.href = '/client-dashboard.html'; return; }
-    document.getElementById('nav-user').textContent = user.displayName || user.email;
+    const sesion = await initBackoffice();
+    if (!sesion) return;
+    if (!sesion.admin) { window.location.href = '/admin/bandeja.html'; return; } // Precios es solo del admin
     loadPricing();
     loadPlan();
   }
 
-  // TAREA 33 (§H.14): plan recurrente — el proveedor (PayPal real o mock)
-  // sale de `services/payments/index.js` en el servidor; acá solo se
-  // manda nombre/monto/período, nunca un planId a mano.
+  // ── Plan recurrente (TAREA 33, §H.14): el proveedor (PayPal real o mock) sale de
+  // `services/payments/index.js` en el servidor; acá solo se manda nombre/monto/período.
   async function loadPlan() {
     try {
       const { plan } = await api.getPlan();
-      document.getElementById('plan-actual').textContent = plan
-        ? `Actual: ${plan.nombre} — $${plan.monto} / ${plan.periodo} (proveedor: ${plan.proveedor})`
-        : 'Todavía no hay un plan configurado.';
-      if (plan) {
-        document.getElementById('plan-nombre').value = plan.nombre;
-        document.getElementById('plan-monto').value = plan.monto;
-        document.getElementById('plan-periodo').value = plan.periodo;
+      if (!plan) {
+        $('plan-precio').textContent = '—';
+        $('plan-actual').textContent = 'Todavía no hay un plan configurado.';
+        return;
       }
+      $('plan-precio').innerHTML = `$${esc(Number(plan.monto).toLocaleString('en-US'))} <small>/ ${esc(PERIODO[plan.periodo] || plan.periodo)}</small>`;
+      $('plan-actual').textContent = `${plan.nombre} · cobrado con ${plan.proveedor}`;
+      $('plan-nombre').value = plan.nombre;
+      $('plan-monto').value = plan.monto;
+      $('plan-periodo').value = plan.periodo;
     } catch (err) {
-      document.getElementById('plan-actual').textContent = `Error al cargar el plan: ${err.message}`;
+      $('plan-actual').textContent = `Error al cargar el plan: ${err.message}`;
     }
   }
 
-  document.getElementById('form-plan').addEventListener('submit', async (e) => {
+  $('form-plan').addEventListener('submit', async (e) => {
     e.preventDefault();
-    const msg = document.getElementById('plan-msg');
+    const msg = $('plan-msg');
+    const boton = e.target.querySelector('button[type="submit"]');
     msg.textContent = '';
+    boton.disabled = true;
     try {
       await api.savePlan({
-        nombre: document.getElementById('plan-nombre').value.trim(),
-        monto: Number(document.getElementById('plan-monto').value),
-        periodo: document.getElementById('plan-periodo').value,
+        nombre: $('plan-nombre').value.trim(),
+        monto: Number($('plan-monto').value),
+        periodo: $('plan-periodo').value,
       });
-      msg.style.color = 'var(--success)';
+      msg.className = 'small mt-2 text-success';
       msg.textContent = 'Plan guardado.';
       loadPlan();
     } catch (err) {
-      msg.style.color = 'var(--danger)';
+      msg.className = 'small mt-2 text-danger';
       msg.textContent = err.message;
+    } finally {
+      boton.disabled = false;
     }
   });
 
-  // ── Load ────────────────────────────────────────────────────────────────────
+  // ── Tarifario ───────────────────────────────────────────────────────────────
   async function loadPricing() {
     try {
-      const data = await api.getPricing();
-      allPricing = data.pricing || [];
-      renderPricing(allPricing);
+      const { pricing = [] } = await api.getPricing();
+      renderPricing(pricing);
     } catch (err) {
-      document.getElementById('loading').innerHTML =
-        `<p style="color:var(--danger)">Error al cargar los precios: ${esc(err.message)}</p>`;
+      $('loading').innerHTML = `<span class="text-danger">Error al cargar los precios: ${esc(err.message)}</span>`;
     }
   }
 
-  // ── Render ──────────────────────────────────────────────────────────────────
   function renderPricing(pricing) {
-    document.getElementById('loading').style.display = 'none';
-    const content = document.getElementById('content');
-    content.style.display = 'block';
+    // Los grupos del orden fijo primero; los demás (p. ej. "… — 24-sep") después, en orden alfabético.
+    const posicion = (g) => (ORDEN_GRUPOS.includes(g) ? ORDEN_GRUPOS.indexOf(g) : ORDEN_GRUPOS.length);
+    const grupos = [...new Set(pricing.map(p => p.grupo))].sort((a, b) => posicion(a) - posicion(b) || a.localeCompare(b, 'es'));
 
-    const grupos = [...new Set(pricing.map(p => p.grupo))];
-    const ORDER = ['Registros Nuevos', 'Modificaciones', 'Renovaciones'];
-    grupos.sort((a, b) => ORDER.indexOf(a) - ORDER.indexOf(b));
+    $('chips').innerHTML = [['', 'Todos', pricing.length], ...grupos.map(g => [g, g, pricing.filter(p => p.grupo === g).length])]
+      .map(([valor, texto, n]) => `<button type="button" class="chip" data-grupo="${esc(valor)}" aria-pressed="${valor === ''}">${esc(texto)} <span class="opacity-75 cifra">${n}</span></button>`).join('');
 
-    content.innerHTML = grupos.map(grupo => {
-      const items = pricing.filter(p => p.grupo === grupo);
-      return `
-        <div class="grupo-section">
-          <div class="grupo-header" onclick="toggleGrupo(this)">
-            ${esc(grupo)}
-            <span class="count">${items.length}</span>
-            <span class="toggle">▾</span>
-          </div>
-          <div class="grupo-body">
-            ${items.map(renderCard).join('')}
-          </div>
-        </div>`;
-    }).join('');
+    $('content').innerHTML = grupos.map(grupo => `
+      <section class="grupo-section mt-3" data-grupo="${esc(grupo)}">
+        <h3 class="eyebrow mb-2">${esc(grupo)}</h3>
+        ${pricing.filter(p => p.grupo === grupo).map(renderCard).join('')}
+      </section>`).join('');
+
+    $('loading').hidden = true;
+    $('content').hidden = false;
+    $('filtros').classList.replace('d-none', 'd-flex');
   }
+
+  const campos = (item, etiquetas) => Object.entries(etiquetas).map(([k, etiqueta]) => `
+    <div class="col-6 col-lg-4 field-group">
+      <label class="form-label" for="c-${esc(item.id)}-${k}">${etiqueta}</label>
+      <div class="input-group input-group-sm">
+        <span class="input-group-text">B/.</span>
+        <input type="number" class="form-control cifra" min="0" step="1" id="c-${esc(item.id)}-${k}" data-key="${k}" value="${Number(item.components?.[k]) || 0}">
+      </div>
+    </div>`).join('');
+
+  const porcentaje = (honorarios, tasas) => (honorarios + tasas > 0 ? (honorarios / (honorarios + tasas)) * 100 : 50);
 
   function renderCard(item) {
-    const comps = item.components || {};
-    const fieldsHtml = COMPONENT_KEYS.map(k => `
-      <div class="field-group">
-        <label>${COMPONENT_LABELS[k]}</label>
-        <div class="input-wrap">
-          <span class="prefix">B/.</span>
-          <input type="number" min="0" step="1"
-            data-key="${k}" data-id="${esc(item.id)}"
-            value="${comps[k] || 0}"
-            oninput="recomputeTotal('${esc(item.id)}')" />
-        </div>
-      </div>`).join('');
-
+    const honorarios = item.honorariosFarmazed || 0, tasas = item.tasasOficiales || 0;
     return `
-      <div class="price-card" id="card-${esc(item.id)}">
-        <div class="card-top">
+      <article class="price-card" id="card-${esc(item.id)}" data-id="${esc(item.id)}" data-nombre="${esc((item.name || '').toLowerCase())}">
+        <div class="d-flex align-items-start justify-content-between gap-3 flex-wrap mb-2">
           <div class="tramite-name">${esc(item.name)}</div>
-          <div class="total-display" id="total-${esc(item.id)}">
-            B/. ${(item.total || 0).toLocaleString('es-PA')}
-            <span>total</span>
-          </div>
+          <div class="total-display cifra">${balboas(item.total)} <span>total</span></div>
         </div>
-        <div class="desglose-row" id="desglose-${esc(item.id)}">
-          <div class="item honorarios">
-            <span class="label">Honorarios Farmazed</span>
-            <span class="amount" id="desglose-honorarios-${esc(item.id)}">B/. ${(item.honorariosFarmazed || 0).toLocaleString('es-PA')}</span>
-          </div>
-          <div class="item tasas">
-            <span class="label">Tasas oficiales</span>
-            <span class="amount" id="desglose-tasas-${esc(item.id)}">B/. ${(item.tasasOficiales || 0).toLocaleString('es-PA')}</span>
-          </div>
+        <div class="reparto mb-2" aria-hidden="true"><i class="h" style="flex-basis:${porcentaje(honorarios, tasas)}%"></i><i class="t" style="flex:1"></i></div>
+        <div class="d-flex gap-4 flex-wrap leyenda mb-3">
+          <span><span class="punto" style="background:var(--fz-green)"></span>Honorarios <span class="amount cifra" data-suma="honorarios">${balboas(honorarios)}</span></span>
+          <span><span class="punto" style="background:var(--fz-blue)"></span>Tasas oficiales <span class="amount cifra" data-suma="tasas">${balboas(tasas)}</span></span>
         </div>
-        <div class="components-grid">${fieldsHtml}</div>
-        <div class="card-footer">
-          <input class="notes-input" placeholder="Notas internas (opcional)"
-            id="notes-${esc(item.id)}" value="${esc(item.notes)}" />
-          <button class="save-btn" onclick="saveCategory('${esc(item.id)}')">Guardar</button>
-          <span class="feedback" id="fb-${esc(item.id)}"></span>
+        <div class="row g-3">
+          <div class="col-lg-5"><div class="bloque honorarios"><div class="row g-2">${campos(item, HONORARIOS)}</div></div></div>
+          <div class="col-lg-7"><div class="bloque tasas"><div class="row g-2">${campos(item, TASAS)}</div></div></div>
         </div>
-      </div>`;
+        <div class="d-flex align-items-center gap-2 flex-wrap mt-3">
+          <input class="form-control form-control-sm flex-grow-1 w-auto notes-input" placeholder="Notas internas (opcional)" aria-label="Notas internas" value="${esc(item.notes)}">
+          <span class="aviso-sin-guardar"><i class="bi bi-circle-fill me-1" style="font-size:.5rem"></i>Cambios sin guardar</span>
+          <span class="feedback" role="status"></span>
+          <button type="button" class="btn btn-sm btn-primary save-btn">Guardar</button>
+        </div>
+      </article>`;
   }
 
-  // ── Compute total + desglose live ───────────────────────────────────────────
-  function recomputeTotal(categoryId) {
-    const values = {};
-    document.querySelectorAll(`[data-id="${categoryId}"]`).forEach(inp => {
-      values[inp.dataset.key] = parseFloat(inp.value) || 0;
-    });
-    const sum = (keys) => keys.reduce((s, k) => s + (values[k] || 0), 0);
-    const honorarios = sum(HONORARIOS_KEYS);
-    const tasas       = sum(TASAS_KEYS);
-    const total       = honorarios + tasas;
-
-    document.getElementById(`total-${categoryId}`).innerHTML =
-      `B/. ${total.toLocaleString('es-PA')} <span>total</span>`;
-    document.getElementById(`desglose-honorarios-${categoryId}`).textContent =
-      `B/. ${honorarios.toLocaleString('es-PA')}`;
-    document.getElementById(`desglose-tasas-${categoryId}`).textContent =
-      `B/. ${tasas.toLocaleString('es-PA')}`;
+  function leerComponentes(card) {
+    const valores = {};
+    card.querySelectorAll('input[data-key]').forEach(inp => { valores[inp.dataset.key] = parseFloat(inp.value) || 0; });
+    return valores;
   }
 
-  // ── Save ─────────────────────────────────────────────────────────────────────
-  async function saveCategory(categoryId) {
-    const inputs = document.querySelectorAll(`[data-id="${categoryId}"]`);
-    const components = {};
-    inputs.forEach(inp => { components[inp.dataset.key] = parseFloat(inp.value) || 0; });
-    const notes = document.getElementById(`notes-${categoryId}`).value;
+  // Recalcula total y desglose mientras el admin edita (antes de guardar).
+  function recalcular(card) {
+    const valores = leerComponentes(card);
+    const suma = (etiquetas) => Object.keys(etiquetas).reduce((s, k) => s + (valores[k] || 0), 0);
+    const honorarios = suma(HONORARIOS), tasas = suma(TASAS);
+    card.querySelector('.total-display').innerHTML = `${balboas(honorarios + tasas)} <span>total</span>`;
+    card.querySelector('[data-suma="honorarios"]').textContent = balboas(honorarios);
+    card.querySelector('[data-suma="tasas"]').textContent = balboas(tasas);
+    card.querySelector('.reparto .h').style.flexBasis = `${porcentaje(honorarios, tasas)}%`;
+  }
 
-    const btn = document.querySelector(`#card-${categoryId} .save-btn`);
-    const fb  = document.getElementById(`fb-${categoryId}`);
-
+  async function guardar(card) {
+    const btn = card.querySelector('.save-btn');
+    const fb  = card.querySelector('.feedback');
     btn.disabled = true;
     btn.textContent = 'Guardando…';
-    fb.className = 'feedback';
-    fb.style.display = 'none';
-
+    fb.textContent = '';
     try {
-      await api.updatePricing(categoryId, { components, notes });
-
+      await api.updatePricing(card.dataset.id, { components: leerComponentes(card), notes: card.querySelector('.notes-input').value });
+      card.classList.remove('sin-guardar');
       fb.className = 'feedback success';
       fb.textContent = '✓ Guardado';
     } catch (err) {
       fb.className = 'feedback error';
       fb.textContent = `✗ ${err.message}`;
-      console.error(err);
     } finally {
       btn.disabled = false;
       btn.textContent = 'Guardar';
-      fb.style.display = 'inline-block';
-      setTimeout(() => { fb.style.display = 'none'; }, 4000);
     }
   }
 
-  // ── Toggle accordion ─────────────────────────────────────────────────────────
-  function toggleGrupo(header) {
-    header.classList.toggle('collapsed');
-    header.nextElementSibling.classList.toggle('collapsed');
+  function filtrar() {
+    const texto = $('buscar').value.trim().toLowerCase();
+    let visibles = 0;
+    document.querySelectorAll('.grupo-section').forEach(seccion => {
+      let enSeccion = 0;
+      seccion.querySelectorAll('.price-card').forEach(card => {
+        const ver = (!grupoActivo || seccion.dataset.grupo === grupoActivo) && card.dataset.nombre.includes(texto);
+        card.hidden = !ver;
+        if (ver) enSeccion++;
+      });
+      seccion.hidden = enSeccion === 0;
+      visibles += enSeccion;
+    });
+    $('sin-resultados').hidden = visibles > 0;
   }
 
-  // Los onclick/oninput inline del HTML generado por renderCard() necesitan
-  // estas funciones en window — un <script type="module"> no las expone por
-  // sí solo (mismo patrón que admin/expediente.html).
-  window.logout         = logout;
-  window.recomputeTotal = recomputeTotal;
-  window.saveCategory   = saveCategory;
-  window.toggleGrupo    = toggleGrupo;
+  $('content').addEventListener('input', (e) => {
+    const card = e.target.closest('.price-card');
+    if (!card) return;
+    card.classList.add('sin-guardar');
+    card.querySelector('.feedback').textContent = '';
+    if (e.target.dataset.key) recalcular(card);
+  });
+  $('content').addEventListener('click', (e) => {
+    const btn = e.target.closest('.save-btn');
+    if (btn) guardar(btn.closest('.price-card'));
+  });
+  $('buscar').addEventListener('input', filtrar);
+  $('chips').addEventListener('click', (e) => {
+    const chip = e.target.closest('.chip');
+    if (!chip) return;
+    grupoActivo = chip.dataset.grupo;
+    $('chips').querySelectorAll('.chip').forEach(c => c.setAttribute('aria-pressed', String(c === chip)));
+    filtrar();
+  });
+  window.addEventListener('beforeunload', (e) => {
+    if (document.querySelector('.price-card.sin-guardar')) e.preventDefault();
+  });
 
   init();
 </script>

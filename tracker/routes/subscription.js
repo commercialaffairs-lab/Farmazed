@@ -8,6 +8,10 @@
  * `orgs/{orgId}.suscripcion` — YA visible en `GET /api/me/org` (spread del
  * doc completo, TAREA 15), no hace falta un endpoint de lectura aparte.
  *
+ * Una empresa tiene UNA sola suscripción: este plan global o su Plan
+ * Empresarial (empresarial.js). Suscribirse aquí teniendo el Empresarial
+ * activo es un cambio de plan (ver services/suscripciones.js).
+ *
  * NO bloquea trámites (instrucción explícita) — ningún gate de
  * transitions.js la consulta.
  *
@@ -21,59 +25,14 @@ const { requireAuth } = require('../middleware/auth');
 const { requirePermission } = require('../middleware/permissions');
 const { serializeTimestamps } = require('../utils/serialize');
 const { getProvider } = require('../services/payments');
-const { HttpError, responderError } = require('../utils/http_error');
+const { suscribirEmpresa } = require('../services/suscripciones');
+const { responderError } = require('../utils/http_error');
 
 const router = Router();
 const db     = () => admin.firestore();
 const PLAN_DOC = 'plan_suscripcion';
 
 const PERIODOS = ['mensual', 'anual'];
-
-// TAREA 38 (H8): subscribe/aceptar reservan 'pendiente' (sin subscriptionId)
-// dentro de una runTransaction ANTES de llamar al proveedor — dos clics en
-// paralelo ya no crean dos suscripciones en PayPal (el segundo recibe 409). Una
-// reserva más vieja que RESERVA_TTL_MS se da por abandonada y se retoma.
-const RESERVA_TTL_MS = 2 * 60 * 1000;
-
-/** Devuelve la `suscripcion` previa (o null) para poder liberarla si el proveedor falla.
- *  `validar(orgData)` aplica los chequeos propios de cada ruta (lanza HttpError). */
-// Clave de idempotencia de PayPal para crear la suscripción: estable dentro de la misma hora (un reintento
-// tras un corte no abre otra) y distinta después (volver a suscribirse tras cancelar sí crea una nueva).
-const claveSuscripcion = (orgId, planId) => `sub-${orgId}-${planId}-${Math.floor(Date.now() / 3_600_000)}`;
-
-async function reservarSuscripcion(orgRef, validar) {
-  return db().runTransaction(async (t) => {
-    const snap = await t.get(orgRef);
-    if (!snap.exists) throw new HttpError(404, { error: 'Empresa no encontrada' });
-    const org = snap.data();
-    validar(org);
-    const previa = org.suscripcion || null;
-    const reservadaMs = previa?.reservadaEn?.toMillis?.();
-    if (previa?.estado === 'pendiente' && !previa.subscriptionId && reservadaMs && Date.now() - reservadaMs < RESERVA_TTL_MS) {
-      throw new HttpError(409, { error: 'Ya se está creando la suscripción — espera un momento.' });
-    }
-    t.update(orgRef, { suscripcion: { estado: 'pendiente', reservadaEn: admin.firestore.Timestamp.now() } });
-    return previa;
-  });
-}
-
-// El proveedor ya creó la suscripción pero Firestore no la guardó: se cancela en el
-// proveedor (si no, quedaría una suscripción viva que nadie conoce) y se libera la reserva.
-async function guardarSuscripcion(orgRef, provider, subscriptionId, previa, campos) {
-  try {
-    await orgRef.update(campos);
-  } catch (e) {
-    console.error('[subscription] creada en el proveedor pero no guardada', { orgId: orgRef.id, subscriptionId, error: e.message });
-    await provider.cancelSubscription(subscriptionId)
-      .catch(err => console.error('[subscription] tampoco se pudo cancelar — cancelar a mano', { orgId: orgRef.id, subscriptionId, error: err.message }));
-    await liberarSuscripcion(orgRef, previa);
-    throw e;
-  }
-}
-
-const liberarSuscripcion = (orgRef, previa) =>
-  orgRef.update({ suscripcion: previa ?? admin.firestore.FieldValue.delete() })
-    .catch(err => console.error('[subscription] no se pudo liberar la reserva', { orgId: orgRef.id, error: err.message }));
 
 // ─── GET /api/subscription/plan (público — un precio no es un secreto) ───────
 router.get('/plan', async (req, res) => {
@@ -130,38 +89,8 @@ router.post('/subscribe', requireAuth, requirePermission('subscription.subscribe
     const plan = planSnap.data();
 
     const orgRef = db().collection('orgs').doc(req.user.orgId);
-    const previa = await reservarSuscripcion(orgRef, (org) => {
-      if (org.suscripcion?.estado === 'activa') throw new HttpError(409, { error: 'Esta empresa ya tiene una suscripción activa.' });
-    });
-
-    let provider, subscriptionId, status, approveUrl;
-    try {
-      provider = getProvider();
-      ({ subscriptionId, status, approveUrl } = await provider.createSubscription({
-        planId: plan.planId, referenceId: req.user.orgId,
-        requestId: claveSuscripcion(req.user.orgId, plan.planId), // un reintento inmediato no crea otra suscripción
-      }));
-    } catch (e) {
-      await liberarSuscripcion(orgRef, previa);
-      throw e;
-    }
-
-    // 'ACTIVE' (mock, o PayPal si no exige aprobación) -> 'activa' de una;
-    // cualquier otro estado inicial de PayPal real (normalmente
-    // 'APPROVAL_PENDING' hasta que el titular aprueba en el checkout
-    // hospedado) -> 'pendiente', el webhook (o una consulta manual,
-    // GET /v1/billing/subscriptions/{id}) la pasaría a 'activa' después —
-    // sin uso real en local, no hay URL pública que PayPal pueda avisar.
-    const now = admin.firestore.Timestamp.now();
-    const suscripcion = {
-      estado: status === 'ACTIVE' ? 'activa' : 'pendiente',
-      proveedor: provider.name,
-      subscriptionId, planId: plan.planId,
-      creadaEn: now, actualizadaEn: now,
-    };
-    await guardarSuscripcion(orgRef, provider, subscriptionId, previa, { suscripcion });
-
-    res.status(201).json(serializeTimestamps({ ...suscripcion, approveUrl }));
+    const suscripcion = await suscribirEmpresa(orgRef, 'global', () => plan.planId);
+    res.status(201).json(serializeTimestamps(suscripcion));
   } catch (e) {
     responderError(res, e);
   }
@@ -175,7 +104,7 @@ router.post('/cancel', requireAuth, requirePermission('subscription.subscribe'),
     const orgRef  = db().collection('orgs').doc(req.user.orgId);
     const orgSnap = await orgRef.get();
     if (!orgSnap.exists) return res.status(404).json({ error: 'Empresa no encontrada' });
-    const suscripcion = orgSnap.data().suscripcion;
+    const { suscripcion, cambioDePlan } = orgSnap.data();
     // Cancelar es idempotente (TAREA 38): ya cancelada -> 200, no 400.
     if (suscripcion?.estado === 'cancelada') return res.json({ estado: 'cancelada', yaEstaba: true });
     if (!suscripcion?.subscriptionId) {
@@ -184,18 +113,22 @@ router.post('/cancel', requireAuth, requirePermission('subscription.subscribe'),
 
     const provider = getProvider();
     await provider.cancelSubscription(suscripcion.subscriptionId);
+    // Un cambio de plan a medio aprobar se descarta con la suscripción (PayPal no deja cancelar
+    // una que nadie aprobó: si alguien la aprueba después, el webhook la manda a revisión).
+    if (cambioDePlan?.subscriptionId) {
+      await provider.cancelSubscription(cambioDePlan.subscriptionId)
+        .catch(err => console.error('[subscription] cambio de plan pendiente sin cancelar en el proveedor', { orgId: orgRef.id, subscriptionId: cambioDePlan.subscriptionId, error: err.message }));
+    }
 
     const now = admin.firestore.Timestamp.now();
-    await orgRef.update({ 'suscripcion.estado': 'cancelada', 'suscripcion.actualizadaEn': now });
+    await orgRef.update({
+      'suscripcion.estado': 'cancelada', 'suscripcion.actualizadaEn': now,
+      cambioDePlan: admin.firestore.FieldValue.delete(),
+    });
     res.json({ estado: 'cancelada' });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
 });
-
-router.reservarSuscripcion  = reservarSuscripcion;
-router.liberarSuscripcion   = liberarSuscripcion;
-router.guardarSuscripcion   = guardarSuscripcion;
-router.claveSuscripcion     = claveSuscripcion;
 
 module.exports = router;

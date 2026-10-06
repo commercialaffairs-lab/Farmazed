@@ -44,7 +44,7 @@ if ss -ltn 2>/dev/null | grep -q ":$STATIC_PORT "; then
   exit 1
 fi
 
-TRACKER_PORT=$(find_free_port 8080)
+TRACKER_PORT=$(find_free_port "${FZ_TRACKER_PORT:-8080}") # FZ_TRACKER_PORT: puerto inicial (demo_docker.sh lo fija al que publica)
 
 PIDS=()
 cleanup() {
@@ -105,6 +105,19 @@ echo "  idempotente, no duplica nada)..."
 if [ $? -ne 0 ]; then echo "❌ seed_pricing_24sep.js falló. Log:"; cat /tmp/demo-local-seed-precios.log; exit 1; fi
 echo "  seed OK."
 
+# PayPal sandbox (opcional): SOLO las líneas PAYMENTS_PROVIDER / PAYPAL_* de tracker/.env (ignorado
+# por git). Sin ese archivo, o sin PAYMENTS_PROVIDER=paypal, la demo sigue con el proveedor de prueba.
+PAYPAL_VARS=()
+if [ -f tracker/.env ]; then
+  while IFS= read -r linea; do PAYPAL_VARS+=("$linea"); done \
+    < <(grep -E '^(PAYMENTS_PROVIDER|PAYPAL_[A-Z_]+)=' tracker/.env | sed -e 's/[[:space:]]*#.*$//' -e 's/\r$//')
+fi
+if printf '%s\n' "${PAYPAL_VARS[@]:-}" | grep -q '^PAYMENTS_PROVIDER=paypal$'; then
+  echo "→ Pagos: PayPal REAL ($(printf '%s\n' "${PAYPAL_VARS[@]}" | grep '^PAYPAL_ENV=' || echo 'PAYPAL_ENV sin definir')), credenciales de tracker/.env."
+else
+  echo "→ Pagos: proveedor de prueba (mock). Para PayPal sandbox ver PAYPAL_SETUP.md."
+fi
+
 TRACKER_OK=""
 for intento in 1 2 3; do
   TRACKER_PORT=$(find_free_port "$TRACKER_PORT")
@@ -119,7 +132,7 @@ for intento in 1 2 3; do
     MCP_KEY=dev-mcp-local \
     PORT=$TRACKER_PORT \
     PRICING_TABLE=24sep \
-    node index.js) > /tmp/demo-local-tracker.log 2>&1 &
+    env "${PAYPAL_VARS[@]:-FZ_SIN_PAYPAL=1}" node index.js) > /tmp/demo-local-tracker.log 2>&1 &
   TRACKER_PID=$!
   PIDS+=($TRACKER_PID)
 

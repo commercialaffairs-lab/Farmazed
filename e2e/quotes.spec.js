@@ -104,7 +104,7 @@ test.describe('R5/R12 — cotización agrupa 3 casos de una empresa', () => {
     // al recargar, así que se verifica releyendo la cotización.
     const linea1 = card.locator('.linea-row[data-case="case-quote-test-1"]');
     await linea1.locator('.inp-honorarios').fill('1300');
-    const alerta = page.waitForEvent('dialog'); // el alert de error no navega; lo acepta page.on('dialog')
+    const alerta = page.waitForResponse(r => r.url().includes('/lineas/') && r.status() >= 400); // el aviso de error es un modal propio (auto-resuelto en pruebas): se espera el rechazo del PATCH
     await linea1.locator('.btn-guardar-linea').click();
     await alerta;
     await page.reload();

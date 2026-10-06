@@ -79,6 +79,9 @@ test.describe('TAREA 34 — Plan Consulta (diagnóstico) + lead del hero', () =>
     // de la empresa" (invitar lead) — ahí hace falta un VALOR, no solo
     // aceptar vacío.
     page.on('dialog', d => d.accept(d.type() === 'prompt' ? 'E2E Hero Co Oficial' : undefined));
+    // Los diálogos ya son modales propios (portal/js/dialogos.js): bajo Playwright se resuelven
+    // solos, y el "prompt" del nombre de la empresa toma este valor.
+    await page.addInitScript(() => { window.__fzRespuestaDialogo = 'E2E Hero Co Oficial'; });
     page.on('pageerror', (err) => console.log('  [pageerror]', err.message));
     page.on('console', (msg) => { if (msg.type() === 'error') console.log('  [console.error]', msg.text()); });
     const authPort = AUTH_PORT;
@@ -157,8 +160,10 @@ test.describe('TAREA 34 — Plan Consulta (diagnóstico) + lead del hero', () =>
     // submit guarda vía API y RECIÉN AL TERMINAR hace alert('Diagnóstico
     // guardado.') — armar el esperador del diálogo ANTES del click, en
     // paralelo, para no seguir a logout() antes de que el alert dispare.
+    // Ya no hay alert nativo que esperar (modal propio, auto-resuelto en pruebas): se espera la
+    // respuesta del PUT del diagnóstico, que es lo que de verdad tiene que terminar antes del logout.
     await Promise.all([
-      page.waitForEvent('dialog'),
+      page.waitForResponse(r => r.url().includes('/diagnostico') && r.request().method() === 'PUT'),
       fila.locator('button[type="submit"]').click(),
     ]);
     await logout(page);

@@ -38,6 +38,7 @@ el uid sale del token y el correo de la sesión debe ser el de la invitación; u
 | Borrar un documento propio (`documents.delete`) | ✅ | ✅ | — | — | — | ✅ |
 | Registrar un pago (`payments.create`) | — | — | — | — | — | ✅ |
 | Ver los pagos de un caso (`payments.read`) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Ver y resolver los pagos por revisar (avisos de PayPal) (`payments.review`) | — | — | — | — | — | ✅ |
 | Enviar un mensaje en el caso (`messages.send`) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Leer los mensajes de un caso (`messages.read`) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Ver/descargar la biblioteca de formularios (R14) (`formularios.read`) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |

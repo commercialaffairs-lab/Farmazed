@@ -132,8 +132,9 @@ test.describe('TAREA 34 — Plan Empresarial (solicitud -> condiciones -> suscri
     // poco el diálogo llega tarde, justo cuando logout() ya está navegando
     // y la página deja de estar "attached" (mismo patrón TAREA 26: armar el
     // esperador ANTES de disparar la acción, correr ambos en paralelo).
+    // (Hoy el aviso es un modal propio auto-resuelto en pruebas: se espera la respuesta del PUT.)
     await Promise.all([
-      page.waitForEvent('dialog'),
+      page.waitForResponse(r => r.url().includes('/condiciones') && r.request().method() === 'PUT'),
       fila.locator('button[type="submit"]').click(),
     ]);
     await logout(page);
