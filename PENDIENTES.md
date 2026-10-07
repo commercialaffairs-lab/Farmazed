@@ -50,6 +50,10 @@ Detalle técnico de cada tarea en `handover.md`. PayPal paso a paso en `PAYPAL_S
 
 Sin API pública (investigación de Rick con Claude web): se integró **por enlace de pago, uno por producto**. El admin crea el cobro en el panel de Rapid PayPro, pega el enlace en la línea de la cotización (Cotizaciones → "Rapid PayPro: Guardar enlace"), el cliente paga en la página de Rapid PayPro desde su portal y, cuando el panel muestra el pago, el admin pulsa "Confirmar pago recibido": se registran los pagos por concepto (`origen: rapidpaypro`) y el trámite avanza igual que con PayPal. Una cotización se cobra por una sola vía (PayPal o Rapid PayPro). Pendiente de Rick: pedir a Rapid PayPro (info@rapidpaypro.com) la API/webhook con las 8 preguntas de la investigación; con eso se automatiza.
 
+## Estado al 07-oct-2026 (cierre de la ronda de Rick)
+
+Rick terminó lo que dependía de él; solo esperan respuesta externa: **PayPal** (desbloqueo de la cuenta → Webhook ID) y **Rapid PayPro** (API/webhook, correo enviado a info@rapidpaypro.com). El siguiente paso es un **deploy de revisión** (sandbox de PayPal) para que Zelky y su staff revisen registro, flujos, landing y blog; instrucciones para los developers en `handover.md` ("Deploy de revisión para Zelky").
+
 ## Antes del deploy a producción
 
 - [ ] Cuenta PayPal Business y app (sandbox primero): `PAYPAL_SETUP.md` §1–3.
