@@ -45,12 +45,16 @@ function resolverModo(argv, env) {
   // emulador exige AMBAS variables. Con solo una, la otra mitad iría a producción.
   const hostFirestore = !!env.FIRESTORE_EMULATOR_HOST;
   const hostAuth = !!env.FIREBASE_AUTH_EMULATOR_HOST;
-  const enEmulador = hostFirestore && hostAuth;
+  // Demo con Auth REAL del proyecto de PRUEBAS (FZ_AUTH=real, 06-oct): Firestore emulado + Auth real
+  // de `farmazed-pruebas`. Se admite solo con la bandera y solo si el proyecto no es el de producción.
+  const authRealDePruebas = env.FZ_AUTH === 'real' && hostFirestore && !hostAuth
+    && !!env.FIREBASE_PROJECT_ID && env.FIREBASE_PROJECT_ID !== 'farmazed';
+  const enEmulador = (hostFirestore && hostAuth) || authRealDePruebas;
   const prod = argv.includes('--prod');
   const confirm = argv.includes('--confirm');
   const proyectos = argv.filter(a => a.startsWith('--project='));
   const proyecto = proyectos.length ? proyectos[0].slice('--project='.length) || null : null;
-  if (hostFirestore !== hostAuth) return { error: 'Define AMBOS emuladores (FIRESTORE_EMULATOR_HOST y FIREBASE_AUTH_EMULATOR_HOST) o ninguno: con uno solo, la otra mitad del script escribiría en producción.' };
+  if (hostFirestore !== hostAuth && !authRealDePruebas) return { error: 'Define AMBOS emuladores (FIRESTORE_EMULATOR_HOST y FIREBASE_AUTH_EMULATOR_HOST) o ninguno: con uno solo, la otra mitad del script escribiría en producción.' };
   if (prod && enEmulador) return { error: '--prod no se combina con los emuladores (apuntaría el emulador como si fuera producción).' };
   if (confirm && !prod) return { error: '--confirm solo vale junto con --prod.' };
   if (!enEmulador && !prod) {

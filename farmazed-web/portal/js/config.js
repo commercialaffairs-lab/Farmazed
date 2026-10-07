@@ -28,7 +28,20 @@ const FIREBASE_CONFIG_LOCAL = {
   appId:             "1:000000000000:web:0000000000000000000000",
 };
 
-const FIREBASE_CONFIG = IS_LOCAL ? FIREBASE_CONFIG_LOCAL : FIREBASE_CONFIG_PROD;
+// Proyecto Firebase de PRUEBAS (farmazed-pruebas, creado por Rick el 06-oct-2026): Auth REAL —
+// correos de verificación de verdad, a cuentas reales — con Firestore/Storage emulados. Solo en
+// local y solo si demo.html lo activó (FZ_AUTH=real -> localStorage.fzAuthReal). Nunca en producción.
+const FIREBASE_CONFIG_PRUEBAS = {
+  apiKey:            "AIzaSyAjp26W3XwTLQCKaww_bF1rlQ9qI34nBa8",
+  authDomain:        "farmazed-pruebas.firebaseapp.com",
+  projectId:         "farmazed-pruebas",
+  storageBucket:     "farmazed-pruebas.firebasestorage.app",
+  messagingSenderId: "922744031069",
+  appId:             "1:922744031069:web:b2a31a2de27522ac474ab4",
+};
+const AUTH_REAL = IS_LOCAL && (() => { try { return localStorage.getItem('fzAuthReal') === '1'; } catch (e) { return false; } })();
+
+const FIREBASE_CONFIG = IS_LOCAL ? (AUTH_REAL ? FIREBASE_CONFIG_PRUEBAS : FIREBASE_CONFIG_LOCAL) : FIREBASE_CONFIG_PROD;
 
 /**
  * ⚠️  DEVELOPER TOUCHPOINT #2
@@ -100,4 +113,4 @@ const FEATURES = {
   clientePrecios: isFeatureOn('clientePrecios'),
 };
 
-export { FIREBASE_CONFIG, API_BASE, IS_LOCAL, FEATURES, localAuthPort };
+export { FIREBASE_CONFIG, API_BASE, IS_LOCAL, AUTH_REAL, FEATURES, localAuthPort };

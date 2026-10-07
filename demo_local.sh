@@ -7,6 +7,9 @@
 #
 # Uso:
 #   ./demo_local.sh
+#   FZ_AUTH=real ./demo_local.sh   # Auth REAL (proyecto farmazed-pruebas: correos de verificación de
+#                                  # verdad) con Firestore/Storage emulados. Requiere credenciales de
+#                                  # Google (ADC) con acceso a ese proyecto: ver DEV_LOCAL.md.
 #   (pensado para correr dentro de una sesión tmux que quede viva: ver
 #   DEV_LOCAL.md, sección "Demo a mano para Rick")
 
@@ -75,12 +78,29 @@ if ! grep -q "All emulators ready" /tmp/demo-local-emulators.log 2>/dev/null; th
 fi
 echo "  emuladores listos."
 
+# FZ_AUTH=real: sin FIREBASE_AUTH_EMULATOR_HOST (el admin SDK habla con el Auth REAL del proyecto de
+# pruebas, con las credenciales ADC) y FIREBASE_PROJECT_ID del proyecto real. Firestore y Storage
+# siguen emulados: los datos de la demo no salen de esta máquina; solo las cuentas viven en Firebase.
+FZ_AUTH="${FZ_AUTH:-emulador}"
+if [ "$FZ_AUTH" = real ]; then
+  PROYECTO="${FZ_FIREBASE_PROJECT:-farmazed-pruebas}"
+  AUTH_ENV=()
+  if [ -z "${GOOGLE_APPLICATION_CREDENTIALS:-}" ] && [ ! -f "$HOME/.config/gcloud/application_default_credentials.json" ]; then
+    echo "❌ FZ_AUTH=real necesita credenciales de Google: GOOGLE_APPLICATION_CREDENTIALS o 'gcloud auth application-default login'."; exit 1
+  fi
+  echo "→ Auth: REAL (proyecto $PROYECTO) — los correos de verificación llegan de verdad. Firestore/Storage: emulados."
+else
+  PROYECTO=demo-farmazed
+  AUTH_ENV=(FIREBASE_AUTH_EMULATOR_HOST=localhost:$AUTH_PORT)
+fi
+
 SEED_ENV=(
   env
   FIRESTORE_EMULATOR_HOST=localhost:$FIRESTORE_PORT
-  FIREBASE_AUTH_EMULATOR_HOST=localhost:$AUTH_PORT
+  "${AUTH_ENV[@]}"
+  FZ_AUTH=$FZ_AUTH
   STORAGE_EMULATOR_HOST=http://localhost:$STORAGE_PORT
-  FIREBASE_PROJECT_ID=demo-farmazed
+  FIREBASE_PROJECT_ID=$PROYECTO
   GCS_BUCKET=demo-farmazed.appspot.com
 )
 
@@ -122,11 +142,12 @@ TRACKER_OK=""
 for intento in 1 2 3; do
   TRACKER_PORT=$(find_free_port "$TRACKER_PORT")
   echo "→ Levantando tracker en :$TRACKER_PORT (PRICING_TABLE=24sep, intento $intento)..."
-  (cd tracker && \
+  (cd tracker && env \
     FIRESTORE_EMULATOR_HOST=localhost:$FIRESTORE_PORT \
-    FIREBASE_AUTH_EMULATOR_HOST=localhost:$AUTH_PORT \
+    "${AUTH_ENV[@]}" \
+    FZ_AUTH=$FZ_AUTH \
     STORAGE_EMULATOR_HOST=http://localhost:$STORAGE_PORT \
-    FIREBASE_PROJECT_ID=demo-farmazed \
+    FIREBASE_PROJECT_ID=$PROYECTO \
     GCS_BUCKET=demo-farmazed.appspot.com \
     ADMIN_KEY=dev-admin-local \
     MCP_KEY=dev-mcp-local \
@@ -161,7 +182,10 @@ cat > "$REPO_ROOT/farmazed-web/demo.html" <<HTML
 <p>Entrando a la demo…</p>
 <script>
   if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
-    try { localStorage.setItem('fzApiPort', '$TRACKER_PORT'); } catch (e) { /* noop */ }
+    try {
+      localStorage.setItem('fzApiPort', '$TRACKER_PORT');
+      localStorage.setItem('fzAuthReal', '$([ "$FZ_AUTH" = real ] && echo 1 || echo 0)'); // Auth real (farmazed-pruebas) o emulador
+    } catch (e) { /* noop */ }
   }
   location.replace('/login.html');
 </script>

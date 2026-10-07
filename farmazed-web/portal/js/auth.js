@@ -5,7 +5,7 @@ import { initializeApp }          from 'https://www.gstatic.com/firebasejs/10.11
 import { getAuth, connectAuthEmulator, createUserWithEmailAndPassword, signInWithEmailAndPassword,
          signOut, onAuthStateChanged, updateProfile }
   from 'https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js';
-import { FIREBASE_CONFIG, API_BASE, IS_LOCAL, localAuthPort } from './config.js';
+import { FIREBASE_CONFIG, API_BASE, IS_LOCAL, AUTH_REAL, localAuthPort } from './config.js';
 
 const firebaseApp = initializeApp(FIREBASE_CONFIG);
 const auth        = getAuth(firebaseApp);
@@ -15,7 +15,7 @@ const auth        = getAuth(firebaseApp);
 // config.js) y puerto configurable (localAuthPort() — 9099 por defecto, para
 // cuando una corrida de pruebas necesita su propio emulador de Auth sin
 // pisar el de otra corrida ya viva, p.ej. la demo de Rick).
-if (IS_LOCAL) {
+if (IS_LOCAL && !AUTH_REAL) { // AUTH_REAL: proyecto de pruebas de verdad (correos reales), ver config.js
   connectAuthEmulator(auth, `http://${window.location.hostname}:${localAuthPort()}`, { disableWarnings: true });
 }
 

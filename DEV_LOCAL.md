@@ -399,3 +399,30 @@ Los puertos llegan al navegador por `localStorage` (`fzApiPort`/`fzAuthPort`, ve
 `portal/js/config.js`); `e2e/playwright.config.js` los fija una vez para todos los specs
 (`storageState`), así ningún spec tiene que acordarse de ponerlos.
 
+
+## Demo con correos reales (`FZ_AUTH=real`, 06-oct-2026)
+
+Para probar el registro con cuentas de correo de verdad (verificación por correo) sin tocar
+producción: Auth **real** del proyecto Firebase de pruebas `farmazed-pruebas` (creado por Rick
+el 06-oct) + Firestore y Storage **emulados**. Los datos de la demo siguen en esta máquina; solo
+las cuentas (correo, contraseña, claims de rol) viven en ese proyecto.
+
+```
+FZ_AUTH=real ./demo_docker.sh      # Windows con Docker (PC de Rick)
+FZ_AUTH=real ./demo_local.sh       # Linux (Patch)
+```
+
+- Requiere credenciales de Google (ADC) de una cuenta con acceso a `farmazed-pruebas`
+  (`gcloud auth application-default login`). `demo_docker.sh` las copia a
+  `.tools/adc-farmazed-pruebas.json` (ignorado por git) con la cuota apuntando a ese proyecto,
+  sin tocar el ADC global.
+- `demo.html` deja `localStorage.fzAuthReal=1`; `portal/js/config.js` elige entonces
+  `FIREBASE_CONFIG_PRUEBAS` y `auth.js` no conecta el emulador de Auth. Solo dentro de
+  `IS_LOCAL`: producción nunca lo ve.
+- El tracker corre sin `FIREBASE_AUTH_EMULATOR_HOST` y con `FIREBASE_PROJECT_ID=farmazed-pruebas`;
+  `migrate_roles.js` admite esa mezcla solo con `FZ_AUTH=real` y un proyecto distinto de `farmazed`.
+- Los seeds crean los usuarios de prueba (`admin-e3@farmazed.test`, etc.) en el proyecto real;
+  esos correos no reciben nada, pero sirven para entrar. Para probar el correo de verificación:
+  `demo.html` → "Crear cuenta" con un Gmail real → el correo llega desde
+  `noreply@farmazed-pruebas.firebaseapp.com`.
+- Limpieza: Firebase Console → Authentication → Usuarios (borrar los de prueba cuando se quiera).

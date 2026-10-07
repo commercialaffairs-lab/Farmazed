@@ -6,6 +6,9 @@
 #
 #   ./demo_docker.sh              # levanta la demo
 #   ./demo_docker.sh --build      # reconstruye la imagen (la primera vez la construye sola)
+#   FZ_AUTH=real ./demo_docker.sh # Auth REAL (farmazed-pruebas, correos de verdad) + Firestore/Storage
+#                                 # emulados; monta tus credenciales de Google (ADC) con cuota en ese
+#                                 # proyecto desde .tools/adc-farmazed-pruebas.json (se crea solo).
 #
 # Entrar: http://localhost:8092/demo.html  (usuarios de prueba: ver demo_local.sh)
 #
@@ -34,8 +37,20 @@ for p in 8092 9099 9199 4040 "$TRACKER_PORT"; do
 done
 
 ENV_MONTAJE=()
+if [ "${FZ_AUTH:-}" = real ]; then
+  ADC=.tools/adc-farmazed-pruebas.json
+  if [ ! -f "$ADC" ]; then
+    ORIGEN="${APPDATA:-$HOME/.config}/gcloud/application_default_credentials.json"
+    [ -f "$ORIGEN" ] || { echo "❌ No hay credenciales de Google (ADC). Corre: gcloud auth application-default login"; exit 1; }
+    mkdir -p .tools
+    # copia con la cuota apuntando al proyecto de pruebas, sin tocar tu ADC global
+    node -e "const fs=require(\"fs\");const j=JSON.parse(fs.readFileSync(process.argv[1],\"utf8\"));j.quota_project_id=\"${FZ_FIREBASE_PROJECT:-farmazed-pruebas}\";fs.writeFileSync(process.argv[2],JSON.stringify(j))" "$ORIGEN" "$ADC"
+  fi
+  ENV_MONTAJE+=(-v "$REPO/$ADC:/adc.json:ro" -e GOOGLE_APPLICATION_CREDENTIALS=/adc.json -e FZ_AUTH=real -e "FZ_FIREBASE_PROJECT=${FZ_FIREBASE_PROJECT:-farmazed-pruebas}")
+  echo "→ Auth REAL: las cuentas viven en Firebase (${FZ_FIREBASE_PROJECT:-farmazed-pruebas}); correos de verificación reales."
+fi
 if [ -f tracker/.env ]; then
-  ENV_MONTAJE=(-v "$REPO/tracker/.env:/env/tracker.env:ro")
+  ENV_MONTAJE+=(-v "$REPO/tracker/.env:/env/tracker.env:ro")
   echo "→ tracker/.env encontrado: se pasa al contenedor (PayPal sandbox si tiene PAYMENTS_PROVIDER=paypal)."
 else
   echo "→ Sin tracker/.env: la demo usa el proveedor de pagos de prueba (mock)."

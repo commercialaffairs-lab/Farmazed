@@ -39,7 +39,7 @@ Detalle técnico de cada tarea en `handover.md`. PayPal paso a paso en `PAYPAL_S
 | # | Decisión | Estado |
 |---|---|---|
 | 5 | Webhook: túnel público (Cloudflare) desde la PC de Rick | Hecho: `./tunel_paypal.sh`. Falta registrar el webhook en PayPal y probar una suscripción. |
-| 6 | Proyecto Firebase de pruebas para correos reales (con las cuentas Gmail personales de Rick) | Pendiente. Necesita: crear el proyecto en console.firebase.google.com, activar Email/Password, pasar la configuración web; y en el código un modo "auth real + Firestore emulado" para la demo (trabajo del developer, ~medio día). |
+| 6 | Proyecto Firebase de pruebas para correos reales (con las cuentas Gmail personales de Rick) | Hecho: proyecto `farmazed-pruebas` (Rick) + modo `FZ_AUTH=real` en la demo (`DEV_LOCAL.md`). Login real verificado; falta que Rick pruebe el registro con su Gmail. |
 | 7 | Al dejar el Plan Empresarial la empresa conserva su información y los informes de la vigencia; el gestor de cuenta era parte del plan, así que deja de tenerlo. Para volver, Farmazed define condiciones nuevas. | Hecho en `services/suscripciones.js` (`camposFinPlanEmpresarial`), `routes/empresarial.js`, bandeja de empresas y portal; pruebas en `webhook_paypal`. |
 | 8 | Redes sociales del pie: Rick las crea | Pendiente de Rick; los iconos siguen en `#`. |
 | 9 | Secret de PayPal sandbox expuesto en el chat del 05-oct: no se rota; el entorno sandbox se suspende en una semana | Decisión de Rick. |
