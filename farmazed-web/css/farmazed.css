@@ -913,3 +913,9 @@
 .fz-faq-cta p { margin: 0 auto 0 0; font-family: 'Oswald', sans-serif; font-size: 1.05rem; color: #333; }
 /* artículos completos: la plantilla recortaba .post-text a 54px (extracto) */
 .main-blog .post-text { height: auto; overflow: visible; color: #555; margin-top: 12px; }
+
+/* ── Redes en el pie: solo X y YouTube (Rick, 07-oct); iconos SVG en línea ── */
+.f-socials { display: flex; gap: 14px; align-items: center; }
+.f-socials a { color: #fff; opacity: .8; display: inline-flex; transition: opacity .15s, transform .15s; }
+.f-socials a:hover, .f-socials a:focus-visible { opacity: 1; transform: translateY(-1px); outline: none; }
+.f-socials a:focus-visible svg { outline: 2px solid #fff; outline-offset: 3px; border-radius: 3px; }
