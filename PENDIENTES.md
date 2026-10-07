@@ -89,3 +89,7 @@ Rick terminó lo que dependía de él; solo esperan respuesta externa: **PayPal*
 - 9 pruebas de pantalla pasan, pero no se pueden repetir seguidas porque usan datos fijos. Para hacerlas repetibles, cada prueba tendría que crear sus propios casos. La lista está en `handover.md`, TAREA 42.
 - El rate limit vive en memoria y no se comparte entre instancias de Cloud Run. Basta mientras haya una sola instancia.
 - Las rutas `POST /api/orgs`, `GET /api/quotes/:id` y `DELETE /api/documents/:docId` no las usa la web. Se dejaron porque las usan las pruebas.
+
+## Después del deploy de revisión
+
+- **Subir `firebase-admin` de 12 a 14.5.0 (cambio mayor).** Es lo único que deja `npm audit` en `high` (`firebase-admin` y su dependencia `node-forge`) y arrastra las 7 moderadas (`uuid`, `google-gax`, `@google-cloud/firestore`, `@google-cloud/storage`). Hay que revisar el changelog contra nuestro uso (`verifyIdToken` con `checkRevoked`, `generateEmailVerificationLink`, Firestore, Storage) y correr `npm test` y las e2e. No se hizo antes del deploy para no cambiar la base de autenticación sin tiempo de prueba.

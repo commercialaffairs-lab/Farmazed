@@ -19,9 +19,16 @@ const { Router } = require('express');
 const { getProvider } = require('../services/payments');
 const { procesarEvento, ReintentarEvento } = require('../services/paypal_webhook');
 
+const { crearLimitador } = require('../utils/rate_limit');
+
 const router = Router();
 
+// Por IP y holgado (PayPal reintenta y manda ráfagas): frena un flood contra la verificación
+// de firma, que llama a la API de PayPal. 300/min.
+const limitador = crearLimitador({ ventanaMs: 60 * 1000, max: 300 });
+
 router.post('/', async (req, res) => {
+  if (limitador.estaLimitado(req.ip)) return res.status(429).json({ error: 'Demasiadas solicitudes.' });
   try {
     const provider = getProvider();
     const valido = await provider.verifyWebhookSignature(req.headers, req.body);

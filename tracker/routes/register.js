@@ -138,11 +138,17 @@ router.post('/', async (req, res) => {
 
 router.limitador = limitador; // para las pruebas en proceso (reset)
 
+// "Reenviar correo" manda un email por llamada (SMTP real): tope por uid, no por IP.
+const limitadorReenvio = crearLimitador({ ventanaMs: 10 * 60 * 1000, max: 5 });
+
 // ─── POST /api/register/reenviar-verificacion (sesión, cuenta aún sin verificar) ─────
 // "Reenviar correo" de verificar-correo.html con la plantilla de marca. Sin SMTP responde
 // `correoEnviado:false` y el navegador reenvía el de Firebase. Exento del 403 de "verifica tu
 // correo" en middleware/auth.js (EXEMPT_PATHS): es justamente para cuentas sin verificar.
 router.post('/reenviar-verificacion', requireAuth, async (req, res) => {
+  if (limitadorReenvio.estaLimitado(req.user.uid)) {
+    return res.status(429).json({ error: 'Demasiados reenvíos. Espera unos minutos antes de pedir otro correo.' });
+  }
   try {
     if (req.user.email_verified) return res.json({ correoEnviado: false, yaVerificado: true });
     const user = await admin.auth().getUser(req.user.uid);

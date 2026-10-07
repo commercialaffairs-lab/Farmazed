@@ -339,3 +339,12 @@ describe('Pagos por revisar — solo admin', () => {
     assert.equal((await fx.api(adminToken, 'POST', `/api/admin/revisiones-pago/no-existe-${RUN}/resolver`, {})).status, 404);
   });
 });
+
+describe('Webhook — rate limit', () => {
+  test('301 llamadas en un minuto desde la misma IP -> la última da 429', async () => {
+    const ip = require('./_ip').ipUnica();
+    let ultimo;
+    for (let i = 0; i < 301; i++) ultimo = await fx.api(null, 'POST', '/api/webhooks/paypal', evento('X.IGNORADO', {}), { 'X-Forwarded-For': ip });
+    assert.equal(ultimo.status, 429);
+  });
+});

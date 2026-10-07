@@ -6348,3 +6348,21 @@ Rick cerró su parte: PayPal sandbox (pago de cotización verificado de punta a 
 - Primer admin de producción: `scripts/bootstrap_admin.js`.
 
 **Para la revisión de Zelky** (lo que debe mirar): registro abierto con correo real → captación → Plan Consulta/Registro/Empresarial → cotización → pago (PayPal sandbox con la cuenta Personal de prueba de `PAYPAL_SETUP.md`) → fases → documentos → informes; admin: bandeja (leads, pagos por revisar), expedientes, cotizaciones (Rapid PayPro por enlace), empresas, precios; landing, blog y preguntas frecuentes (textos regulatorios por validar). Los pendientes de decisión están en `PENDIENTES.md`.
+
+## 2026-10-07 — TAREA 44: verificación previa al deploy de revisión (HEAD a9f6e74, sin commit ni push)
+- `npm ci` OK. `npm test`: 25 suites (24 + migración), 433 pass / 0 fail (incl. `webhook_paypal` 23, `pagos_rapidpaypro` 5, `pagos_paypal` 19, `paypal_contrato` 13).
+- e2e Playwright (`e2e/run.sh`): 31 passed / 0 failed (5.0 min). Cubre dialogos.js, pago_paypal, registro, precios, plan_consulta/empresarial, roles, xss. No hubo que cambiar código.
+- Secretos en `35559c1..a9f6e74`: ninguno. `tunel_paypal.sh`, `demo_docker.sh`, `docker-compose.yml` sin credenciales (solo referencias a variables). `tracker/.env` está en .gitignore y no versionado. Único hallazgo: `farmazed-web/portal/js/config.js:35` trae una `apiKey` web de Firebase (la de prod `farmazed`); es identificador público por diseño, pero conviene restringirla por referrer HTTP en Google Cloud Console (farmazed.com/www.farmazed.com).
+- Nota: la consola de `plan_consulta.spec` muestra un 501 en POST (servidor estático de la e2e); no falla la prueba.
+- No desplegué (lo coordina el PM con Rick).
+
+## 2026-10-07 — Anexo T44: rate limit + npm audit (sin commit)
+- `tracker/routes/register.js` (`limitadorReenvio`, 5/10 min por **uid**) en `POST /reenviar-verificacion` → 429. `tracker/routes/webhooks.js` (300/min por IP, `req.ip`) → 429 antes de verificar la firma. Ambos con `utils/rate_limit.js`.
+- Tests: `registro_captacion` (6to reenvío = 429) y `webhook_paypal` (301ª llamada = 429). `npm test` completo en verde.
+- `npm audit` (tracker, prod = todo): 15 (10 moderate, 4 high, 1 critical). Critical: `proxy-addr` (spoofing por IPv4-mapped IPv6 en *trust subnet*; el tracker usa `trust proxy 1`, por saltos; fix no mayor). High: `@grpc/grpc-js` (fix no mayor), `node-forge` y `firebase-admin` (fix = firebase-admin 14.5.0, MAJOR), `nodemailer` (fix = 10.0.16, MAJOR). No apliqué ningún fix: sin orden, y dos son majors.
+
+## 2026-10-07 — T44b: npm audit fix + nodemailer 10 (sin commit)
+- `npm audit fix` (sin --force): solo `package-lock.json` (proxy-addr, @grpc/grpc-js).
+- `nodemailer` ^6.10.1 → ^10.0.16 (`tracker/package.json`). Changelog 7→10: breaking = Node ≥20 (Dockerfile `node:20-alpine`, OK), código de error `NoAuth`→`ENOAUTH` (no lo leemos), TLS validado al bajar contenido remoto (nuestro adjunto es `path` local). `services/correo.js` (createTransport + sendMail) sin cambios. Verificado con `jsonTransport` + adjunto cid; `npm test` completo verde. Sin SMTP real: probar el envío en el deploy.
+- `npm audit` final: 9 (7 moderate, 2 high), todo por `firebase-admin` 12 (`node-forge`, `uuid`, google-gax…); fix = firebase-admin 14.5.0 (mayor), anotado en PENDIENTES.md para después del deploy de revisión. Ninguna critical.
+- Antes del commit, `./verificar_local.sh`: backend 25 suites en verde; Playwright 30 pasan / 1 falla (`checklist_recibo_iea.spec.js:71`, "(opcional)" no cambia a obligatorio). En la primera corrida del día pasó 31/31 y repetido solo pasa 1/1: es una de las specs no repetibles (datos sembrados una vez, ver Deuda técnica/TAREA 42), no relacionada con estos cambios. Sin arreglo.

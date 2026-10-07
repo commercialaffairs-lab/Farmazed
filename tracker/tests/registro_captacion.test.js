@@ -128,6 +128,21 @@ describe('POST /api/register', () => {
   });
 });
 
+describe('POST /api/register/reenviar-verificacion', () => {
+  test('rate limit por uid — el 6to reenvío da 429', async () => {
+    const datos = { ...DATOS_BASE, correo: `lead-reenvio-${Date.now()}@farmazed.test` };
+    assert.equal((await post('/api/register', datos, withIp())).status, 201);
+    const token = await idTokenFor(datos.correo, datos.password);
+    const estados = [];
+    for (let i = 0; i < 6; i++) {
+      const res = await fetch(`${API_BASE}/api/register/reenviar-verificacion`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
+      estados.push(res.status);
+    }
+    assert.deepEqual(estados.slice(0, 5), [200, 200, 200, 200, 200]);
+    assert.equal(estados[5], 429);
+  });
+});
+
 describe('PATCH /api/orgs/mine/captacion', () => {
   let tokenTitular, tokenMiembro, tokenStaff;
 
