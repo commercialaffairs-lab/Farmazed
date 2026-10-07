@@ -125,12 +125,12 @@ echo "  idempotente, no duplica nada)..."
 if [ $? -ne 0 ]; then echo "❌ seed_pricing_24sep.js falló. Log:"; cat /tmp/demo-local-seed-precios.log; exit 1; fi
 echo "  seed OK."
 
-# PayPal sandbox (opcional): SOLO las líneas PAYMENTS_PROVIDER / PAYPAL_* de tracker/.env (ignorado
+# PayPal sandbox y SMTP (opcionales): SOLO las líneas PAYMENTS_PROVIDER / PAYPAL_* / SMTP_* de tracker/.env (ignorado
 # por git). Sin ese archivo, o sin PAYMENTS_PROVIDER=paypal, la demo sigue con el proveedor de prueba.
 PAYPAL_VARS=()
 if [ -f tracker/.env ]; then
   while IFS= read -r linea; do PAYPAL_VARS+=("$linea"); done \
-    < <(grep -E '^(PAYMENTS_PROVIDER|PAYPAL_[A-Z_]+)=' tracker/.env | sed -e 's/[[:space:]]*#.*$//' -e 's/\r$//')
+    < <(grep -E '^(PAYMENTS_PROVIDER|PAYPAL_[A-Z_]+|SMTP_[A-Z_]+)=' tracker/.env | sed -e 's/[[:space:]]*#.*$//' -e 's/\r$//')
 fi
 if printf '%s\n' "${PAYPAL_VARS[@]:-}" | grep -q '^PAYMENTS_PROVIDER=paypal$'; then
   echo "→ Pagos: PayPal REAL ($(printf '%s\n' "${PAYPAL_VARS[@]}" | grep '^PAYPAL_ENV=' || echo 'PAYPAL_ENV sin definir')), credenciales de tracker/.env."

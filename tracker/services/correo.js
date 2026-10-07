@@ -27,7 +27,8 @@ function transportador() {
     const port = Number(process.env.SMTP_PORT) || 587;
     transporte = nodemailer.createTransport({
       host: process.env.SMTP_HOST, port, secure: port === 465,
-      auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+      // Google muestra la contraseña de aplicación en grupos de 4 ("xxxx xxxx …"): los espacios no forman parte de ella.
+      auth: { user: process.env.SMTP_USER, pass: String(process.env.SMTP_PASS).replace(/\s+/g, '') },
     });
   }
   return transporte;
