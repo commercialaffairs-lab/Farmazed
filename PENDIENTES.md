@@ -46,6 +46,10 @@ Detalle técnico de cada tarea en `handover.md`. PayPal paso a paso en `PAYPAL_S
 | 11 | Correo oficial de la marca: `info@farmazed.com` (Google Workspace). Remitente del correo de verificación de marca y contacto del sitio. | Hecho. Correo de verificación de marca enviado por SMTP de Google (info@farmazed.com) y **aprobado por Rick el 07-oct**. Para producción: las 5 variables `SMTP_*` en Secret Manager (CORREOS.md). |
 | 9 | Secret de PayPal sandbox expuesto en el chat del 05-oct: no se rota; el entorno sandbox se suspende en una semana | Decisión de Rick. |
 
+## Rapid PayPro (07-oct-2026)
+
+Sin API pública (investigación de Rick con Claude web): se integró **por enlace de pago, uno por producto**. El admin crea el cobro en el panel de Rapid PayPro, pega el enlace en la línea de la cotización (Cotizaciones → "Rapid PayPro: Guardar enlace"), el cliente paga en la página de Rapid PayPro desde su portal y, cuando el panel muestra el pago, el admin pulsa "Confirmar pago recibido": se registran los pagos por concepto (`origen: rapidpaypro`) y el trámite avanza igual que con PayPal. Una cotización se cobra por una sola vía (PayPal o Rapid PayPro). Pendiente de Rick: pedir a Rapid PayPro (info@rapidpaypro.com) la API/webhook con las 8 preguntas de la investigación; con eso se automatiza.
+
 ## Antes del deploy a producción
 
 - [ ] Cuenta PayPal Business y app (sandbox primero): `PAYPAL_SETUP.md` §1–3.

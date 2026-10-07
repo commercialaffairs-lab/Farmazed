@@ -1938,6 +1938,9 @@ function renderCotizacion(quotes) {
           <div class="text-end" style="font-size:.75rem;color:#4b5563">
             <div>Honorarios Farmazed: B/. ${Number(l.honorariosFarmazed).toFixed(2)}</div>
             <div>Tasas oficiales: B/. ${Number(l.tasasOficiales).toFixed(2)}</div>
+            ${q.estado === 'aceptada' && l.pagoExterno?.estado === 'confirmado' ? '<div class="text-success mt-1"><i class="iconoir-check-circle"></i> Pagado por Rapid PayPro</div>' : ''}
+            ${q.estado === 'aceptada' && esTitular && l.pagoExterno?.url && l.pagoExterno.estado !== 'confirmado' && q.pagoPaypal?.estado !== 'capturada'
+              ? `<a class="btn-fz btn-fz-sm btn-fz-outline mt-1" href="${esc(l.pagoExterno.url)}" target="_blank" rel="noopener">Pagar con Rapid PayPro</a>` : ''}
           </div>
         </div>`).join('');
 
@@ -1951,10 +1954,17 @@ function renderCotizacion(quotes) {
       // todavía no se capturó un pago — el monto NUNCA sale de este botón,
       // lo calcula el servidor desde la propia cotización.
       const yaPagada = q.pagoPaypal?.estado === 'capturada';
+      // Rapid PayPro (enlace por producto): si algún producto ya se pagó por ahí, el resto va por la misma vía.
+      const algunaPorRapidPay = q.lineas.some(l => l.pagoExterno?.estado === 'confirmado');
+      const todasPorRapidPay = q.lineas.filter(l => (l.tipo || 'principal') === 'principal').every(l => l.pagoExterno?.estado === 'confirmado');
       const pagoHtml = (q.estado === 'aceptada' && esTitular) ? (
         yaPagada
           ? `<div class="small text-success mt-2"><i class="iconoir-check-circle"></i> Pagado con PayPal (orden ${esc(q.pagoPaypal.orderId)}).</div>`
-          : `<div class="mt-3"><button class="btn-fz btn-fz-sm btn-pagar-paypal" data-quote="${esc(q.id)}">Pagar con PayPal</button></div>`
+          : todasPorRapidPay
+            ? '<div class="small text-success mt-2"><i class="iconoir-check-circle"></i> Pagado por Rapid PayPro.</div>'
+            : algunaPorRapidPay
+              ? '<div class="small text-muted mt-2">Los productos pendientes se pagan con su enlace de Rapid PayPro; Farmazed confirma cada pago al recibirlo.</div>'
+              : `<div class="mt-3 d-flex gap-2 flex-wrap align-items-center"><button class="btn-fz btn-fz-sm btn-pagar-paypal" data-quote="${esc(q.id)}">Pagar con PayPal</button>${q.lineas.some(l => l.pagoExterno?.url) ? '<span class="small text-muted">o con el enlace de Rapid PayPro de cada producto</span>' : ''}</div>`
       ) : '';
 
       return `

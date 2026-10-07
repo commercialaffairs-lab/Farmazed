@@ -298,6 +298,11 @@ function verificarAccesoYEstado(user, data) {
   if (data.estado !== 'aceptada') {
     throw new HttpError(400, { error: `Solo se puede pagar una cotización 'aceptada' (esta está '${data.estado}').` });
   }
+  // Una cotización se cobra por UNA vía: si un producto ya se confirmó por Rapid PayPro
+  // (routes/pago_externo.js), PayPal no cobra el total (cobraría dos veces ese producto).
+  if ((data.lineas || []).some(l => l.pagoExterno?.estado === 'confirmado')) {
+    throw new HttpError(409, { error: 'Esta cotización ya tiene productos pagados por Rapid PayPro: el resto se cobra por la misma vía (contacta a Farmazed).' });
+  }
 }
 
 // ─── POST /api/quotes/:id/pago/crear-orden (cliente_titular) ─────────────────

@@ -152,6 +152,15 @@
             </div>
             <button class="btn btn-sm btn-outline-primary btn-guardar-linea">Guardar</button>
           ` : ''}
+          ${!esExtra && puedeEditar && ['borrador', 'enviada', 'aceptada'].includes(q.estado) ? `
+            <div class="w-100 d-flex align-items-center gap-2 flex-wrap mt-1 pago-externo">
+              <span class="text-muted" style="font-size:.72rem">Rapid PayPro:</span>
+              ${l.pagoExterno?.estado === 'confirmado'
+                ? `<span class="badge bg-success-subtle text-success border border-success-subtle">Pagado por Rapid PayPro${l.pagoExterno.referencia ? ` · ref. ${esc(l.pagoExterno.referencia)}` : ''}</span>`
+                : `<input type="url" class="form-control form-control-sm inp-enlace-externo" style="max-width:320px" placeholder="https://link.rapidpaypro.com/…" value="${esc(l.pagoExterno?.url || '')}">
+                   <button class="btn btn-sm btn-outline-secondary btn-guardar-enlace">Guardar enlace</button>
+                   ${q.estado === 'aceptada' && l.pagoExterno?.url ? '<button class="btn btn-sm btn-outline-success btn-confirmar-externo">Confirmar pago recibido</button>' : ''}`}
+            </div>` : ''}
         </div>`;
       }).join('');
 
@@ -178,6 +187,28 @@
         row.querySelector('.sel-modalidad-iea').disabled = !chk.checked || chk.disabled;
       });
     });
+
+    // Rapid PayPro por enlace (07-oct): el admin crea el cobro en su panel y pega el enlace del producto;
+    // cuando el panel muestra el pago, "Confirmar pago recibido" registra los pagos por concepto.
+    box.querySelectorAll('.btn-guardar-enlace').forEach(btn => btn.addEventListener('click', async () => {
+      const row = btn.closest('.linea-row');
+      btn.disabled = true;
+      try {
+        await api.setEnlacePagoExterno(row.dataset.quote, row.dataset.case, row.querySelector('.inp-enlace-externo').value.trim() || null);
+        await loadQuotes();
+      } catch (err) { await avisar('Error: ' + err.message); btn.disabled = false; }
+    }));
+    box.querySelectorAll('.btn-confirmar-externo').forEach(btn => btn.addEventListener('click', async () => {
+      const row = btn.closest('.linea-row');
+      const referencia = await preguntar('Referencia del pago en Rapid PayPro (opcional):');
+      if (referencia === null) return;
+      if (!(await confirmar('Se registrarán los pagos de este producto como recibidos por Rapid PayPro y el trámite podrá avanzar. ¿Confirmar?'))) return;
+      btn.disabled = true;
+      try {
+        await api.confirmarPagoExterno(row.dataset.quote, row.dataset.case, referencia);
+        await loadQuotes();
+      } catch (err) { await avisar('Error: ' + err.message); btn.disabled = false; }
+    }));
 
     box.querySelectorAll('.btn-guardar-linea').forEach(btn => {
       btn.addEventListener('click', async () => {

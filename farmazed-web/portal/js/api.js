@@ -188,6 +188,9 @@ const api = {
     body: JSON.stringify(data),
   }),
   sendQuote:    (id) => apiFetch(`/api/quotes/${id}/send`, { method: 'POST' }),
+  // Rapid PayPro por enlace (07-oct): un enlace por producto; el admin confirma el pago cuando lo ve en su panel.
+  setEnlacePagoExterno: (quoteId, caseId, url) => apiFetch(`/api/quotes/${quoteId}/lineas/${caseId}/pago-externo`, { method: 'PUT', body: JSON.stringify({ url }) }),
+  confirmarPagoExterno: (quoteId, caseId, referencia) => apiFetch(`/api/quotes/${quoteId}/lineas/${caseId}/pago-externo/confirmar`, { method: 'POST', body: JSON.stringify({ referencia }) }),
   respondQuote: (id, decision, motivo) => apiFetch(`/api/quotes/${id}/respond`, {
     method: 'POST',
     body: JSON.stringify({ decision, motivo }),

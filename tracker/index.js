@@ -175,6 +175,7 @@ app.use('/api/cases/:caseId/formularios', formulariosRouter.porCaso);
 app.use('/api/formularios', formulariosRouter.biblioteca);
 
 // ── R5/R12: cotizaciones (TAREA 18) — por encima de los casos, agrupa N por empresa ──
+app.use('/api/quotes/:id/lineas/:caseId/pago-externo', require('./routes/pago_externo')); // Rapid PayPro por enlace (07-oct)
 app.use('/api/quotes', quotesRouter);
 
 // ── E3 parte 1/2: empresas + alta por invitación + permisos (PM_COMMENTS §H.4) ──
