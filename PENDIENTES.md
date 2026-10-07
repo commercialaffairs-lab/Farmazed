@@ -54,6 +54,13 @@ Sin API pública (investigación de Rick con Claude web): se integró **por enla
 
 Rick terminó lo que dependía de él; solo esperan respuesta externa: **PayPal** (desbloqueo de la cuenta → Webhook ID) y **Rapid PayPro** (API/webhook, correo enviado a info@rapidpaypro.com). El siguiente paso es un **deploy de revisión** (sandbox de PayPal) para que Zelky y su staff revisen registro, flujos, landing y blog; instrucciones para los developers en `handover.md` ("Deploy de revisión para Zelky").
 
+## Más medios de pago (ideas de Rick, 07-oct-2026; sin trabajo de código hasta tener respuestas)
+
+| Medio | Qué es | Siguiente paso |
+|---|---|---|
+| **Yappy (Banco General)** | Billetera local con **Botón de Pago Yappy** para webs (documentación y plugins propios; se activa con la cuenta Yappy Comercial). Además, el enlace de Rapid PayPro ya acepta Yappy. | Rick abre/verifica la cuenta Yappy Comercial y pide el acceso al Botón de Pago; con credenciales se integra como proveedor propio (crear cobro + confirmación). Mientras tanto, Yappy funciona vía los enlaces de Rapid PayPro. |
+| **Google Pay / Apple Pay** | Billeteras: no cobran solas, necesitan una pasarela que las acepte. Integración directa no recomendada (pasarela compatible + PCI + aprobación de Google). | Preguntar a Rapid PayPro si su página de pago las admite, y a PayPal si están disponibles para Panamá. |
+
 ## Antes del deploy a producción
 
 - [ ] Cuenta PayPal Business y app (sandbox primero): `PAYPAL_SETUP.md` §1–3.
