@@ -1,0 +1,14 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "overused-font",
+        "value": "arial",
+        "createdAt": "2026-10-07T05:13:29.174Z",
+        "reason": "Claude: plantilla de correo HTML (tracker/emails/verificacion.html); los clientes de correo no cargan fuentes web, Arial/Georgia son la pila segura"
+      }
+    ]
+  }
+}

@@ -12,7 +12,7 @@ Firebase Console → proyecto → **Authentication → Plantillas → Verificaci
 correo electrónico** → lápiz:
 
 - **Nombre del remitente**: `Farmazed`
-- **Responder a**: `contacto@farmazed.com`
+- **Responder a**: `info@farmazed.com`
 - **Asunto**: `Confirma tu correo para entrar al portal Farmazed`
 - **Mensaje**:
 
@@ -46,17 +46,18 @@ Sin SMTP, todo sigue como hoy (correo de Firebase).
 Variables (Secret Manager en Cloud Run; `tracker/.env` en local):
 
 ```
-SMTP_HOST=smtp.<proveedor>.com
+SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
-SMTP_USER=<usuario o api key>
-SMTP_PASS=<contraseña o api key>
-SMTP_FROM=Farmazed <no-reply@farmazed.com>
+SMTP_USER=info@farmazed.com
+SMTP_PASS=<contraseña de aplicación de Google>
+SMTP_FROM=Farmazed <info@farmazed.com>
 ```
 
-Proveedor: cualquiera con SMTP (Brevo, SendGrid, Mailgun, Postmark, Google Workspace). Lo que
-hay que decidir: cuál, y verificar el dominio `farmazed.com` en él (SPF/DKIM) para que
-`no-reply@farmazed.com` no caiga en spam. Para una prueba rápida sirve una cuenta de Gmail con
-"contraseña de aplicación" (`smtp.gmail.com`, 587) y `SMTP_FROM` con ese mismo Gmail.
+El correo oficial es `info@farmazed.com` (Google Workspace). Para enviar desde él:
+`SMTP_HOST=smtp.gmail.com`, `SMTP_PORT=587`, `SMTP_USER=info@farmazed.com`, `SMTP_PASS=<contraseña
+de aplicación>` (Google: cuenta info@ → Seguridad → verificación en 2 pasos activada → Contraseñas
+de aplicaciones → nueva, 16 caracteres) y `SMTP_FROM=Farmazed <info@farmazed.com>`. Google ya firma
+SPF/DKIM del dominio. Límite de Workspace: ~2.000 correos/día por cuenta, de sobra.
 
 Dónde se usa: `POST /api/register` (al crear la cuenta) y `POST /api/register/reenviar-verificacion`
 (botón "Reenviar correo"). El enlace vuelve a `PORTAL_URL/verificar-correo.html`.
