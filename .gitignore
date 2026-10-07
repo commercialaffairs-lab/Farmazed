@@ -41,3 +41,6 @@ e2e/playwright-report/
 # TAREA 41
 graphify-out/
 farmazed-web/demo.html
+
+# binarios descargados por tunel_paypal.sh
+.tools/

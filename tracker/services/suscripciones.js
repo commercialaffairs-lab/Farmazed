@@ -82,6 +82,22 @@ async function guardarSuscripcion(orgRef, provider, subscriptionId, campo, previ
   }
 }
 
+/**
+ * Al terminar el Plan Empresarial (cancelación o cambio al plan global) la empresa conserva su
+ * información y los informes generados durante la vigencia, pero deja de tener gestor de cuenta:
+ * el gestor es parte de ese plan, no de la empresa (decisión de Rick, 06-oct-2026). Para volver al
+ * Plan Empresarial, Farmazed define las condiciones de nuevo (routes/empresarial.js).
+ */
+function camposFinPlanEmpresarial(org, ahora) {
+  const propuesta = org?.propuestaEmpresarial;
+  if (!propuesta?.gestorCuenta) return {};
+  return {
+    'propuestaEmpresarial.gestorCuentaAnterior': propuesta.gestorCuenta,
+    'propuestaEmpresarial.gestorCuenta': null,
+    'propuestaEmpresarial.gestorHasta': ahora,
+  };
+}
+
 /** Lo que se escribe en la empresa cuando su `cambioDePlan` entra en vigor (sin efectos: lo usa
  *  también el webhook dentro de su propia transacción). */
 function cambiosDeCambioDePlan(org, ahora) {
@@ -92,6 +108,7 @@ function cambiosDeCambioDePlan(org, ahora) {
   return {
     suscripcion: { ...cambio, estado: 'activa', actualizadaEn: ahora, ...(anterior ? { anterior } : {}) },
     cambioDePlan: admin.firestore.FieldValue.delete(),
+    ...(anterior?.tipo === 'empresarial' ? camposFinPlanEmpresarial(org, ahora) : {}),
   };
 }
 
@@ -167,4 +184,4 @@ async function suscribirEmpresa(orgRef, tipo, resolverPlan, extra = () => ({})) 
   return { ...nueva, approveUrl: creada.approveUrl, cambioDePlan: !!vigente };
 }
 
-module.exports = { tipoDeSuscripcion, suscribirEmpresa, aplicarCambioDePlan, cambiosDeCambioDePlan, cancelarAnterior, claveSuscripcion };
+module.exports = { tipoDeSuscripcion, suscribirEmpresa, aplicarCambioDePlan, cambiosDeCambioDePlan, camposFinPlanEmpresarial, cancelarAnterior, claveSuscripcion };

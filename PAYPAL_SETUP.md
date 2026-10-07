@@ -51,9 +51,11 @@ En la misma app → *Add Webhook*:
   - `BILLING.SUBSCRIPTION.PAYMENT.FAILED`
 - [ ] Anotar el **Webhook ID**.
 
-PayPal tiene que poder llegar a esa URL desde internet. La demo local (túnel SSH
-desde Argus) **no** es alcanzable por PayPal. Opciones: un túnel público tipo
-`cloudflared` (hay que instalarlo) o probar ya desplegado en Cloud Run.
+PayPal tiene que poder llegar a esa URL desde internet. La demo local **no** lo es
+por sí sola. Para pruebas: `./tunel_paypal.sh` (abre un túnel público de Cloudflare
+al tracker de la demo e imprime la URL del webhook; no instala nada, descarga el
+binario en `.tools/`). La URL cambia cada vez que se relanza el túnel: hay que
+actualizarla en PayPal. Para producción, la URL es la de Cloud Run.
 
 ## 4. Dónde van las credenciales
 
@@ -152,4 +154,5 @@ primero a comprobar en Sandbox, con una suscripción de prueba y un cambio de pl
 - [ ] Entrar por `http://localhost:8092/demo.html` (ese origen exacto: PayPal devuelve ahí).
 - [ ] Pagar una cotización aceptada con la cuenta **Personal** de sandbox. PayPal devuelve
       al portal, que captura el pago y lo registra.
-- [ ] (Opcional, para suscripciones y cambios de plan) túnel público o deploy de prueba.
+- [ ] (Para suscripciones y cambios de plan) `./tunel_paypal.sh` + webhook registrado en
+      PayPal con esa URL + `PAYPAL_WEBHOOK_ID` real en `tracker/.env` + reiniciar la demo.

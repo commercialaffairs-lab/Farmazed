@@ -143,21 +143,49 @@ describe('Cambio de plan — una sola suscripción, la nueva rige al cierre del 
     assert.equal((await fx.api(titular.token, 'POST', '/api/empresarial/aceptar')).status, 409);
   });
 
-  test('empresarial -> global: el camino de vuelta también es un cambio de plan', async () => {
-    const empresarial = (await org(titular.orgId)).suscripcion;
+  test('empresarial -> global: el camino de vuelta también es un cambio de plan, y la empresa deja de tener gestor', async () => {
+    const antes = await org(titular.orgId);
+    const empresarial = antes.suscripcion;
+    const gestor = antes.propuestaEmpresarial.gestorCuenta;
+    assert.ok(gestor);
     const r = await fx.api(titular.token, 'POST', '/api/subscription/subscribe');
     assert.equal(r.status, 201, JSON.stringify(r.json));
-    const s = (await org(titular.orgId)).suscripcion;
-    assert.equal(s.tipo, 'global');
-    assert.equal(s.anterior.subscriptionId, empresarial.subscriptionId);
+    const o = await org(titular.orgId);
+    assert.equal(o.suscripcion.tipo, 'global');
+    assert.equal(o.suscripcion.anterior.subscriptionId, empresarial.subscriptionId);
     // la empresarial empezaba a cobrarse en `rigeDesde`: la global nueva rige desde ese mismo día
-    assert.equal(s.rigeDesde.toMillis(), empresarial.rigeDesde.toMillis());
+    assert.equal(o.suscripcion.rigeDesde.toMillis(), empresarial.rigeDesde.toMillis());
+    // decisión de Rick (06-oct): conserva su información, pero el gestor era parte del plan
+    assert.equal(o.propuestaEmpresarial.gestorCuenta, null);
+    assert.equal(o.propuestaEmpresarial.gestorCuentaAnterior, gestor);
+    assert.ok(o.propuestaEmpresarial.gestorHasta);
+    assert.equal(o.propuestaEmpresarial.productosEstimados, '10 productos', 'la solicitud original se conserva');
   });
 
-  test('cancelar la suscripción la deja cancelada y permite volver a suscribirse', async () => {
+  test('sin gestor no se puede re-aceptar: Farmazed define condiciones nuevas y entonces sí', async () => {
+    const sinCondiciones = await fx.api(titular.token, 'POST', '/api/empresarial/aceptar');
+    assert.equal(sinCondiciones.status, 400);
+    assert.match(sinCondiciones.json.error, /condiciones de nuevo/);
+
+    const analista = await admin.auth().getUserByEmail('analista@farmazed.test');
+    const cond = await fx.api(adminToken, 'PUT', `/api/empresarial/${titular.orgId}/condiciones`, { monto: 600, periodo: 'mensual', gestorCuenta: analista.uid });
+    assert.equal(cond.status, 200, JSON.stringify(cond.json));
+    assert.equal(cond.json.gestorHasta, undefined, 'el plan nuevo no arrastra la fecha de fin del anterior');
+
+    const r = await fx.api(titular.token, 'POST', '/api/empresarial/aceptar'); // global activa -> cambio de plan
+    assert.equal(r.status, 201, JSON.stringify(r.json));
+    assert.equal((await org(titular.orgId)).suscripcion.tipo, 'empresarial');
+  });
+
+  test('cancelar la suscripción Empresarial la deja cancelada y sin gestor; para volver hacen falta condiciones nuevas', async () => {
     assert.equal((await fx.api(titular.token, 'POST', '/api/subscription/cancel')).status, 200);
-    assert.equal((await org(titular.orgId)).suscripcion.estado, 'cancelada');
-    const r = await fx.api(titular.token, 'POST', '/api/empresarial/aceptar'); // 'aceptada' sin Empresarial activo: se puede retomar
+    const o = await org(titular.orgId);
+    assert.equal(o.suscripcion.estado, 'cancelada');
+    assert.equal(o.propuestaEmpresarial.gestorCuenta, null);
+    assert.equal((await fx.api(titular.token, 'POST', '/api/empresarial/aceptar')).status, 400);
+    const analista = await admin.auth().getUserByEmail('analista@farmazed.test');
+    assert.equal((await fx.api(adminToken, 'PUT', `/api/empresarial/${titular.orgId}/condiciones`, { monto: 600, periodo: 'mensual', gestorCuenta: analista.uid })).status, 200);
+    const r = await fx.api(titular.token, 'POST', '/api/empresarial/aceptar');
     assert.equal(r.status, 201, JSON.stringify(r.json));
     assert.equal(r.json.cambioDePlan, false);
     assert.equal((await org(titular.orgId)).suscripcion.tipo, 'empresarial');
@@ -188,6 +216,19 @@ describe('Cambio de plan — una sola suscripción, la nueva rige al cierre del 
     // La anterior termina después: no toca a la nueva.
     await webhook(evento('BILLING.SUBSCRIPTION.CANCELLED', { id: 'I-VIEJA', custom_id: orgId }));
     assert.equal((await org(orgId)).suscripcion.estado, 'activa');
+  });
+
+  test('PayPal cancela una suscripción Empresarial (CANCELLED/EXPIRED): la empresa queda sin gestor', async () => {
+    const orgId = await empresaCon('fin-emp', {
+      suscripcion: suscripcion('I-EMP-FIN', 'activa', { tipo: 'empresarial', planId: 'P-EMP' }),
+      propuestaEmpresarial: { estado: 'aceptada', planId: 'P-EMP', gestorCuenta: 'uid-gestor', gestorCuentaEmail: 'analista@farmazed.test', productosEstimados: '4' },
+    });
+    await webhook(evento('BILLING.SUBSCRIPTION.EXPIRED', { id: 'I-EMP-FIN', custom_id: orgId }));
+    const o = await org(orgId);
+    assert.equal(o.suscripcion.estado, 'cancelada');
+    assert.equal(o.propuestaEmpresarial.gestorCuenta, null);
+    assert.equal(o.propuestaEmpresarial.gestorCuentaAnterior, 'uid-gestor');
+    assert.equal(o.propuestaEmpresarial.productosEstimados, '4');
   });
 
   test('el titular no aprueba el cambio y PayPal lo expira: se descarta y la vigente sigue igual', async () => {

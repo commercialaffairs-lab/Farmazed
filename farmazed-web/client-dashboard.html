@@ -2024,6 +2024,11 @@ async function loadEmpresarial() {
         </div></div>` : '<p class="text-muted small">El titular todavía no envió la solicitud de propuesta.</p>';
     } else if (p.estado === 'solicitada') {
       propuestaHtml = `<div class="alert alert-info small">Solicitud enviada — Farmazed está preparando las condiciones.</div>`;
+    } else if (p.estado === 'aceptada' && !p.gestorCuenta) {
+      // El plan terminó (cancelado o cambio al plan de la plataforma): la empresa conserva sus informes;
+      // el gestor era parte del plan. Volver exige condiciones nuevas definidas por Farmazed.
+      const hasta = p.gestorHasta ? new Date(p.gestorHasta).toLocaleDateString('es-PA', { day: 'numeric', month: 'long', year: 'numeric' }) : null;
+      propuestaHtml = `<div class="alert alert-secondary small">Tu Plan Empresarial terminó${hasta ? ` el ${esc(hasta)}` : ''}. Tus informes de avance siguen disponibles abajo. Si quieres retomarlo, Farmazed te propondrá condiciones nuevas.</div>`;
     } else if (p.estado === 'condiciones_definidas' || !(org.suscripcion?.estado === 'activa' && org.suscripcion.tipo === 'empresarial')) {
       // También con la propuesta ya 'aceptada' si el Plan Empresarial no está activo (no se terminó de
       // aprobar en PayPal, se canceló o la empresa se pasó al plan de la plataforma): se puede retomar.

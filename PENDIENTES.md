@@ -34,13 +34,15 @@ Detalle técnico de cada tarea en `handover.md`. PayPal paso a paso en `PAYPAL_S
 | 3 | Tarifario viejo: se retira después del deploy | Pendiente a propósito. Retirarlo cuando producción ya use `PRICING_TABLE=24sep`. |
 | 4 | `admin/precios.html`: unificar el estilo y mejorarlo | Hecho. Usa el mismo menú que el resto del admin, con buscador, filtro por grupo y aviso de cambios sin guardar. |
 
-## Decisiones que le tocan a Rick
+## Decisiones de Rick del 06-oct-2026
 
-| # | Decisión | Dónde está la propuesta |
+| # | Decisión | Estado |
 |---|---|---|
-| 5 | Túnel público o deploy de prueba para que PayPal llegue al webhook | `PAYPAL_SETUP.md` §3 |
-| 6 | Proyecto Firebase de pruebas si se quieren correos de verificación reales | `PAYPAL_SETUP.md`, tabla de pruebas |
-| 7 | Si una empresa deja el Plan Empresarial, ¿conserva su gestor de cuenta y los informes? Hoy los conserva | `tracker/routes/empresarial.js` |
+| 5 | Webhook: túnel público (Cloudflare) desde la PC de Rick | Hecho: `./tunel_paypal.sh`. Falta registrar el webhook en PayPal y probar una suscripción. |
+| 6 | Proyecto Firebase de pruebas para correos reales (con las cuentas Gmail personales de Rick) | Pendiente. Necesita: crear el proyecto en console.firebase.google.com, activar Email/Password, pasar la configuración web; y en el código un modo "auth real + Firestore emulado" para la demo (trabajo del developer, ~medio día). |
+| 7 | Al dejar el Plan Empresarial la empresa conserva su información y los informes de la vigencia; el gestor de cuenta era parte del plan, así que deja de tenerlo. Para volver, Farmazed define condiciones nuevas. | Hecho en `services/suscripciones.js` (`camposFinPlanEmpresarial`), `routes/empresarial.js`, bandeja de empresas y portal; pruebas en `webhook_paypal`. |
+| 8 | Redes sociales del pie: Rick las crea | Pendiente de Rick; los iconos siguen en `#`. |
+| 9 | Secret de PayPal sandbox expuesto en el chat del 05-oct: no se rota; el entorno sandbox se suspende en una semana | Decisión de Rick. |
 
 ## Antes del deploy a producción
 

@@ -14,7 +14,7 @@
  */
 const admin = require('firebase-admin');
 const { abrirRevision } = require('./revisiones_pago');
-const { cambiosDeCambioDePlan, cancelarAnterior } = require('./suscripciones');
+const { cambiosDeCambioDePlan, cancelarAnterior, tipoDeSuscripcion, camposFinPlanEmpresarial } = require('./suscripciones');
 
 const db = () => admin.firestore();
 const ID_DOC = /^[\w.-]{1,150}$/; // lo que llega de fuera y se usa como id de documento
@@ -61,7 +61,13 @@ function decidirSuscripcion(org, tipo, subscriptionId, ahora) {
     }
     // Una suscripción cancelada no revive: un ACTIVATED/SUSPENDED que llega después es un evento atrasado.
     if (actual.estado === estado || actual.estado === 'cancelada') return { resultado: 'sin_cambio' };
-    return { resultado: `suscripcion_${estado}`, cambios: { 'suscripcion.estado': estado, 'suscripcion.actualizadaEn': ahora } };
+    return {
+      resultado: `suscripcion_${estado}`,
+      cambios: {
+        'suscripcion.estado': estado, 'suscripcion.actualizadaEn': ahora,
+        ...(estado === 'cancelada' && tipoDeSuscripcion(org) === 'empresarial' ? camposFinPlanEmpresarial(org, ahora) : {}),
+      },
+    };
   }
 
   // Terminó una suscripción que ya no es la de la empresa (la reemplazada por un cambio de plan,

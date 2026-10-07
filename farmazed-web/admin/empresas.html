@@ -162,7 +162,8 @@
           // "Definir condiciones" (empresarial.manage) y "Ver miembros"
           // (orgs.manage) son acciones solo-admin en el backend — el staff
           // solo llega hasta "Cargar diagnóstico" (orgs.edit_diagnostico).
-          const condicionesBtn = isUserAdmin && plan === 'empresarial' && propuesta?.estado === 'solicitada'
+          // También cuando el plan terminó (propuesta 'aceptada' sin gestor): se acuerdan condiciones nuevas.
+          const condicionesBtn = isUserAdmin && plan === 'empresarial' && (propuesta?.estado === 'solicitada' || (propuesta?.estado === 'aceptada' && !propuesta.gestorCuenta))
             ? `<button class="btn btn-xs btn-outline-warning btn-sm py-0 px-2 small" onclick="toggleCondiciones('${esc(o.id)}')">Definir condiciones</button>`
             : '';
           const miembrosBtn = isUserAdmin

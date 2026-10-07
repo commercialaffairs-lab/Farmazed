@@ -87,7 +87,10 @@ router.put('/:orgId/condiciones', requireAuth, requirePermission('empresarial.ma
     const orgSnap = await orgRef.get();
     if (!orgSnap.exists) return res.status(404).json({ error: 'Empresa no encontrada' });
     const propuesta = orgSnap.data().propuestaEmpresarial;
-    if (!propuesta || propuesta.estado !== 'solicitada') {
+    // También se redefinen las condiciones de una propuesta 'aceptada' cuyo plan terminó (sin gestor):
+    // la empresa conserva su historial, pero el plan nuevo se acuerda de nuevo.
+    const planTerminado = propuesta?.estado === 'aceptada' && !propuesta.gestorCuenta;
+    if (!propuesta || (propuesta.estado !== 'solicitada' && !planTerminado)) {
       return res.status(400).json({ error: `Esta empresa no tiene una solicitud 'solicitada' pendiente (estado actual: ${propuesta?.estado || 'sin solicitud'}).` });
     }
 
@@ -97,8 +100,9 @@ router.put('/:orgId/condiciones', requireAuth, requirePermission('empresarial.ma
     });
 
     const now = admin.firestore.Timestamp.now();
+    const { gestorHasta, ...propuestaBase } = propuesta; // el plan nuevo empieza sin fecha de fin
     const propuestaActualizada = {
-      ...propuesta,
+      ...propuestaBase,
       estado: 'condiciones_definidas',
       monto: montoNum, periodo, planId, proveedor: provider.name,
       gestorCuenta, gestorCuentaEmail: gestorRecord.email,
@@ -126,6 +130,9 @@ router.post('/aceptar', requireAuth, requirePermission('empresarial.solicitar'),
       const propuesta = org.propuestaEmpresarial;
       if (!propuesta || !['condiciones_definidas', 'aceptada'].includes(propuesta.estado)) {
         throw new HttpError(400, { error: `Todavía no hay condiciones definidas para aceptar (estado actual: ${propuesta?.estado || 'sin solicitud'}).` });
+      }
+      if (propuesta.estado === 'aceptada' && !propuesta.gestorCuenta) {
+        throw new HttpError(400, { error: 'El Plan Empresarial anterior terminó: Farmazed debe definir las condiciones de nuevo antes de aceptar.' });
       }
       return propuesta.planId;
     }, (ahora) => ({

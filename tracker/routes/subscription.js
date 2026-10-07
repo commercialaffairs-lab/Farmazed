@@ -25,7 +25,7 @@ const { requireAuth } = require('../middleware/auth');
 const { requirePermission } = require('../middleware/permissions');
 const { serializeTimestamps } = require('../utils/serialize');
 const { getProvider } = require('../services/payments');
-const { suscribirEmpresa } = require('../services/suscripciones');
+const { suscribirEmpresa, tipoDeSuscripcion, camposFinPlanEmpresarial } = require('../services/suscripciones');
 const { responderError } = require('../utils/http_error');
 
 const router = Router();
@@ -104,7 +104,8 @@ router.post('/cancel', requireAuth, requirePermission('subscription.subscribe'),
     const orgRef  = db().collection('orgs').doc(req.user.orgId);
     const orgSnap = await orgRef.get();
     if (!orgSnap.exists) return res.status(404).json({ error: 'Empresa no encontrada' });
-    const { suscripcion, cambioDePlan } = orgSnap.data();
+    const org = orgSnap.data();
+    const { suscripcion, cambioDePlan } = org;
     // Cancelar es idempotente (TAREA 38): ya cancelada -> 200, no 400.
     if (suscripcion?.estado === 'cancelada') return res.json({ estado: 'cancelada', yaEstaba: true });
     if (!suscripcion?.subscriptionId) {
@@ -124,6 +125,7 @@ router.post('/cancel', requireAuth, requirePermission('subscription.subscribe'),
     await orgRef.update({
       'suscripcion.estado': 'cancelada', 'suscripcion.actualizadaEn': now,
       cambioDePlan: admin.firestore.FieldValue.delete(),
+      ...(tipoDeSuscripcion(org) === 'empresarial' ? camposFinPlanEmpresarial(org, now) : {}), // termina el plan: sin gestor
     });
     res.json({ estado: 'cancelada' });
   } catch (e) {
