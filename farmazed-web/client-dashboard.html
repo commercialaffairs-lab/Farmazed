@@ -350,6 +350,22 @@
      todavía no la completó (org.captacion no existe). Editable después
      desde Mi Empresa — mismo formulario, mismo endpoint, ver script de
      abajo (#form-captacion se reusa en los dos casos). ══ -->
+<style>
+  /* Radios y casillas: el borde gris claro de Bootstrap no se ve sobre fondo blanco (pedido de Rick, 07-oct). */
+  .form-check-input { border: 1.5px solid #212529; }
+  .form-check-input:checked { border-color: var(--fz-primary, #1B4F8A); }
+  .form-check-input:focus { border-color: #212529; box-shadow: 0 0 0 .2rem rgba(27, 79, 138, .25); }
+  /* Contadores "productos por categoría" (captación) */
+  .fz-contador { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 6px 10px; border: 1px solid #dee2e6; border-radius: 8px; background: #f8fafc; }
+  .fz-contador-nombre { font-size: .9rem; font-weight: 600; color: #1f2937; }
+  .fz-contador-ctrl { display: inline-flex; align-items: center; border: 1.5px solid #212529; border-radius: 8px; overflow: hidden; background: #fff; }
+  .fz-contador-ctrl button { width: 36px; height: 34px; border: 0; background: #fff; color: #1B4F8A; font-size: 1.2rem; line-height: 1; cursor: pointer; }
+  .fz-contador-ctrl button:hover { background: #e8f0fb; }
+  .fz-contador-ctrl button:focus-visible { outline: 2px solid #1B4F8A; outline-offset: -2px; }
+  .fz-contador-ctrl button:disabled { color: #adb5bd; cursor: not-allowed; }
+  .fz-contador-ctrl input { width: 52px; height: 34px; border: 0; border-left: 1px solid #dee2e6; border-right: 1px solid #dee2e6; text-align: center; font-weight: 700; font-variant-numeric: tabular-nums; -moz-appearance: textfield; }
+  .fz-contador-ctrl input::-webkit-outer-spin-button, .fz-contador-ctrl input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+</style>
 <div id="captacion-overlay" class="d-none" style="position:fixed;inset:0;background:rgba(15,50,96,.85);z-index:2000;display:flex;align-items:center;justify-content:center;padding:16px;overflow-y:auto;">
   <div class="bg-white rounded shadow-lg p-4" style="max-width:560px;width:100%;margin:24px 0;">
     <h5 class="mb-1">Captación de información preliminar</h5>
@@ -365,7 +381,8 @@
       </div>
       <div class="mb-3">
         <label class="form-label small fw-semibold">Número de productos por categoría</label>
-        <input type="text" class="form-control" id="capt-numero-productos" placeholder="Ej: 3 medicamentos, 1 cosmético" required>
+        <p class="text-muted small mb-2" id="capt-productos-ayuda">Marca una categoría arriba y aparecerá aquí su contador.</p>
+        <div id="capt-productos" class="d-flex flex-column gap-2"></div>
       </div>
       <div class="mb-3">
         <label class="form-label small fw-semibold d-block">¿Registro previo ante autoridad reconocida (FDA, EMA, TGA…)?</label>
@@ -1162,18 +1179,62 @@
       <label class="form-check-label small" for="capt-cat-${esc(key)}">${esc(label)}</label>
     </div>`).join('');
 
+  // Contadores "productos por categoría": uno por categoría marcada (botones − / +, mínimo 1). Al
+  // guardar se manda el objeto {categoria: n} y también el texto resumido de siempre
+  // ("3 Medicamentos, 1 Cosméticos") para la bandeja y los informes.
+  const MAX_PRODUCTOS = 999;
+  const acotar = (v) => Math.min(MAX_PRODUCTOS, Math.max(1, Math.round(Number(v)) || 1));
+  function leerContadores() {
+    const out = {};
+    document.querySelectorAll('#capt-productos .fz-contador').forEach(fila => { out[fila.dataset.cat] = acotar(fila.querySelector('input').value); });
+    return out;
+  }
+  function renderContadores(valores = {}) {
+    const previos = leerContadores();
+    const marcadas = [...document.querySelectorAll('#capt-categorias input[type=checkbox]:checked')].map(cb => cb.value);
+    document.getElementById('capt-productos').innerHTML = marcadas.map(key => {
+      const n = acotar(valores[key] ?? previos[key] ?? 1);
+      const nombre = esc(TRAMITE_LABEL[key] || key);
+      return `
+      <div class="fz-contador" data-cat="${esc(key)}">
+        <label class="fz-contador-nombre" for="capt-num-${esc(key)}">${nombre}</label>
+        <div class="fz-contador-ctrl">
+          <button type="button" data-paso="-1" aria-label="Quitar uno de ${nombre}"${n <= 1 ? ' disabled' : ''}>−</button>
+          <input type="number" id="capt-num-${esc(key)}" min="1" max="${MAX_PRODUCTOS}" step="1" value="${n}" inputmode="numeric" aria-label="Productos de ${nombre}">
+          <button type="button" data-paso="1" aria-label="Agregar uno de ${nombre}">+</button>
+        </div>
+      </div>`;
+    }).join('');
+    document.getElementById('capt-productos-ayuda').classList.toggle('d-none', marcadas.length > 0);
+  }
+  document.getElementById('capt-categorias').addEventListener('change', () => renderContadores());
+  document.getElementById('capt-productos').addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-paso]');
+    if (!btn) return;
+    const input = btn.parentElement.querySelector('input');
+    const nuevo = acotar((Number(input.value) || 1) + Number(btn.dataset.paso));
+    input.value = nuevo;
+    btn.parentElement.querySelector('button[data-paso="-1"]').disabled = nuevo <= 1;
+  });
+  document.getElementById('capt-productos').addEventListener('change', (e) => {
+    if (e.target.tagName !== 'INPUT') return;
+    e.target.value = acotar(e.target.value);
+    e.target.parentElement.querySelector('button[data-paso="-1"]').disabled = Number(e.target.value) <= 1;
+  });
+
   let onCaptacionGuardada = null;
   window.__fzAbrirCaptacion = function abrirCaptacion(captacionExistente, { editable } = { editable: false }) {
     const form = document.getElementById('form-captacion');
     form.reset();
     document.querySelectorAll('#capt-categorias input[type=checkbox]').forEach(cb => { cb.checked = false; });
+    document.getElementById('capt-productos').innerHTML = '';
     if (captacionExistente) {
       document.getElementById('capt-fabricante').value = captacionExistente.paisYNombreFabricante || '';
       (captacionExistente.categoriasProducto || []).forEach(c => {
         const cb = document.getElementById(`capt-cat-${c}`);
         if (cb) cb.checked = true;
       });
-      document.getElementById('capt-numero-productos').value = captacionExistente.numeroProductosPorCategoria || '';
+      renderContadores(captacionExistente.productosPorCategoria || {});
       const r1 = form.querySelector(`input[name="capt-registro-previo"][value="${captacionExistente.registroPrevioAutoridadReconocida ? 'si' : 'no'}"]`);
       if (r1) r1.checked = true;
       const r2 = form.querySelector(`input[name="capt-nuevo-o-registrado"][value="${captacionExistente.clienteNuevoOYaRegistrado}"]`);
@@ -1181,6 +1242,7 @@
       const r3 = form.querySelector(`input[name="capt-modificacion-en-curso"][value="${captacionExistente.productoConModificacionEnCurso ? 'si' : 'no'}"]`);
       if (r3) r3.checked = true;
     }
+    if (!captacionExistente) renderContadores();
     document.getElementById('captacion-intro').textContent = editable
       ? 'Edita la información de captación de tu empresa.'
       : 'Antes de empezar, necesitamos esta información de tu empresa (se pide una sola vez — después la puedes editar desde "Mi Empresa").';
@@ -1208,10 +1270,13 @@
       return;
     }
 
+    const productosPorCategoria = leerContadores();
     const data = {
       paisYNombreFabricante: document.getElementById('capt-fabricante').value.trim(),
       categoriasProducto,
-      numeroProductosPorCategoria: document.getElementById('capt-numero-productos').value.trim(),
+      productosPorCategoria,
+      // texto resumido (lo leen la bandeja del admin y los informes): "3 Medicamentos, 1 Cosméticos"
+      numeroProductosPorCategoria: categoriasProducto.map(c => `${productosPorCategoria[c] || 1} ${TRAMITE_LABEL[c] || c}`).join(', '),
       registroPrevioAutoridadReconocida: registroPrevio?.value === 'si',
       clienteNuevoOYaRegistrado: nuevoORegistrado?.value,
       productoConModificacionEnCurso: modificacionEnCurso?.value === 'si',

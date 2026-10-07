@@ -90,7 +90,10 @@ test.describe('R? — TAREA 32: registro abierto -> verificación -> captación 
 
     await page.fill('#capt-fabricante', 'Alemania — Laboratorios E2E');
     await page.check('#capt-cat-medicamentos');
-    await page.fill('#capt-numero-productos', '2 medicamentos');
+    // Contador por categoría (07-oct): aparece al marcar la categoría; "+" lo sube a 2.
+    await expect(page.locator('#capt-num-medicamentos')).toHaveValue('1');
+    await page.click('.fz-contador[data-cat="medicamentos"] button[data-paso="1"]');
+    await expect(page.locator('#capt-num-medicamentos')).toHaveValue('2');
     await page.check('input[name="capt-registro-previo"][value="si"]');
     await page.check('input[name="capt-nuevo-o-registrado"][value="nuevo"]');
     await page.check('input[name="capt-modificacion-en-curso"][value="no"]');

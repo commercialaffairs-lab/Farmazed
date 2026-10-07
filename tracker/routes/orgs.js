@@ -83,7 +83,7 @@ router.get('/:orgId/members', requireAuth, requirePermission('orgs.manage'), asy
 // primera vez y para "editar después desde Mi Empresa" (instrucción
 // explícita del PM: sí se puede editar más adelante).
 const CAPTACION_CAMPOS = [
-  'paisYNombreFabricante', 'categoriasProducto', 'numeroProductosPorCategoria',
+  'paisYNombreFabricante', 'categoriasProducto', 'numeroProductosPorCategoria', 'productosPorCategoria',
   'registroPrevioAutoridadReconocida', 'clienteNuevoOYaRegistrado', 'productoConModificacionEnCurso',
 ];
 
@@ -98,6 +98,18 @@ function validarCaptacion(body) {
   }
   if (categoriasProducto.some(c => !TRAMITE_TYPES.includes(c))) {
     return `categoriasProducto debe ser un subconjunto de: ${TRAMITE_TYPES.join(', ')}`;
+  }
+  // Contadores del portal (07-oct): {categoria: entero 1..999}, solo categorías marcadas. Opcional:
+  // `numeroProductosPorCategoria` (texto) sigue siendo el campo de siempre y el que muestra la bandeja.
+  const { productosPorCategoria } = body;
+  if (productosPorCategoria !== undefined) {
+    if (!productosPorCategoria || typeof productosPorCategoria !== 'object' || Array.isArray(productosPorCategoria)) {
+      return 'productosPorCategoria debe ser un objeto {categoria: cantidad}.';
+    }
+    for (const [cat, n] of Object.entries(productosPorCategoria)) {
+      if (!categoriasProducto.includes(cat)) return `productosPorCategoria: "${cat}" no está entre las categorías marcadas.`;
+      if (!Number.isInteger(n) || n < 1 || n > 999) return `productosPorCategoria: la cantidad de "${cat}" debe ser un entero entre 1 y 999.`;
+    }
   }
   if (typeof registroPrevioAutoridadReconocida !== 'boolean') {
     return 'registroPrevioAutoridadReconocida debe ser true/false.';
@@ -140,7 +152,9 @@ router.patch('/mine/captacion', requireAuth, requirePermission('orgs.edit_captac
     const captacion = {};
     for (const campo of CAPTACION_CAMPOS) {
       const v = req.body[campo];
-      captacion[campo] = typeof v === 'string' ? v.trim() : v;
+      // Un campo opcional ausente (p. ej. productosPorCategoria desde clientes viejos) se guarda
+      // como null: Firestore rechaza `undefined`.
+      captacion[campo] = typeof v === 'string' ? v.trim() : (v === undefined ? null : v);
     }
     captacion.revisadoPorFarmazed = yaExistia ? (orgSnap.data().captacion.revisadoPorFarmazed ?? false) : false;
     captacion.completadaPor = req.user.uid;

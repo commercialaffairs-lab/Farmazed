@@ -167,6 +167,15 @@ describe('PATCH /api/orgs/mine/captacion', () => {
     assert.equal(org.json.captacion.revisadoPorFarmazed, false);
   });
 
+  test('productosPorCategoria (contadores del portal): válido se guarda; categoría no marcada o cantidad inválida -> 400', async () => {
+    const ok = await apiAuth(tokenTitular, 'PATCH', '/api/orgs/mine/captacion', { ...CAPTACION_OK, productosPorCategoria: { medicamentos: 3 } });
+    assert.equal(ok.status, 200, JSON.stringify(ok.json));
+    assert.deepEqual((await apiAuth(tokenTitular, 'GET', '/api/me/org')).json.captacion.productosPorCategoria, { medicamentos: 3 });
+    for (const malo of [{ plaguicidas: 1 }, { medicamentos: 0 }, { medicamentos: 2.5 }, [3], 'tres']) {
+      assert.equal((await apiAuth(tokenTitular, 'PATCH', '/api/orgs/mine/captacion', { ...CAPTACION_OK, productosPorCategoria: malo })).status, 400, JSON.stringify(malo));
+    }
+  });
+
   test('editar después (mismo endpoint) actualiza, no duplica — sigue siendo UN solo objeto captacion', async () => {
     const editado = { ...CAPTACION_OK, numeroProductosPorCategoria: '10 medicamentos', clienteNuevoOYaRegistrado: 'ya_registrado' };
     const guardar = await apiAuth(tokenTitular, 'PATCH', '/api/orgs/mine/captacion', editado);
