@@ -15,7 +15,9 @@ const crypto = require('crypto');
 // espera la verificación. Si en el futuro aparece uno, agregarlo a
 // EXEMPT_PATHS (contra `req.path`, relativo al router donde se monte
 // requireAuth — ver Express docs).
-const EXEMPT_PATHS = [];
+// Rutas que una cuenta del registro abierto puede usar ANTES de verificar su correo
+// (`req.path` es relativo al router: /api/register/reenviar-verificacion -> '/reenviar-verificacion').
+const EXEMPT_PATHS = ['/reenviar-verificacion'];
 
 /**
  * Verifies Firebase ID token from Authorization: Bearer <token>

@@ -119,7 +119,8 @@
       // sesión — hay que loguearse de verdad acá para que
       // sendEmailVerification() tenga un auth.currentUser real.
       await login(correo, password);
-      await sendEmailVerification(auth.currentUser);
+      // Si el servidor ya mandó el correo de marca (SMTP configurado), no se duplica con el de Firebase.
+      if (!body.correoEnviado) await sendEmailVerification(auth.currentUser);
 
       document.getElementById('done-email').textContent = correo;
       document.getElementById('registro-form').classList.add('d-none');

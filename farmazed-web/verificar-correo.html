@@ -38,6 +38,7 @@
 <script type="module">
   import { requireLogin, logout } from './portal/js/auth.js';
   import { auth } from './portal/js/auth.js';
+  import api from './portal/js/api.js';
   import { sendEmailVerification } from 'https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js';
 
   function msg(text, ok) {
@@ -68,7 +69,9 @@
 
     document.getElementById('btn-reenviar').addEventListener('click', async () => {
       try {
-        await sendEmailVerification(auth.currentUser);
+        // Primero el correo de marca del tracker (si hay SMTP); si no, el de Firebase.
+        const { correoEnviado } = await api.reenviarVerificacion().catch(() => ({ correoEnviado: false }));
+        if (!correoEnviado) await sendEmailVerification(auth.currentUser);
         msg('Correo reenviado.', true);
       } catch (err) {
         msg(err.message, false);

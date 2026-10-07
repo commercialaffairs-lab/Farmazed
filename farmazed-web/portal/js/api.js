@@ -201,6 +201,9 @@ const api = {
   suscribirEmpresa: () => apiFetch('/api/subscription/subscribe', { method: 'POST' }),
   cancelarSuscripcion: () => apiFetch('/api/subscription/cancel', { method: 'POST' }),
 
+  // Correo de verificación de marca (tracker, si hay SMTP) — cuenta aún sin verificar
+  reenviarVerificacion: () => apiFetch('/api/register/reenviar-verificacion', { method: 'POST' }),
+
   // ── Pagos por revisar (admin): avisos del webhook de PayPal y cambios de plan ──
   getRevisionesPago: () => apiFetch('/api/admin/revisiones-pago'),
   resolverRevisionPago: (id, nota) => apiFetch(`/api/admin/revisiones-pago/${encodeURIComponent(id)}/resolver`, { method: 'POST', body: JSON.stringify({ nota }) }),

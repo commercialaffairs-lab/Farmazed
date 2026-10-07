@@ -28,6 +28,8 @@ const admin       = require('firebase-admin');
 const { textoError, errorPassword } = require('../utils/validar_texto');
 const { crearLimitador } = require('../utils/rate_limit');
 const { createOrg } = require('../services/orgs');
+const { enviarVerificacion } = require('../services/correo');
+const { requireAuth } = require('../middleware/auth');
 const invitaciones = require('./invitations');
 
 const router = Router();
@@ -111,7 +113,16 @@ router.post('/', async (req, res) => {
       role: 'cliente_titular', orgId: orgRef.id, origen: 'registro',
     });
 
-    res.status(201).json({ uid: userRecord.uid, orgId: orgRef.id });
+    // Correo de verificación de marca (services/correo.js) si hay SMTP; si falla o no hay SMTP,
+    // `correoEnviado:false` y el navegador manda el de Firebase (texto plano), como siempre.
+    let correoEnviado = false;
+    try {
+      correoEnviado = await enviarVerificacion({ correo, nombre });
+    } catch (err) {
+      console.error('[register] no se pudo enviar el correo de verificación de marca; el navegador usará el de Firebase', { uid: userRecord.uid, error: err.message });
+    }
+
+    res.status(201).json({ uid: userRecord.uid, orgId: orgRef.id, correoEnviado });
   } catch (e) {
     // TAREA 39 (H4): si falló la empresa o los claims, no se deja una cuenta
     // huérfana (con el correo "ocupado" y sin rol/empresa): se borran el
@@ -126,5 +137,21 @@ router.post('/', async (req, res) => {
 });
 
 router.limitador = limitador; // para las pruebas en proceso (reset)
+
+// ─── POST /api/register/reenviar-verificacion (sesión, cuenta aún sin verificar) ─────
+// "Reenviar correo" de verificar-correo.html con la plantilla de marca. Sin SMTP responde
+// `correoEnviado:false` y el navegador reenvía el de Firebase. Exento del 403 de "verifica tu
+// correo" en middleware/auth.js (EXEMPT_PATHS): es justamente para cuentas sin verificar.
+router.post('/reenviar-verificacion', requireAuth, async (req, res) => {
+  try {
+    if (req.user.email_verified) return res.json({ correoEnviado: false, yaVerificado: true });
+    const user = await admin.auth().getUser(req.user.uid);
+    const correoEnviado = await enviarVerificacion({ correo: user.email, nombre: user.displayName });
+    res.json({ correoEnviado });
+  } catch (e) {
+    console.error('[register] reenviar-verificacion', { uid: req.user?.uid, error: e.message });
+    res.status(500).json({ error: 'No se pudo reenviar el correo. Intenta de nuevo en unos minutos.' });
+  }
+});
 
 module.exports = router;
