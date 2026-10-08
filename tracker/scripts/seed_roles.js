@@ -21,7 +21,7 @@ if (!process.env.FIRESTORE_EMULATOR_HOST) {
   process.exit(1);
 }
 
-const admin = require('firebase-admin');
+const admin = require('../utils/firebase_admin.js');
 if (!admin.apps.length) {
   admin.initializeApp({ projectId: process.env.FIREBASE_PROJECT_ID || 'demo-farmazed' });
 }

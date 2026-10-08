@@ -17,7 +17,7 @@
 
 const { Router } = require('express');
 const crypto       = require('crypto');
-const admin         = require('firebase-admin');
+const admin         = require('../utils/firebase_admin.js');
 const { requireAuth } = require('../middleware/auth');
 const { requirePermission, ROLES } = require('../middleware/permissions');
 const { serializeTimestamps } = require('../utils/serialize');

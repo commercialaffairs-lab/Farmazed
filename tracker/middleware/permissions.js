@@ -35,7 +35,7 @@
  * Hay que correr migrate_roles.js sobre las cuentas viejas ANTES de desplegar.
  */
 
-const admin = require('firebase-admin');
+const admin = require('../utils/firebase_admin.js');
 
 const ROLES = ['cliente_titular', 'cliente_miembro', 'analista', 'abogado', 'regente', 'admin'];
 const CLIENT_ROLES = ['cliente_titular', 'cliente_miembro'];

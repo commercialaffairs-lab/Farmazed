@@ -31,7 +31,7 @@ if (!process.env.FIRESTORE_EMULATOR_HOST) {
 
 const path = require('path');
 const { execFileSync } = require('child_process');
-const admin = require('firebase-admin');
+const admin = require('../utils/firebase_admin.js');
 
 if (!admin.apps.length) {
   admin.initializeApp({ projectId: process.env.FIREBASE_PROJECT_ID || 'demo-farmazed' });

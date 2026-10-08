@@ -11,7 +11,7 @@
  * To update a single category later, use the Admin Pricing UI instead.
  */
 
-const admin = require('firebase-admin');
+const admin = require('./utils/firebase_admin.js');
 
 // ─── Init (same pattern as index.js) ────────────────────────────────────────
 // FIREBASE_PROJECT_ID solo se usa en dev local contra el emulador (ver

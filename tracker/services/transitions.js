@@ -28,7 +28,7 @@
  *   - cerrado:     solo al ENTRAR a 'cerrado' (cualquier origen).
  */
 
-const admin = require('firebase-admin');
+const admin = require('../utils/firebase_admin.js');
 const { isValidTransition } = require('../data/case_status');
 const { hasConceptPayment } = require('./payments_ledger');
 const { hasAcceptedQuote, describeQuoteGate, attachCaseToDraftQuote, getAcceptedQuoteLineForCase } = require('./quotes');

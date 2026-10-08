@@ -1,6 +1,6 @@
 const { Router }   = require('express');
 const multer        = require('multer');
-const admin         = require('firebase-admin');
+const admin         = require('../utils/firebase_admin.js');
 const { requireAuth } = require('../middleware/auth');
 const { uploadFile, getSignedUrl, deleteFile } = require('../services/storage');
 const { isValidDocStatus, DOC_STATUSES, PENDING_DOCS } = require('../data/case_status');

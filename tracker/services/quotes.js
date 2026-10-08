@@ -6,7 +6,7 @@
  * `services/transitions.js`/`routes/mcp.js` hacían `require('../routes/quotes')`.
  * Las rutas ahora son finas y dependen de esto, nunca al revés.
  */
-const admin = require('firebase-admin');
+const admin = require('../utils/firebase_admin.js');
 const { desglose, desgloseConceptos } = require('../utils/pricing_desglose');
 
 const db = () => admin.firestore();

@@ -36,7 +36,7 @@
 const { Router }   = require('express');
 const multer        = require('multer');
 const { randomUUID: uuid } = require('node:crypto');
-const admin         = require('firebase-admin');
+const admin         = require('../utils/firebase_admin.js');
 const { requireAuth } = require('../middleware/auth');
 const { uploadFile, deleteFile } = require('../services/storage');
 const { serializeTimestamps } = require('../utils/serialize');

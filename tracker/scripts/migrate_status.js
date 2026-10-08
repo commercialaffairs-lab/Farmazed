@@ -75,7 +75,7 @@ if (!process.env.FIRESTORE_EMULATOR_HOST) {
   process.exit(1);
 }
 
-const admin = require('firebase-admin');
+const admin = require('../utils/firebase_admin.js');
 const { CASE_STATUSES, isValidStatus } = require('../data/case_status');
 
 if (!admin.apps.length) {

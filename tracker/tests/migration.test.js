@@ -21,7 +21,7 @@
 
 const { test, describe, before } = require('node:test');
 const assert = require('node:assert/strict');
-const admin  = require('firebase-admin');
+const admin  = require('../utils/firebase_admin.js');
 
 const AUTH_PORT      = process.env.FZ_AUTH_PORT;
 const API_PORT       = process.env.FZ_API_PORT;

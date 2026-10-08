@@ -1,4 +1,4 @@
-const admin = require('firebase-admin');
+const admin = require('../utils/firebase_admin.js');
 const crypto = require('crypto');
 
 // TAREA 32 (ajuste del PM tras la entrega — la verificación de correo solo

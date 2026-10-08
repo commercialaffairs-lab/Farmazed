@@ -15,7 +15,7 @@
  * `actor`: { uid, email, revisor } — `revisor` es el email que queda en
  * `reviewedBy` del documento (solo REST; el MCP no tiene usuario individual).
  */
-const admin = require('firebase-admin');
+const admin = require('../utils/firebase_admin.js');
 const { PENDING_DOCS } = require('../data/case_status');
 const { applyTransition } = require('./transitions');
 

@@ -7,7 +7,7 @@
  * El `id` lo decide quien la abre (el id del evento de PayPal, p. ej.): abrir dos veces
  * la misma revisión no la duplica.
  */
-const admin = require('firebase-admin');
+const admin = require('../utils/firebase_admin.js');
 
 const db = () => admin.firestore();
 const COLECCION = 'revisiones_pago';

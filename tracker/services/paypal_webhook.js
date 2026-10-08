@@ -12,7 +12,7 @@
  * Cada evento se procesa UNA vez: `paypal_eventos/{event.id}` se escribe en la misma
  * transacción que su efecto (PayPal reintenta un evento hasta que recibe un 2xx).
  */
-const admin = require('firebase-admin');
+const admin = require('../utils/firebase_admin.js');
 const { abrirRevision } = require('./revisiones_pago');
 const { cambiosDeCambioDePlan, cancelarAnterior, tipoDeSuscripcion, camposFinPlanEmpresarial } = require('./suscripciones');
 

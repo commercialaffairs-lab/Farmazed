@@ -24,7 +24,7 @@
  */
 
 const { Router } = require('express');
-const admin       = require('firebase-admin');
+const admin       = require('../utils/firebase_admin.js');
 const { textoError, errorPassword } = require('../utils/validar_texto');
 const { crearLimitador } = require('../utils/rate_limit');
 const { createOrg } = require('../services/orgs');

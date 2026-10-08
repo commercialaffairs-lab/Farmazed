@@ -18,7 +18,7 @@
  * ANTES de llamar al proveedor — dos clics en paralelo no crean dos suscripciones en PayPal
  * (el segundo recibe 409). Una reserva más vieja que RESERVA_TTL_MS se da por abandonada.
  */
-const admin = require('firebase-admin');
+const admin = require('../utils/firebase_admin.js');
 const { getProvider, urlsDeRetorno } = require('./payments');
 const { abrirRevision } = require('./revisiones_pago');
 const { HttpError } = require('../utils/http_error');

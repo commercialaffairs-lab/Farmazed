@@ -7,7 +7,7 @@
  */
 
 const { Router } = require('express');
-const admin       = require('firebase-admin');
+const admin       = require('../utils/firebase_admin.js');
 const { requireAuth } = require('../middleware/auth');
 const { requirePermission, STAFF_ROLES } = require('../middleware/permissions');
 

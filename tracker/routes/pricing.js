@@ -20,7 +20,7 @@
 
 const express = require('express');
 const router  = express.Router();
-const admin   = require('firebase-admin');
+const admin   = require('../utils/firebase_admin.js');
 const { requireAuth } = require('../middleware/auth');
 const { requirePermission } = require('../middleware/permissions');
 

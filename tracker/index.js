@@ -5,7 +5,7 @@
 const express  = require('express');
 const cors     = require('cors');
 const helmet   = require('helmet');
-const admin    = require('firebase-admin');
+const admin    = require('./utils/firebase_admin.js');
 const { requireAuth, requireAdmin } = require('./middleware/auth');
 const { requirePermission } = require('./middleware/permissions');
 const { crearLimitador } = require('./utils/rate_limit');

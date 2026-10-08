@@ -7,7 +7,7 @@
  * Campos: `nombre` (trim), `createdAt`, `createdBy` (uid de quien la creó, o `null` si
  * fue un auto-registro) y, solo si se pasan, `plan`, `pais`, `telefonoContacto`.
  */
-const admin = require('firebase-admin');
+const admin = require('../utils/firebase_admin.js');
 
 /** Crea la empresa y devuelve su `DocumentReference`. */
 async function createOrg({ nombre, createdBy = null, plan, pais, telefonoContacto }) {

@@ -17,7 +17,7 @@
  */
 
 const { Router } = require('express');
-const admin       = require('firebase-admin');
+const admin       = require('../utils/firebase_admin.js');
 const { requireMcpKey } = require('../middleware/auth');
 const { getChecklist }  = require('../data/faddi_checklists');
 const { rechazoTramite } = require('../data/tramites_habilitados');

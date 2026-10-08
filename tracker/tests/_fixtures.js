@@ -6,7 +6,7 @@
  *
  * Requiere FZ_AUTH_PORT / FZ_API_PORT / FZ_FIRESTORE_PORT (los pone run_permission_tests.sh).
  */
-const admin = require('firebase-admin');
+const admin = require('../utils/firebase_admin.js');
 
 const AUTH_PORT      = process.env.FZ_AUTH_PORT;
 const API_PORT       = process.env.FZ_API_PORT;

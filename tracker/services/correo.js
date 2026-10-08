@@ -11,7 +11,7 @@
  */
 const fs = require('fs');
 const path = require('path');
-const admin = require('firebase-admin');
+const admin = require('../utils/firebase_admin.js');
 const { obtenerConfig } = require('../config');
 
 const PLANTILLAS = path.join(__dirname, '..', 'emails');

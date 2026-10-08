@@ -51,7 +51,7 @@ if (require.main !== module) {
     console.error(`❌ ${modo.error}`);
     process.exit(1);
   }
-  const admin = require('firebase-admin');
+  const admin = require('../utils/firebase_admin.js');
   admin.initializeApp({ projectId: modo.proyecto || process.env.FIREBASE_PROJECT_ID || 'demo-farmazed' });
   if (modo.prod) {
     console.log(`⚠️  PRODUCCIÓN — proyecto "${admin.app().options.projectId}" — ${modo.dryRun ? 'DRY-RUN (no se escribe nada; para aplicar: --prod --project=<id> --confirm)' : 'ESCRIBE de verdad (--prod --confirm)'}`);

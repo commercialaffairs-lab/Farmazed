@@ -7,7 +7,7 @@
  * Ahora las rutas son finas y dependen de este servicio, nunca al revés.
  */
 const { randomUUID: uuid } = require('node:crypto');
-const admin        = require('firebase-admin');
+const admin        = require('../utils/firebase_admin.js');
 
 const db = () => admin.firestore();
 
