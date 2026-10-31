@@ -195,7 +195,7 @@
       btn.disabled = true;
       try {
         await api.setEnlacePagoExterno(row.dataset.quote, row.dataset.case, row.querySelector('.inp-enlace-externo').value.trim() || null);
-        await loadQuotes();
+        await load();
       } catch (err) { await avisar('Error: ' + err.message); btn.disabled = false; }
     }));
     box.querySelectorAll('.btn-confirmar-externo').forEach(btn => btn.addEventListener('click', async () => {
@@ -206,7 +206,7 @@
       btn.disabled = true;
       try {
         await api.confirmarPagoExterno(row.dataset.quote, row.dataset.case, referencia);
-        await loadQuotes();
+        await load();
       } catch (err) { await avisar('Error: ' + err.message); btn.disabled = false; }
     }));
 
