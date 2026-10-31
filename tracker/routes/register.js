@@ -61,6 +61,36 @@ function validar({ nombre, correo, password, telefono, empresa, pais }) {
   return errorPassword(password);
 }
 
+/**
+ * Alta de un cliente_titular con su empresa: usuario de Auth + empresa + claims. Compartida
+ * con scripts/seed_clientes.js (misma forma que el registro abierto; cambian `emailVerified`
+ * y `origen`). Los errores de createUser se propagan tal cual (`e.code`). Si falla la empresa
+ * o los claims (TAREA 39, H4) no queda una cuenta huérfana con el correo "ocupado": se borran
+ * el usuario y la empresa a medio crear y se lanza un error con `altaDeshecha:true`.
+ */
+async function altaTitular({ nombre, correo, password, empresa, pais, telefono, plan, emailVerified, origen }) {
+  const userRecord = await admin.auth().createUser({ email: correo, password, displayName: nombre, emailVerified });
+  let orgRef = null;
+  try {
+    // auto-registro — nadie de Farmazed la creó (createdBy: null)
+    orgRef = await createOrg({ nombre: empresa, pais, telefonoContacto: telefono, plan });
+
+    // Fijo aquí, nunca desde el body — ver nota de arriba. `origen:'registro'`
+    // (ajuste del PM) es lo que hace que `requireAuth` (tracker/middleware/
+    // auth.js) exija correo verificado para ESTA cuenta — las de
+    // invitación/semilla/legacy no llevan este claim, no las afecta.
+    await admin.auth().setCustomUserClaims(userRecord.uid, { role: 'cliente_titular', orgId: orgRef.id, origen });
+    return { userRecord, orgRef };
+  } catch (e) {
+    console.error('[register] falló el alta, se deshace', { uid: userRecord.uid, orgId: orgRef?.id || null, error: e.message });
+    await Promise.all([
+      admin.auth().deleteUser(userRecord.uid),
+      orgRef ? orgRef.delete() : null,
+    ]).catch(err => console.error('[register] no se pudo deshacer el alta — limpiar a mano', { uid: userRecord.uid, orgId: orgRef?.id || null, error: err.message }));
+    throw Object.assign(e, { altaDeshecha: true });
+  }
+}
+
 // ─── POST /api/register (público) ──────────────────────────────────────────────
 router.post('/', async (req, res) => {
   if (limitador.estaLimitado(req.ip)) {
@@ -85,11 +115,9 @@ router.post('/', async (req, res) => {
     return res.status(409).json({ error: MENSAJE_CORREO_EN_USO });
   }
 
-  let userRecord;
+  let userRecord, orgRef;
   try {
-    userRecord = await admin.auth().createUser({
-      email: correo, password, displayName: nombre, emailVerified: false,
-    });
+    ({ userRecord, orgRef } = await altaTitular({ nombre, correo, password, empresa, pais, telefono, plan, emailVerified: false, origen: 'registro' }));
   } catch (e) {
     if (e.code === 'auth/email-already-exists') {
       return res.status(409).json({ error: MENSAJE_CORREO_EN_USO });
@@ -97,46 +125,24 @@ router.post('/', async (req, res) => {
     if (e.code === 'auth/invalid-password' || e.code === 'auth/invalid-email') {
       return res.status(400).json({ error: e.code === 'auth/invalid-email' ? 'Correo inválido.' : 'Contraseña inválida.' });
     }
+    if (e.altaDeshecha) return res.status(500).json({ error: 'No se pudo completar el registro — intenta de nuevo.' });
     return res.status(500).json({ error: e.message });
   }
 
-  let orgRef = null;
+  // Correo de verificación de marca (services/correo.js) si hay SMTP; si falla o no hay SMTP,
+  // `correoEnviado:false` y el navegador manda el de Firebase (texto plano), como siempre.
+  let correoEnviado = false;
   try {
-    // auto-registro — nadie de Farmazed la creó (createdBy: null)
-    orgRef = await createOrg({ nombre: empresa, pais, telefonoContacto: telefono, plan });
-
-    // Fijo aquí, nunca desde el body — ver nota de arriba. `origen:'registro'`
-    // (ajuste del PM) es lo que hace que `requireAuth` (tracker/middleware/
-    // auth.js) exija correo verificado para ESTA cuenta — las de
-    // invitación/semilla/legacy no llevan este claim, no las afecta.
-    await admin.auth().setCustomUserClaims(userRecord.uid, {
-      role: 'cliente_titular', orgId: orgRef.id, origen: 'registro',
-    });
-
-    // Correo de verificación de marca (services/correo.js) si hay SMTP; si falla o no hay SMTP,
-    // `correoEnviado:false` y el navegador manda el de Firebase (texto plano), como siempre.
-    let correoEnviado = false;
-    try {
-      correoEnviado = await enviarVerificacion({ correo, nombre });
-    } catch (err) {
-      console.error('[register] no se pudo enviar el correo de verificación de marca; el navegador usará el de Firebase', { uid: userRecord.uid, error: err.message });
-    }
-
-    res.status(201).json({ uid: userRecord.uid, orgId: orgRef.id, correoEnviado });
-  } catch (e) {
-    // TAREA 39 (H4): si falló la empresa o los claims, no se deja una cuenta
-    // huérfana (con el correo "ocupado" y sin rol/empresa): se borran el
-    // usuario y la empresa a medio crear. El correo queda libre para reintentar.
-    console.error('[register] falló el alta, se deshace', { uid: userRecord.uid, orgId: orgRef?.id || null, error: e.message });
-    await Promise.all([
-      admin.auth().deleteUser(userRecord.uid),
-      orgRef ? orgRef.delete() : null,
-    ]).catch(err => console.error('[register] no se pudo deshacer el alta — limpiar a mano', { uid: userRecord.uid, orgId: orgRef?.id || null, error: err.message }));
-    res.status(500).json({ error: 'No se pudo completar el registro — intenta de nuevo.' });
+    correoEnviado = await enviarVerificacion({ correo, nombre });
+  } catch (err) {
+    console.error('[register] no se pudo enviar el correo de verificación de marca; el navegador usará el de Firebase', { uid: userRecord.uid, error: err.message });
   }
+
+  res.status(201).json({ uid: userRecord.uid, orgId: orgRef.id, correoEnviado });
 });
 
 router.limitador = limitador; // para las pruebas en proceso (reset)
+router.altaTitular = altaTitular;
 
 // "Reenviar correo" manda un email por llamada (SMTP real): tope por uid, no por IP.
 const limitadorReenvio = crearLimitador({ ventanaMs: 10 * 60 * 1000, max: 5 });

@@ -179,6 +179,69 @@ distintas a lo esperado.
 `https://www.farmazed.com`, coincidencia exacta: ni subdominios, ni `http://`, ni `evil-farmazed.com`, ni
 `localhost`). Si se agrega un front en otro subdominio, hay que listarlo explícitamente.
 
+### Orden exacto del deploy de revisión (TAREA 46) — checklist de punta a punta
+
+Todo desde Cloud Shell, en un clon al día (`cd ~/Farmazed && git pull origin main`). Nada de esto se
+ejecuta sin el visto bueno de Rick; cada paso de escritura trae antes su dry-run.
+
+1. **Verificar el código** (en Patch, antes de subir): `cd tracker && npm ci && npm test` en verde.
+   La imagen del tracker es `node:22-alpine` (firebase-admin 14): hay que reconstruirla.
+2. **Variables y secretos de Cloud Run** (el servicio NO arranca sin ellos; tabla y comandos en
+   "Configuración del tracker en producción"). Crear antes en Secret Manager: `mcp-key`,
+   `paypal-client-id`, `paypal-client-secret`, `paypal-webhook-id`, `smtp-pass`. Variables en claro:
+   `NODE_ENV=production`, `FIREBASE_PROJECT_ID=farmazed`, `GCS_BUCKET=farmazed-docs`, `PAYPAL_ENV=sandbox`
+   (durante la revisión), `PAYMENTS_PROVIDER=paypal`, `PORTAL_URL=https://farmazed.com`, `SMTP_HOST`,
+   `SMTP_PORT`, `SMTP_USER`, `SMTP_FROM` (+ `TRUST_PROXY`/`CORS_ORIGINS` si cambian los defaults).
+3. **Migración de roles, SOLO dry-run** (`node scripts/migrate_roles.js --prod --project=farmazed`) y
+   `backfill_invitaciones.js` igual. Rick revisa la lista; solo con su visto bueno, la misma línea con
+   `--confirm`. Debe quedar hecha **antes** de pasar tráfico (una cuenta sin `role` recibe 403).
+4. **Reglas de Firebase**: `firebase deploy --only firestore:rules,storage --project farmazed`
+   (deny-all; el front no accede directo, todo va por el tracker).
+5. **Revisión nueva SIN tráfico**: `gcloud run deploy <servicio-tracker> --source . --region us-central1
+   --no-traffic --tag candidata` y `curl .../health` en la URL de la etiqueta. Si falla la validación de
+   config, el tráfico sigue en la revisión anterior.
+6. **Pasar el tráfico** (`update-traffic --to-latest`) y desplegar el front (`farmazed-web`). Registrar en
+   developer.paypal.com (Sandbox) el webhook `https://<url-del-tracker>/api/webhooks/paypal` con los 8
+   eventos de `PAYPAL_SETUP.md` §3 y poner su ID en `paypal-webhook-id`.
+7. **Primer admin**: crear la cuenta de Rick en la consola de Firebase Auth y correr
+   `FIREBASE_PROJECT_ID=farmazed node scripts/bootstrap_admin.js --email=<correo-de-rick>`.
+8. **Invitar a Xenia (regente)**: Rick entra a `admin/empresas.html` → Invitaciones → invitar empleado
+   (`xegantes@hotmail.com`, rol `regente`). `routes/invitations.js` NO envía correo (la tabla lo dice:
+   "sin envío de correo todavía"): el admin copia el enlace `https://farmazed.com/aceptar-invitacion.html?token=<id>`
+   de esa tabla y se lo manda a Xenia por un canal de confianza. Al abrirlo ella elige su nombre y su
+   contraseña; la cuenta nace con correo verificado (el enlace prueba el buzón), rol `regente` y sin
+   empresa. El enlace caduca a los 7 días y es de un solo uso. Después, el admin la asigna a los casos
+   que debe ver (`asignados.regente`); sin asignación su lista queda vacía.
+9. **Clientes de la revisión** (`seed_roles.js` en modo lista, abajo): dry-run, revisar, `--confirm`.
+10. **Humo en producción**: login de un cliente sembrado, verificación de correo del registro abierto,
+   descarga de un documento (URL firmada) y un pago sandbox.
+
+#### Sembrar cuentas reales: `seed_roles.js` en modo lista (TAREA 46)
+
+Sin `--cliente`/`--staff` el script sigue siendo el fixture de pruebas (7 usuarios, contraseña fija,
+SOLO emulador). Con una lista explícita **nunca** siembra el fixture: crea solo lo pedido, con
+contraseña aleatoria impresa **una sola vez** (no se guarda en ningún archivo ni log: cópiala en el
+momento a un gestor de contraseñas y entrégala por un canal seguro).
+
+```bash
+cd ~/Farmazed/tracker      # NO definir FIRESTORE_EMULATOR_HOST ni FIREBASE_AUTH_EMULATOR_HOST
+# 1) DRY-RUN (con --prod, por defecto): solo lista. No escribe nada.
+node scripts/seed_roles.js --prod --project=farmazed \
+  --cliente='cliente1@farmazed.test|Cliente Demo Uno|Empresa Demo Uno' \
+  --cliente='cliente2@farmazed.test|Cliente Demo Dos|Empresa Demo Dos'
+# 2) Con el visto bueno de Rick, la MISMA línea más --confirm.
+```
+
+- `--cliente`: `cliente_titular` de su propia empresa (misma alta que `POST /api/register`, pero con
+  correo verificado y claim `origen:'seed'`). `--staff='correo|Nombre|rol'` (`analista|abogado|regente`,
+  sin empresa; rechaza `admin` y `cliente_*`) existe pero **no se usa en esta revisión**: el personal
+  (Xenia) entra por invitación de empleado, paso 8.
+- Idempotente: un correo que ya existe en Auth no se toca (se informa). Si algo se corta, repetir el comando.
+- Guardas: sin `--prod --project=<id> --confirm` no escribe en producción; `--project` es obligatorio; si
+  `FIREBASE_PROJECT_ID`/`GOOGLE_CLOUD_PROJECT` están definidos deben coincidir. Un correo marcador
+  (`...@pendiente.invalid`) se puede listar en el dry-run pero el script se niega a escribirlo.
+- Un `regente` solo ve y trabaja los casos donde el admin lo **asignó** (`asignados.regente`, `cases.assign`).
+
 ### Permisos requeridos (ya configurados)
 - Service account `267037695065-compute@developer.gserviceaccount.com` tiene:
   - `roles/cloudbuild.builds.builder`

@@ -14,16 +14,64 @@
  *   FIREBASE_AUTH_EMULATOR_HOST=localhost:9099 \
  *   FIREBASE_PROJECT_ID=demo-farmazed \
  *   node scripts/seed_roles.js
+ *
+ * MODO LISTA (TAREA 46) — cuentas REALES con lista explícita, nunca el fixture:
+ *   node scripts/seed_roles.js --project=farmazed \
+ *     --cliente='correo|Nombre|Empresa' [--cliente=...] --staff='correo|Nombre|rol' [--staff=...]
+ *   · cliente = cliente_titular de su PROPIA empresa (comparte `altaTitular` con POST /api/register).
+ *   · staff = analista|abogado|regente (STAFF_ROLES), sin orgId. El admin va por bootstrap_admin.js.
+ *   · Cuentas con correo verificado y claim origen:'seed'; contraseña ALEATORIA, impresa UNA vez.
+ *   · Idempotente: un correo que ya existe en Auth no se toca.
+ *   · Guardas de migrate_roles.js (`resolverModo`): contra producción solo con
+ *     `--prod --project=<id> --confirm`; sin --confirm es DRY-RUN (solo lista). Con emuladores escribe
+ *     (salvo --dry-run). --project=<id> es obligatorio.
  */
+const crypto = require('node:crypto');
+const CORREO_VALIDO = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const argv = process.argv.slice(2);
+const MODO_LISTA = argv.some(a => /^--(cliente|staff)=/.test(a));
 
-if (!process.env.FIRESTORE_EMULATOR_HOST) {
-  console.error('❌ FIRESTORE_EMULATOR_HOST no está definido — este script SOLO corre contra el emulador.');
+let modoLista = null; // { dryRun, proyecto, clientes, staff } — solo en modo lista
+if (MODO_LISTA) {
+  const { resolverModo } = require('./migrate_roles');
+  const { STAFF_ROLES } = require('../middleware/permissions');
+  const proyecto = argv.find(a => a.startsWith('--project='))?.slice('--project='.length);
+  const modo = resolverModo(argv, process.env);
+  const lista = modo.error ? null : parsearLista(argv, STAFF_ROLES);
+  const error = modo.error || (!proyecto && '--project=<id> es obligatorio.') || lista.error;
+  if (error) { console.error(`❌ ${error}`); process.exit(1); }
+  modoLista = { ...lista, proyecto, prod: modo.prod, dryRun: modo.dryRun };
+} else if (!process.env.FIRESTORE_EMULATOR_HOST) {
+  console.error('❌ FIRESTORE_EMULATOR_HOST no está definido — este script SOLO corre contra el emulador (o en modo lista: --cliente/--staff, ver arriba).');
   process.exit(1);
+}
+
+/** Valida --cliente / --staff. Devuelve { clientes, staff } o { error }. */
+function parsearLista(args, rolesStaff) {
+  const partes = (v) => { const p = v.split('|').map(x => x.trim()); return p.length === 3 && p.every(Boolean) ? p : null; };
+  const valores = (flag) => args.filter(a => a.startsWith(`--${flag}=`)).map(a => a.slice(flag.length + 3));
+  const clientes = [], staff = [];
+  for (const v of valores('cliente')) {
+    const p = partes(v);
+    if (!p) return { error: `--cliente='${v}' inválido: usa 'correo|Nombre|Empresa'.` };
+    clientes.push({ correo: p[0], nombre: p[1], empresa: p[2] });
+  }
+  for (const v of valores('staff')) {
+    const p = partes(v);
+    if (!p) return { error: `--staff='${v}' inválido: usa 'correo|Nombre|rol'.` };
+    if (!rolesStaff.includes(p[2])) return { error: `--staff='${v}': el rol debe ser uno de ${rolesStaff.join(', ')} (el admin va por bootstrap_admin.js; los cliente_* por --cliente).` };
+    staff.push({ correo: p[0], nombre: p[1], role: p[2] });
+  }
+  const todos = [...clientes, ...staff];
+  const mal = todos.find(c => !CORREO_VALIDO.test(c.correo));
+  if (mal) return { error: `Correo inválido: ${mal.correo}` };
+  if (new Set(todos.map(c => c.correo.toLowerCase())).size !== todos.length) return { error: 'Hay un correo repetido en los argumentos.' };
+  return { clientes, staff };
 }
 
 const admin = require('../utils/firebase_admin.js');
 if (!admin.apps.length) {
-  admin.initializeApp({ projectId: process.env.FIREBASE_PROJECT_ID || 'demo-farmazed' });
+  admin.initializeApp({ projectId: modoLista?.proyecto || process.env.FIREBASE_PROJECT_ID || 'demo-farmazed' });
 }
 const db   = admin.firestore();
 const auth = admin.auth();
@@ -345,7 +393,53 @@ async function main() {
   console.log(`   Password (todas): ${PASSWORD}`);
 }
 
-main().then(() => process.exit(0)).catch(err => {
+async function existeEnAuth(correo) {
+  try { await auth.getUserByEmail(correo); return true; } catch (e) {
+    if (e.code === 'auth/user-not-found') return false;
+    throw e;
+  }
+}
+
+async function crearStaff({ correo, nombre, role }, password) {
+  const u = await auth.createUser({ email: correo, password, displayName: nombre, emailVerified: true });
+  try {
+    await auth.setCustomUserClaims(u.uid, { role, origen: 'seed' });
+  } catch (e) {
+    await auth.deleteUser(u.uid).catch(err => console.error(`⚠️ no se pudo deshacer ${correo} — borrar a mano: ${err.message}`));
+    throw e;
+  }
+}
+
+async function mainLista({ clientes, staff, dryRun, prod }) {
+  const { altaTitular } = require('../routes/register');
+  if (prod) console.log(`⚠️  PRODUCCIÓN — proyecto "${admin.app().options.projectId}" — ${dryRun ? 'DRY-RUN (no se escribe nada; para aplicar: --prod --project=<id> --confirm)' : 'ESCRIBE de verdad (--prod --confirm)'}`);
+  const prefijo = dryRun ? '[dry-run] ' : '';
+  const items = [
+    ...clientes.map(c => ({ ...c, descripcion: `cliente_titular de "${c.empresa}"` })),
+    ...staff.map(s => ({ ...s, descripcion: `personal (${s.role})` })),
+  ];
+  if (!dryRun) {
+    const marcador = items.find(it => it.correo.toLowerCase().endsWith('.invalid'));
+    if (marcador) throw new Error(`${marcador.correo} es un marcador (.invalid), no un correo real: no se escribe.`);
+  }
+  let creadas = 0, existentes = 0;
+  for (const it of items) {
+    if (await existeEnAuth(it.correo)) {
+      existentes++;
+      console.log(`  ${prefijo}YA EXISTE, no se toca: ${it.correo}`);
+      continue;
+    }
+    creadas++;
+    if (dryRun) { console.log(`  ${prefijo}crearía ${it.descripcion}: ${it.correo} (${it.nombre})`); continue; }
+    const password = crypto.randomBytes(15).toString('base64url');
+    if (it.role) await crearStaff(it, password);
+    else await altaTitular({ nombre: it.nombre, correo: it.correo, password, empresa: it.empresa, emailVerified: true, origen: 'seed' });
+    console.log(`  ✅ creado ${it.descripcion}: ${it.correo} — contraseña (se muestra UNA vez): ${password}`);
+  }
+  console.log(`\n${dryRun ? '🔎 DRY-RUN' : '✅ Siembra'}: ${creadas} ${dryRun ? 'por crear' : 'creada(s)'}, ${existentes} ya existían (sin tocar).`);
+}
+
+(modoLista ? mainLista(modoLista) : main()).then(() => process.exit(0)).catch(err => {
   console.error('❌ Seed de roles error:', err);
   process.exit(1);
 });

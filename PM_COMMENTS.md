@@ -836,3 +836,8 @@ la demo local con PayPal **sandbox** (`PAYMENTS_PROVIDER=paypal`,
 emuladores (el enlace sale del emulador de Auth). Credenciales de PayPal:
 las carga Rick en `tracker/.env` (ignorado por git) o Secret Manager; nunca
 en el chat ni en el repo.
+
+## H.17 — 26-oct: cuentas para el deploy de revisión (Rick, vía Dandy)
+- Clientes demo `cliente1@farmazed.test` y `cliente2@farmazed.test` (cada uno titular de su propia empresa) y Xenia Mendoza como **regente**, creados con `seed_roles.js` en modo lista (TAREA 46, aceptada; no hay script nuevo, decisión de Rick).
+- El regente pide y revisa documentos, sin panel admin, y **solo ve los casos que le asignan**: el admin debe asignarle expedientes.
+- Pendiente de Rick: el correo real de Xenia (Workspace), quién ejecuta el deploy, y la autorización de commit y push. Las contraseñas se muestran una sola vez al correr el seed en producción y no se guardan en ningún archivo.
