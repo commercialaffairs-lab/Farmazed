@@ -156,3 +156,9 @@ primero a comprobar en Sandbox, con una suscripción de prueba y un cambio de pl
       al portal, que captura el pago y lo registra.
 - [ ] (Para suscripciones y cambios de plan) `./tunel_paypal.sh` + webhook registrado en
       PayPal con esa URL + `PAYPAL_WEBHOOK_ID` real en `tracker/.env` + reiniciar la demo.
+
+## Estado al 01-nov-2026 (decisión de Rick)
+
+- **Hoy se cobra solo por cotización**: PayPal (botón del portal) o enlace de Rapid PayPro por producto. No hay planes ni precios fijos, así que **suscripciones y cambio de plan quedan en pausa**; el webhook no es necesario para el pago de cotización (el portal captura al volver de PayPal) y se registra en producción con la URL de Cloud Run.
+- Pago sandbox probado de punta a punta el 01-nov con la demo en Docker (PBS, B/. 4,130, captura `COMPLETED`).
+- Hallazgo abierto sobre el borrador automático (MEF/IEA cobrados con casillas desmarcadas): ver `PENDIENTES.md`, sección "Prueba de pago PayPal sandbox".

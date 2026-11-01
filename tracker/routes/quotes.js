@@ -43,7 +43,7 @@ const admin       = require('../utils/firebase_admin.js');
 const { requireAuth } = require('../middleware/auth');
 const { serializeTimestamps } = require('../utils/serialize');
 const { effectiveRole, CLIENT_ROLES, requirePermission } = require('../middleware/permissions');
-const { conceptosRequeridosFase05 } = require('../utils/conceptos_fase05');
+const { conceptosCobrados } = require('../utils/conceptos_fase05');
 const { getProvider, urlsDeRetorno } = require('../services/payments');
 const { createConceptPayment } = require('../services/payments_ledger');
 const { recomputeTotal } = require('../services/quotes');
@@ -491,7 +491,7 @@ router.post('/:id/pago/capturar', requireAuth, requirePermission('quotes.pay'), 
         if (!principal) throw new Error(`el caso ${caseId} no tiene línea principal en la cotización`);
         const extras = data.lineas.filter(l => l.caseId === caseId && l.tipo && l.tipo !== 'principal');
 
-        for (const concepto of conceptosRequeridosFase05(principal)) {
+        for (const concepto of conceptosCobrados(principal, extras)) {
           const montoConcepto = (principal.conceptos?.[concepto] || 0)
             + extras.reduce((s, l) => s + (l.conceptos?.[concepto] || 0), 0);
           const pago = await createConceptPayment(caseId, {

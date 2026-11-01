@@ -19,4 +19,17 @@ function conceptosRequeridosFase05(linea) {
   return requeridos;
 }
 
-module.exports = { conceptosRequeridosFase05 };
+/**
+ * Conceptos a registrar cuando se cobra una línea (PayPal o Rapid PayPro): los requeridos por el
+ * gate de fase_05 MÁS cualquier otro con monto > 0 en la cotización. Lo cobrado queda siempre en
+ * el libro de pagos aunque la casilla (esExtranjero/aplicaIEA) no esté marcada — hallazgo de la
+ * prueba de Rick del 01-nov-2026: el borrador automático trae MEF e IEA del tarifario y se cobran.
+ */
+function conceptosCobrados(principal, extras = []) {
+  const monto = (c) => (principal?.conceptos?.[c] || 0) + extras.reduce((s, l) => s + (l?.conceptos?.[c] || 0), 0);
+  const lista = [...conceptosRequeridosFase05(principal)];
+  for (const c of ['honorarios', 'tasa_dnfd', 'mef', 'iea']) if (!lista.includes(c) && monto(c) > 0) lista.push(c);
+  return lista;
+}
+
+module.exports = { conceptosRequeridosFase05, conceptosCobrados };

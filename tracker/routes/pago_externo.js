@@ -19,7 +19,7 @@ const { requireAuth } = require('../middleware/auth');
 const { requirePermission } = require('../middleware/permissions');
 const { serializeTimestamps } = require('../utils/serialize');
 const { textoError, trimOrNull } = require('../utils/validar_texto');
-const { conceptosRequeridosFase05 } = require('../utils/conceptos_fase05');
+const { conceptosCobrados } = require('../utils/conceptos_fase05');
 const { createConceptPayment } = require('../services/payments_ledger');
 
 const router = Router({ mergeParams: true });
@@ -100,7 +100,7 @@ router.post('/confirmar', requireAuth, requirePermission('payments.create'), asy
     const ahora = admin.firestore.Timestamp.now();
     const batch = db().batch();
     const pagos = [];
-    for (const concepto of conceptosRequeridosFase05(principal)) {
+    for (const concepto of conceptosCobrados(principal, extras)) {
       const monto = (principal.conceptos?.[concepto] || 0) + extras.reduce((s, l) => s + (l.conceptos?.[concepto] || 0), 0);
       const pago = await createConceptPayment(caseId, {
         concepto, monto, origen: PROVEEDOR, paypalOrderId: null,
