@@ -56,7 +56,10 @@
         </div>
         <div class="col-sm-5 mb-3">
           <label class="form-label small" for="s-telefono">Número de contacto</label>
-          <input type="tel" class="form-control" id="s-telefono" maxlength="40" required>
+          <div class="input-group">
+            <select class="form-select" id="s-codigo" aria-label="Código de país" style="max-width:118px;flex:0 0 auto"></select>
+            <input type="tel" class="form-control" id="s-telefono" maxlength="20" inputmode="numeric" placeholder="6000-0000" required>
+          </div>
         </div>
       </div>
 
@@ -82,7 +85,7 @@
         <div class="row">
           <div class="col-sm-7 mb-3">
             <label class="form-label small" for="s-pais">¿Dónde está registrada la empresa?</label>
-            <input type="text" class="form-control" id="s-pais" maxlength="80" placeholder="País">
+            <select class="form-select" id="s-pais"></select>
           </div>
           <div class="col-sm-5 mb-3">
             <label class="form-label small" for="s-cantidad">Productos que maneja</label>
@@ -133,12 +136,17 @@
 
 <script type="module">
   import { API_BASE } from './portal/js/auth.js';
+  import { llenarPaises, llenarCodigos } from './portal/js/paises.js';
 
   function show(id) { document.getElementById(id).classList.remove('d-none'); }
   function hide(id) { document.getElementById(id).classList.add('d-none'); }
   const PLANES = ['consulta', 'registro', 'empresarial'];
   const v = (id) => document.getElementById(id).value.trim();
   const tipoElegido = () => document.querySelector('input[name=tipo]:checked')?.value;
+
+  llenarCodigos(document.getElementById('s-codigo'));
+  llenarPaises(document.getElementById('s-pais'));
+  const telefonoCompleto = () => `${v('s-codigo')} ${v('s-telefono')}`;
 
   document.getElementById('s-tipo').addEventListener('change', () => {
     document.getElementById('bloque-empresa').classList.toggle('d-none', tipoElegido() !== 'empresa');
@@ -147,7 +155,7 @@
   function validar() {
     if (!v('s-nombre')) return 'Escribe tu nombre.';
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v('s-correo'))) return 'Escribe un correo válido.';
-    if (!v('s-telefono')) return 'Escribe un número de contacto.';
+    if (!/^[\d\s().-]{6,20}$/.test(v('s-telefono'))) return 'Escribe un número de contacto válido (solo dígitos, sin el código de país).';
     const tipo = tipoElegido();
     if (!tipo) return 'Indica si representas a una empresa, eres regente independiente o abogado tramitante.';
     if (tipo === 'empresa') {
@@ -173,7 +181,7 @@
     const esEmpresa = tipo === 'empresa';
     const plan = new URLSearchParams(window.location.search).get('plan');
     const body = {
-      nombre: v('s-nombre'), correo: v('s-correo'), telefono: v('s-telefono'), tipoSolicitante: tipo,
+      nombre: v('s-nombre'), correo: v('s-correo'), telefono: telefonoCompleto(), tipoSolicitante: tipo,
       intencion: document.querySelector('input[name=intencion]:checked').value, fuente: v('s-fuente'),
       mensaje: v('s-mensaje') || undefined, plan: PLANES.includes(plan) ? plan : undefined,
       ...(esEmpresa ? {

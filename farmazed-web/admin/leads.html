@@ -98,6 +98,7 @@
   import { initBackoffice, esc } from '../portal/js/auth.js';
   import { avisar, confirmar, preguntar } from '../portal/js/dialogos.js';
   import api from '../portal/js/api.js';
+  import { opcionesPaises } from '../portal/js/paises.js';
 
   const TIPO    = { empresa: 'Empresa', regente: 'Regente independiente', abogado: 'Abogado tramitante' };
   const INTERES = { medicamentos: 'Medicamentos', cosmeticos: 'Cosméticos', higienicos: 'Higiénicos', plaguicidas: 'Plaguicidas', excepcion: 'Excepción de registro', publicidad: 'Publicidad' };
@@ -204,7 +205,7 @@
           <select class="form-select form-select-sm" name="fuente" ${dis}><option value="">—</option>${Object.keys(FUENTE).map(f => `<option value="${f}" ${l.fuente === f ? 'selected' : ''}>${FUENTE[f]}</option>`).join('')}</select></div>
         <div class="col-6 ${esEmpresa ? '' : 'd-none'} campo-empresa"><div class="campo-label">Empresa</div><input class="form-control form-control-sm" name="empresa" value="${esc(l.empresa || '')}" ${dis}></div>
         <div class="col-6 ${esEmpresa ? '' : 'd-none'} campo-empresa"><div class="campo-label">Sitio web</div><input class="form-control form-control-sm" name="website" value="${esc(l.website || '')}" placeholder="https://" ${dis}></div>
-        <div class="col-6 ${esEmpresa ? '' : 'd-none'} campo-empresa"><div class="campo-label">Registrada en</div><input class="form-control form-control-sm" name="pais" value="${esc(l.pais || '')}" ${dis}></div>
+        <div class="col-6 ${esEmpresa ? '' : 'd-none'} campo-empresa"><div class="campo-label">Registrada en</div><select class="form-select form-select-sm" name="pais" ${dis}>${opcionesPaises({ seleccionado: l.pais || null, placeholder: '—' })}</select></div>
         <div class="col-6 ${esEmpresa ? '' : 'd-none'} campo-empresa"><div class="campo-label">Productos que maneja</div><input type="number" min="0" class="form-control form-control-sm" name="cantidadProductos" value="${l.cantidadProductos ?? ''}" ${dis}></div>
         <div class="col-12 ${esEmpresa ? '' : 'd-none'} campo-empresa"><div class="campo-label">Productos de interés</div>
           <div class="d-flex flex-wrap gap-3">${Object.keys(INTERES).map(i => `<label class="small"><input type="checkbox" class="form-check-input me-1" name="interes" value="${i}" ${(l.interes || []).includes(i) ? 'checked' : ''} ${dis}>${INTERES[i]}</label>`).join('')}</div></div>
