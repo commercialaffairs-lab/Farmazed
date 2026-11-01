@@ -147,6 +147,7 @@ const api = {
   getOrgMembers: (orgId) => apiFetch(`/api/orgs/${orgId}/members`),
 
   getEmployees: () => apiFetch('/api/employees'),
+  reiniciarDemo: () => apiFetch('/api/demo/reiniciar', { method: 'POST' }),
   restablecerContrasena: (correo) => apiFetch('/api/employees/restablecer-contrasena', { method: 'POST', body: JSON.stringify({ correo }) }),
 
   getInvitations: () => apiFetch('/api/invitations'),

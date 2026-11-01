@@ -345,7 +345,7 @@ router.post('/:id/pago/crear-orden', requireAuth, requirePermission('quotes.pay'
     const liberar = () => ref.update({ pagoPaypal: admin.firestore.FieldValue.delete() })
       .catch(err => console.error('[quotes/pago] no se pudo liberar la reserva', { quoteId: ref.id, error: err.message }));
     try {
-      provider = getProvider();
+      provider = getProvider(req.user);
       orden = await provider.createOrder({
         amount: reserva.monto, currency: 'USD', referenceId: req.params.id,
         // un reintento inmediato del mismo cobro no abre otra orden; por hora, para que una orden caducada no quede pegada
@@ -430,7 +430,7 @@ router.post('/:id/pago/capturar', requireAuth, requirePermission('quotes.pay'), 
 
     let resultado;
     try {
-      resultado = await getProvider().captureOrder(orderId);
+      resultado = await getProvider(req.user).captureOrder(orderId);
     } catch (e) {
       // Puede haber cobrado igual (timeout con la respuesta perdida): al
       // volver al estado previo, reintentar /capturar lo detecta

@@ -158,6 +158,43 @@ async function getOrgId() {
   return result.claims.orgId || null;
 }
 
+/** ¿Cuenta de demostración? (claim `demo:true`, services/demo.js). */
+async function esDemo() {
+  if (!_currentUser) return false;
+  return (await _currentUser.getIdTokenResult()).claims.demo === true;
+}
+
+/**
+ * Botón [Reiniciar cuenta demo] (Rick, 01-nov): solo para cuentas demo. Lo pinta dentro del
+ * contenedor que se le pase; al confirmar llama a POST /api/demo/reiniciar y cierra la sesión
+ * (el reinicio revoca los tokens: la persona vuelve a entrar y arranca el recorrido de cero).
+ */
+async function montarBotonDemo(contenedor) {
+  if (!contenedor || !(await esDemo())) return null;
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.id = 'btn-reiniciar-demo';
+  btn.className = 'btn btn-sm btn-warning fw-semibold';
+  btn.textContent = 'Reiniciar cuenta demo';
+  btn.title = 'Vuelve a dejar la cuenta de demostración como al principio del recorrido';
+  btn.addEventListener('click', async () => {
+    const { confirmar, avisar } = await import('./dialogos.js');
+    if (!(await confirmar('Se borrarán los cambios que hiciste en la demo y todo volverá al estado inicial. ¿Reiniciar?'))) return;
+    btn.disabled = true;
+    try {
+      const { default: api } = await import('./api.js');
+      await api.reiniciarDemo();
+      await avisar('Demo reiniciada. Vuelve a iniciar sesión para empezar el recorrido desde el principio.');
+      await logout();
+    } catch (err) {
+      btn.disabled = false;
+      await avisar('Error: ' + err.message);
+    }
+  });
+  contenedor.prepend(btn);
+  return btn;
+}
+
 /** ¿Analista, abogado o regente? (empleado Farmazed, no admin ni cliente). */
 async function isStaff() {
   return STAFF_ROLES.includes(await getRole());
@@ -191,6 +228,7 @@ async function initBackoffice() {
   if (nombre) nombre.textContent = user.displayName || user.email;
   document.getElementById('sidebar-logout')?.addEventListener('click', logout);
   const admin = await isAdmin();
+  await montarBotonDemo(nombre?.parentElement || document.querySelector('.topbar'));
   const rotulo = document.getElementById('sidebar-rol');
   if (rotulo) rotulo.textContent = admin ? 'Admin Panel' : (ROTULO_STAFF[await getRole()] || 'Personal');
   if (admin) {
@@ -204,5 +242,5 @@ async function initBackoffice() {
 
 export {
   initBackoffice, esc, auth, register, login, logout, getToken, requireLogin, requireVerifiedLogin, isAdmin, API_BASE,
-  getRole, getOrgId, isStaff, hasBackofficeAccess,
+  getRole, getOrgId, isStaff, hasBackofficeAccess, esDemo, montarBotonDemo,
 };

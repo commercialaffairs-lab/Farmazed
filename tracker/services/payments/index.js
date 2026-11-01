@@ -16,7 +16,10 @@
  */
 const { resolverProveedorPagos, obtenerConfig } = require('../../config');
 
-function getProvider() {
+function getProvider(user = null) {
+  // Modo demo (01-nov): una cuenta de demostración (claim demo:true) nunca cobra con dinero
+  // real, ni siquiera en producción — siempre el proveedor de prueba.
+  if (user?.demo === true) return require('./mock');
   // TAREA 40: la decisión vive en tracker/config.js. El mock SOLO con emulador o
   // PAYMENTS_PROVIDER=mock (nunca en producción); sin él y sin credenciales de PayPal
   // completas esto LANZA (y el tracker ni siquiera arranca): ya no cae al mock "a medias".

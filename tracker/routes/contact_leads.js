@@ -19,6 +19,7 @@ const invitationsRouter = require('./invitations');
 const { textoError, trimOrNull } = require('../utils/validar_texto');
 const { crearLimitador } = require('../utils/rate_limit');
 const { createOrg } = require('../services/orgs');
+const { visibleParaDemo } = require('../services/demo'); // el personal demo solo ve leads demo:true
 
 const router = Router();
 const db     = () => admin.firestore();
@@ -130,7 +131,7 @@ router.get('/', requireAuth, requirePermission('contact_leads.read'), async (req
     let query = db().collection('contactLeads').orderBy('createdAt', 'desc');
     if (req.query.todos !== '1') query = query.where('invitado', '==', false);
     const snap = await query.get();
-    const leads = snap.docs.map(d => ({ id: d.id, estado: d.data().invitado ? 'invitado' : 'nuevo', ...d.data() }));
+    const leads = snap.docs.map(d => ({ id: d.id, estado: d.data().invitado ? 'invitado' : 'nuevo', ...d.data() })).filter(l => visibleParaDemo(req.user, l));
     const catalogos = { tipos: TIPOS_SOLICITANTE, intereses: INTERESES, intenciones: INTENCIONES, fuentes: FUENTES, estados: ESTADOS };
     res.json(serializeTimestamps({ total: leads.length, leads, catalogos }));
   } catch (e) {
@@ -145,6 +146,7 @@ router.patch('/:id', requireAuth, requirePermission('contact_leads.edit'), async
     const snap = await ref.get();
     if (!snap.exists) return res.status(404).json({ error: 'Lead no encontrado' });
     const lead = snap.data();
+    if (!visibleParaDemo(req.user, lead)) return res.status(403).json({ error: 'Forbidden' });
 
     const { datos, error } = normalizarLead(req.body, { parcial: true });
     if (error) return res.status(400).json({ error });

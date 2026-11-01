@@ -21,6 +21,10 @@ function correoConfigurado(env = process.env) {
   return !!(env.SMTP_HOST && env.SMTP_USER && env.SMTP_PASS && env.SMTP_FROM);
 }
 
+// Modo demo (01-nov): a las cuentas de demostración (*.demo@) no se les manda ningún correo.
+const { esCorreoDemo } = require('./demo');
+const seEnvia = (correo) => correoConfigurado() && !esCorreoDemo(correo);
+
 function transportador() {
   if (!transporte) {
     const nodemailer = require('nodemailer');
@@ -48,7 +52,7 @@ function plantilla(nombreArchivo, valores) {
  * hay SMTP configurado. Lanza si el envío falla (quien llama decide si cae al correo de Firebase).
  */
 async function enviarVerificacion({ correo, nombre }) {
-  if (!correoConfigurado()) return false;
+  if (!seEnvia(correo)) return false;
   const enlace = await admin.auth().generateEmailVerificationLink(correo, {
     url: `${obtenerConfig().portalUrl}/verificar-correo.html`, // a dónde vuelve tras confirmar
   });
@@ -69,7 +73,7 @@ async function enviarVerificacion({ correo, nombre }) {
  * Lanza si el envío falla (quien llama decide; el enlace sigue visible en el panel).
  */
 async function enviarInvitacion({ correo, rol, empresa, enlace }) {
-  if (!correoConfigurado()) return false;
+  if (!seEnvia(correo)) return false;
   const html = plantilla('invitacion.html', {
     rol, empresa: empresa ? ` de ${empresa}` : '', enlace, anio: new Date().getFullYear(),
   });
@@ -90,7 +94,7 @@ async function enviarInvitacion({ correo, rol, empresa, enlace }) {
  * Devuelve true si lo envió, false si no hay SMTP. Lanza si el envío falla.
  */
 async function enviarRestablecimiento({ correo, nombre }) {
-  if (!correoConfigurado()) return false;
+  if (!seEnvia(correo)) return false;
   const enlace = await admin.auth().generatePasswordResetLink(correo, { url: `${obtenerConfig().portalUrl}/login.html` });
   const html = plantilla('restablecer.html', { nombre: nombre || 'cliente', enlace, anio: new Date().getFullYear() });
   await transportador().sendMail({

@@ -147,3 +147,9 @@ Objetivo: que un prospecto (cliente) o un empleado nuevo entienda la plataforma 
 **Decisiones de Rick pendientes antes de arrancar**: (1) ¿modo demo en producción o en un despliegue aparte (recomendado: `demo.farmazed.com`)? (2) ¿cuentas demo con clave pública (p. ej. `Demo2026!`) o entregadas una a una? (3) ¿manual solo web o también PDF?
 
 Estimación: 4–5 sesiones (datos+reinicio · recorrido cliente · recorrido personal · manual · pruebas).
+
+### Modo demo — punto 1 HECHO (01-nov-2026): cuentas, datos de ejemplo y reinicio
+
+- Cuentas de producción decididas por Rick (claves por `DEMO_PASSWORD_*`, fuera del repo): `cliente.demo@farmazed.com` (titular de "Laboratorios Ejemplo S.A.") y `regente.demo@farmazed.com` (regente; solo ve sus casos asignados, por eso convive con datos reales). **Sin admin demo.** Detalle, garantías y cómo sembrar: `DEMO.md`.
+- Hecho: `services/demo.js` (seed + borrado aislado por `demo-org`/`demo:true`), `scripts/seed_demo.js`, `POST /api/demo/reiniciar` (solo claim `demo:true`, 1/min, revoca sesiones), botón **[Reiniciar cuenta demo]** en el topbar del portal del cliente y del back-office, pago de cuentas demo siempre con el proveedor de prueba (`getProvider(user)`), sin correos a `*.demo@`, paso 9b en `DEPLOY.md`, suite `tests/demo.test.js`.
+- Siguientes puntos del plan: 2) recorrido guiado con pasos predeterminados, 3) manual ES/EN/FR/PT, 4) e2e del recorrido.

@@ -213,6 +213,9 @@ ejecuta sin el visto bueno de Rick; cada paso de escritura trae antes su dry-run
    empresa. El enlace caduca a los 7 días y es de un solo uso. Después, el admin la asigna a los casos
    que debe ver (`asignados.regente`); sin asignación su lista queda vacía.
 9. **Clientes de la revisión** (`seed_roles.js` en modo lista, abajo): dry-run, revisar, `--confirm`.
+9b. **Cuentas de demostración** (`DEMO.md`): con `DEMO_PASSWORD_CLIENTE` y `DEMO_PASSWORD_REGENTE` en el entorno (Secret Manager; también las necesita el servicio para el botón de reinicio), `cd tracker && node scripts/seed_demo.js --prod --project=farmazed --confirm`.
+    Crea `cliente.demo@farmazed.com` y `regente.demo@farmazed.com` con la empresa "Laboratorios Ejemplo S.A." y sus
+    datos de ejemplo (todo `demo:true`). Volver a correrlo equivale al botón [Reiniciar cuenta demo].
 10. **Humo en producción**: login de un cliente sembrado, verificación de correo del registro abierto,
    descarga de un documento (URL firmada) y un pago sandbox.
 

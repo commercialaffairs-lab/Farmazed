@@ -18,6 +18,7 @@ const { serializeTimestamps } = require('../utils/serialize');
 const { TRAMITE_TYPES } = require('../data/faddi_checklists');
 const { textoError } = require('../utils/validar_texto');
 const { createOrg } = require('../services/orgs');
+const { visibleParaDemo } = require('../services/demo'); // el personal demo solo ve empresas demo:true
 
 const router = Router();
 const db     = () => admin.firestore();
@@ -26,7 +27,7 @@ const db     = () => admin.firestore();
 router.get('/', requireAuth, requirePermission('orgs.list'), async (req, res) => {
   try {
     const snap = await db().collection('orgs').orderBy('createdAt', 'desc').get();
-    const orgs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const orgs = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(o => visibleParaDemo(req.user, o));
     res.json(serializeTimestamps({ total: orgs.length, orgs }));
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -193,7 +194,7 @@ router.patch('/mine/captacion', requireAuth, requirePermission('orgs.edit_captac
 router.get('/leads', requireAuth, requirePermission('orgs.read_leads'), async (req, res) => {
   try {
     const snap = await db().collection('orgs').where('captacion.revisadoPorFarmazed', '==', false).get();
-    const leads = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const leads = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(o => visibleParaDemo(req.user, o));
     res.json(serializeTimestamps({ total: leads.length, leads }));
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -206,6 +207,7 @@ router.post('/:orgId/leads/revisar', requireAuth, requirePermission('orgs.read_l
     const orgRef  = db().collection('orgs').doc(req.params.orgId);
     const orgSnap = await orgRef.get();
     if (!orgSnap.exists) return res.status(404).json({ error: 'Empresa no encontrada' });
+    if (!visibleParaDemo(req.user, orgSnap.data())) return res.status(403).json({ error: 'Forbidden' });
     if (!orgSnap.data().captacion) return res.status(400).json({ error: 'Esta empresa todavía no tiene captación completada.' });
 
     await orgRef.update({
@@ -263,6 +265,7 @@ router.put('/:orgId/diagnostico', requireAuth, requirePermission('orgs.edit_diag
     const orgRef  = db().collection('orgs').doc(req.params.orgId);
     const orgSnap = await orgRef.get();
     if (!orgSnap.exists) return res.status(404).json({ error: 'Empresa no encontrada' });
+    if (!visibleParaDemo(req.user, orgSnap.data())) return res.status(403).json({ error: 'Forbidden' });
 
     const now = admin.firestore.Timestamp.now();
     const diagnostico = {};

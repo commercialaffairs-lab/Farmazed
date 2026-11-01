@@ -422,6 +422,7 @@
       </ul>
 
       <ul class="topbar-item list-unstyled d-inline-flex align-items-center mb-0 gap-3">
+        <li id="tb-demo" class="d-flex align-items-center"></li>
         <li class="d-none d-md-flex align-items-center gap-2" style="font-size:.75rem;">
           <span style="font-weight:700;color:#fff;" id="tb-empresa">—</span>
           <span style="color:rgba(255,255,255,.3);">|</span>
@@ -1095,7 +1096,7 @@
 <!-- render function, since type="module" is deferred regardless of source -->
 <!-- position). Fills window.DATA with real data, then calls window.renderAll(). -->
 <script type="module">
-  import { esc, requireVerifiedLogin, logout } from './portal/js/auth.js';
+  import { esc, requireVerifiedLogin, logout, montarBotonDemo } from './portal/js/auth.js';
   import { avisar, confirmar, preguntar } from './portal/js/dialogos.js';
   // El <script> clásico de abajo usa estos modales como globales (igual que esc/__fzApi).
   Object.assign(window, { avisar, confirmar, preguntar });
@@ -1124,6 +1125,7 @@
   }
 
   const user = await requireVerifiedLogin('login.html');
+  montarBotonDemo(document.getElementById('tb-demo')); // solo aparece en la cuenta de demostración
   if (!user) return; // en camino a verificar-correo.html
 
   // TAREA 15/E3 parte 2: el módulo "Mi Empresa" (classic script) necesita
