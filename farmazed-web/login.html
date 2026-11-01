@@ -235,7 +235,7 @@
         </div>
 
         <div class="fz-card-footer">
-            <a href="#">¿Olvidó su contraseña?</a>
+            <a href="#" id="link-olvido">¿Olvidó su contraseña?</a>
             <span>·</span>
             <a href="index.html">← Volver al sitio</a>
         </div>
@@ -302,6 +302,37 @@
                 msg.textContent = 'Usuario o contraseña incorrectos.';
             }
         });
+    </script>
+
+    <script type="module">
+      // "¿Olvidó su contraseña?" (decisión 14 de Rick, 31-oct-2026): usa el correo del campo
+      // Usuario; el servidor manda el correo de marca con el enlace de Firebase para definir una
+      // contraseña nueva. Misma respuesta exista o no la cuenta.
+      import { API_BASE } from './portal/js/auth.js';
+      document.getElementById('link-olvido').addEventListener('click', async (e) => {
+        e.preventDefault();
+        const msg = document.getElementById('login-msg');
+        const correo = document.getElementById('usuario').value.trim();
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo)) {
+          msg.style.color = '#c0392b';
+          msg.textContent = 'Escribe tu correo en el campo Usuario y vuelve a pulsar "¿Olvidó su contraseña?".';
+          return;
+        }
+        msg.style.color = '#2190d7';
+        msg.textContent = 'Enviando…';
+        try {
+          const res = await fetch(`${API_BASE}/api/register/restablecer`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ correo }),
+          });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+          msg.style.color = '#2e7d32';
+          msg.textContent = `Si existe una cuenta con ${correo}, te enviamos un correo para definir una contraseña nueva.`;
+        } catch (err) {
+          msg.style.color = '#c0392b';
+          msg.textContent = err.message;
+        }
+      });
     </script>
 
     <script>

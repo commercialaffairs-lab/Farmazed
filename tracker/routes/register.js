@@ -28,7 +28,7 @@ const admin       = require('../utils/firebase_admin.js');
 const { textoError, errorPassword } = require('../utils/validar_texto');
 const { crearLimitador } = require('../utils/rate_limit');
 const { createOrg } = require('../services/orgs');
-const { enviarVerificacion } = require('../services/correo');
+const { enviarVerificacion, enviarRestablecimiento } = require('../services/correo');
 const { requireAuth } = require('../middleware/auth');
 const invitaciones = require('./invitations');
 
@@ -164,6 +164,26 @@ router.post('/reenviar-verificacion', requireAuth, async (req, res) => {
     console.error('[register] reenviar-verificacion', { uid: req.user?.uid, error: e.message });
     res.status(500).json({ error: 'No se pudo reenviar el correo. Intenta de nuevo en unos minutos.' });
   }
+});
+
+// ─── POST /api/register/restablecer (público) — "¿Olvidó su contraseña?" del login ─────────
+// Misma respuesta exista o no la cuenta (no sirve para averiguar qué correos tiene Farmazed).
+// Sin SMTP responde `correoEnviado:false` y el navegador manda el de Firebase (texto plano).
+const limitadorRestablecer = crearLimitador({ ventanaMs: 10 * 60 * 1000, max: 5 });
+router.post('/restablecer', async (req, res) => {
+  if (limitadorRestablecer.estaLimitado(req.ip)) {
+    return res.status(429).json({ error: 'Demasiadas solicitudes desde esta dirección. Intenta de nuevo más tarde.' });
+  }
+  const correo = typeof req.body?.correo === 'string' ? req.body.correo.trim() : '';
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo) || correo.length > 254) return res.status(400).json({ error: 'Correo inválido.' });
+  let correoEnviado = false;
+  try {
+    const user = await admin.auth().getUserByEmail(correo);
+    correoEnviado = await enviarRestablecimiento({ correo: user.email, nombre: user.displayName });
+  } catch (e) {
+    if (e.code !== 'auth/user-not-found') console.error('[register] restablecer', { error: e.message });
+  }
+  res.json({ correoEnviado });
 });
 
 module.exports = router;

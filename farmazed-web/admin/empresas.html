@@ -261,6 +261,11 @@
         ? members.map(m => `${m.email} (${m.role})`).join('\n')
         : '(sin miembros)';
       await avisar(`Miembros de ${nombre}:\n\n${lista}`);
+      if (!members.length) return;
+      // Decisión 14: restablecer la contraseña de un cliente desde aquí, por correo.
+      const correo = await preguntar('Para enviar un correo de "contraseña nueva" a un miembro, escribe su correo (o deja vacío):', { valor: members.length === 1 ? members[0].email : '' });
+      if (correo && members.some(m => m.email === correo.trim())) await restablecerContrasena(correo.trim());
+      else if (correo) await avisar('Ese correo no es miembro de esta empresa.');
     } catch (e) { await avisar('Error: ' + e.message); }
   };
 
@@ -269,11 +274,24 @@
     employeesCache = employees;
     document.getElementById('employees-list').innerHTML = employees.length
       ? employees.map(e => `
-        <div class="d-flex align-items-center justify-content-between border-bottom py-2 px-2">
+        <div class="d-flex align-items-center justify-content-between border-bottom py-2 px-2 gap-2">
           <div class="small">${esc(e.email)}</div>
-          <span class="badge bg-secondary-subtle text-secondary border">${esc(e.role)}</span>
+          <div class="d-flex align-items-center gap-2">
+            <span class="badge bg-secondary-subtle text-secondary border">${esc(e.role)}</span>
+            <button class="btn btn-sm btn-link p-0 small btn-restablecer" data-correo="${esc(e.email)}" title="Enviar correo para definir una contraseña nueva">Restablecer contraseña</button>
+          </div>
         </div>`).join('')
       : '<div class="text-muted small p-2">Sin empleados todavía.</div>';
+    document.querySelectorAll('.btn-restablecer').forEach(btn => btn.addEventListener('click', () => restablecerContrasena(btn.dataset.correo)));
+  }
+
+  // Decisión 14 (31-oct): el admin nunca ve contraseñas; manda el correo para definir una nueva.
+  async function restablecerContrasena(correo) {
+    if (!(await confirmar(`Se enviará a ${correo} un correo para definir una contraseña nueva. ¿Continuar?`))) return;
+    try {
+      const r = await api.restablecerContrasena(correo);
+      await avisar(r.correoEnviado ? `Correo de restablecimiento enviado a ${correo}.` : 'No hay envío de correo configurado en este entorno; no se pudo enviar.');
+    } catch (err) { await avisar('Error: ' + err.message); }
   }
 
   async function loadInvitations() {

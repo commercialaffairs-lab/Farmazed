@@ -83,4 +83,24 @@ async function enviarInvitacion({ correo, rol, empresa, enlace }) {
   return true;
 }
 
-module.exports = { correoConfigurado, enviarVerificacion, enviarInvitacion, plantilla };
+/**
+ * Correo para definir una contraseña nueva (decisión 14 de Rick, 31-oct-2026): lo pide el propio
+ * usuario desde el login ("¿Olvidó su contraseña?") o el admin desde el panel. El enlace lo genera
+ * Firebase Auth y lleva a su página de nueva contraseña; al terminar vuelve al login del portal.
+ * Devuelve true si lo envió, false si no hay SMTP. Lanza si el envío falla.
+ */
+async function enviarRestablecimiento({ correo, nombre }) {
+  if (!correoConfigurado()) return false;
+  const enlace = await admin.auth().generatePasswordResetLink(correo, { url: `${obtenerConfig().portalUrl}/login.html` });
+  const html = plantilla('restablecer.html', { nombre: nombre || 'cliente', enlace, anio: new Date().getFullYear() });
+  await transportador().sendMail({
+    from: process.env.SMTP_FROM, to: correo,
+    subject: 'Define una contraseña nueva para el portal Farmazed',
+    html,
+    text: `Hola ${nombre || ''},\n\nRecibimos una solicitud para cambiar la contraseña de tu cuenta en el portal de Farmazed. Abre este enlace para definir una nueva (vence en 1 hora):\n${enlace}\n\nSi no fuiste tú, ignora este mensaje: tu contraseña actual sigue igual.\n\nFarmazed · Asuntos Regulatorios Farmacéuticos · Panamá`,
+    attachments: [{ filename: 'logo.png', path: path.join(PLANTILLAS, 'logo.png'), cid: 'logo' }],
+  });
+  return true;
+}
+
+module.exports = { correoConfigurado, enviarVerificacion, enviarInvitacion, enviarRestablecimiento, plantilla };
