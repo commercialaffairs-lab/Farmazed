@@ -63,4 +63,24 @@ async function enviarVerificacion({ correo, nombre }) {
   return true;
 }
 
-module.exports = { correoConfigurado, enviarVerificacion, plantilla };
+/**
+ * Correo de invitación a crear la cuenta (decisión de Rick, 31-oct-2026): el admin invita, la
+ * persona recibe el enlace y crea su contraseña. Devuelve true si lo envió, false si no hay SMTP.
+ * Lanza si el envío falla (quien llama decide; el enlace sigue visible en el panel).
+ */
+async function enviarInvitacion({ correo, rol, empresa, enlace }) {
+  if (!correoConfigurado()) return false;
+  const html = plantilla('invitacion.html', {
+    rol, empresa: empresa ? ` de ${empresa}` : '', enlace, anio: new Date().getFullYear(),
+  });
+  await transportador().sendMail({
+    from: process.env.SMTP_FROM, to: correo,
+    subject: 'Te invitaron al portal Farmazed — crea tu cuenta',
+    html,
+    text: `Hola,\n\nFarmazed te invitó a crear tu cuenta en su portal como ${rol}${empresa ? ` de ${empresa}` : ''}. Abre este enlace para elegir tu contraseña (vence en 7 días):\n${enlace}\n\nSi no esperabas esta invitación, ignora este mensaje.\n\nFarmazed · Asuntos Regulatorios Farmacéuticos · Panamá`,
+    attachments: [{ filename: 'logo.png', path: path.join(PLANTILLAS, 'logo.png'), cid: 'logo' }],
+  });
+  return true;
+}
+
+module.exports = { correoConfigurado, enviarVerificacion, enviarInvitacion, plantilla };

@@ -214,7 +214,8 @@ const api = {
   // ── TAREA 34 (§H.15) — planes del landing ──────────────────────────────────────
   setMiPlan: (plan) => apiFetch('/api/orgs/mine/plan', { method: 'PATCH', body: JSON.stringify({ plan }) }),
   saveDiagnostico: (orgId, data) => apiFetch(`/api/orgs/${orgId}/diagnostico`, { method: 'PUT', body: JSON.stringify(data) }),
-  getContactLeads: () => apiFetch('/api/contact-leads'),
+  getContactLeads: (todos = false) => apiFetch(todos ? '/api/contact-leads?todos=1' : '/api/contact-leads'),
+  updateContactLead: (id, data) => apiFetch(`/api/contact-leads/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
   invitarContactLead: (id, orgName) => apiFetch(`/api/contact-leads/${id}/invitar`, { method: 'POST', body: JSON.stringify({ orgName }) }),
   solicitarEmpresarial: (data) => apiFetch('/api/empresarial/solicitar', { method: 'POST', body: JSON.stringify(data) }),
   definirCondicionesEmpresarial: (orgId, data) => apiFetch(`/api/empresarial/${orgId}/condiciones`, { method: 'PUT', body: JSON.stringify(data) }),

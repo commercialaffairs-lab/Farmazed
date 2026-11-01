@@ -181,6 +181,8 @@ function esc(v) {
  * solo-admin (Empresas, Precios, Configuración) visibles para el admin. Devuelve `{ user, admin }`,
  * o `null` si ya se redirigió (login, verificar correo o portal del cliente): la página debe parar.
  */
+const ROTULO_STAFF = { analista: 'Analista', abogado: 'Abogado', regente: 'Regente' };
+
 async function initBackoffice() {
   const user = await requireVerifiedLogin('/login.html');
   if (!user) return null; // en camino a verificar-correo.html
@@ -189,6 +191,8 @@ async function initBackoffice() {
   if (nombre) nombre.textContent = user.displayName || user.email;
   document.getElementById('sidebar-logout')?.addEventListener('click', logout);
   const admin = await isAdmin();
+  const rotulo = document.getElementById('sidebar-rol');
+  if (rotulo) rotulo.textContent = admin ? 'Admin Panel' : (ROTULO_STAFF[await getRole()] || 'Personal');
   if (admin) {
     for (const id of ['nav-empresas', 'nav-precios', 'nav-configuracion']) {
       const enlace = document.getElementById(id);

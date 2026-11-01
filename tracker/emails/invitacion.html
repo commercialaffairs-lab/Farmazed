@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>Te invitaron al portal Farmazed</title>
+  <!-- Plantilla del correo de invitación (services/correo.js la rellena: {{rol}}, {{empresa}},
+       {{enlace}}, {{anio}}; el logo va adjunto como cid:logo). Misma estructura que verificacion.html. -->
+</head>
+<body style="margin:0;padding:0;background:#f0f4fa;">
+  <div style="display:none;max-height:0;overflow:hidden;opacity:0;">Crea tu cuenta en el portal de Farmazed con este enlace.</div>
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#f0f4fa;">
+    <tr>
+      <td align="center" style="padding:32px 16px;">
+        <table role="presentation" width="560" cellspacing="0" cellpadding="0" border="0" style="max-width:560px;width:100%;">
+          <tr>
+            <td align="center" style="padding:0 0 20px;">
+              <img src="cid:logo" width="56" height="56" alt="Farmazed" style="display:block;width:56px;height:56px;">
+              <div style="font-family:Georgia,'Times New Roman',serif;font-size:22px;font-weight:bold;color:#0F3260;margin-top:10px;">Farmazed</div>
+              <div style="font-family:Arial,Helvetica,sans-serif;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#6b7280;margin-top:2px;">Asuntos Regulatorios</div>
+            </td>
+          </tr>
+          <tr>
+            <td style="background:#ffffff;border-radius:12px;border-top:4px solid #1B4F8A;padding:36px 36px 32px;font-family:Arial,Helvetica,sans-serif;color:#1f2937;">
+              <h1 style="margin:0 0 14px;font-size:22px;line-height:1.3;font-weight:bold;color:#0F3260;">Te invitaron al portal Farmazed</h1>
+              <p style="margin:0 0 12px;font-size:15px;line-height:1.6;">Hola,</p>
+              <p style="margin:0 0 24px;font-size:15px;line-height:1.6;">Farmazed te invitó a crear tu cuenta en su portal como <strong>{{rol}}</strong>{{empresa}}. Abre el enlace, elige tu contraseña y podrás entrar de inmediato.</p>
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin:0 auto 24px;">
+                <tr>
+                  <td align="center" style="background:#1B4F8A;border-radius:8px;">
+                    <a href="{{enlace}}" style="display:inline-block;padding:14px 30px;font-size:15px;font-weight:bold;color:#ffffff;text-decoration:none;font-family:Arial,Helvetica,sans-serif;">Crear mi cuenta</a>
+                  </td>
+                </tr>
+              </table>
+              <p style="margin:0 0 6px;font-size:13px;line-height:1.6;color:#6b7280;">Si el botón no funciona, copia este enlace en tu navegador:</p>
+              <p style="margin:0 0 24px;font-size:12px;line-height:1.5;word-break:break-all;"><a href="{{enlace}}" style="color:#1B4F8A;">{{enlace}}</a></p>
+              <hr style="border:0;border-top:1px solid #e3e8f0;margin:0 0 18px;">
+              <p style="margin:0;font-size:13px;line-height:1.6;color:#6b7280;">La invitación vence en 7 días y solo sirve para este correo. Si no la esperabas, ignora este mensaje.</p>
+            </td>
+          </tr>
+          <tr>
+            <td align="center" style="padding:22px 16px 0;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:1.7;color:#5f6b7a;">
+              Farmazed · Asuntos Regulatorios Farmacéuticos<br>
+              PH Cosmopolitan Towers, Pueblo Nuevo, Panamá · <a href="mailto:info@farmazed.com" style="color:#1B4F8A;text-decoration:none;">info@farmazed.com</a><br>
+              © {{anio}} Farmazed
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

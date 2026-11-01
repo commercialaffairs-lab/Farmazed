@@ -230,7 +230,7 @@
                 <div id="login-msg"></div>
             </form>
             <div class="text-center mt-3">
-                <a href="/registro.html" style="font-size:.82rem">Crear cuenta</a>
+                <a href="/solicitar-cuenta.html" style="font-size:.82rem">Solicitar cuenta</a>
             </div>
         </div>
 
@@ -304,5 +304,13 @@
         });
     </script>
 
+    <script>
+      // aceptar-invitacion.html manda aquí tras crear la contraseña (31-oct-2026)
+      if (new URLSearchParams(location.search).get("cuenta") === "creada") {
+        var m = document.getElementById("login-msg");
+        m.style.color = "#2e7d32";
+        m.textContent = "Cuenta creada. Inicia sesión con tu correo y la contraseña que acabas de elegir.";
+      }
+    </script>
 </body>
 </html>

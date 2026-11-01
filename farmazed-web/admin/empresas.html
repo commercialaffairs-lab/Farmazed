@@ -23,11 +23,12 @@
 <div class="sidebar py-3 d-flex flex-column">
   <div class="px-4 mb-4">
     <div style="font-family:Georgia,serif;color:#fff;font-size:1.2rem;font-weight:700">Farmazed</div>
-    <div style="color:rgba(255,255,255,.4);font-size:.72rem">Admin Panel</div>
+    <div id="sidebar-rol" style="color:rgba(255,255,255,.4);font-size:.72rem">Admin Panel</div>
   </div>
   <div class="section-label">Gestión</div>
   <a href="/admin/casos.html"><i class="bi bi-folder2-open me-2"></i>Expedientes</a>
   <a href="/admin/bandeja.html"><i class="bi bi-inbox me-2"></i>Mi Bandeja</a>
+  <a href="/admin/leads.html"><i class="bi bi-person-lines-fill me-2"></i>Leads</a>
   <a href="/admin/cotizaciones.html"><i class="bi bi-receipt me-2"></i>Cotizaciones</a>
   <a href="/admin/formularios.html"><i class="bi bi-file-earmark-text me-2"></i>Formularios</a>
   <a href="/admin/empresas.html" class="active"><i class="bi bi-building me-2"></i>Empresas</a>
@@ -96,7 +97,7 @@
               <th class="small">Rol</th>
               <th class="small">Empresa</th>
               <th class="small">Estado</th>
-              <th class="small">Link (dev — sin envío de correo todavía)</th>
+              <th class="small">Enlace (por si el correo no llegó)</th>
             </tr>
           </thead>
           <tbody id="invitations-tbody"></tbody>
@@ -299,8 +300,8 @@
     const email   = document.getElementById('titular-email').value.trim();
     const orgName = document.getElementById('titular-org').value.trim();
     try {
-      await api.inviteTitular(email, orgName);
-      await avisar('Invitación de titular creada.');
+      const inv = await api.inviteTitular(email, orgName);
+      await avisar(inv.correoEnviado ? `Invitación enviada por correo a ${email}.` : 'Invitación creada. No hay envío de correo configurado: copia el enlace de la tabla y envíaselo.');
       e.target.reset();
       await Promise.all([loadOrgs(), loadInvitations()]);
     } catch (err) { await avisar('Error: ' + err.message); }
@@ -311,8 +312,8 @@
     const email = document.getElementById('empleado-email').value.trim();
     const role  = document.getElementById('empleado-role').value;
     try {
-      await api.inviteEmpleado(email, role);
-      await avisar('Invitación de empleado creada.');
+      const inv = await api.inviteEmpleado(email, role);
+      await avisar(inv.correoEnviado ? `Invitación enviada por correo a ${email}.` : 'Invitación creada. No hay envío de correo configurado: copia el enlace de la tabla y envíaselo.');
       e.target.reset();
       await loadInvitations();
     } catch (err) { await avisar('Error: ' + err.message); }

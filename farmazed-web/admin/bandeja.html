@@ -27,11 +27,12 @@
 <div class="sidebar py-3 d-flex flex-column">
   <div class="px-4 mb-4">
     <div style="font-family:Georgia,serif;color:#fff;font-size:1.2rem;font-weight:700">Farmazed</div>
-    <div style="color:rgba(255,255,255,.4);font-size:.72rem">Admin Panel</div>
+    <div id="sidebar-rol" style="color:rgba(255,255,255,.4);font-size:.72rem">Admin Panel</div>
   </div>
   <div class="section-label">Gestión</div>
   <a href="/admin/casos.html"><i class="bi bi-folder2-open me-2"></i>Expedientes</a>
   <a href="/admin/bandeja.html" class="active"><i class="bi bi-inbox me-2"></i>Mi Bandeja</a>
+  <a href="/admin/leads.html"><i class="bi bi-person-lines-fill me-2"></i>Leads</a>
   <a href="/admin/cotizaciones.html"><i class="bi bi-receipt me-2"></i>Cotizaciones</a>
   <a href="/admin/formularios.html"><i class="bi bi-file-earmark-text me-2"></i>Formularios</a>
   <a href="/admin/empresas.html" id="nav-empresas" style="display:none"><i class="bi bi-building me-2"></i>Empresas</a>
@@ -63,7 +64,7 @@
     <!-- TAREA 34 (§H.15): "Enviar consulta" del hero — SIN cuenta todavía
          (a diferencia de la card de arriba). -->
     <div class="card border-0 shadow-sm mb-3 d-none" id="contact-leads-card">
-      <div class="card-header bg-white fw-semibold small">Consultas del sitio (sin cuenta)</div>
+      <div class="card-header bg-white fw-semibold small d-flex justify-content-between align-items-center">Consultas del sitio (sin cuenta) <a href="/admin/leads.html" class="small fw-normal">Abrir CRM de leads →</a></div>
       <div class="list-group list-group-flush" id="contact-leads-list"></div>
     </div>
 
@@ -234,11 +235,23 @@
       const list = document.getElementById('contact-leads-list');
       if (!leads.length) { card.classList.add('d-none'); return; }
 
+      // solicitar-cuenta.html (31-oct): interés, intención, fuente y plan. Los leads del
+      // formulario viejo (contacto.html) no traen esos campos y se pintan como antes.
+      const INTERES = { medicamentos: 'Medicamentos', cosmeticos: 'Cosméticos', higienicos: 'Higiénicos', plaguicidas: 'Plaguicidas', excepcion: 'Excepción', publicidad: 'Publicidad' };
+      const FUENTE  = { google: 'Google', youtube: 'YouTube', instagram: 'Instagram', facebook: 'Facebook', linkedin: 'LinkedIn', x: 'X', referido: 'Referido', otro: 'Otro' };
+      const detalle = (l) => [
+        l.intencion ? (l.intencion === 'cuenta' ? '<span class="badge bg-success-subtle text-success border">Quiere cuenta</span>' : '<span class="badge bg-secondary-subtle text-secondary border">Solo información</span>') : '',
+        l.plan ? `<span class="badge bg-primary-subtle text-primary border">Plan ${esc(l.plan)}</span>` : '',
+        l.interes?.length ? `Interés: ${l.interes.map(i => esc(INTERES[i] || i)).join(', ')}` : '',
+        l.fuente ? `Se enteró por: ${esc(FUENTE[l.fuente] || l.fuente)}` : '',
+        [l.telefono, l.pais].filter(Boolean).map(esc).join(' · '),
+      ].filter(Boolean).join(' <span class="text-muted">·</span> ');
       list.innerHTML = leads.map(l => `
-        <div class="list-group-item d-flex justify-content-between align-items-center" data-lead-id="${esc(l.id)}">
+        <div class="list-group-item d-flex justify-content-between align-items-center" data-lead-id="${esc(l.id)}" data-lead-empresa="${esc(l.empresa || '')}">
           <div>
             <strong class="small">${esc(l.nombre)}</strong>
             <span class="text-muted small"> — ${esc(l.correo)}${l.empresa ? `, ${esc(l.empresa)}` : ''}${l.tipoProducto ? ` (${esc(l.tipoProducto)})` : ''}</span>
+            ${detalle(l) ? `<div class="small mt-1">${detalle(l)}</div>` : ''}
             ${l.mensaje ? `<div class="small text-muted fst-italic mt-1">“${esc(l.mensaje)}”</div>` : ''}
           </div>
           <button class="btn btn-sm btn-outline-primary btn-invitar-lead">Invitar a crear cuenta</button>
@@ -247,13 +260,14 @@
       list.querySelectorAll('.btn-invitar-lead').forEach(btn => {
         btn.addEventListener('click', async (e) => {
           const row = e.target.closest('[data-lead-id]');
-          const orgName = await preguntar('Nombre de la empresa para esta invitación:');
+          const orgName = await preguntar('Nombre de la empresa para esta invitación:', { valor: row.dataset.leadEmpresa || '' });
           if (!orgName) return;
           btn.disabled = true;
           try {
-            await api.invitarContactLead(row.dataset.leadId, orgName);
+            const inv = await api.invitarContactLead(row.dataset.leadId, orgName);
             row.remove();
             if (!list.children.length) card.classList.add('d-none');
+            await avisar(inv.correoEnviado ? `Invitación enviada por correo a ${inv.email}.` : 'Invitación creada. No hay envío de correo configurado: copia el enlace desde Empresas → Invitaciones.');
           } catch (err) {
             btn.disabled = false;
             await avisar(err.message);

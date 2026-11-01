@@ -25,11 +25,29 @@ const { HttpError, responderError } = require('../utils/http_error');
 const { textoError, errorPassword, enmascararCorreo } = require('../utils/validar_texto');
 const { crearLimitador } = require('../utils/rate_limit');
 const { createOrg } = require('../services/orgs');
+const { enviarInvitacion } = require('../services/correo');
+const { obtenerConfig } = require('../config');
 
 const router = Router();
 const db     = () => admin.firestore();
 
 const EMPLEADO_ROLES = ['analista', 'abogado', 'regente', 'admin'];
+const ROL_TEXTO = {
+  cliente_titular: 'titular de empresa', cliente_miembro: 'miembro de empresa',
+  analista: 'analista', abogado: 'abogado', regente: 'regente farmacéutico', admin: 'administrador',
+};
+
+// Decisión de Rick (31-oct-2026): la invitación llega por correo. Sin SMTP (o si falla) devuelve
+// false y el admin copia el enlace del panel, como antes.
+async function enviarCorreoInvitacion(invite, empresa = null) {
+  const enlace = `${obtenerConfig().portalUrl}/aceptar-invitacion.html?token=${invite.token}`;
+  try {
+    return await enviarInvitacion({ correo: invite.email, rol: ROL_TEXTO[invite.role] || invite.role, empresa, enlace });
+  } catch (e) {
+    console.error('[invitations] no se pudo enviar el correo de invitación; el enlace sigue en el panel', { token: invite.token, error: e.message });
+    return false;
+  }
+}
 
 function newToken() {
   return crypto.randomBytes(24).toString('hex');
@@ -69,7 +87,8 @@ router.post('/titular', requireAuth, requirePermission('invitations.create_org')
     const orgRef = await createOrg({ nombre: orgName, createdBy: req.user.uid });
 
     const invite = await createInvitation({ email, role: 'cliente_titular', orgId: orgRef.id, invitedBy: req.user.uid });
-    res.status(201).json(serializeTimestamps({ ...invite, orgId: orgRef.id }));
+    const correoEnviado = await enviarCorreoInvitacion(invite, orgName);
+    res.status(201).json(serializeTimestamps({ ...invite, orgId: orgRef.id, correoEnviado }));
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
@@ -88,7 +107,8 @@ router.post('/empleado', requireAuth, requirePermission('invitations.create_empl
     }
 
     const invite = await createInvitation({ email, role, orgId: null, invitedBy: req.user.uid });
-    res.status(201).json(serializeTimestamps(invite));
+    const correoEnviado = await enviarCorreoInvitacion(invite);
+    res.status(201).json(serializeTimestamps({ ...invite, correoEnviado }));
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
@@ -104,7 +124,9 @@ router.post('/miembro', requireAuth, requirePermission('invitations.create_miemb
     if (!req.user.orgId) return res.status(400).json({ error: 'Tu cuenta no tiene una empresa asociada (orgId) — contacta a Farmazed.' });
 
     const invite = await createInvitation({ email, role: 'cliente_miembro', orgId: req.user.orgId, invitedBy: req.user.uid });
-    res.status(201).json(serializeTimestamps(invite));
+    const org = await db().collection('orgs').doc(req.user.orgId).get();
+    const correoEnviado = await enviarCorreoInvitacion(invite, org.exists ? org.data().nombre : null);
+    res.status(201).json(serializeTimestamps({ ...invite, correoEnviado }));
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
@@ -293,6 +315,7 @@ router.get('/', requireAuth, requirePermission('invitations.create_empleado'), a
 // que quotes.js/payments.js, que cuelgan helpers del router exportado para
 // que otro archivo los reuse sin duplicar lógica.
 router.createInvitation = createInvitation;
+router.enviarCorreoInvitacion = enviarCorreoInvitacion;
 router.estaCaducada = estaCaducada; // register.js: una invitación caducada no bloquea el registro del correo
 
 module.exports = router;

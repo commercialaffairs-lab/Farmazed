@@ -77,7 +77,7 @@
 </div>
 
 <script type="module">
-  import { login, auth } from './portal/js/auth.js';
+  import { login, logout } from './portal/js/auth.js';
   import api from './portal/js/api.js';
 
   const token = new URLSearchParams(window.location.search).get('token');
@@ -156,14 +156,11 @@
     }
   });
 
-  // Los custom claims (role/orgId) se asignaron DESPUÉS de crear el token de la
-  // sesión — hay que forzar un refresh para que el resto del sitio
-  // (requireLogin/isAdmin/hasBackofficeAccess) los vea ya.
+  // Decisión de Rick (31-oct-2026): tras crear la contraseña no se entra directo; se
+  // cierra la sesión y la persona la prueba en el login (que redirige según su rol).
   async function entrar() {
-    const result = await auth.currentUser.getIdTokenResult(true);
-    const role   = result.claims.role;
-    const esCliente = role === 'cliente_titular' || role === 'cliente_miembro';
-    window.location.href = esCliente ? '/client-dashboard.html' : '/admin/bandeja.html';
+    await logout().catch(() => {});
+    window.location.href = '/login.html?cuenta=creada';
   }
 
   function mostrarLogin(mensaje) {

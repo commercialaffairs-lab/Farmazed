@@ -146,6 +146,7 @@ const PERMISSIONS = {
   // por eso es un permiso aparte de orgs.read_leads (esos ya tienen cuenta
   // y captación completada).
   'contact_leads.read':    { label: 'Ver los mensajes del formulario de contacto público',  roles: [...STAFF_ROLES, 'admin'] },
+  'contact_leads.edit':    { label: 'CRM de leads: estado, notas y datos de cada contacto',       roles: [...STAFF_ROLES, 'admin'] },
   'empresarial.solicitar': { label: 'Enviar/aceptar la solicitud de propuesta del Plan Empresarial', roles: ['cliente_titular'] },
   'empresarial.manage':    { label: 'Definir condiciones (monto/período/gestor) del Plan Empresarial', roles: ['admin'] },
   // TAREA 41b: el grafo del código expone la ESTRUCTURA interna del backend — solo admin, nunca público.
