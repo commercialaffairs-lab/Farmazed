@@ -10,7 +10,7 @@
 const admin = require('../utils/firebase_admin.js');
 
 /** Crea la empresa y devuelve su `DocumentReference`. */
-async function createOrg({ nombre, createdBy = null, plan, pais, telefonoContacto }) {
+async function createOrg({ nombre, createdBy = null, plan, pais, telefonoContacto, website, leadId, prefillCaptacion }) {
   if (typeof nombre !== 'string' || !nombre.trim()) throw new Error('createOrg: nombre inválido');
   const data = {
     nombre: String(nombre).trim(),
@@ -19,6 +19,11 @@ async function createOrg({ nombre, createdBy = null, plan, pais, telefonoContact
     ...(plan !== undefined && { plan }),
     ...(pais !== undefined && { pais }),
     ...(telefonoContacto !== undefined && { telefonoContacto }),
+    ...(website !== undefined && { website }),
+    // Empresa nacida de un lead del CRM: el portal precarga la captación con lo que el cliente
+    // ya dijo en "Solicitar cuenta" y, al guardarla, el lead recibe la última versión.
+    ...(leadId !== undefined && { leadId }),
+    ...(prefillCaptacion !== undefined && { prefillCaptacion }),
   };
   return admin.firestore().collection('orgs').add(data);
 }

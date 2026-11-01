@@ -1235,12 +1235,19 @@
         if (cb) cb.checked = true;
       });
       renderContadores(captacionExistente.productosPorCategoria || {});
-      const r1 = form.querySelector(`input[name="capt-registro-previo"][value="${captacionExistente.registroPrevioAutoridadReconocida ? 'si' : 'no'}"]`);
-      if (r1) r1.checked = true;
-      const r2 = form.querySelector(`input[name="capt-nuevo-o-registrado"][value="${captacionExistente.clienteNuevoOYaRegistrado}"]`);
-      if (r2) r2.checked = true;
-      const r3 = form.querySelector(`input[name="capt-modificacion-en-curso"][value="${captacionExistente.productoConModificacionEnCurso ? 'si' : 'no'}"]`);
-      if (r3) r3.checked = true;
+      // Con un prefill del CRM estas preguntas no vienen: se dejan sin marcar para que el cliente responda.
+      if (typeof captacionExistente.registroPrevioAutoridadReconocida === 'boolean') {
+        const r1 = form.querySelector(`input[name="capt-registro-previo"][value="${captacionExistente.registroPrevioAutoridadReconocida ? 'si' : 'no'}"]`);
+        if (r1) r1.checked = true;
+      }
+      if (captacionExistente.clienteNuevoOYaRegistrado) {
+        const r2 = form.querySelector(`input[name="capt-nuevo-o-registrado"][value="${captacionExistente.clienteNuevoOYaRegistrado}"]`);
+        if (r2) r2.checked = true;
+      }
+      if (typeof captacionExistente.productoConModificacionEnCurso === 'boolean') {
+        const r3 = form.querySelector(`input[name="capt-modificacion-en-curso"][value="${captacionExistente.productoConModificacionEnCurso ? 'si' : 'no'}"]`);
+        if (r3) r3.checked = true;
+      }
     }
     if (!captacionExistente) renderContadores();
     document.getElementById('captacion-intro').textContent = editable
@@ -1315,7 +1322,9 @@
   if (myPerms.role === 'cliente_titular') {
     try {
       const orgInicial = await api.getMyOrg();
-      if (!orgInicial.captacion) window.__fzAbrirCaptacion(null, { editable: false });
+      // Empresa nacida de un lead del CRM: el formulario llega precargado con lo que el cliente
+      // ya dijo en "Solicitar cuenta" (prefillCaptacion); solo confirma o corrige.
+      if (!orgInicial.captacion) window.__fzAbrirCaptacion(orgInicial.prefillCaptacion || null, { editable: false });
     } catch (e) { /* si getMyOrg falla, no bloqueamos el dashboard por esto */ }
   }
 

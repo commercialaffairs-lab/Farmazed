@@ -181,9 +181,18 @@ router.post('/:id/invitar', requireAuth, requirePermission('invitations.create_o
     const lead = snap.data();
     if (lead.invitado) return res.status(409).json({ error: 'Este lead ya fue invitado.' });
 
+    const categorias = Array.isArray(lead.interes) ? lead.interes : [];
     const orgRef = await createOrg({
       nombre: orgName, plan: PLANES.includes(lead.plan) ? lead.plan : 'consulta',
-      pais: lead.pais || null, telefonoContacto: lead.telefono || null, createdBy: req.user.uid,
+      pais: lead.pais || null, telefonoContacto: lead.telefono || null, website: lead.website || null,
+      createdBy: req.user.uid, leadId: ref.id,
+      prefillCaptacion: {
+        paisYNombreFabricante: [lead.pais, lead.empresa].filter(Boolean).join(' — ') || null,
+        categoriasProducto: categorias,
+        // Solo con una categoría se sabe a cuál va el total; con varias el cliente reparte.
+        productosPorCategoria: categorias.length === 1 && Number.isInteger(lead.cantidadProductos) && lead.cantidadProductos > 0
+          ? { [categorias[0]]: Math.min(lead.cantidadProductos, 999) } : {},
+      },
     });
     const invite = await invitationsRouter.createInvitation({
       email: lead.correo, role: 'cliente_titular', orgId: orgRef.id, invitedBy: req.user.uid,

@@ -209,6 +209,12 @@
         <div class="col-6 ${esEmpresa ? '' : 'd-none'} campo-empresa"><div class="campo-label">Productos que maneja</div><input type="number" min="0" class="form-control form-control-sm" name="cantidadProductos" value="${l.cantidadProductos ?? ''}" ${dis}></div>
         <div class="col-12 ${esEmpresa ? '' : 'd-none'} campo-empresa"><div class="campo-label">Productos de interés</div>
           <div class="d-flex flex-wrap gap-3">${Object.keys(INTERES).map(i => `<label class="small"><input type="checkbox" class="form-check-input me-1" name="interes" value="${i}" ${(l.interes || []).includes(i) ? 'checked' : ''} ${dis}>${INTERES[i]}</label>`).join('')}</div></div>
+        ${l.captacion ? `<div class="col-12 border rounded p-2 mt-2" style="background:#f6f9fd">
+          <div class="campo-label mb-1">Última información del cliente en el portal <span class="text-success">· ${esc(fecha(l.captacion.actualizadaEn))}</span></div>
+          <div class="small"><strong>Fabricante:</strong> ${esc(l.captacion.paisYNombreFabricante || '—')} · <strong>Productos:</strong> ${esc(l.captacion.numeroProductosPorCategoria || '—')}</div>
+          <div class="small"><strong>Registro previo (FDA/EMA/TGA…):</strong> ${l.captacion.registroPrevioAutoridadReconocida ? 'Sí' : 'No'} · <strong>Cliente:</strong> ${l.captacion.clienteNuevoOYaRegistrado === 'nuevo' ? 'nuevo' : 'ya tiene registros'} · <strong>Modificación en curso:</strong> ${l.captacion.productoConModificacionEnCurso ? 'Sí' : 'No'}</div>
+          <div class="small text-muted mt-1">Los campos "Productos de interés" y "Productos que maneja" de arriba ya reflejan esta versión.</div>
+        </div>` : ''}
         ${l.mensaje ? `<div class="col-12"><div class="campo-label">Mensaje del contacto</div><div class="small fst-italic text-muted">“${esc(l.mensaje)}”</div></div>` : ''}
         <div class="col-12"><div class="campo-label">Notas internas</div><textarea class="form-control form-control-sm" name="notas" rows="3" ${dis}>${esc(l.notas || '')}</textarea></div>
         <div class="col-12 d-flex gap-2 mt-2">

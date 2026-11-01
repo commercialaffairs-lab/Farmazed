@@ -162,6 +162,25 @@ router.patch('/mine/captacion', requireAuth, requirePermission('orgs.edit_captac
     captacion.actualizadaEn = now;
 
     await orgRef.update({ captacion });
+    // Decisión de Rick (31-oct-2026): si la empresa nació de un lead del CRM, en el CRM prevalece
+    // lo último que el cliente puso en el portal. Si falla, la captación ya quedó guardada.
+    const leadId = orgSnap.data().leadId;
+    if (leadId) {
+      const porCategoria = captacion.productosPorCategoria && typeof captacion.productosPorCategoria === 'object' ? Object.values(captacion.productosPorCategoria) : [];
+      await db().collection('contactLeads').doc(leadId).update({
+        interes: captacion.categoriasProducto,
+        ...(porCategoria.length ? { cantidadProductos: porCategoria.reduce((s, n) => s + n, 0) } : {}),
+        captacion: {
+          paisYNombreFabricante: captacion.paisYNombreFabricante,
+          numeroProductosPorCategoria: captacion.numeroProductosPorCategoria,
+          registroPrevioAutoridadReconocida: captacion.registroPrevioAutoridadReconocida,
+          clienteNuevoOYaRegistrado: captacion.clienteNuevoOYaRegistrado,
+          productoConModificacionEnCurso: captacion.productoConModificacionEnCurso,
+          actualizadaEn: now,
+        },
+        actualizadoEn: now, actualizadoPor: req.user.uid, actualizadoDesde: 'portal',
+      }).catch(err => console.error('[orgs] no se pudo reflejar la captación en el lead del CRM', { orgId, leadId, error: err.message }));
+    }
     res.json(serializeTimestamps({ id: orgId, captacion }));
   } catch (e) {
     res.status(500).json({ error: e.message });
