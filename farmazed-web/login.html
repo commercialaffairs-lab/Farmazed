@@ -314,6 +314,7 @@
       // Usuario; el servidor manda el correo de marca con el enlace de Firebase para definir una
       // contraseña nueva. Misma respuesta exista o no la cuenta.
       import { API_BASE } from './portal/js/auth.js';
+      import { avisar } from './portal/js/dialogos.js';
       const { t } = window.FZI18N;
       document.getElementById('link-olvido').addEventListener('click', async (e) => {
         e.preventDefault();
@@ -334,9 +335,15 @@
           if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
           msg.style.color = '#2e7d32';
           msg.textContent = t('Si existe una cuenta con {correo}, te enviamos un correo para definir una contraseña nueva.', { correo });
+          // Rick (02-nov-2026): además del aviso en línea, un modal que confirme el envío y diga qué hacer.
+          await avisar(
+            t('Si existe una cuenta con {correo}, Farmazed te envió un correo desde info@farmazed.com con el enlace para definir una contraseña nueva. El enlace vence en 1 hora. Si no lo ves en unos minutos, revisa la carpeta de spam o correo no deseado.', { correo }),
+            { tipo: 'exito', titulo: t('Correo enviado'), ok: t('Entendido') },
+          );
         } catch (err) {
           msg.style.color = '#c0392b';
           msg.textContent = err.message;
+          await avisar(t('No se pudo enviar el correo: {error}. Intenta de nuevo en unos minutos.', { error: err.message }), { tipo: 'error', titulo: t('No se pudo enviar') });
         }
       });
     </script>

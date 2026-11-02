@@ -19,6 +19,10 @@
     "Escribe tu correo en el campo Usuario y vuelve a pulsar \"¿Olvidó su contraseña?\".": "Type your email in the Username field and click \"Forgot your password?\" again.",
     "Enviando…": "Sending…",
     "Si existe una cuenta con {correo}, te enviamos un correo para definir una contraseña nueva.": "If an account exists for {correo}, we have sent you an email to set a new password.",
+    "Correo enviado": "Email sent",
+    "Si existe una cuenta con {correo}, Farmazed te envió un correo desde info@farmazed.com con el enlace para definir una contraseña nueva. El enlace vence en 1 hora. Si no lo ves en unos minutos, revisa la carpeta de spam o correo no deseado.": "If an account exists for {correo}, Farmazed has sent you an email from info@farmazed.com with the link to set a new password. The link expires in 1 hour. If you do not see it within a few minutes, check your spam or junk folder.",
+    "No se pudo enviar": "Could not send",
+    "No se pudo enviar el correo: {error}. Intenta de nuevo en unos minutos.": "The email could not be sent: {error}. Please try again in a few minutes.",
     "Cuenta creada. Inicia sesión con tu correo y la contraseña que acabas de elegir.": "Account created. Sign in with your email and the password you just chose."
   },
   "fr": {
@@ -41,6 +45,10 @@
     "Escribe tu correo en el campo Usuario y vuelve a pulsar \"¿Olvidó su contraseña?\".": "Saisissez votre e-mail dans le champ Identifiant, puis cliquez de nouveau sur « Mot de passe oublié ? ».",
     "Enviando…": "Envoi en cours…",
     "Si existe una cuenta con {correo}, te enviamos un correo para definir una contraseña nueva.": "Si un compte existe pour {correo}, nous vous avons envoyé un e-mail pour définir un nouveau mot de passe.",
+    "Correo enviado": "E-mail envoyé",
+    "Si existe una cuenta con {correo}, Farmazed te envió un correo desde info@farmazed.com con el enlace para definir una contraseña nueva. El enlace vence en 1 hora. Si no lo ves en unos minutos, revisa la carpeta de spam o correo no deseado.": "Si un compte existe pour {correo}, Farmazed vous a envoyé un e-mail depuis info@farmazed.com avec le lien pour définir un nouveau mot de passe. Le lien expire dans 1 heure. Si vous ne le voyez pas d'ici quelques minutes, vérifiez votre dossier de courrier indésirable.",
+    "No se pudo enviar": "Envoi impossible",
+    "No se pudo enviar el correo: {error}. Intenta de nuevo en unos minutos.": "L'e-mail n'a pas pu être envoyé : {error}. Réessayez dans quelques minutes.",
     "Cuenta creada. Inicia sesión con tu correo y la contraseña que acabas de elegir.": "Compte créé. Connectez-vous avec votre e-mail et le mot de passe que vous venez de choisir."
   },
   "pt": {
@@ -63,6 +71,10 @@
     "Escribe tu correo en el campo Usuario y vuelve a pulsar \"¿Olvidó su contraseña?\".": "Escreva o seu e-mail no campo Utilizador e volte a carregar em \"Esqueceu-se da palavra-passe?\".",
     "Enviando…": "A enviar…",
     "Si existe una cuenta con {correo}, te enviamos un correo para definir una contraseña nueva.": "Se existir uma conta com {correo}, enviámos-lhe um e-mail para definir uma nova palavra-passe.",
+    "Correo enviado": "E-mail enviado",
+    "Si existe una cuenta con {correo}, Farmazed te envió un correo desde info@farmazed.com con el enlace para definir una contraseña nueva. El enlace vence en 1 hora. Si no lo ves en unos minutos, revisa la carpeta de spam o correo no deseado.": "Se existir uma conta com {correo}, a Farmazed enviou-lhe um e-mail de info@farmazed.com com a ligação para definir uma palavra-passe nova. A ligação expira em 1 hora. Se não o vir em alguns minutos, verifique a pasta de spam ou correio não solicitado.",
+    "No se pudo enviar": "Não foi possível enviar",
+    "No se pudo enviar el correo: {error}. Intenta de nuevo en unos minutos.": "Não foi possível enviar o e-mail: {error}. Tente novamente dentro de alguns minutos.",
     "Cuenta creada. Inicia sesión con tu correo y la contraseña que acabas de elegir.": "Conta criada. Inicie sessão com o seu e-mail e a palavra-passe que acabou de escolher."
   }
 }
