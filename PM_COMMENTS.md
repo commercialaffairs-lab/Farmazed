@@ -841,3 +841,38 @@ en el chat ni en el repo.
 - Clientes demo `cliente1@farmazed.test` y `cliente2@farmazed.test` (cada uno titular de su propia empresa) y Xenia Mendoza como **regente**, creados con `seed_roles.js` en modo lista (TAREA 46, aceptada; no hay script nuevo, decisión de Rick).
 - El regente pide y revisa documentos, sin panel admin, y **solo ve los casos que le asignan**: el admin debe asignarle expedientes.
 - Pendiente de Rick: el correo real de Xenia (Workspace), quién ejecuta el deploy, y la autorización de commit y push. Las contraseñas se muestran una sola vez al correr el seed en producción y no se guardan en ningún archivo.
+
+## H.18 — 01-nov-2026: deploy a producción de las tareas 54–59 y pendientes para trabajar después (Rick)
+
+**Desplegado** (detalle en DEPLOY.md "Cómo redesplegar" y handover TAREA 60): tracker `farmazed-tracker-00006-dod`,
+web `farmazed-web-00019-nkx`, reglas e índices de Firestore, Secret Manager con los secretos de PayPal sandbox,
+SMTP y demo, cuentas demo sembradas, `admin@pbtradingsolutions.com` como único admin (decisión de Rick: las
+cuentas `richypb@gmail.com` y la de prueba de agosto quedan sin rol).
+
+**Pendientes (Rick, para trabajar después):**
+
+1. **Webhook de PayPal (sandbox)**: registrar en developer.paypal.com el webhook
+   `https://api.farmazed.com/api/webhooks/paypal` con los 8 eventos de PAYPAL_SETUP.md §3 y pasar el ID para
+   subirlo como versión nueva del secreto `paypal-webhook-id` (hoy tiene el marcador `sin-webhook`: los pagos
+   funcionan, los avisos de PayPal se rechazan). Después, probar una suscripción y un pago sandbox reales.
+2. **Facturación electrónica (EBI-PAC)**: conseguir las credenciales del PAC para Farmazed y cargarlas como
+   secretos `EBI_TOKEN_USUARIO`/`EBI_TOKEN_PASSWORD` (+ `EBI_BASE_URL`), y completar en Finanzas → Configuración
+   el emisor (RUC, DV, razón social, sucursal, punto de facturación). Decidir con el contador: ITBMS incluido en
+   los honorarios (criterio actual) o cobrado aparte; códigos DGI de forma de pago (hoy tarjeta para PayPal y
+   Rapid PayPro, transferencia para manual). Hasta entonces la facturación en producción está `desactivado`: los
+   pagos se registran igual y las facturas quedan pendientes de emitir. Smoke test contra
+   `integraciondemo.ebi-pac.com` en horario de Panamá antes de pasar al PAC de producción.
+3. **Cloud Scheduler**: programar `POST https://api.farmazed.com/api/facturas/procesar-pendientes?minutos=2`
+   cada 5–10 min con un token de admin (o una cuenta de servicio con rol admin), para retomar facturas de
+   workflows automáticos que Cloud Run deje a medias.
+4. **Cuentas antiguas**: borrar desde la consola de Firebase `richypb@gmail.com` y
+   `verify-upload-…@farmazed-test.local` si no se van a usar (sin rol no pueden entrar).
+5. **Portal del cliente — facturas**: la API (`GET /api/facturas/mias`, PDF) existe; falta la pantalla en el portal
+   si se quiere que el cliente vea sus facturas además de recibirlas por correo.
+6. **Correos del tracker y páginas admin solo-admin** siguen en español (fuera del alcance de los 4 idiomas).
+7. **Plan demo**: punto 4 del plan (e2e del recorrido completo) sigue pendiente; retirar `registro.html` /
+   `POST /api/register` y reescribir `e2e/registro.spec.js`.
+8. **Infra**: `gcloud run deploy farmazed-web --source .` falla al importar el contenedor; mientras no se
+   entienda, la web se despliega con `gcloud builds submit --tag gcr.io/farmazed/farmazed-web:<tag>` +
+   `deploy --image` (DEPLOY.md). Revisar también el checklist "Antes del deploy" de PENDIENTES.md (quedan los
+   puntos de PayPal).
