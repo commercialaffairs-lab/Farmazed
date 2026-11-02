@@ -3,7 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Portal del Cliente | Farmazed</title>
+  <script src="/portal/js/i18n.js"></script>
+  <title data-i18n>Portal del Cliente | Farmazed</title>
   <link rel="icon" href="src/images/favicon_Farzed.png">
   <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@300;400;600&family=Open+Sans:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link href="src/approx/css/bootstrap.min.css" rel="stylesheet">
@@ -302,6 +303,13 @@
       }
     }
 
+    /* ── Modo demo (portal/js/recorrido.js pone body.fz-demo): se ocultan las acciones que no
+          entran en el recorrido — invitar miembros (mandaría correos reales) y la suscripción
+          (sin planes por ahora, decisión de Rick 01-nov) — y se muestran las ayudas solo-demo. ── */
+    .fz-demo-solo { display: none !important; }
+    body.fz-demo .fz-demo-solo { display: inline-flex !important; }
+    body.fz-demo #form-invitar-miembro, body.fz-demo #btn-suscribir, body.fz-demo #btn-cancelar-suscripcion { display: none !important; }
+
     /* ── Wizard real (portado de portal/nuevo.html + wizard.js — Gap 7) ── */
     .wz-tabs { display:flex; gap:0; border-bottom:2px solid #dee2e6; margin-bottom:2rem; }
     .wz-tab  { flex:1; padding:.6rem .3rem; text-align:center; font-size:.78rem; font-weight:600;
@@ -368,41 +376,41 @@
 </style>
 <div id="captacion-overlay" class="d-none" style="position:fixed;inset:0;background:rgba(15,50,96,.85);z-index:2000;display:flex;align-items:center;justify-content:center;padding:16px;overflow-y:auto;">
   <div class="bg-white rounded shadow-lg p-4" style="max-width:560px;width:100%;margin:24px 0;">
-    <h5 class="mb-1">Captación de información preliminar</h5>
+    <h5 class="mb-1" data-i18n>Captación de información preliminar</h5>
     <p class="text-muted small mb-3" id="captacion-intro">Antes de empezar, necesitamos esta información de tu empresa (se pide una sola vez — después la puedes editar desde "Mi Empresa").</p>
     <form id="form-captacion">
       <div class="mb-3">
-        <label class="form-label small fw-semibold">País y nombre del laboratorio fabricante</label>
-        <input type="text" class="form-control" id="capt-fabricante" placeholder="Ej: Alemania — Laboratorios XYZ" required>
+        <label class="form-label small fw-semibold" data-i18n>País y nombre del laboratorio fabricante</label>
+        <input type="text" class="form-control" id="capt-fabricante" placeholder="Ej: Alemania — Laboratorios XYZ" data-i18n-attr="placeholder" required>
       </div>
       <div class="mb-3">
-        <label class="form-label small fw-semibold">Categoría(s) de producto</label>
+        <label class="form-label small fw-semibold" data-i18n>Categoría(s) de producto</label>
         <div id="capt-categorias"></div>
       </div>
       <div class="mb-3">
-        <label class="form-label small fw-semibold">Número de productos por categoría</label>
-        <p class="text-muted small mb-2" id="capt-productos-ayuda">Marca una categoría arriba y aparecerá aquí su contador.</p>
+        <label class="form-label small fw-semibold" data-i18n>Número de productos por categoría</label>
+        <p class="text-muted small mb-2" id="capt-productos-ayuda" data-i18n>Marca una categoría arriba y aparecerá aquí su contador.</p>
         <div id="capt-productos" class="d-flex flex-column gap-2"></div>
       </div>
       <div class="mb-3">
-        <label class="form-label small fw-semibold d-block">¿Registro previo ante autoridad reconocida (FDA, EMA, TGA…)?</label>
-        <div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="capt-registro-previo" value="si" required><label class="form-check-label small">Sí</label></div>
-        <div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="capt-registro-previo" value="no"><label class="form-check-label small">No</label></div>
+        <label class="form-label small fw-semibold d-block" data-i18n>¿Registro previo ante autoridad reconocida (FDA, EMA, TGA…)?</label>
+        <div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="capt-registro-previo" value="si" required><label class="form-check-label small" data-i18n>Sí</label></div>
+        <div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="capt-registro-previo" value="no"><label class="form-check-label small" data-i18n>No</label></div>
       </div>
       <div class="mb-3">
-        <label class="form-label small fw-semibold d-block">¿Cliente nuevo o ya tiene productos registrados en Panamá?</label>
-        <div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="capt-nuevo-o-registrado" value="nuevo" required><label class="form-check-label small">Cliente nuevo</label></div>
-        <div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="capt-nuevo-o-registrado" value="ya_registrado"><label class="form-check-label small">Ya tiene productos registrados</label></div>
+        <label class="form-label small fw-semibold d-block" data-i18n>¿Cliente nuevo o ya tiene productos registrados en Panamá?</label>
+        <div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="capt-nuevo-o-registrado" value="nuevo" required><label class="form-check-label small" data-i18n>Cliente nuevo</label></div>
+        <div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="capt-nuevo-o-registrado" value="ya_registrado"><label class="form-check-label small" data-i18n>Ya tiene productos registrados</label></div>
       </div>
       <div class="mb-3">
-        <label class="form-label small fw-semibold d-block">¿Algún producto con modificación en curso?</label>
-        <div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="capt-modificacion-en-curso" value="si" required><label class="form-check-label small">Sí</label></div>
-        <div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="capt-modificacion-en-curso" value="no"><label class="form-check-label small">No</label></div>
+        <label class="form-label small fw-semibold d-block" data-i18n>¿Algún producto con modificación en curso?</label>
+        <div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="capt-modificacion-en-curso" value="si" required><label class="form-check-label small" data-i18n>Sí</label></div>
+        <div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="capt-modificacion-en-curso" value="no"><label class="form-check-label small" data-i18n>No</label></div>
       </div>
       <div class="alert alert-danger d-none" id="captacion-error"></div>
       <div class="d-flex justify-content-end gap-2">
-        <button type="button" class="btn btn-outline-secondary d-none" id="btn-captacion-cancelar">Cancelar</button>
-        <button type="submit" class="btn btn-primary" id="btn-captacion-guardar">Guardar</button>
+        <button type="button" class="btn btn-outline-secondary d-none" id="btn-captacion-cancelar" data-i18n>Cancelar</button>
+        <button type="submit" class="btn btn-primary" id="btn-captacion-guardar" data-i18n>Guardar</button>
       </div>
     </form>
   </div>
@@ -422,7 +430,14 @@
       </ul>
 
       <ul class="topbar-item list-unstyled d-inline-flex align-items-center mb-0 gap-3">
+        <li id="tb-idioma" class="d-flex align-items-center"></li>
         <li id="tb-demo" class="d-flex align-items-center"></li>
+        <!-- Manual de usuario (farmazed-web/manual/, generado por tracker/scripts/generar_manual.js; ES/EN/FR/PT) -->
+        <li class="d-flex align-items-center">
+          <a href="/manual/cliente/es.html" target="_blank" rel="noopener" id="tb-ayuda" class="d-flex align-items-center gap-1" style="color:rgba(255,255,255,.85);font-size:.78rem;text-decoration:none;" title="Manual de usuario (español, inglés, francés y portugués)" data-i18n-attr="title">
+            <i class="iconoir-help-circle" style="font-size:1rem;"></i><span class="d-none d-sm-inline" data-i18n>Ayuda</span>
+          </a>
+        </li>
         <li class="d-none d-md-flex align-items-center gap-2" style="font-size:.75rem;">
           <span style="font-weight:700;color:#fff;" id="tb-empresa">—</span>
           <span style="color:rgba(255,255,255,.3);">|</span>
@@ -436,7 +451,7 @@
             <span id="notif-badge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size:.55rem;padding:2px 5px;display:none;"></span>
           </a>
           <div class="dropdown-menu dropdown-menu-end py-0" style="min-width:300px;">
-            <h6 class="m-0 py-2 px-3 border-bottom" style="font-size:.78rem;font-weight:700;font-family:var(--fz-head);">Notificaciones</h6>
+            <h6 class="m-0 py-2 px-3 border-bottom" style="font-size:.78rem;font-weight:700;font-family:var(--fz-head);" data-i18n>Notificaciones</h6>
             <div id="notif-list" style="max-height:220px;overflow-y:auto;"></div>
           </div>
         </li>
@@ -454,10 +469,10 @@
               </div>
             </div>
             <div class="dropdown-divider m-0"></div>
-            <a class="dropdown-item py-2" href="#" style="font-size:.78rem;"><i class="iconoir-user me-2"></i>Ver perfil</a>
-            <a class="dropdown-item py-2" href="#" style="font-size:.78rem;"><i class="iconoir-lock me-2"></i>Cambiar contraseña</a>
+            <a class="dropdown-item py-2" href="#" style="font-size:.78rem;" onclick="showModule('cuenta');return false;"><i class="iconoir-settings me-2"></i><span data-i18n>Mi cuenta</span></a>
+            <a class="dropdown-item py-2" href="#" style="font-size:.78rem;"><i class="iconoir-lock me-2"></i><span data-i18n>Cambiar contraseña</span></a>
             <div class="dropdown-divider m-0"></div>
-            <a class="dropdown-item py-2 text-danger" href="#" id="btn-logout" style="font-size:.78rem;"><i class="iconoir-power me-2"></i>Cerrar sesión</a>
+            <a class="dropdown-item py-2 text-danger" href="#" id="btn-logout" style="font-size:.78rem;"><i class="iconoir-power me-2"></i><span data-i18n>Cerrar sesión</span></a>
           </div>
         </li>
       </ul>
@@ -478,39 +493,39 @@
       <div class="d-flex align-items-start flex-column w-100 h-100">
         <ul class="navbar-nav mb-auto w-100 pt-2">
 
-          <li class="px-3 mb-1" style="font-size:.6rem;text-transform:uppercase;letter-spacing:.08em;color:rgba(255,255,255,.3);font-weight:600;margin-top:8px;">Mi Portal</li>
+          <li class="px-3 mb-1" style="font-size:.6rem;text-transform:uppercase;letter-spacing:.08em;color:rgba(255,255,255,.3);font-weight:600;margin-top:8px;" data-i18n>Mi Portal</li>
 
           <li class="nav-item">
             <a class="nav-link active" href="#" onclick="showModule('resumen',this);return false;">
-              <i class="iconoir-home-simple menu-icon"></i><span>Resumen</span>
+              <i class="iconoir-home-simple menu-icon"></i><span data-i18n>Resumen</span>
             </a>
           </li>
           <li class="nav-item">
             <a class="nav-link" href="#" onclick="showModule('productos',this);return false;">
-              <i class="iconoir-package menu-icon"></i><span>Mis Productos</span>
+              <i class="iconoir-package menu-icon"></i><span data-i18n>Mis Productos</span>
             </a>
           </li>
           <li class="nav-item">
             <a class="nav-link" href="#" onclick="showModule('documentos',this);return false;">
-              <i class="iconoir-page menu-icon"></i><span>Mis Documentos</span>
+              <i class="iconoir-page menu-icon"></i><span data-i18n>Mis Documentos</span>
             </a>
           </li>
           <li class="nav-item">
             <a class="nav-link" href="#" onclick="showModule('mensajes',this);return false;">
               <i class="iconoir-chat-bubble menu-icon"></i>
-              <span>Mensajes</span>
+              <span data-i18n>Mensajes</span>
               <span class="badge ms-auto" id="msg-badge" style="background:var(--fz-amber);font-size:.6rem;display:none;"></span>
             </a>
           </li>
           <li class="nav-item">
             <a class="nav-link" href="#" onclick="showModule('empresa',this);return false;">
-              <i class="iconoir-building menu-icon"></i><span>Mi Empresa</span>
+              <i class="iconoir-building menu-icon"></i><span data-i18n>Mi Empresa</span>
             </a>
           </li>
           <li class="nav-item">
             <a class="nav-link" href="#" onclick="showModule('cotizacion',this);return false;">
               <i class="iconoir-receipt menu-icon"></i>
-              <span>Cotización</span>
+              <span data-i18n>Cotización</span>
               <span class="badge ms-auto" id="cotizacion-badge" style="background:var(--fz-amber);font-size:.6rem;display:none;"></span>
             </a>
           </li>
@@ -518,20 +533,20 @@
                abajo decide cuál mostrar, ninguno aparece por default. -->
           <li class="nav-item" id="nav-diagnostico-item" style="display:none">
             <a class="nav-link" href="#" onclick="showModule('diagnostico',this);return false;">
-              <i class="iconoir-stethoscope menu-icon"></i><span>Diagnóstico</span>
+              <i class="iconoir-stethoscope menu-icon"></i><span data-i18n>Diagnóstico</span>
             </a>
           </li>
           <li class="nav-item" id="nav-empresarial-item" style="display:none">
             <a class="nav-link" href="#" onclick="showModule('empresarial',this);return false;">
-              <i class="iconoir-graph-up menu-icon"></i><span>Informes de avance</span>
+              <i class="iconoir-graph-up menu-icon"></i><span data-i18n>Informes de avance</span>
             </a>
           </li>
 
-          <li class="px-3 mb-1" style="font-size:.6rem;text-transform:uppercase;letter-spacing:.08em;color:rgba(255,255,255,.3);font-weight:600;margin-top:16px;">Trámites</li>
+          <li class="px-3 mb-1" style="font-size:.6rem;text-transform:uppercase;letter-spacing:.08em;color:rgba(255,255,255,.3);font-weight:600;margin-top:16px;" data-i18n>Trámites</li>
 
           <li class="nav-item">
             <a class="nav-link" href="#" onclick="showModule('solicitar',this);return false;">
-              <i class="iconoir-add-circle menu-icon"></i><span>Solicitar Registro</span>
+              <i class="iconoir-add-circle menu-icon"></i><span data-i18n>Solicitar Registro</span>
             </a>
           </li>
           <!-- FEATURES.clientePrecios (config.js) — apagado por defecto, ver
@@ -539,7 +554,7 @@
                script de arriba lo revele si el flag está encendido. -->
           <li class="nav-item" id="nav-precios-item" style="display:none">
             <a class="nav-link" href="#" onclick="showModule('precios',this);return false;">
-              <i class="iconoir-coins menu-icon"></i><span>Precios</span>
+              <i class="iconoir-coins menu-icon"></i><span data-i18n>Precios</span>
             </a>
           </li>
         </ul>
@@ -547,7 +562,7 @@
         <div style="padding:14px 16px;border-top:1px solid rgba(255,255,255,.07);width:100%;">
           <div style="font-size:.65rem;color:rgba(255,255,255,.3);line-height:1.7;">
             <strong style="color:rgba(255,255,255,.55);">Farmazed</strong><br>
-            Asuntos Regulatorios · Panamá 2026
+            <span data-i18n>Asuntos Regulatorios · Panamá 2026</span>
           </div>
         </div>
       </div>
@@ -565,7 +580,7 @@
       <div class="fz-module active" id="mod-resumen">
         <div class="fz-mod-header">
           <div>
-            <h4>Resumen</h4>
+            <h4 data-i18n>Resumen</h4>
             <p id="bienvenida-text"></p>
           </div>
         </div>
@@ -575,29 +590,29 @@
           <div class="col-6 col-md-3">
             <div class="fz-metric" id="card-activos">
               <div class="fz-metric-num fz-text-green" id="m-activos">—</div>
-              <div class="fz-metric-label">productos con registro vigente</div>
-              <div class="fz-metric-title fz-text-green">Mis registros activos</div>
+              <div class="fz-metric-label" data-i18n>productos con registro vigente</div>
+              <div class="fz-metric-title fz-text-green" data-i18n>Mis registros activos</div>
             </div>
           </div>
           <div class="col-6 col-md-3">
             <div class="fz-metric" id="card-proceso">
               <div class="fz-metric-num fz-text-primary" id="m-proceso">—</div>
-              <div class="fz-metric-label">expedientes en trámite con Farmazed</div>
-              <div class="fz-metric-title fz-text-primary">En proceso</div>
+              <div class="fz-metric-label" data-i18n>expedientes en trámite con Farmazed</div>
+              <div class="fz-metric-title fz-text-primary" data-i18n>En proceso</div>
             </div>
           </div>
           <div class="col-6 col-md-3">
             <div class="fz-metric" id="card-pendientes">
               <div class="fz-metric-num fz-text-amber" id="m-pendientes">—</div>
-              <div class="fz-metric-label">acciones que requieren tu atención</div>
-              <div class="fz-metric-title fz-text-amber">Pendientes de mi parte</div>
+              <div class="fz-metric-label" data-i18n>acciones que requieren tu atención</div>
+              <div class="fz-metric-title fz-text-amber" data-i18n>Pendientes de mi parte</div>
             </div>
           </div>
           <div class="col-6 col-md-3">
             <div class="fz-metric" id="card-vencer">
               <div class="fz-metric-num fz-text-red" id="m-vencer">—</div>
-              <div class="fz-metric-label">vencen en los próximos 90 días</div>
-              <div class="fz-metric-title fz-text-red">Próximos a vencer</div>
+              <div class="fz-metric-label" data-i18n>vencen en los próximos 90 días</div>
+              <div class="fz-metric-title fz-text-red" data-i18n>Próximos a vencer</div>
             </div>
           </div>
         </div>
@@ -608,9 +623,9 @@
             <div class="d-flex justify-content-between align-items-start mb-3">
               <div>
                 <h5 style="font-family:var(--fz-head);font-size:.95rem;color:#1e293b;margin:0 0 3px;font-weight:600;">
-                  <i class="iconoir-warning-triangle me-2" style="color:var(--fz-amber);"></i>Necesitamos algo de tu parte
+                  <i class="iconoir-warning-triangle me-2" style="color:var(--fz-amber);"></i><span data-i18n>Necesitamos algo de tu parte</span>
                 </h5>
-                <p style="font-size:.75rem;color:#6b7280;margin:0;">Farmazed está esperando los siguientes elementos para continuar con tus trámites.</p>
+                <p style="font-size:.75rem;color:#6b7280;margin:0;" data-i18n>Farmazed está esperando los siguientes elementos para continuar con tus trámites.</p>
               </div>
             </div>
             <div id="pendientes-list"></div>
@@ -625,19 +640,19 @@
                 <img src="src/images/Logo.png" alt="Farmazed">
                 <span>Farmazed</span>
               </div>
-              <p style="font-size:.75rem;color:#6b7280;font-style:italic;margin:0 0 4px;">"Tu expediente está en manos expertas."</p>
-              <p style="font-size:.7rem;color:#9ca3af;margin:0;">PH Cosmopolitan Towers, Pueblo Nuevo, Panamá · Lic. Zelky Marín, Farmacéutica</p>
+              <p style="font-size:.75rem;color:#6b7280;font-style:italic;margin:0 0 4px;" data-i18n>"Tu expediente está en manos expertas."</p>
+              <p style="font-size:.7rem;color:#9ca3af;margin:0;" data-i18n>PH Cosmopolitan Towers, Pueblo Nuevo, Panamá · Lic. Zelky Marín, Farmacéutica</p>
             </div>
             <div class="col-md-6">
-              <p style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#9ca3af;margin-bottom:8px;">Acceso rápido</p>
+              <p style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#9ca3af;margin-bottom:8px;" data-i18n>Acceso rápido</p>
               <div class="d-flex flex-wrap gap-2">
-                <a href="#" onclick="showModule('productos');return false;" style="font-size:.75rem;color:var(--fz-primary);text-decoration:none;">Mis productos</a>
+                <a href="#" onclick="showModule('productos');return false;" style="font-size:.75rem;color:var(--fz-primary);text-decoration:none;" data-i18n>Mis productos</a>
                 <span style="color:#d1d5db;">·</span>
-                <a href="#" onclick="showModule('documentos');return false;" style="font-size:.75rem;color:var(--fz-primary);text-decoration:none;">Mis documentos</a>
+                <a href="#" onclick="showModule('documentos');return false;" style="font-size:.75rem;color:var(--fz-primary);text-decoration:none;" data-i18n>Mis documentos</a>
                 <span style="color:#d1d5db;">·</span>
-                <a href="#" onclick="showModule('solicitar');return false;" style="font-size:.75rem;color:var(--fz-primary);text-decoration:none;">Solicitar registro</a>
+                <a href="#" onclick="showModule('solicitar');return false;" style="font-size:.75rem;color:var(--fz-primary);text-decoration:none;" data-i18n>Solicitar registro</a>
                 <span style="color:#d1d5db;">·</span>
-                <a href="#" onclick="showModule('mensajes');return false;" style="font-size:.75rem;color:var(--fz-primary);text-decoration:none;">Mensajes</a>
+                <a href="#" onclick="showModule('mensajes');return false;" style="font-size:.75rem;color:var(--fz-primary);text-decoration:none;" data-i18n>Mensajes</a>
               </div>
             </div>
           </div>
@@ -648,11 +663,11 @@
       <div class="fz-module" id="mod-productos">
         <div class="fz-mod-header">
           <div>
-            <h4>Mis Productos</h4>
-            <p>Estado y avance de cada producto en el proceso regulatorio.</p>
+            <h4 data-i18n>Mis Productos</h4>
+            <p data-i18n>Estado y avance de cada producto en el proceso regulatorio.</p>
           </div>
           <button class="btn-fz btn-fz-sm" onclick="showModule('solicitar')">
-            <i class="iconoir-add-circle"></i> Solicitar nuevo registro
+            <i class="iconoir-add-circle"></i> <span data-i18n>Solicitar nuevo registro</span>
           </button>
         </div>
         <div id="productos-list"></div>
@@ -662,17 +677,17 @@
       <div class="fz-module" id="mod-documentos">
         <div class="fz-mod-header">
           <div>
-            <h4>Mis Documentos</h4>
-            <p>Gestión de todos los documentos de tus expedientes.</p>
+            <h4 data-i18n>Mis Documentos</h4>
+            <p data-i18n>Gestión de todos los documentos de tus expedientes.</p>
           </div>
         </div>
         <div class="fz-panel">
           <div class="fz-tabs">
-            <button class="fz-tab active" onclick="filterDocs(this,'todos')">Todos</button>
-            <button class="fz-tab" onclick="filterDocs(this,'pendiente')">Pendientes</button>
-            <button class="fz-tab" onclick="filterDocs(this,'en_revision')">En revisión</button>
-            <button class="fz-tab" onclick="filterDocs(this,'aprobado')">Aprobados</button>
-            <button class="fz-tab" onclick="filterDocs(this,'rechazado')">Rechazados</button>
+            <button class="fz-tab active" onclick="filterDocs(this,'todos')" data-i18n>Todos</button>
+            <button class="fz-tab" onclick="filterDocs(this,'pendiente')" data-i18n>Pendientes</button>
+            <button class="fz-tab" onclick="filterDocs(this,'en_revision')" data-i18n>En revisión</button>
+            <button class="fz-tab" onclick="filterDocs(this,'aprobado')" data-i18n>Aprobados</button>
+            <button class="fz-tab" onclick="filterDocs(this,'rechazado')" data-i18n>Rechazados</button>
           </div>
           <div id="docs-list"></div>
         </div>
@@ -682,14 +697,14 @@
       <div class="fz-module" id="mod-mensajes">
         <div class="fz-mod-header">
           <div>
-            <h4>Mensajes de Farmazed</h4>
-            <p>Canal de comunicación directo con tu equipo de Farmazed.</p>
+            <h4 data-i18n>Mensajes de Farmazed</h4>
+            <p data-i18n>Canal de comunicación directo con tu equipo de Farmazed.</p>
           </div>
         </div>
         <div class="fz-chat-layout">
           <!-- Thread list -->
           <div class="fz-threads-sidebar">
-            <div class="fz-threads-header">Conversaciones</div>
+            <div class="fz-threads-header" data-i18n>Conversaciones</div>
             <div id="threads-list" style="overflow-y:auto;flex:1;"></div>
           </div>
           <!-- Chat area -->
@@ -704,14 +719,14 @@
               </div>
             </div>
             <div class="fz-chat-msgs" id="chat-messages">
-              <div style="display:flex;align-items:center;justify-content:center;height:100%;color:#9ca3af;font-size:.78rem;">
+              <div style="display:flex;align-items:center;justify-content:center;height:100%;color:#9ca3af;font-size:.78rem;" data-i18n>
                 Selecciona un hilo para ver los mensajes.
               </div>
             </div>
             <div class="fz-chat-footer">
-              <textarea id="chat-input" rows="2" placeholder="Escribe un mensaje…"></textarea>
+              <textarea id="chat-input" rows="2" placeholder="Escribe un mensaje…" data-i18n-attr="placeholder"></textarea>
               <button class="btn-fz btn-fz-sm" onclick="sendMessage()" style="align-self:flex-end;white-space:nowrap;">
-                <i class="iconoir-send"></i> Enviar
+                <i class="iconoir-send"></i> <span data-i18n>Enviar</span>
               </button>
             </div>
           </div>
@@ -721,18 +736,45 @@
       <!-- ══ MODULE: MI EMPRESA (TAREA 15/E3 parte 2) ══ -->
       <div class="fz-module" id="mod-empresa">
         <div class="fz-mod-header">
-          <h4>Mi Empresa</h4>
+          <h4 data-i18n>Mi Empresa</h4>
         </div>
         <div id="empresa-content">
           <div class="text-center py-4"><div class="spinner-border spinner-border-sm text-primary"></div></div>
         </div>
       </div>
 
+      <!-- ══ MODULE: MI CUENTA (Rick, 01-nov-2026: ajustes de la persona; aquí se activa el recorrido guiado) ══ -->
+      <div class="fz-module" id="mod-cuenta">
+        <div class="fz-mod-header">
+          <h4 data-i18n>Mi cuenta</h4>
+          <p data-i18n>Preferencias de tu cuenta: idioma de la interfaz y recorrido guiado.</p>
+        </div>
+        <div class="card border-0 shadow-sm mb-3">
+          <div class="card-body">
+            <h6 class="fw-bold mb-2" data-i18n>Idioma de la interfaz</h6>
+            <div id="cuenta-idioma"></div>
+          </div>
+        </div>
+        <div class="card border-0 shadow-sm mb-3">
+          <div class="card-body">
+            <h6 class="fw-bold mb-2" data-i18n>Recorrido guiado</h6>
+            <p class="small text-muted mb-3" data-i18n>Muestra abajo a la derecha una tarjeta con los pasos para empezar en el portal: confirmar tu empresa, crear tu primer producto, subir documentos, aceptar y pagar la cotización y escribir a tu equipo. Puedes apagarla cuando quieras.</p>
+            <div class="form-check form-switch">
+              <input class="form-check-input" type="checkbox" role="switch" id="pref-recorrido">
+              <label class="form-check-label" for="pref-recorrido" data-i18n>Mostrar el recorrido guiado</label>
+            </div>
+            <p class="small text-muted mt-2 d-none" id="pref-recorrido-demo" data-i18n>En la cuenta de demostración el recorrido siempre está activo.</p>
+            <p class="small text-danger mt-2 d-none" id="pref-recorrido-error"></p>
+          </div>
+        </div>
+        <a id="cuenta-manual" href="/manual/cliente/es.html" target="_blank" rel="noopener" class="small" data-i18n>Manual del portal (se abre en otra pestaña)</a>
+      </div>
+
       <!-- ══ MODULE: COTIZACIÓN (R5/R12, TAREA 18) ══ -->
       <div class="fz-module" id="mod-cotizacion">
         <div class="fz-mod-header">
-          <h4>Cotización</h4>
-          <p>Agrupa todos tus trámites en curso en una sola cotización, con el desglose de honorarios Farmazed y tasas oficiales.</p>
+          <h4 data-i18n>Cotización</h4>
+          <p data-i18n>Agrupa todos tus trámites en curso en una sola cotización, con el desglose de honorarios Farmazed y tasas oficiales.</p>
         </div>
         <div id="cotizacion-content">
           <div class="text-center py-4"><div class="spinner-border spinner-border-sm text-primary"></div></div>
@@ -742,8 +784,8 @@
       <!-- ══ MODULE: DIAGNÓSTICO (Plan Consulta, TAREA 34 §H.15) ══ -->
       <div class="fz-module" id="mod-diagnostico">
         <div class="fz-mod-header">
-          <h4>Diagnóstico regulatorio</h4>
-          <p>Clasificación del producto, ruta recomendada, requisitos aplicables y un estimado de tiempos y costos oficiales — sin costo, sin trámite todavía.</p>
+          <h4 data-i18n>Diagnóstico regulatorio</h4>
+          <p data-i18n>Clasificación del producto, ruta recomendada, requisitos aplicables y un estimado de tiempos y costos oficiales — sin costo, sin trámite todavía.</p>
         </div>
         <div id="diagnostico-content">
           <div class="text-center py-4"><div class="spinner-border spinner-border-sm text-primary"></div></div>
@@ -753,8 +795,8 @@
       <!-- ══ MODULE: PLAN EMPRESARIAL — solicitud + informes de avance (TAREA 34 §H.15) ══ -->
       <div class="fz-module" id="mod-empresarial">
         <div class="fz-mod-header">
-          <h4>Plan Empresarial</h4>
-          <p>Solicitud de propuesta, condiciones a convenir con Farmazed, y el avance de todos los casos de tu empresa.</p>
+          <h4 data-i18n>Plan Empresarial</h4>
+          <p data-i18n>Solicitud de propuesta, condiciones a convenir con Farmazed, y el avance de todos los casos de tu empresa.</p>
         </div>
         <div id="empresarial-content">
           <div class="text-center py-4"><div class="spinner-border spinner-border-sm text-primary"></div></div>
@@ -765,19 +807,21 @@
       <div class="fz-module" id="mod-solicitar">
         <div class="fz-mod-header">
           <div>
-            <h4>Solicitar Nuevo Registro</h4>
-            <p>Inicia el proceso con Farmazed. Te guiamos desde el diagnóstico hasta la obtención del registro sanitario.</p>
+            <h4 data-i18n>Solicitar Nuevo Registro</h4>
+            <p data-i18n>Inicia el proceso con Farmazed. Te guiamos desde el diagnóstico hasta la obtención del registro sanitario.</p>
           </div>
         </div>
 
         <div class="fz-cta">
           <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
             <div>
-              <h5 style="font-family:var(--fz-head);font-size:1.05rem;color:var(--fz-navy);font-weight:600;margin:0 0 4px;">¿Tienes un nuevo producto que registrar?</h5>
-              <p style="font-size:.8rem;color:#374151;margin:0;">Te guiamos desde el diagnóstico regulatorio hasta la obtención de tu registro sanitario ante DNFD/MINSA.</p>
+              <h5 style="font-family:var(--fz-head);font-size:1.05rem;color:var(--fz-navy);font-weight:600;margin:0 0 4px;" data-i18n>¿Tienes un nuevo producto que registrar?</h5>
+              <p style="font-size:.8rem;color:#374151;margin:0;" data-i18n>Te guiamos desde el diagnóstico regulatorio hasta la obtención de tu registro sanitario ante DNFD/MINSA.</p>
             </div>
             <div class="d-flex gap-2 flex-wrap">
-              <button class="btn-fz" onclick="toggleWizard()"><i class="iconoir-add-circle"></i> Iniciar solicitud</button>
+              <button class="btn-fz" onclick="toggleWizard()"><i class="iconoir-add-circle"></i> <span data-i18n>Iniciar solicitud</span></button>
+              <!-- Modo demo (recorrido, paso "Crea tu primer producto"): llena el asistente con datos de ejemplo. -->
+              <button class="btn-fz btn-fz-outline fz-demo-solo" id="btn-demo-rellenar" onclick="rellenarConDatosDemo()" title="Solo en la cuenta de demostración" data-i18n-attr="title"><i class="iconoir-magic-wand"></i> <span data-i18n>Rellenar con datos de ejemplo</span></button>
             </div>
           </div>
         </div>
@@ -787,251 +831,251 @@
         <div class="fz-cta-form" id="wizard-form" style="display:none;">
 
           <div class="wz-tabs">
-            <div class="wz-tab active" data-step="1">1. Tipo de Trámite</div>
-            <div class="wz-tab"        data-step="2">2. Datos del Producto</div>
-            <div class="wz-tab"        data-step="3">3. Empresas</div>
-            <div class="wz-tab"        data-step="4">4. Documentos</div>
-            <div class="wz-tab"        data-step="5">5. Confirmar</div>
+            <div class="wz-tab active" data-step="1" data-i18n>1. Tipo de Trámite</div>
+            <div class="wz-tab"        data-step="2" data-i18n>2. Datos del Producto</div>
+            <div class="wz-tab"        data-step="3" data-i18n>3. Empresas</div>
+            <div class="wz-tab"        data-step="4" data-i18n>4. Documentos</div>
+            <div class="wz-tab"        data-step="5" data-i18n>5. Confirmar</div>
           </div>
 
           <!-- ── STEP 1 ── -->
           <div class="wz-step" id="step-1">
-            <h6 style="font-family:var(--fz-head);font-size:.95rem;color:#1e293b;margin-bottom:2px;">¿Qué tipo de registro necesitas?</h6>
-            <p class="text-muted small mb-4">Selecciona el módulo que corresponde a tu producto.</p>
+            <h6 style="font-family:var(--fz-head);font-size:.95rem;color:#1e293b;margin-bottom:2px;" data-i18n>¿Qué tipo de registro necesitas?</h6>
+            <p class="text-muted small mb-4" data-i18n>Selecciona el módulo que corresponde a tu producto.</p>
             <div class="row g-3" id="tramite-grid"></div>
 
             <div class="mt-4 d-none" id="med-extra">
               <div class="row g-3">
                 <div class="col-md-6">
-                  <label class="form-label small fw-semibold">Tipo de Solicitud</label>
+                  <label class="form-label small fw-semibold" data-i18n>Tipo de Solicitud</label>
                   <select class="form-select" id="tipoSolicitud">
-                    <option>Nuevo Registro</option>
-                    <option>Renovación Sin Cambios</option>
-                    <option>Renovación Con Cambios</option>
+                    <option value="Nuevo Registro" data-i18n>Nuevo Registro</option>
+                    <option value="Renovación Sin Cambios" data-i18n>Renovación Sin Cambios</option>
+                    <option value="Renovación Con Cambios" data-i18n>Renovación Con Cambios</option>
                   </select>
                 </div>
                 <div class="col-md-6">
-                  <label class="form-label small fw-semibold">Tipo de Procedimiento</label>
+                  <label class="form-label small fw-semibold" data-i18n>Tipo de Procedimiento</label>
                   <select class="form-select" id="tipoRegistro"></select>
-                  <div class="form-text">Abreviado requiere aprobación ARR (FDA, EMA, INVIMA, etc.)</div>
+                  <div class="form-text" data-i18n>Abreviado requiere aprobación ARR (FDA, EMA, INVIMA, etc.)</div>
                 </div>
               </div>
-              <div class="alert alert-info d-none mt-3" id="tipo-registro-contactenos">
+              <div class="alert alert-info d-none mt-3" id="tipo-registro-contactenos" data-i18n>
                 📞 Este tipo de trámite requiere gestión personalizada. Contáctenos directamente y un especialista de Farmazed te guiará.
               </div>
               <div class="alert alert-light border d-none mt-3" id="abreviado-paises-panel" style="font-size:.8rem;">
-                <p class="fw-semibold mb-2">🌍 Verifica si el país de fabricación califica para procedimiento Abreviado (Decreto 29/2023):</p>
+                <p class="fw-semibold mb-2" data-i18n>🌍 Verifica si el país de fabricación califica para procedimiento Abreviado (Decreto 29/2023):</p>
                 <div class="row g-2">
                   <div class="col-md-4">
-                    <strong class="small d-block mb-1">Miembros PIC/S</strong>
-                    <span class="text-muted small">Síntesis Química, Biológicos y la mayoría de subtipos</span>
-                    <div class="small mt-1">Alemania, Argentina, Australia, Austria, Bélgica, Canadá, Chipre, Corea del Sur, Croacia, Dinamarca, Eslovaquia, Eslovenia, España, Estados Unidos, Estonia, Finlandia, Francia, Grecia, Hungría, Indonesia, Irán, Irlanda, Islandia, Israel, Italia, Japón, Letonia, Liechtenstein, Lituania, Malasia, Malta, México, Noruega, Nueva Zelanda, Países Bajos, Polonia, Portugal, Reino Unido, República Checa, Rumania, Singapur, Sudáfrica, Suecia, Suiza, Tailandia, Turquía, Ucrania.</div>
+                    <strong class="small d-block mb-1" data-i18n>Miembros PIC/S</strong>
+                    <span class="text-muted small" data-i18n>Síntesis Química, Biológicos y la mayoría de subtipos</span>
+                    <div class="small mt-1" data-i18n>Alemania, Argentina, Australia, Austria, Bélgica, Canadá, Chipre, Corea del Sur, Croacia, Dinamarca, Eslovaquia, Eslovenia, España, Estados Unidos, Estonia, Finlandia, Francia, Grecia, Hungría, Indonesia, Irán, Irlanda, Islandia, Israel, Italia, Japón, Letonia, Liechtenstein, Lituania, Malasia, Malta, México, Noruega, Nueva Zelanda, Países Bajos, Polonia, Portugal, Reino Unido, República Checa, Rumania, Singapur, Sudáfrica, Suecia, Suiza, Tailandia, Turquía, Ucrania.</div>
                   </div>
                   <div class="col-md-4">
-                    <strong class="small d-block mb-1">OMS Precalificados</strong>
-                    <span class="text-muted small">Solo Vacunas</span>
-                    <div class="small mt-1">China, Egipto, India, Indonesia, Serbia, Sudáfrica, Tailandia, Vietnam.</div>
+                    <strong class="small d-block mb-1" data-i18n>OMS Precalificados</strong>
+                    <span class="text-muted small" data-i18n>Solo Vacunas</span>
+                    <div class="small mt-1" data-i18n>China, Egipto, India, Indonesia, Serbia, Sudáfrica, Tailandia, Vietnam.</div>
                   </div>
                   <div class="col-md-4">
-                    <strong class="small d-block mb-1">OPS Reconocidos (ARR Regional)</strong>
-                    <span class="text-muted small">Solo Síntesis Química</span>
-                    <div class="small mt-1">Argentina (ANMAT), Brasil (ANVISA), Chile (ISP), Colombia (INVIMA), Cuba (CECMED), México (COFEPRIS).</div>
+                    <strong class="small d-block mb-1" data-i18n>OPS Reconocidos (ARR Regional)</strong>
+                    <span class="text-muted small" data-i18n>Solo Síntesis Química</span>
+                    <div class="small mt-1" data-i18n>Argentina (ANMAT), Brasil (ANVISA), Chile (ISP), Colombia (INVIMA), Cuba (CECMED), México (COFEPRIS).</div>
                   </div>
                 </div>
-                <p class="text-muted small mb-0 mt-2">Esta lista es orientativa. Farmazed confirmará la elegibilidad exacta durante el diagnóstico regulatorio.</p>
+                <p class="text-muted small mb-0 mt-2" data-i18n>Esta lista es orientativa. Farmazed confirmará la elegibilidad exacta durante el diagnóstico regulatorio.</p>
               </div>
             </div>
 
             <div class="alert alert-warning d-none mt-4" id="excepcion-disclaimer">
-              ⚠️ <strong>La Excepción de Registro es una autorización temporal para importar un lote específico.</strong>
-              NO otorga Registro Sanitario permanente.
+              ⚠️ <strong data-i18n>La Excepción de Registro es una autorización temporal para importar un lote específico.</strong>
+              <span data-i18n>NO otorga Registro Sanitario permanente.</span>
             </div>
           </div>
 
           <!-- ── STEP 2 ── -->
           <div class="wz-step d-none" id="step-2">
-            <h6 style="font-family:var(--fz-head);font-size:.95rem;color:#1e293b;margin-bottom:2px;">Datos del Producto</h6>
-            <p class="text-muted small mb-4">Estos datos se usarán directamente para llenar el formulario FADDI.</p>
+            <h6 style="font-family:var(--fz-head);font-size:.95rem;color:#1e293b;margin-bottom:2px;" data-i18n>Datos del Producto</h6>
+            <p class="text-muted small mb-4" data-i18n>Estos datos se usarán directamente para llenar el formulario FADDI.</p>
             <div class="row g-3">
               <div class="col-md-6">
-                <label class="form-label small fw-semibold">Nombre Comercial <span class="text-danger">*</span></label>
-                <input type="text" class="form-control" id="nombreComercial" placeholder="Ej: Amoxicilina 500mg">
+                <label class="form-label small fw-semibold"><span data-i18n>Nombre Comercial</span> <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" id="nombreComercial" placeholder="Ej: Amoxicilina 500mg" data-i18n-attr="placeholder">
               </div>
               <div class="col-md-6 d-none" data-tramites="medicamentos,excepcion">
-                <label class="form-label small fw-semibold">Principio Activo (DCI) <span class="text-danger">*</span></label>
-                <input type="text" class="form-control" id="principioActivo" placeholder="Ej: Amoxicilina">
+                <label class="form-label small fw-semibold"><span data-i18n>Principio Activo (DCI)</span> <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" id="principioActivo" placeholder="Ej: Amoxicilina" data-i18n-attr="placeholder">
               </div>
               <div class="col-md-4 d-none" data-tramites="medicamentos">
-                <label class="form-label small fw-semibold">Concentración <span class="text-danger">*</span></label>
-                <input type="text" class="form-control" id="concentracion" placeholder="Ej: 500 mg">
+                <label class="form-label small fw-semibold"><span data-i18n>Concentración</span> <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" id="concentracion" placeholder="Ej: 500 mg" data-i18n-attr="placeholder">
               </div>
               <div class="col-md-4 d-none" data-tramites="medicamentos">
-                <label class="form-label small fw-semibold">Forma Farmacéutica <span class="text-danger">*</span></label>
-                <input type="text" class="form-control" id="formaFarmaceutica" placeholder="Ej: CÁPSULA">
+                <label class="form-label small fw-semibold"><span data-i18n>Forma Farmacéutica</span> <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" id="formaFarmaceutica" placeholder="Ej: CÁPSULA" data-i18n-attr="placeholder">
               </div>
               <div class="col-md-4 d-none" data-tramites="medicamentos">
-                <label class="form-label small fw-semibold">Vía de Administración <span class="text-danger">*</span></label>
-                <input type="text" class="form-control" id="viaAdministracion" placeholder="Ej: ORAL">
+                <label class="form-label small fw-semibold"><span data-i18n>Vía de Administración</span> <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" id="viaAdministracion" placeholder="Ej: ORAL" data-i18n-attr="placeholder">
               </div>
               <div class="col-md-6 d-none" data-tramites="medicamentos">
-                <label class="form-label small fw-semibold">Condición de Venta <span class="text-danger">*</span></label>
+                <label class="form-label small fw-semibold"><span data-i18n>Condición de Venta</span> <span class="text-danger">*</span></label>
                 <select class="form-select" id="condicionVenta"></select>
               </div>
               <div class="col-md-3 d-none" data-tramites="medicamentos">
-                <label class="form-label small fw-semibold">Código ATC</label>
-                <input type="text" class="form-control" id="codigoATC" placeholder="Ej: J01CA04">
+                <label class="form-label small fw-semibold" data-i18n>Código ATC</label>
+                <input type="text" class="form-control" id="codigoATC" placeholder="Ej: J01CA04" data-i18n-attr="placeholder">
               </div>
               <div class="col-md-3 d-none" data-tramites="medicamentos">
-                <label class="form-label small fw-semibold">Vida Útil</label>
-                <input type="text" class="form-control" id="vidaUtil" placeholder="Ej: 36 meses">
+                <label class="form-label small fw-semibold" data-i18n>Vida Útil</label>
+                <input type="text" class="form-control" id="vidaUtil" placeholder="Ej: 36 meses" data-i18n-attr="placeholder">
               </div>
               <div class="col-12 d-none" data-tramites="medicamentos">
-                <label class="form-label small fw-semibold">Condiciones de Almacenamiento</label>
-                <textarea class="form-control" id="condicionesAlmacenamiento" rows="2" placeholder="Ej: Conservar a temperatura no mayor de 30°C en lugar seco."></textarea>
+                <label class="form-label small fw-semibold" data-i18n>Condiciones de Almacenamiento</label>
+                <textarea class="form-control" id="condicionesAlmacenamiento" rows="2" placeholder="Ej: Conservar a temperatura no mayor de 30°C en lugar seco." data-i18n-attr="placeholder"></textarea>
               </div>
               <div class="col-md-4 d-none" data-tramites="cosmeticos">
-                <label class="form-label small fw-semibold">Clasificación</label>
-                <input type="text" class="form-control" id="clasificacion" placeholder="Ej: PRODUCTOS PARA EL CABELLO">
+                <label class="form-label small fw-semibold" data-i18n>Clasificación</label>
+                <input type="text" class="form-control" id="clasificacion" placeholder="Ej: PRODUCTOS PARA EL CABELLO" data-i18n-attr="placeholder">
               </div>
               <div class="col-md-4 d-none" data-tramites="cosmeticos">
-                <label class="form-label small fw-semibold">Forma Cosmética</label>
-                <input type="text" class="form-control" id="formaCosmetica" placeholder="Ej: SHAMPOO / CHAMPÚ">
+                <label class="form-label small fw-semibold" data-i18n>Forma Cosmética</label>
+                <input type="text" class="form-control" id="formaCosmetica" placeholder="Ej: SHAMPOO / CHAMPÚ" data-i18n-attr="placeholder">
               </div>
               <div class="col-12 d-none" data-tramites="medicamentos,cosmeticos,higienicos,plaguicidas,excepcion">
-                <label class="form-label small fw-semibold">Descripción del Envase</label>
-                <input type="text" class="form-control" id="descripcionEnvase" placeholder="Ej: FRASCO DE 250 ML">
+                <label class="form-label small fw-semibold" data-i18n>Descripción del Envase</label>
+                <input type="text" class="form-control" id="descripcionEnvase" placeholder="Ej: FRASCO DE 250 ML" data-i18n-attr="placeholder">
               </div>
               <div class="col-12 d-none" data-tramites="medicamentos,cosmeticos,higienicos,plaguicidas,excepcion">
-                <label class="form-label small fw-semibold">Presentación del Producto</label>
-                <input type="text" class="form-control" id="descripcionPresentacion" placeholder="Ej: CAJA CON 30 TABLETAS RECUBIERTAS">
+                <label class="form-label small fw-semibold" data-i18n>Presentación del Producto</label>
+                <input type="text" class="form-control" id="descripcionPresentacion" placeholder="Ej: CAJA CON 30 TABLETAS RECUBIERTAS" data-i18n-attr="placeholder">
               </div>
               <div class="col-12 d-none" data-tramites="medicamentos">
-                <label class="form-label small fw-semibold d-block mb-2">Tipo de Presentación <span class="text-danger">*</span></label>
+                <label class="form-label small fw-semibold d-block mb-2"><span data-i18n>Tipo de Presentación</span> <span class="text-danger">*</span></label>
                 <div class="form-check form-check-inline">
                   <input class="form-check-input" type="radio" name="tipoPresentacion" value="Comercial" id="tp-comercial" checked>
-                  <label class="form-check-label" for="tp-comercial">Comercial</label>
+                  <label class="form-check-label" for="tp-comercial" data-i18n>Comercial</label>
                 </div>
                 <div class="form-check form-check-inline">
                   <input class="form-check-input" type="radio" name="tipoPresentacion" value="Muestra Médica" id="tp-muestra">
-                  <label class="form-check-label" for="tp-muestra">Muestra Médica</label>
+                  <label class="form-check-label" for="tp-muestra" data-i18n>Muestra Médica</label>
                 </div>
                 <div class="form-check form-check-inline">
                   <input class="form-check-input" type="radio" name="tipoPresentacion" value="Hospitalaria" id="tp-hospitalaria">
-                  <label class="form-check-label" for="tp-hospitalaria">Hospitalaria</label>
+                  <label class="form-check-label" for="tp-hospitalaria" data-i18n>Hospitalaria</label>
                 </div>
               </div>
               <div class="col-12 d-none" data-tramites="medicamentos">
-                <label class="form-label small fw-semibold d-block mb-2">Tipo de Medicamento <span class="text-danger">*</span></label>
+                <label class="form-label small fw-semibold d-block mb-2"><span data-i18n>Tipo de Medicamento</span> <span class="text-danger">*</span></label>
                 <div id="tipo-med-checks"></div>
               </div>
               <div class="col-md-6 d-none" data-tramites="publicidad">
-                <label class="form-label small fw-semibold">N° de Registro Sanitario del producto <span class="text-danger">*</span></label>
-                <input type="text" class="form-control" id="numeroRegistroSanitario" placeholder="Ej: RS-12345">
-                <div class="form-text">La publicidad debe corresponder a un producto ya registrado.</div>
+                <label class="form-label small fw-semibold"><span data-i18n>N° de Registro Sanitario del producto</span> <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" id="numeroRegistroSanitario" placeholder="Ej: RS-12345" data-i18n-attr="placeholder">
+                <div class="form-text" data-i18n>La publicidad debe corresponder a un producto ya registrado.</div>
               </div>
               <div class="col-md-6 d-none" data-tramites="publicidad">
-                <label class="form-label small fw-semibold">Código de la Publicidad</label>
-                <input type="text" class="form-control" id="codigoPublicidad" placeholder="Código interno del material, si aplica">
+                <label class="form-label small fw-semibold" data-i18n>Código de la Publicidad</label>
+                <input type="text" class="form-control" id="codigoPublicidad" placeholder="Código interno del material, si aplica" data-i18n-attr="placeholder">
               </div>
               <div class="col-12 d-none" data-tramites="publicidad">
-                <label class="form-label small fw-semibold d-block mb-2">Tipo de Publicidad <span class="text-danger">*</span></label>
+                <label class="form-label small fw-semibold d-block mb-2"><span data-i18n>Tipo de Publicidad</span> <span class="text-danger">*</span></label>
                 <div id="tipo-pub-checks"></div>
               </div>
               <div class="col-12 d-none" data-tramites="publicidad">
-                <label class="form-label small fw-semibold">Descripción breve del material <span class="text-danger">*</span></label>
-                <textarea class="form-control" id="descripcionMaterial" rows="2" placeholder="Ej: Spot de radio de 30 segundos para campaña de lanzamiento."></textarea>
+                <label class="form-label small fw-semibold"><span data-i18n>Descripción breve del material</span> <span class="text-danger">*</span></label>
+                <textarea class="form-control" id="descripcionMaterial" rows="2" placeholder="Ej: Spot de radio de 30 segundos para campaña de lanzamiento." data-i18n-attr="placeholder"></textarea>
               </div>
               <div class="col-md-4 d-none" data-tramites="excepcion">
-                <label class="form-label small fw-semibold">Lote a Importar <span class="text-danger">*</span></label>
-                <input type="text" class="form-control" id="lote" placeholder="Ej: LT-2026-004">
+                <label class="form-label small fw-semibold"><span data-i18n>Lote a Importar</span> <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" id="lote" placeholder="Ej: LT-2026-004" data-i18n-attr="placeholder">
               </div>
               <div class="col-md-4 d-none" data-tramites="excepcion">
-                <label class="form-label small fw-semibold">País de Origen <span class="text-danger">*</span></label>
-                <input type="text" class="form-control" id="paisOrigen" placeholder="Ej: Estados Unidos">
+                <label class="form-label small fw-semibold"><span data-i18n>País de Origen</span> <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" id="paisOrigen" placeholder="Ej: Estados Unidos" data-i18n-attr="placeholder">
               </div>
               <div class="col-md-4 d-none" data-tramites="excepcion">
-                <label class="form-label small fw-semibold">Cantidad a Importar</label>
-                <input type="text" class="form-control" id="cantidadImportar" placeholder="Ej: 500 unidades">
+                <label class="form-label small fw-semibold" data-i18n>Cantidad a Importar</label>
+                <input type="text" class="form-control" id="cantidadImportar" placeholder="Ej: 500 unidades" data-i18n-attr="placeholder">
               </div>
             </div>
           </div>
 
           <!-- ── STEP 3 ── -->
           <div class="wz-step d-none" id="step-3">
-            <h6 style="font-family:var(--fz-head);font-size:.95rem;color:#1e293b;margin-bottom:2px;">Datos de las Empresas</h6>
-            <p class="text-muted small mb-4">Esta información se usará para los pasos 4–11 de FADDI. Puedes completarla parcialmente ahora y actualizarla después.</p>
+            <h6 style="font-family:var(--fz-head);font-size:.95rem;color:#1e293b;margin-bottom:2px;" data-i18n>Datos de las Empresas</h6>
+            <p class="text-muted small mb-4" data-i18n>Esta información se usará para los pasos 4–11 de FADDI. Puedes completarla parcialmente ahora y actualizarla después.</p>
 
             <div class="entity-section">
-              <h6>Empresa Fabricante <span class="text-danger">*</span></h6>
+              <h6><span data-i18n>Empresa Fabricante</span> <span class="text-danger">*</span></h6>
               <div class="row g-2">
-                <div class="col-md-6"><input class="form-control form-control-sm" id="fab-correo"    placeholder="Correo electrónico"></div>
-                <div class="col-md-6"><input class="form-control form-control-sm" id="fab-nombre"    placeholder="Nombre del fabricante"></div>
-                <div class="col-md-4"><input class="form-control form-control-sm" id="fab-pais"      placeholder="País"></div>
-                <div class="col-md-8"><input class="form-control form-control-sm" id="fab-direccion" placeholder="Dirección"></div>
+                <div class="col-md-6"><input class="form-control form-control-sm" id="fab-correo"    placeholder="Correo electrónico" data-i18n-attr="placeholder"></div>
+                <div class="col-md-6"><input class="form-control form-control-sm" id="fab-nombre"    placeholder="Nombre del fabricante" data-i18n-attr="placeholder"></div>
+                <div class="col-md-4"><input class="form-control form-control-sm" id="fab-pais"      placeholder="País" data-i18n-attr="placeholder"></div>
+                <div class="col-md-8"><input class="form-control form-control-sm" id="fab-direccion" placeholder="Dirección" data-i18n-attr="placeholder"></div>
               </div>
             </div>
 
             <div class="entity-section">
-              <h6>Titular del Producto</h6>
+              <h6 data-i18n>Titular del Producto</h6>
               <div class="row g-2">
-                <div class="col-md-6"><input class="form-control form-control-sm" id="tit-correo"    placeholder="Correo electrónico"></div>
-                <div class="col-md-6"><input class="form-control form-control-sm" id="tit-nombre"    placeholder="Nombre del titular"></div>
-                <div class="col-md-4"><input class="form-control form-control-sm" id="tit-pais"      placeholder="País"></div>
-                <div class="col-md-8"><input class="form-control form-control-sm" id="tit-direccion" placeholder="Dirección"></div>
+                <div class="col-md-6"><input class="form-control form-control-sm" id="tit-correo"    placeholder="Correo electrónico" data-i18n-attr="placeholder"></div>
+                <div class="col-md-6"><input class="form-control form-control-sm" id="tit-nombre"    placeholder="Nombre del titular" data-i18n-attr="placeholder"></div>
+                <div class="col-md-4"><input class="form-control form-control-sm" id="tit-pais"      placeholder="País" data-i18n-attr="placeholder"></div>
+                <div class="col-md-8"><input class="form-control form-control-sm" id="tit-direccion" placeholder="Dirección" data-i18n-attr="placeholder"></div>
               </div>
             </div>
 
             <div class="entity-section">
-              <h6>Empresa Solicitante (en Panamá) <span class="text-danger">*</span></h6>
+              <h6><span data-i18n>Empresa Solicitante (en Panamá)</span> <span class="text-danger">*</span></h6>
               <div class="row g-2">
-                <div class="col-md-4"><input class="form-control form-control-sm" id="sol-ruc"       placeholder="Número de RUC"></div>
-                <div class="col-md-8"><input class="form-control form-control-sm" id="sol-nombre"    placeholder="Nombre de la empresa"></div>
-                <div class="col-md-4"><input class="form-control form-control-sm" id="sol-telefono"  placeholder="Teléfono de contacto"></div>
-                <div class="col-md-4"><input class="form-control form-control-sm" id="sol-correo"    placeholder="Correo electrónico"></div>
-                <div class="col-md-4"><input class="form-control form-control-sm" id="sol-direccion" placeholder="Dirección"></div>
+                <div class="col-md-4"><input class="form-control form-control-sm" id="sol-ruc"       placeholder="Número de RUC" data-i18n-attr="placeholder"></div>
+                <div class="col-md-8"><input class="form-control form-control-sm" id="sol-nombre"    placeholder="Nombre de la empresa" data-i18n-attr="placeholder"></div>
+                <div class="col-md-4"><input class="form-control form-control-sm" id="sol-telefono"  placeholder="Teléfono de contacto" data-i18n-attr="placeholder"></div>
+                <div class="col-md-4"><input class="form-control form-control-sm" id="sol-correo"    placeholder="Correo electrónico" data-i18n-attr="placeholder"></div>
+                <div class="col-md-4"><input class="form-control form-control-sm" id="sol-direccion" placeholder="Dirección" data-i18n-attr="placeholder"></div>
               </div>
             </div>
 
             <div class="entity-section">
-              <h6>Representante Legal</h6>
+              <h6 data-i18n>Representante Legal</h6>
               <div class="row g-2">
-                <div class="col-md-3"><input class="form-control form-control-sm" id="rep-cedula"    placeholder="Cédula"></div>
-                <div class="col-md-5"><input class="form-control form-control-sm" id="rep-nombre"    placeholder="Nombre completo"></div>
-                <div class="col-md-4"><input class="form-control form-control-sm" id="rep-telefono"  placeholder="Teléfono"></div>
-                <div class="col-md-6"><input class="form-control form-control-sm" id="rep-correo"    placeholder="Correo"></div>
-                <div class="col-md-6"><input class="form-control form-control-sm" id="rep-direccion" placeholder="Dirección"></div>
+                <div class="col-md-3"><input class="form-control form-control-sm" id="rep-cedula"    placeholder="Cédula" data-i18n-attr="placeholder"></div>
+                <div class="col-md-5"><input class="form-control form-control-sm" id="rep-nombre"    placeholder="Nombre completo" data-i18n-attr="placeholder"></div>
+                <div class="col-md-4"><input class="form-control form-control-sm" id="rep-telefono"  placeholder="Teléfono" data-i18n-attr="placeholder"></div>
+                <div class="col-md-6"><input class="form-control form-control-sm" id="rep-correo"    placeholder="Correo" data-i18n-attr="placeholder"></div>
+                <div class="col-md-6"><input class="form-control form-control-sm" id="rep-direccion" placeholder="Dirección" data-i18n-attr="placeholder"></div>
               </div>
             </div>
 
             <div class="entity-section">
-              <h6>Farmacéutico Regente</h6>
+              <h6 data-i18n>Farmacéutico Regente</h6>
               <div class="row g-2">
-                <div class="col-md-3"><input class="form-control form-control-sm" id="far-cedula"    placeholder="Cédula"></div>
-                <div class="col-md-3"><input class="form-control form-control-sm" id="far-idoneidad" placeholder="N° Idoneidad"></div>
-                <div class="col-md-6"><input class="form-control form-control-sm" id="far-nombre"    placeholder="Nombre completo"></div>
-                <div class="col-md-4"><input class="form-control form-control-sm" id="far-telefono"  placeholder="Teléfono"></div>
-                <div class="col-md-4"><input class="form-control form-control-sm" id="far-correo"    placeholder="Correo"></div>
-                <div class="col-md-4"><input class="form-control form-control-sm" id="far-direccion" placeholder="Dirección"></div>
+                <div class="col-md-3"><input class="form-control form-control-sm" id="far-cedula"    placeholder="Cédula" data-i18n-attr="placeholder"></div>
+                <div class="col-md-3"><input class="form-control form-control-sm" id="far-idoneidad" placeholder="N° Idoneidad" data-i18n-attr="placeholder"></div>
+                <div class="col-md-6"><input class="form-control form-control-sm" id="far-nombre"    placeholder="Nombre completo" data-i18n-attr="placeholder"></div>
+                <div class="col-md-4"><input class="form-control form-control-sm" id="far-telefono"  placeholder="Teléfono" data-i18n-attr="placeholder"></div>
+                <div class="col-md-4"><input class="form-control form-control-sm" id="far-correo"    placeholder="Correo" data-i18n-attr="placeholder"></div>
+                <div class="col-md-4"><input class="form-control form-control-sm" id="far-direccion" placeholder="Dirección" data-i18n-attr="placeholder"></div>
               </div>
             </div>
 
             <div class="entity-section">
-              <h6>Abogado</h6>
+              <h6 data-i18n>Abogado</h6>
               <div class="row g-2">
-                <div class="col-md-3"><input class="form-control form-control-sm" id="abo-cedula"    placeholder="Cédula"></div>
-                <div class="col-md-3"><input class="form-control form-control-sm" id="abo-idoneidad" placeholder="N° Idoneidad"></div>
-                <div class="col-md-6"><input class="form-control form-control-sm" id="abo-nombre"    placeholder="Nombre completo"></div>
-                <div class="col-md-4"><input class="form-control form-control-sm" id="abo-correo"    placeholder="Correo"></div>
-                <div class="col-md-8"><input class="form-control form-control-sm" id="abo-direccion" placeholder="Dirección"></div>
+                <div class="col-md-3"><input class="form-control form-control-sm" id="abo-cedula"    placeholder="Cédula" data-i18n-attr="placeholder"></div>
+                <div class="col-md-3"><input class="form-control form-control-sm" id="abo-idoneidad" placeholder="N° Idoneidad" data-i18n-attr="placeholder"></div>
+                <div class="col-md-6"><input class="form-control form-control-sm" id="abo-nombre"    placeholder="Nombre completo" data-i18n-attr="placeholder"></div>
+                <div class="col-md-4"><input class="form-control form-control-sm" id="abo-correo"    placeholder="Correo" data-i18n-attr="placeholder"></div>
+                <div class="col-md-8"><input class="form-control form-control-sm" id="abo-direccion" placeholder="Dirección" data-i18n-attr="placeholder"></div>
               </div>
             </div>
 
             <div class="entity-section">
-              <h6>Distribuidores en Panamá</h6>
+              <h6 data-i18n>Distribuidores en Panamá</h6>
               <div id="distribuidores-list">
-                <input class="form-control form-control-sm distribuidor-licencia mb-2" placeholder="Número de Licencia del Distribuidor">
+                <input class="form-control form-control-sm distribuidor-licencia mb-2" placeholder="Número de Licencia del Distribuidor" data-i18n-attr="placeholder">
               </div>
-              <button type="button" class="btn btn-sm btn-outline-secondary" id="btn-add-dist">
+              <button type="button" class="btn btn-sm btn-outline-secondary" id="btn-add-dist" data-i18n>
                 + Agregar distribuidor
               </button>
             </div>
@@ -1039,8 +1083,8 @@
 
           <!-- ── STEP 4 ── -->
           <div class="wz-step d-none" id="step-4">
-            <h6 style="font-family:var(--fz-head);font-size:.95rem;color:#1e293b;margin-bottom:2px;">Carga de Documentos</h6>
-            <p class="text-muted small mb-3">Sube cada documento en el slot correspondiente. Formato: PDF, JPG, PNG o DOCX. Máx. 50 MB por archivo.</p>
+            <h6 style="font-family:var(--fz-head);font-size:.95rem;color:#1e293b;margin-bottom:2px;" data-i18n>Carga de Documentos</h6>
+            <p class="text-muted small mb-3" data-i18n>Sube cada documento en el slot correspondiente. Formato: PDF, JPG, PNG o DOCX. Máx. 50 MB por archivo.</p>
             <div id="upload-progress" class="mb-4"></div>
             <div id="checklist-container"></div>
           </div>
@@ -1049,26 +1093,26 @@
           <div class="wz-step d-none" id="step-5">
             <div class="text-center mb-4">
               <div style="font-size:3rem">📋</div>
-              <h6 style="font-family:var(--fz-head);font-size:1.05rem;color:#1e293b;margin-top:8px;">Confirmación del Expediente</h6>
-              <p class="text-muted small">Revisa el resumen antes de enviar a Farmazed.</p>
+              <h6 style="font-family:var(--fz-head);font-size:1.05rem;color:#1e293b;margin-top:8px;" data-i18n>Confirmación del Expediente</h6>
+              <p class="text-muted small" data-i18n>Revisa el resumen antes de enviar a Farmazed.</p>
             </div>
             <div class="row justify-content-center">
               <div class="col-md-8">
                 <table class="table table-sm">
-                  <tr><td class="text-muted small fw-semibold">Producto</td><td id="confirm-product-name" class="fw-bold">—</td></tr>
-                  <tr><td class="text-muted small fw-semibold">Tipo de Trámite</td><td id="confirm-tramite">—</td></tr>
-                  <tr><td class="text-muted small fw-semibold">Documentos</td><td id="confirm-progress">—</td></tr>
+                  <tr><td class="text-muted small fw-semibold" data-i18n>Producto</td><td id="confirm-product-name" class="fw-bold">—</td></tr>
+                  <tr><td class="text-muted small fw-semibold" data-i18n>Tipo de Trámite</td><td id="confirm-tramite">—</td></tr>
+                  <tr><td class="text-muted small fw-semibold" data-i18n>Documentos</td><td id="confirm-progress">—</td></tr>
                 </table>
                 <div id="confirm-missing"></div>
-                <p class="text-muted small mt-3">Al enviar, el equipo de Farmazed recibirá una notificación y revisará tu expediente. Te contactarán si necesitan documentos adicionales.</p>
+                <p class="text-muted small mt-3" data-i18n>Al enviar, el equipo de Farmazed recibirá una notificación y revisará tu expediente. Te contactarán si necesitan documentos adicionales.</p>
               </div>
             </div>
           </div>
 
           <!-- Navigation -->
           <div class="d-flex justify-content-between mt-3">
-            <button class="btn btn-outline-secondary px-4" id="btn-prev">← Anterior</button>
-            <button class="btn-fz px-4" id="btn-next">Siguiente →</button>
+            <button class="btn btn-outline-secondary px-4" id="btn-prev" data-i18n>← Anterior</button>
+            <button class="btn-fz px-4" id="btn-next" data-i18n>Siguiente →</button>
           </div>
         </div>
       </div>
@@ -1080,11 +1124,11 @@
       <div class="fz-module" id="mod-precios">
         <div class="fz-mod-header">
           <div>
-            <h4>Precios</h4>
-            <p>Lo que cobra Farmazed por sus honorarios y lo que corresponde a tasas oficiales de DNFD/IEA/CNF/MEF — desglosado, para que sepas a dónde va cada balboa.</p>
+            <h4 data-i18n>Precios</h4>
+            <p data-i18n>Lo que cobra Farmazed por sus honorarios y lo que corresponde a tasas oficiales de DNFD/IEA/CNF/MEF — desglosado, para que sepas a dónde va cada balboa.</p>
           </div>
         </div>
-        <div id="precios-content"><div class="text-center py-4 text-muted">Cargando…</div></div>
+        <div id="precios-content"><div class="text-center py-4 text-muted" data-i18n>Cargando…</div></div>
       </div>
 
     </div><!-- container -->
@@ -1096,7 +1140,9 @@
 <!-- render function, since type="module" is deferred regardless of source -->
 <!-- position). Fills window.DATA with real data, then calls window.renderAll(). -->
 <script type="module">
-  import { esc, requireVerifiedLogin, logout, montarBotonDemo } from './portal/js/auth.js';
+  import { esc, requireVerifiedLogin, logout, montarBotonDemo, esDemo } from './portal/js/auth.js';
+  // Panel del recorrido: demo (siempre) o cliente real (si lo activó en "Mi cuenta").
+  import { montarRecorrido, activarRecorrido, desactivarRecorrido } from './portal/js/recorrido.js';
   import { avisar, confirmar, preguntar } from './portal/js/dialogos.js';
   // El <script> clásico de abajo usa estos modales como globales (igual que esc/__fzApi).
   Object.assign(window, { avisar, confirmar, preguntar });
@@ -1104,11 +1150,37 @@
   import api from './portal/js/api.js';
   import { getFullMeta } from './portal/js/status_ui.js';
   import { FEATURES } from './portal/js/config.js';
+  const { t } = window.FZI18N; // capa de idiomas (portal/js/i18n.js, cargada en el <head>)
 
   // TAREA 32: envuelto en una IIFE async para poder cortar temprano
   // (`return`) si el correo no está verificado — un módulo ES no permite
   // `return` en su nivel superior, solo dentro de una función.
   (async () => {
+
+  // ══ Idiomas (ES · EN · FR · PT) ══ selector en el topbar y repintado en vivo. Lo marcado con data-i18n lo
+  // vuelve a traducir la capa sola; lo que se genera por JS se repinta aquí (window.repintarIdioma, script clásico).
+  FZI18N.montarSelector('#tb-idioma');
+  // "Ayuda" abre el manual en el idioma de la interfaz (para cualquier cuenta; en la demo, recorrido.js
+  // hace lo mismo con la sección del rol).
+  const sincronizarAyudaIdioma = () => {
+    const a = document.getElementById('tb-ayuda'); if (a) a.href = `/manual/cliente/${FZI18N.idioma()}.html`;
+    const m = document.getElementById('cuenta-manual'); if (m) m.href = `/manual/cliente/${FZI18N.idioma()}.html`;
+  };
+  FZI18N.listo.then(sincronizarAyudaIdioma);
+  FZI18N.onCambio(sincronizarAyudaIdioma);
+  let datosListos = false;            // true cuando ya corrió renderAll() con datos reales
+  let captacionIntro = () => '';      // texto de intro de la captación, en el idioma actual (lo fija abrirCaptacion)
+  FZI18N.onCambio(() => {
+    // La fase legible de cada producto se deriva aquí (claroTextFor) → se recalcula antes de repintar.
+    if (window.__fzStatusMeta && Array.isArray(window.DATA?.productos)) {
+      window.DATA.productos = window.DATA.productos.map((p) => ({ ...p, fase_label: claroTextFor(p.status, p.status_label) }));
+    }
+    if (!document.getElementById('captacion-overlay').classList.contains('d-none')) {
+      document.getElementById('captacion-intro').textContent = captacionIntro();
+      renderContadores(); // vuelve a pintar nombres y aria-labels de los contadores en el idioma nuevo
+    }
+    if (typeof window.repintarIdioma === 'function') window.repintarIdioma(datosListos);
+  });
 
   // El módulo Mensajes (classic script) llama sendMessage() del chat en vivo,
   // fuera de este script — expuesto en window para que pueda llegar al API.
@@ -1128,6 +1200,67 @@
   montarBotonDemo(document.getElementById('tb-demo')); // solo aparece en la cuenta de demostración
   if (!user) return; // en camino a verificar-correo.html
 
+  // "Ir al paso" del recorrido (demo o cliente real; portal/js/recorrido.js): abre el módulo donde se
+  // hace cada paso (mismos ids en services/demo_recorrido_textos.js para las dos variantes).
+  const irARecorrido = (paso) => {
+    if (paso === 'captacion') {
+      if (document.getElementById('captacion-overlay').classList.contains('d-none')) window.showModule('empresa');
+      return;
+    }
+    if (paso === 'producto' || paso === 'documento') {
+      const casoPropio = window.__fzRecorrido?.estado()?.extra?.casoPropioId;
+      // Ya existe su producto (borrador): se retoma en el asistente (wizard.js lee ?caseId= al cargar).
+      if (paso === 'documento' && casoPropio && new URLSearchParams(location.search).get('caseId') !== casoPropio) {
+        window.location.href = `client-dashboard.html?caseId=${encodeURIComponent(casoPropio)}`;
+        return;
+      }
+      window.showModule('solicitar');
+      document.getElementById('wizard-form').style.display = 'block';
+      document.getElementById('wizard-form').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      return;
+    }
+    window.showModule({ cotizacion: 'cotizacion', pago: 'cotizacion', mensaje: 'mensajes' }[paso] || 'resumen');
+  };
+  // Cuenta demo: siempre. Cliente real: solo si lo activó en "Mi cuenta" (preferencia en el tracker).
+  montarRecorrido({ irA: irARecorrido });
+
+  // ── "Mi cuenta" (Rick, 01-nov-2026): idioma + interruptor del recorrido guiado ──────────────────
+  FZI18N.montarSelector('#cuenta-idioma', { oscuro: true });
+  const prefRecorrido = document.getElementById('pref-recorrido');
+  window.__fzCargarCuenta = async () => {
+    sincronizarAyudaIdioma();
+    if (await esDemo()) {
+      prefRecorrido.checked = true;
+      prefRecorrido.disabled = true;
+      document.getElementById('pref-recorrido-demo').classList.remove('d-none');
+      return;
+    }
+    try { prefRecorrido.checked = !!(await api.getPreferencias()).recorridoGuiado; }
+    catch (e) { prefRecorrido.checked = !!window.__fzRecorrido; }
+  };
+  prefRecorrido.addEventListener('change', async () => {
+    const err = document.getElementById('pref-recorrido-error');
+    err.classList.add('d-none');
+    prefRecorrido.disabled = true;
+    try {
+      if (prefRecorrido.checked) await activarRecorrido({ irA: irARecorrido });
+      else await desactivarRecorrido();
+    } catch (e) {
+      prefRecorrido.checked = !prefRecorrido.checked;
+      err.textContent = t('No se pudo guardar la preferencia.');
+      err.classList.remove('d-none');
+    } finally {
+      prefRecorrido.disabled = false;
+    }
+  });
+  // El panel también se puede ocultar desde su propia ✕: el interruptor se mantiene en sintonía.
+  document.addEventListener('fz:recorrido', (e) => { prefRecorrido.checked = !!e.detail.activo; });
+  // Al retomar un borrador (?caseId=…) la persona quiere seguir en el asistente, no ver el resumen.
+  if (new URLSearchParams(location.search).get('caseId')) {
+    window.showModule('solicitar');
+    document.getElementById('wizard-form').style.display = 'block';
+  }
+
   // TAREA 15/E3 parte 2: el módulo "Mi Empresa" (classic script) necesita
   // saber si esta cuenta es titular (puede invitar) o miembro (solo ve) —
   // sale de GET /api/me/permissions, no de un if de rol hardcodeado aquí.
@@ -1143,16 +1276,16 @@
     if (motivo === 'pago' && retornoPaypal.get('quote') && retornoPaypal.get('token')) {
       try {
         await api.capturarPago(retornoPaypal.get('quote'), retornoPaypal.get('token'));
-        await avisar('Pago recibido. ¡Gracias!');
+        await avisar(t('Pago recibido. ¡Gracias!'));
       } catch (err) {
-        await avisar('No se pudo confirmar el pago: ' + err.message + '\n\nSi PayPal ya te lo cobró, no vuelvas a pagar: contacta a Farmazed.');
+        await avisar(t('No se pudo confirmar el pago: {error}', { error: err.message }) + '\n\n' + t('Si PayPal ya te lo cobró, no vuelvas a pagar: contacta a Farmazed.'));
       }
       window.showModule('cotizacion');
     } else if (motivo === 'suscripcion') {
-      await avisar('PayPal recibió tu aprobación. La suscripción aparecerá como activa en unos minutos.');
+      await avisar(t('PayPal recibió tu aprobación. La suscripción aparecerá como activa en unos minutos.'));
       window.showModule('empresa');
     } else if (motivo === 'cancelado') {
-      await avisar('No se completó la operación en PayPal. No se hizo ningún cobro.');
+      await avisar(t('No se completó la operación en PayPal. No se hizo ningún cobro.'));
     }
   }
 
@@ -1178,7 +1311,7 @@
   document.getElementById('capt-categorias').innerHTML = Object.entries(TRAMITE_LABEL).map(([key, label]) => `
     <div class="form-check form-check-inline">
       <input class="form-check-input" type="checkbox" value="${esc(key)}" id="capt-cat-${esc(key)}">
-      <label class="form-check-label small" for="capt-cat-${esc(key)}">${esc(label)}</label>
+      <label class="form-check-label small" for="capt-cat-${esc(key)}">${esc(t(label))}</label>
     </div>`).join('');
 
   // Contadores "productos por categoría": uno por categoría marcada (botones − / +, mínimo 1). Al
@@ -1196,14 +1329,14 @@
     const marcadas = [...document.querySelectorAll('#capt-categorias input[type=checkbox]:checked')].map(cb => cb.value);
     document.getElementById('capt-productos').innerHTML = marcadas.map(key => {
       const n = acotar(valores[key] ?? previos[key] ?? 1);
-      const nombre = esc(TRAMITE_LABEL[key] || key);
+      const nombre = esc(t(TRAMITE_LABEL[key] || key));
       return `
       <div class="fz-contador" data-cat="${esc(key)}">
         <label class="fz-contador-nombre" for="capt-num-${esc(key)}">${nombre}</label>
         <div class="fz-contador-ctrl">
-          <button type="button" data-paso="-1" aria-label="Quitar uno de ${nombre}"${n <= 1 ? ' disabled' : ''}>−</button>
-          <input type="number" id="capt-num-${esc(key)}" min="1" max="${MAX_PRODUCTOS}" step="1" value="${n}" inputmode="numeric" aria-label="Productos de ${nombre}">
-          <button type="button" data-paso="1" aria-label="Agregar uno de ${nombre}">+</button>
+          <button type="button" data-paso="-1" aria-label="${t('Quitar uno de {nombre}', { nombre })}"${n <= 1 ? ' disabled' : ''}>−</button>
+          <input type="number" id="capt-num-${esc(key)}" min="1" max="${MAX_PRODUCTOS}" step="1" value="${n}" inputmode="numeric" aria-label="${t('Productos de {nombre}', { nombre })}">
+          <button type="button" data-paso="1" aria-label="${t('Agregar uno de {nombre}', { nombre })}">+</button>
         </div>
       </div>`;
     }).join('');
@@ -1252,9 +1385,10 @@
       }
     }
     if (!captacionExistente) renderContadores();
-    document.getElementById('captacion-intro').textContent = editable
-      ? 'Edita la información de captación de tu empresa.'
-      : 'Antes de empezar, necesitamos esta información de tu empresa (se pide una sola vez — después la puedes editar desde "Mi Empresa").';
+    captacionIntro = () => (editable
+      ? t('Edita la información de captación de tu empresa.')
+      : t('Antes de empezar, necesitamos esta información de tu empresa (se pide una sola vez — después la puedes editar desde "Mi Empresa").'));
+    document.getElementById('captacion-intro').textContent = captacionIntro();
     document.getElementById('btn-captacion-cancelar').classList.toggle('d-none', !editable);
     document.getElementById('captacion-overlay').classList.remove('d-none');
   };
@@ -1274,7 +1408,7 @@
     const modificacionEnCurso = document.querySelector('input[name="capt-modificacion-en-curso"]:checked');
 
     if (categoriasProducto.length === 0) {
-      errBox.textContent = 'Selecciona al menos una categoría de producto.';
+      errBox.textContent = t('Selecciona al menos una categoría de producto.');
       errBox.classList.remove('d-none');
       return;
     }
@@ -1370,21 +1504,21 @@
   // Para las 14 fases y draft/submitted/pending_docs se usa el label real del
   // enum (GET /api/meta/statuses), no un texto duplicado aquí.
   function claroTextFor(status, label) {
-    if (status === 'observado_dnfd') return 'DNFD solicitó correcciones';
-    if (status === 'aprobado')       return '¡Registro aprobado!';
-    if (status === 'denegado')       return 'Registro denegado';
-    if (status === 'draft')          return 'Borrador — aún no enviado';
-    if (status === 'submitted')      return 'Enviado — en cola de revisión';
-    if (status === 'pending_docs')   return 'Esperando documentos tuyos';
+    if (status === 'observado_dnfd') return t('DNFD solicitó correcciones');
+    if (status === 'aprobado')       return t('¡Registro aprobado!');
+    if (status === 'denegado')       return t('Registro denegado');
+    if (status === 'draft')          return t('Borrador — aún no enviado');
+    if (status === 'submitted')      return t('Enviado — en cola de revisión');
+    if (status === 'pending_docs')   return t('Esperando documentos tuyos');
     // Ajuste TAREA 8 (Rick, 29-sep): un status que no está en el enum de 21
     // (caso legacy sin migrar, D07) NO debe caer en un texto que insinúe una
     // fase real — mentiría (ej. mostrar "aprobado" como si estuviera en
     // Diagnóstico). Fallback neutro + aviso para quien mire la consola.
     if (!statusMeta.statuses.includes(status)) {
       console.warn(`[client-dashboard] status "${status}" no está en el enum de 21 (caso sin migrar) — mostrando fallback neutro.`);
-      return 'Estado en actualización';
+      return t('Estado en actualización');
     }
-    return `Fase actual: ${label}`;
+    return t('Fase actual: {fase}', { fase: t(label) });
   }
 
   function tsToISODate(ts) {
@@ -1434,7 +1568,7 @@
     activeCases.forEach((c, i) => {
       for (const doc of docLists[i].documents) {
         documentos.push({
-          nombre:   doc.faddiDocName || doc.fileName || '(documento)',
+          nombre:   doc.faddiDocName || doc.fileName || null, // null → '(documento)' al pintar
           producto: c.caseCode || c.productName || c.id,
           fase:     TRAMITE_LABEL[c.tramiteType] || c.tramiteType,
           fecha:    tsToISODate(doc.uploadedAt) || doc.uploadedAt,
@@ -1459,13 +1593,14 @@
       const docsDelCaso = docLists[i].documents || [];
 
       const actividad = [];
-      if (c.createdAt) actividad.push({ fecha: tsToISODate(c.createdAt), descripcion: 'Expediente creado' });
+      // `tipo` permite traducir la descripción al pintar (cambio de idioma en vivo); `descripcion` queda como respaldo.
+      if (c.createdAt) actividad.push({ fecha: tsToISODate(c.createdAt), tipo: 'creado', descripcion: 'Expediente creado' });
       docsDelCaso.forEach(doc => {
-        if (doc.uploadedAt) actividad.push({ fecha: tsToISODate(doc.uploadedAt), descripcion: `Documento subido: ${doc.faddiDocName || doc.fileName}` });
+        if (doc.uploadedAt) actividad.push({ fecha: tsToISODate(doc.uploadedAt), tipo: 'documento_subido', documento: doc.faddiDocName || doc.fileName, descripcion: `Documento subido: ${doc.faddiDocName || doc.fileName}` });
       });
       const updatedISO = tsToISODate(c.updatedAt);
       if (updatedISO && updatedISO !== tsToISODate(c.createdAt)) {
-        actividad.push({ fecha: updatedISO, descripcion: 'Última actualización del expediente' });
+        actividad.push({ fecha: updatedISO, tipo: 'actualizado', descripcion: 'Última actualización del expediente' });
       }
       actividad.sort((a, b) => (b.fecha || '').localeCompare(a.fecha || ''));
 
@@ -1473,9 +1608,11 @@
 
       return {
         codigo:             c.caseCode || c.id,
-        nombre_comercial:   c.productName || c.product?.nombreComercial || '(sin nombre)',
+        nombre_comercial:   c.productName || c.product?.nombreComercial || null, // null → '(sin nombre)' al pintar
         categoria:          c.tramiteType,
         fase_actual:        phaseInfo.fase,
+        status:             c.status,
+        status_label:       label, // etiqueta del enum (español); fase_label se recalcula al cambiar de idioma
         fase_label:         claroTextFor(c.status, label),
         fases_completadas:  c.status === 'aprobado' || c.status === 'denegado'
                                ? [1,2,3,4,5]
@@ -1484,7 +1621,7 @@
         vencimiento,
         bloqueado:          phaseInfo.bloqueado,
         documentos:         docsDelCaso.map(doc => ({
-                               nombre: doc.faddiDocName || doc.fileName || '(documento)',
+                               nombre: doc.faddiDocName || doc.fileName || null,
                                estado: ESTADO_MAP[doc.status] || 'pendiente',
                                nota:   doc.reviewNotes || null,
                              })),
@@ -1528,9 +1665,9 @@
         pendientes.push({
           id:               d.id,
           producto_codigo:  c.caseCode || c.id,
-          producto_nombre:  c.productName || c.product?.nombreComercial || '(sin nombre)',
+          producto_nombre:  c.productName || c.product?.nombreComercial || null,
           tipo_accion:      'subir',
-          descripcion:      d.reviewNotes || `Farmazed solicita: ${d.faddiDocName || d.faddiDocId}`,
+          descripcion:      d.reviewNotes || null, // null → 'Farmazed solicita: …' al pintar (pendienteTexto)
           fase:             TRAMITE_LABEL[c.tramiteType] || c.tramiteType,
           fecha_limite:     null,
           // TAREA 13: datos que necesita el botón "Subir archivo" para
@@ -1551,7 +1688,7 @@
     window.DATA.mensajes = activeCases.map((c, i) => ({
       caseId:           c.id,
       producto_codigo:  c.caseCode || c.id,
-      producto_nombre:  c.productName || c.product?.nombreComercial || '(sin nombre)',
+      producto_nombre:  c.productName || c.product?.nombreComercial || null,
       mensajes: (msgLists[i].messages || []).map(m => ({
         remitente:  m.senderRole,
         nombre:     m.senderName,
@@ -1571,6 +1708,7 @@
     console.error('Error cargando datos reales:', err);
   }
 
+  datosListos = true;
   window.renderAll();
 
   document.getElementById('btn-logout').addEventListener('click', (e) => {
@@ -1589,6 +1727,7 @@
 // renders con datos reales corren después de eso. Envoltorio perezoso para no
 // duplicar el helper.
 const esc = (v) => window.esc(v);
+const { t } = window.FZI18N; // capa de idiomas (portal/js/i18n.js, cargada en el <head>)
 // ── Data ──
 const DATA = {
   cliente: {
@@ -1617,7 +1756,7 @@ window.DATA = DATA;
 const BLOCK_ORDER = ['A', 'B', 'C', 'D', 'E'];
 function fasesLabels() {
   const labels = window.__fzStatusMeta?.blockLabels || {};
-  return BLOCK_ORDER.map(l => labels[l] || l);
+  return BLOCK_ORDER.map(l => t(labels[l] || l));
 }
 // TIPOS_NOMBRES/DOCS_POR_TIPO/PAISES_ABREVIADO (categorías y checklist falsos del
 // wizard de maqueta, países incompletos) eliminados junto con el wizard falso —
@@ -1632,16 +1771,15 @@ function daysUntil(d) {
 }
 function formatDate(d) {
   if (!d) return '—';
-  const [y,m,day] = d.split('-');
-  return `${parseInt(day)} ${'ene feb mar abr may jun jul ago sep oct nov dic'.split(' ')[parseInt(m)-1]} ${y}`;
+  return FZI18N.fecha(d, { day: 'numeric', month: 'short', year: 'numeric' }) || '—';
 }
 function estadoBadge(e) {
-  const m = {activo:['fz-badge-green','Activo'],en_tramite:['fz-badge-blue','En trámite'],bloqueado:['fz-badge-amber','Bloqueado'],vencido:['fz-badge-red','Vencido'],por_vencer:['fz-badge-amber','Por renovar'],denegado:['fz-badge-red','Denegado'],sin_migrar:['fz-badge-gray','Estado en actualización']};
+  const m = {activo:['fz-badge-green',t('Activo')],en_tramite:['fz-badge-blue',t('En trámite')],bloqueado:['fz-badge-amber',t('Bloqueado')],vencido:['fz-badge-red',t('Vencido')],por_vencer:['fz-badge-amber',t('Por renovar')],denegado:['fz-badge-red',t('Denegado')],sin_migrar:['fz-badge-gray',t('Estado en actualización')]};
   const [c,l] = m[e]||['fz-badge-gray',e];
   return `<span class="fz-badge ${c}">${esc(l)}</span>`;
 }
 function docBadge(e) {
-  const m = {pendiente:['fz-badge-amber','Pendiente'],en_revision:['fz-badge-blue','En revisión'],aprobado:['fz-badge-green','Aprobado'],rechazado:['fz-badge-red','Rechazado']};
+  const m = {pendiente:['fz-badge-amber',t('Pendiente')],en_revision:['fz-badge-blue',t('En revisión')],aprobado:['fz-badge-green',t('Aprobado')],rechazado:['fz-badge-red',t('Rechazado')]};
   const [c,l] = m[e]||['fz-badge-gray',e];
   return `<span class="fz-badge ${c}">${esc(l)}</span>`;
 }
@@ -1649,21 +1787,21 @@ function docBadge(e) {
 // existen en el backend real — remapeado a los 6 trámites reales.
 function catBadge(tramiteType) {
   const m = {
-    medicamentos: ['fz-badge-blue',  'Medicamentos'],
-    cosmeticos:   ['fz-badge-green', 'Cosméticos'],
-    higienicos:   ['fz-badge-navy',  'Higiénicos'],
-    plaguicidas:  ['fz-badge-amber', 'Plaguicidas'],
-    excepcion:    ['fz-badge-red',   'Excepción de Registro'],
-    publicidad:   ['fz-badge-gray',  'Publicidad'],
+    medicamentos: ['fz-badge-blue',  t('Medicamentos')],
+    cosmeticos:   ['fz-badge-green', t('Cosméticos')],
+    higienicos:   ['fz-badge-navy',  t('Higiénicos')],
+    plaguicidas:  ['fz-badge-amber', t('Plaguicidas')],
+    excepcion:    ['fz-badge-red',   t('Excepción de Registro')],
+    publicidad:   ['fz-badge-gray',  t('Publicidad')],
   };
   const [cls,l] = m[tramiteType]||['fz-badge-gray',tramiteType];
   return `<span class="fz-badge ${cls}">${esc(l)}</span>`;
 }
 function docActionBtn(e) {
-  if (e==='pendiente')  return `<button class="btn-fz btn-fz-sm">Subir archivo</button>`;
-  if (e==='rechazado')  return `<button class="btn-fz btn-fz-sm" style="background:var(--fz-amber);">Resubir</button>`;
-  if (e==='en_revision')return `<button class="btn-fz-outline btn-fz-sm">Ver detalle</button>`;
-  if (e==='aprobado')   return `<button class="btn-fz-outline btn-fz-sm">Ver</button>`;
+  if (e==='pendiente')  return `<button class="btn-fz btn-fz-sm">${t('Subir archivo')}</button>`;
+  if (e==='rechazado')  return `<button class="btn-fz btn-fz-sm" style="background:var(--fz-amber);">${t('Resubir')}</button>`;
+  if (e==='en_revision')return `<button class="btn-fz-outline btn-fz-sm">${t('Ver detalle')}</button>`;
+  if (e==='aprobado')   return `<button class="btn-fz-outline btn-fz-sm">${t('Ver')}</button>`;
   return '';
 }
 function pendActionBtn(p, idx) {
@@ -1672,17 +1810,28 @@ function pendActionBtn(p, idx) {
   // mismo patrón que ya usa portal/js/wizard.js para el checklist.
   if (p.tipo_accion === 'subir') {
     return `<label class="btn-fz btn-fz-sm" style="cursor:pointer;">
-      Subir archivo
+      ${t('Subir archivo')}
       <input type="file" class="d-none" data-pendiente-idx="${idx}"
              accept=".pdf,.jpg,.jpeg,.png,.doc,.docx">
     </label>`;
   }
-  const m = {revisar:'Revisar y aprobar',confirmar:'Completar info',firmar:'Ver detalle'};
-  return `<button class="btn-fz btn-fz-sm">${esc(m[p.tipo_accion]||'Ver detalle')}</button>`;
+  const m = {revisar:t('Revisar y aprobar'),confirmar:t('Completar info'),firmar:t('Ver detalle')};
+  return `<button class="btn-fz btn-fz-sm">${esc(m[p.tipo_accion]||t('Ver detalle'))}</button>`;
 }
-function pendIcon(t) {
+function pendIcon(tipo) {
   const m = {subir:'iconoir-upload-square',revisar:'iconoir-eye',confirmar:'iconoir-edit-pencil',firmar:'iconoir-pen-tablet'};
-  return m[t]||'iconoir-clock';
+  return m[tipo]||'iconoir-clock';
+}
+// Textos derivados de los datos: DATA guarda el español/los códigos y se traduce al pintar, así el cambio de
+// idioma en vivo (window.repintarIdioma) los repinta sin volver a pedir nada al API.
+function pendienteTexto(p) {
+  return p.descripcion || t('Farmazed solicita: {documento}', { documento: t(p.faddiDocName || p.faddiDocId || '') });
+}
+function actividadTexto(a) {
+  if (a.tipo === 'creado') return t('Expediente creado');
+  if (a.tipo === 'documento_subido') return t('Documento subido: {documento}', { documento: t(a.documento || '') });
+  if (a.tipo === 'actualizado') return t('Última actualización del expediente');
+  return a.descripcion || '';
 }
 
 // ── Module switcher ──
@@ -1703,6 +1852,7 @@ function showModule(name, linkEl) {
   currentModule = name;
   window.scrollTo({top:0,behavior:'smooth'});
   if (name === 'precios') loadPrecios();
+  if (name === 'cuenta' && window.__fzCargarCuenta) window.__fzCargarCuenta(); // módulo "Mi cuenta" (lo define el <script type="module">)
   if (name === 'empresa') loadEmpresa();
   if (name === 'cotizacion') loadCotizacion();
   if (name === 'diagnostico') loadDiagnostico();
@@ -1725,25 +1875,25 @@ async function loadPrecios() {
 
     box.innerHTML = GRUPO_ORDER.filter(g => byGrupo[g]).map(grupo => `
       <div class="mb-4">
-        <h6 class="text-muted fw-bold text-uppercase small mb-2">${esc(grupo)}</h6>
+        <h6 class="text-muted fw-bold text-uppercase small mb-2">${esc(t(grupo))}</h6>
         ${byGrupo[grupo].map(p => `
           <div class="fz-price-card mb-2 p-3" style="background:#fff;border:0.5px solid var(--fz-border);border-radius:8px;">
             <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
-              <div class="fw-semibold small">${esc(p.name)}</div>
+              <div class="fw-semibold small">${esc(t(p.name))}</div>
               <div class="fw-bold" style="color:var(--fz-primary);">B/. ${(p.total || 0).toLocaleString('es-PA')}</div>
             </div>
             <div class="d-flex gap-4 mt-2 flex-wrap">
               <div>
-                <div class="text-muted" style="font-size:.68rem;text-transform:uppercase;">Honorarios Farmazed</div>
+                <div class="text-muted" style="font-size:.68rem;text-transform:uppercase;">${t('Honorarios Farmazed')}</div>
                 <div class="fw-semibold small" style="color:var(--fz-green);">B/. ${(p.honorariosFarmazed || 0).toLocaleString('es-PA')}</div>
               </div>
               <div>
-                <div class="text-muted" style="font-size:.68rem;text-transform:uppercase;">Tasas oficiales</div>
+                <div class="text-muted" style="font-size:.68rem;text-transform:uppercase;">${t('Tasas oficiales')}</div>
                 <div class="fw-semibold small" style="color:var(--fz-primary);">B/. ${(p.tasasOficiales || 0).toLocaleString('es-PA')}</div>
               </div>
             </div>
           </div>`).join('')}
-      </div>`).join('') || '<div class="text-muted small">No hay precios cargados todavía.</div>';
+      </div>`).join('') || `<div class="text-muted small">${t('No hay precios cargados todavía.')}</div>`;
 
     preciosLoaded = true;
   } catch (err) {
@@ -1764,14 +1914,14 @@ async function loadEmpresa() {
 
     // TAREA 34 (§H.15): "el cliente ve su plan en Mi Empresa y puede pedir
     // subir de plan" — sin restricción de qué transición vale.
-    const PLAN_LABEL = { consulta: 'Consulta ($0)', registro: 'Registro', empresarial: 'Empresarial (a convenir)' };
+    const PLAN_LABEL = { consulta: t('Consulta ($0)'), registro: t('Registro'), empresarial: t('Empresarial (a convenir)') };
     const planHtml = `
-      <p style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#9ca3af;margin-bottom:8px;">Plan actual</p>
-      <div class="small mb-2"><span class="fz-badge fz-badge-blue">${esc(PLAN_LABEL[org.plan] || 'sin definir')}</span></div>
+      <p style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#9ca3af;margin-bottom:8px;">${t('Plan actual')}</p>
+      <div class="small mb-2"><span class="fz-badge fz-badge-blue">${esc(PLAN_LABEL[org.plan] || t('sin definir'))}</span></div>
       ${esTitular ? `
         <div class="d-flex gap-2 flex-wrap">
-          ${org.plan !== 'registro'    ? '<button class="btn-fz btn-fz-sm btn-fz-outline btn-subir-plan" data-plan="registro">Subir a Registro</button>' : ''}
-          ${org.plan !== 'empresarial' ? '<button class="btn-fz btn-fz-sm btn-fz-outline btn-subir-plan" data-plan="empresarial">Subir a Empresarial</button>' : ''}
+          ${org.plan !== 'registro'    ? `<button class="btn-fz btn-fz-sm btn-fz-outline btn-subir-plan" data-plan="registro">${t('Subir a Registro')}</button>` : ''}
+          ${org.plan !== 'empresarial' ? `<button class="btn-fz btn-fz-sm btn-fz-outline btn-subir-plan" data-plan="empresarial">${t('Subir a Empresarial')}</button>` : ''}
         </div>` : ''}`;
 
     // TAREA 33 (§H.14): plan recurrente de uso de la plataforma — NO
@@ -1781,20 +1931,21 @@ async function loadEmpresa() {
     // la otra es un cambio de plan: la actual se cobra hasta el fin del ciclo ya facturado y
     // ese día empieza a regir la nueva (services/suscripciones.js en el backend).
     const s = org.suscripcion;
-    const TIPO_PLAN = { global: 'Plan de la plataforma', empresarial: 'Plan Empresarial' };
-    const fechaCorta = (iso) => new Date(iso).toLocaleDateString('es-PA', { day: 'numeric', month: 'long', year: 'numeric' });
+    const TIPO_PLAN = { global: t('Plan de la plataforma'), empresarial: t('Plan Empresarial') };
+    const ESTADO_SUSCRIPCION = { activa: t('activa'), pendiente: t('pendiente'), cancelada: t('cancelada') };
+    const fechaCorta = (iso) => FZI18N.fecha(iso, { day: 'numeric', month: 'long', year: 'numeric' });
     const esEmpresarial = s?.estado === 'activa' && s.tipo === 'empresarial';
     const cambioHtml = s?.estado === 'activa' && s.anterior?.vigenteHasta && new Date(s.anterior.vigenteHasta) > new Date()
-      ? `<div class="small text-muted mb-2">Tu ${esc(TIPO_PLAN[s.anterior.tipo] || 'plan anterior')} sigue vigente hasta el ${fechaCorta(s.anterior.vigenteHasta)}; ese día empieza el ciclo de facturación del nuevo plan.</div>`
-      : org.cambioDePlan ? '<div class="small text-muted mb-2">Tienes un cambio de plan por aprobar en PayPal. Mientras tanto sigues con tu plan actual.</div>' : '';
+      ? `<div class="small text-muted mb-2">${t('Tu {plan} sigue vigente hasta el {fecha}; ese día empieza el ciclo de facturación del nuevo plan.', { plan: esc(TIPO_PLAN[s.anterior.tipo] || t('plan anterior')), fecha: fechaCorta(s.anterior.vigenteHasta) })}</div>`
+      : org.cambioDePlan ? `<div class="small text-muted mb-2">${t('Tienes un cambio de plan por aprobar en PayPal. Mientras tanto sigues con tu plan actual.')}</div>` : '';
     const suscripcionHtml = `
-      <p style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#9ca3af;margin:20px 0 8px;">Suscripción (uso de la plataforma)</p>
-      <div class="small text-muted mb-2">Estado: <span class="fz-badge ${s?.estado === 'activa' ? 'fz-badge-green' : s?.estado === 'pendiente' ? 'fz-badge-amber' : 'fz-badge-blue'}">${esc(s?.estado || 'sin suscripción')}</span>${s?.tipo && s.estado !== 'cancelada' ? ` · ${esc(TIPO_PLAN[s.tipo] || s.tipo)}` : ''}</div>
+      <p style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#9ca3af;margin:20px 0 8px;">${t('Suscripción (uso de la plataforma)')}</p>
+      <div class="small text-muted mb-2">${t('Estado:')} <span class="fz-badge ${s?.estado === 'activa' ? 'fz-badge-green' : s?.estado === 'pendiente' ? 'fz-badge-amber' : 'fz-badge-blue'}">${esc(ESTADO_SUSCRIPCION[s?.estado] || s?.estado || t('sin suscripción'))}</span>${s?.tipo && s.estado !== 'cancelada' ? ` · ${esc(TIPO_PLAN[s.tipo] || s.tipo)}` : ''}</div>
       ${cambioHtml}
       ${esTitular ? `<div class="d-flex gap-2 flex-wrap">
-        ${(!s || s.estado === 'cancelada') ? '<button class="btn-fz btn-fz-sm" id="btn-suscribir">Suscribirme</button>' : ''}
-        ${esEmpresarial ? '<button class="btn-fz btn-fz-sm btn-fz-outline" id="btn-suscribir" data-cambio="1">Cambiar al plan de la plataforma</button>' : ''}
-        ${(s && s.estado !== 'cancelada') ? '<button class="btn-fz btn-fz-sm btn-fz-outline" id="btn-cancelar-suscripcion">Cancelar suscripción</button>' : ''}
+        ${(!s || s.estado === 'cancelada') ? `<button class="btn-fz btn-fz-sm" id="btn-suscribir">${t('Suscribirme')}</button>` : ''}
+        ${esEmpresarial ? `<button class="btn-fz btn-fz-sm btn-fz-outline" id="btn-suscribir" data-cambio="1">${t('Cambiar al plan de la plataforma')}</button>` : ''}
+        ${(s && s.estado !== 'cancelada') ? `<button class="btn-fz btn-fz-sm btn-fz-outline" id="btn-cancelar-suscripcion">${t('Cancelar suscripción')}</button>` : ''}
       </div>` : ''}`;
 
     const miembrosHtml = org.members.map(m => `
@@ -1803,22 +1954,22 @@ async function loadEmpresa() {
           <div class="small fw-semibold">${esc(m.displayName)}</div>
           <div class="text-muted" style="font-size:.72rem">${esc(m.email)}</div>
         </div>
-        <span class="fz-badge fz-badge-blue">${m.role === 'cliente_titular' ? 'Titular' : 'Miembro'}</span>
+        <span class="fz-badge fz-badge-blue">${m.role === 'cliente_titular' ? t('Titular') : t('Miembro')}</span>
       </div>`).join('');
 
     const invitacionesHtml = esTitular && org.invitations?.length ? `
-      <p style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#9ca3af;margin:20px 0 8px;">Invitaciones enviadas</p>
+      <p style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#9ca3af;margin:20px 0 8px;">${t('Invitaciones enviadas')}</p>
       ${org.invitations.map(inv => `
         <div class="d-flex justify-content-between align-items-center border-bottom py-2">
           <div class="small">${esc(inv.email)}</div>
-          <span class="fz-badge ${inv.used ? 'fz-badge-green' : 'fz-badge-amber'}">${inv.used ? 'Activa' : 'Pendiente'}</span>
+          <span class="fz-badge ${inv.used ? 'fz-badge-green' : 'fz-badge-amber'}">${inv.used ? t('Activa') : t('Pendiente')}</span>
         </div>`).join('')}` : '';
 
     const invitarFormHtml = esTitular ? `
-      <p style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#9ca3af;margin:20px 0 8px;">Invitar miembro</p>
+      <p style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#9ca3af;margin:20px 0 8px;">${t('Invitar miembro')}</p>
       <form id="form-invitar-miembro" class="d-flex gap-2">
         <input type="email" class="form-control form-control-sm" id="miembro-email" placeholder="correo@empresa.com" required>
-        <button type="submit" class="btn-fz btn-fz-sm">Invitar</button>
+        <button type="submit" class="btn-fz btn-fz-sm">${t('Invitar')}</button>
       </form>
       <div id="invitar-miembro-msg" class="small mt-2"></div>` : '';
 
@@ -1826,21 +1977,21 @@ async function loadEmpresa() {
     // titular puede editarla (orgs.edit_captacion), el miembro solo la ve.
     const c = org.captacion;
     const captacionHtml = c ? `
-      <p style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#9ca3af;margin-bottom:8px;">Captación de información preliminar</p>
-      <div class="small text-muted mb-1"><strong>Fabricante:</strong> ${esc(c.paisYNombreFabricante)}</div>
-      <div class="small text-muted mb-1"><strong>Categorías:</strong> ${esc((c.categoriasProducto || []).join(', '))}</div>
-      <div class="small text-muted mb-1"><strong>N.° de productos:</strong> ${esc(c.numeroProductosPorCategoria)}</div>
-      <div class="small text-muted mb-1"><strong>Registro previo (FDA/EMA/TGA…):</strong> ${c.registroPrevioAutoridadReconocida ? 'Sí' : 'No'}</div>
-      <div class="small text-muted mb-1"><strong>Cliente:</strong> ${c.clienteNuevoOYaRegistrado === 'nuevo' ? 'Nuevo' : 'Ya tiene productos registrados'}</div>
-      <div class="small text-muted mb-2"><strong>Modificación en curso:</strong> ${c.productoConModificacionEnCurso ? 'Sí' : 'No'}</div>
-      ${esTitular ? '<button class="btn-fz btn-fz-sm" id="btn-editar-captacion">Editar</button>' : ''}`
-      : (esTitular ? '<button class="btn-fz btn-fz-sm" id="btn-editar-captacion">Completar captación de información preliminar</button>' : '<p class="text-muted small">Todavía sin captación.</p>');
+      <p style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#9ca3af;margin-bottom:8px;">${t('Captación de información preliminar')}</p>
+      <div class="small text-muted mb-1"><strong>${t('Fabricante:')}</strong> ${esc(c.paisYNombreFabricante)}</div>
+      <div class="small text-muted mb-1"><strong>${t('Categorías:')}</strong> ${esc((c.categoriasProducto || []).join(', '))}</div>
+      <div class="small text-muted mb-1"><strong>${t('N.° de productos:')}</strong> ${esc(c.numeroProductosPorCategoria)}</div>
+      <div class="small text-muted mb-1"><strong>${t('Registro previo (FDA/EMA/TGA…):')}</strong> ${c.registroPrevioAutoridadReconocida ? t('Sí') : t('No')}</div>
+      <div class="small text-muted mb-1"><strong>${t('Cliente:')}</strong> ${c.clienteNuevoOYaRegistrado === 'nuevo' ? t('Nuevo') : t('Ya tiene productos registrados')}</div>
+      <div class="small text-muted mb-2"><strong>${t('Modificación en curso:')}</strong> ${c.productoConModificacionEnCurso ? t('Sí') : t('No')}</div>
+      ${esTitular ? `<button class="btn-fz btn-fz-sm" id="btn-editar-captacion">${t('Editar')}</button>` : ''}`
+      : (esTitular ? `<button class="btn-fz btn-fz-sm" id="btn-editar-captacion">${t('Completar captación de información preliminar')}</button>` : `<p class="text-muted small">${t('Todavía sin captación.')}</p>`);
 
     box.innerHTML = `
       <div class="row g-3">
         <div class="col-md-7">
-          <p style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#9ca3af;margin-bottom:8px;">${esc(org.nombre)} — miembros</p>
-          ${miembrosHtml || '<p class="text-muted small">Sin miembros todavía.</p>'}
+          <p style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#9ca3af;margin-bottom:8px;">${t('{empresa} — miembros', { empresa: esc(org.nombre) })}</p>
+          ${miembrosHtml || `<p class="text-muted small">${t('Sin miembros todavía.')}</p>`}
           ${invitacionesHtml}
         </div>
         <div class="col-md-5">
@@ -1857,7 +2008,7 @@ async function loadEmpresa() {
         try {
           await window.__fzApi.setMiPlan(btn.dataset.plan);
           window.location.reload(); // revela el nav nuevo (Diagnóstico/Informes) sin reconstruir todo a mano
-        } catch (err) { await avisar('Error: ' + err.message); btn.disabled = false; }
+        } catch (err) { await avisar(t('Error: {error}', { error: err.message })); btn.disabled = false; }
       }));
 
       document.getElementById('form-invitar-miembro').addEventListener('submit', async (e) => {
@@ -1867,7 +2018,7 @@ async function loadEmpresa() {
         try {
           await window.__fzApi.inviteMiembro(email);
           msg.className = 'small mt-2 text-success';
-          msg.textContent = 'Invitación enviada.';
+          msg.textContent = t('Invitación enviada.');
           empresaLoaded = false;
           loadEmpresa();
         } catch (err) {
@@ -1884,7 +2035,7 @@ async function loadEmpresa() {
       // TAREA 33 (§H.14): no bloquea trámites — solo informativo + la
       // acción de suscribir/cancelar.
       document.getElementById('btn-suscribir')?.addEventListener('click', async (e) => {
-        if (e.target.dataset.cambio && !(await confirmar('Tu Plan Empresarial se cobra hasta terminar el ciclo de facturación actual. Ese mismo día empieza a regir (y a cobrarse) el plan de la plataforma. ¿Hacer el cambio?'))) return;
+        if (e.target.dataset.cambio && !(await confirmar(t('Tu Plan Empresarial se cobra hasta terminar el ciclo de facturación actual. Ese mismo día empieza a regir (y a cobrarse) el plan de la plataforma. ¿Hacer el cambio?')))) return;
         e.target.disabled = true;
         try {
           const { approveUrl } = await window.__fzApi.suscribirEmpresa();
@@ -1893,19 +2044,19 @@ async function loadEmpresa() {
           empresaLoaded = false;
           loadEmpresa();
         } catch (err) {
-          await avisar('Error: ' + err.message);
+          await avisar(t('Error: {error}', { error: err.message }));
           e.target.disabled = false;
         }
       });
       document.getElementById('btn-cancelar-suscripcion')?.addEventListener('click', async (e) => {
-        if (!(await confirmar('¿Cancelar la suscripción de la empresa?'))) return;
+        if (!(await confirmar(t('¿Cancelar la suscripción de la empresa?')))) return;
         e.target.disabled = true;
         try {
           await window.__fzApi.cancelarSuscripcion();
           empresaLoaded = false;
           loadEmpresa();
         } catch (err) {
-          await avisar('Error: ' + err.message);
+          await avisar(t('Error: {error}', { error: err.message }));
           e.target.disabled = false;
         }
       });
@@ -1921,6 +2072,7 @@ async function loadEmpresa() {
 // cliente solo ve la cotización desde que se envía (nunca se le presenta el
 // borrador sin ajustar como si fuera una cifra final).
 let cotizacionLoaded = false;
+let cotizacionQuotes = null; // última lista pintada — se repinta tal cual al cambiar de idioma
 const COTIZACION_ESTADO_LABEL = {
   enviada: 'Pendiente de tu respuesta', aceptada: 'Aceptada', rechazada: 'Rechazada',
 };
@@ -1929,7 +2081,8 @@ async function loadCotizacion() {
   const box = document.getElementById('cotizacion-content');
   try {
     const { quotes } = await window.__fzApi.getQuotes();
-    renderCotizacion(quotes.filter(q => q.estado !== 'borrador'));
+    cotizacionQuotes = quotes.filter(q => q.estado !== 'borrador');
+    renderCotizacion(cotizacionQuotes);
     cotizacionLoaded = true;
   } catch (err) {
     box.innerHTML = `<div class="alert alert-danger">${esc(err.message)}</div>`;
@@ -1939,26 +2092,26 @@ async function loadCotizacion() {
 function renderCotizacion(quotes) {
   const box = document.getElementById('cotizacion-content');
   if (!quotes.length) {
-    box.innerHTML = `<p class="text-muted small">Todavía no tienes una cotización enviada.</p>`;
+    box.innerHTML = `<p class="text-muted small">${t('Todavía no tienes una cotización enviada.')}</p>`;
   } else {
     const esTitular = window.__fzMyRole === 'cliente_titular';
     box.innerHTML = quotes.map(q => {
       const lineasHtml = q.lineas.map(l => `
         <div class="d-flex justify-content-between align-items-start border-bottom py-2">
-          <div class="small fw-semibold">${esc(l.caseCode)}${l.tipo === 'prioridad_innovadores' ? ' <span class="text-muted" style="font-size:.68rem;font-weight:400">(prioridad innovadores)</span>' : ''}</div>
+          <div class="small fw-semibold">${esc(l.caseCode)}${l.tipo === 'prioridad_innovadores' ? ` <span class="text-muted" style="font-size:.68rem;font-weight:400">${t('(prioridad innovadores)')}</span>` : ''}</div>
           <div class="text-end" style="font-size:.75rem;color:#4b5563">
-            <div>Honorarios Farmazed: B/. ${Number(l.honorariosFarmazed).toFixed(2)}</div>
-            <div>Tasas oficiales: B/. ${Number(l.tasasOficiales).toFixed(2)}</div>
-            ${q.estado === 'aceptada' && l.pagoExterno?.estado === 'confirmado' ? '<div class="text-success mt-1"><i class="iconoir-check-circle"></i> Pagado por Rapid PayPro</div>' : ''}
+            <div>${t('Honorarios Farmazed: B/. {monto}', { monto: Number(l.honorariosFarmazed).toFixed(2) })}</div>
+            <div>${t('Tasas oficiales: B/. {monto}', { monto: Number(l.tasasOficiales).toFixed(2) })}</div>
+            ${q.estado === 'aceptada' && l.pagoExterno?.estado === 'confirmado' ? `<div class="text-success mt-1"><i class="iconoir-check-circle"></i> ${t('Pagado por Rapid PayPro')}</div>` : ''}
             ${q.estado === 'aceptada' && esTitular && l.pagoExterno?.url && l.pagoExterno.estado !== 'confirmado' && q.pagoPaypal?.estado !== 'capturada'
-              ? `<a class="btn-fz btn-fz-sm btn-fz-outline mt-1" href="${esc(l.pagoExterno.url)}" target="_blank" rel="noopener">Pagar con Rapid PayPro</a>` : ''}
+              ? `<a class="btn-fz btn-fz-sm btn-fz-outline mt-1" href="${esc(l.pagoExterno.url)}" target="_blank" rel="noopener">${t('Pagar con Rapid PayPro')}</a>` : ''}
           </div>
         </div>`).join('');
 
       const accionesHtml = (q.estado === 'enviada' && esTitular) ? `
         <div class="d-flex gap-2 mt-3">
-          <button class="btn-fz btn-fz-sm btn-aceptar-cot" data-quote="${esc(q.id)}">Aceptar</button>
-          <button class="btn-fz btn-fz-sm btn-fz-outline btn-rechazar-cot" data-quote="${esc(q.id)}">Rechazar</button>
+          <button class="btn-fz btn-fz-sm btn-aceptar-cot" data-quote="${esc(q.id)}">${t('Aceptar')}</button>
+          <button class="btn-fz btn-fz-sm btn-fz-outline btn-rechazar-cot" data-quote="${esc(q.id)}">${t('Rechazar')}</button>
         </div>` : '';
 
       // TAREA 33 (§H.14): "Pagar con PayPal" solo si ya está aceptada y
@@ -1970,23 +2123,23 @@ function renderCotizacion(quotes) {
       const todasPorRapidPay = q.lineas.filter(l => (l.tipo || 'principal') === 'principal').every(l => l.pagoExterno?.estado === 'confirmado');
       const pagoHtml = (q.estado === 'aceptada' && esTitular) ? (
         yaPagada
-          ? `<div class="small text-success mt-2"><i class="iconoir-check-circle"></i> Pagado con PayPal (orden ${esc(q.pagoPaypal.orderId)}).</div>`
+          ? `<div class="small text-success mt-2"><i class="iconoir-check-circle"></i> ${t('Pagado con PayPal (orden {orden}).', { orden: esc(q.pagoPaypal.orderId) })}</div>`
           : todasPorRapidPay
-            ? '<div class="small text-success mt-2"><i class="iconoir-check-circle"></i> Pagado por Rapid PayPro.</div>'
+            ? `<div class="small text-success mt-2"><i class="iconoir-check-circle"></i> ${t('Pagado por Rapid PayPro.')}</div>`
             : algunaPorRapidPay
-              ? '<div class="small text-muted mt-2">Los productos pendientes se pagan con su enlace de Rapid PayPro; Farmazed confirma cada pago al recibirlo.</div>'
-              : `<div class="mt-3 d-flex gap-2 flex-wrap align-items-center"><button class="btn-fz btn-fz-sm btn-pagar-paypal" data-quote="${esc(q.id)}">Pagar con PayPal</button>${q.lineas.some(l => l.pagoExterno?.url) ? '<span class="small text-muted">o con el enlace de Rapid PayPro de cada producto</span>' : ''}</div>`
+              ? `<div class="small text-muted mt-2">${t('Los productos pendientes se pagan con su enlace de Rapid PayPro; Farmazed confirma cada pago al recibirlo.')}</div>`
+              : `<div class="mt-3 d-flex gap-2 flex-wrap align-items-center"><button class="btn-fz btn-fz-sm btn-pagar-paypal" data-quote="${esc(q.id)}">${t('Pagar con PayPal')}</button>${q.lineas.some(l => l.pagoExterno?.url) ? `<span class="small text-muted">${t('o con el enlace de Rapid PayPro de cada producto')}</span>` : ''}</div>`
       ) : '';
 
       return `
         <div class="card border-0 shadow-sm mb-3">
           <div class="card-body">
             <div class="d-flex justify-content-between align-items-center mb-2">
-              <span class="fz-badge fz-badge-blue">${esc(COTIZACION_ESTADO_LABEL[q.estado] || q.estado)}</span>
-              <span class="fw-bold">Total: B/. ${Number(q.total).toFixed(2)}</span>
+              <span class="fz-badge fz-badge-blue">${esc(t(COTIZACION_ESTADO_LABEL[q.estado] || q.estado))}</span>
+              <span class="fw-bold">${t('Total: B/. {monto}', { monto: Number(q.total).toFixed(2) })}</span>
             </div>
             ${lineasHtml}
-            ${q.motivoRechazo ? `<div class="text-danger small mt-2">Rechazada: ${esc(q.motivoRechazo)}</div>` : ''}
+            ${q.motivoRechazo ? `<div class="text-danger small mt-2">${t('Rechazada: {motivo}', { motivo: esc(q.motivoRechazo) })}</div>` : ''}
             ${accionesHtml}
             ${pagoHtml}
           </div>
@@ -1994,21 +2147,21 @@ function renderCotizacion(quotes) {
     }).join('');
 
     box.querySelectorAll('.btn-aceptar-cot').forEach(btn => btn.addEventListener('click', async () => {
-      if (!(await confirmar('¿Aceptar esta cotización?'))) return;
+      if (!(await confirmar(t('¿Aceptar esta cotización?')))) return;
       try {
         await window.__fzApi.respondQuote(btn.dataset.quote, 'aceptada');
         cotizacionLoaded = false;
         loadCotizacion();
-      } catch (e) { await avisar('Error: ' + e.message); }
+      } catch (e) { await avisar(t('Error: {error}', { error: e.message })); }
     }));
     box.querySelectorAll('.btn-rechazar-cot').forEach(btn => btn.addEventListener('click', async () => {
-      const motivo = await preguntar('Motivo del rechazo:');
+      const motivo = await preguntar(t('Motivo del rechazo:'));
       if (!motivo) return;
       try {
         await window.__fzApi.respondQuote(btn.dataset.quote, 'rechazada', motivo);
         cotizacionLoaded = false;
         loadCotizacion();
-      } catch (e) { await avisar('Error: ' + e.message); }
+      } catch (e) { await avisar(t('Error: {error}', { error: e.message })); }
     }));
 
     // TAREA 33 (§H.14): sin app sandbox de PayPal todavía, `approveUrl`
@@ -2019,7 +2172,7 @@ function renderCotizacion(quotes) {
     box.querySelectorAll('.btn-pagar-paypal').forEach(btn => btn.addEventListener('click', async () => {
       const quoteId = btn.dataset.quote;
       btn.disabled = true;
-      btn.textContent = 'Procesando…';
+      btn.textContent = t('Procesando…');
       try {
         const orden = await window.__fzApi.crearOrdenPago(quoteId);
         if (orden.approveUrl) {
@@ -2030,9 +2183,9 @@ function renderCotizacion(quotes) {
         cotizacionLoaded = false;
         loadCotizacion();
       } catch (e) {
-        await avisar('Error al pagar: ' + e.message);
+        await avisar(t('Error al pagar: {error}', { error: e.message }));
         btn.disabled = false;
-        btn.textContent = 'Pagar con PayPal';
+        btn.textContent = t('Pagar con PayPal');
       }
     }));
   }
@@ -2057,23 +2210,23 @@ async function loadDiagnostico() {
     box.innerHTML = d ? `
       <div class="card border-0 shadow-sm">
         <div class="card-body">
-          <p class="small text-muted mb-1"><strong>Clasificación del producto:</strong> ${esc(d.clasificacion)}</p>
-          <p class="small text-muted mb-1"><strong>Ruta recomendada:</strong> ${esc(d.rutaRecomendada)}</p>
-          <p class="small text-muted mb-1"><strong>Requisitos aplicables:</strong> ${esc(d.requisitosAplicables)}</p>
-          <p class="small text-muted mb-1"><strong>Estimado de tiempos:</strong> ${esc(d.estimadoTiempos)}</p>
-          <p class="small text-muted mb-3"><strong>Estimado de costos oficiales:</strong> ${esc(d.estimadoCostos)}</p>
-          ${esTitular ? '<button class="btn-fz" id="btn-contratar-registro">Contratar el registro</button>' : ''}
+          <p class="small text-muted mb-1"><strong>${t('Clasificación del producto:')}</strong> ${esc(d.clasificacion)}</p>
+          <p class="small text-muted mb-1"><strong>${t('Ruta recomendada:')}</strong> ${esc(d.rutaRecomendada)}</p>
+          <p class="small text-muted mb-1"><strong>${t('Requisitos aplicables:')}</strong> ${esc(d.requisitosAplicables)}</p>
+          <p class="small text-muted mb-1"><strong>${t('Estimado de tiempos:')}</strong> ${esc(d.estimadoTiempos)}</p>
+          <p class="small text-muted mb-3"><strong>${t('Estimado de costos oficiales:')}</strong> ${esc(d.estimadoCostos)}</p>
+          ${esTitular ? `<button class="btn-fz" id="btn-contratar-registro">${t('Contratar el registro')}</button>` : ''}
         </div>
       </div>`
-      : `<p class="text-muted small">Farmazed está preparando tu diagnóstico — te avisamos cuando esté listo.</p>`;
+      : `<p class="text-muted small">${t('Farmazed está preparando tu diagnóstico — te avisamos cuando esté listo.')}</p>`;
 
     document.getElementById('btn-contratar-registro')?.addEventListener('click', async (e) => {
       e.target.disabled = true;
       try {
         await window.__fzApi.setMiPlan('registro');
-        await avisar('¡Listo! Ya puedes crear tu producto en "Solicitar Registro".');
+        await avisar(t('¡Listo! Ya puedes crear tu producto en "Solicitar Registro".'));
         window.location.reload();
-      } catch (err) { await avisar('Error: ' + err.message); e.target.disabled = false; }
+      } catch (err) { await avisar(t('Error: {error}', { error: err.message })); e.target.disabled = false; }
     });
     diagnosticoLoaded = true;
   } catch (err) {
@@ -2095,26 +2248,28 @@ async function loadEmpresarial() {
     if (!p) {
       propuestaHtml = esTitular ? `
         <div class="card border-0 shadow-sm mb-4"><div class="card-body">
-          <h6 class="mb-3">Solicitud de propuesta</h6>
+          <h6 class="mb-3">${t('Solicitud de propuesta')}</h6>
           <form id="form-propuesta">
             <div class="mb-3">
-              <label class="form-label small">Productos estimados (cuáles y cuántos)</label>
+              <label class="form-label small">${t('Productos estimados (cuáles y cuántos)')}</label>
               <textarea class="form-control" id="prop-productos" rows="2" required></textarea>
             </div>
-            <label class="form-label small d-block mb-1">Necesidades</label>
-            <div class="form-check"><input class="form-check-input" type="checkbox" id="prop-modificaciones"><label class="form-check-label small">Modificaciones post-registro</label></div>
-            <div class="form-check"><input class="form-check-input" type="checkbox" id="prop-etiquetado"><label class="form-check-label small">Revisión de etiquetado</label></div>
-            <div class="form-check mb-3"><input class="form-check-input" type="checkbox" id="prop-informes"><label class="form-check-label small">Informes periódicos</label></div>
-            <button type="submit" class="btn-fz btn-fz-sm">Enviar solicitud</button>
+            <label class="form-label small d-block mb-1">${t('Necesidades')}</label>
+            <div class="form-check"><input class="form-check-input" type="checkbox" id="prop-modificaciones"><label class="form-check-label small">${t('Modificaciones post-registro')}</label></div>
+            <div class="form-check"><input class="form-check-input" type="checkbox" id="prop-etiquetado"><label class="form-check-label small">${t('Revisión de etiquetado')}</label></div>
+            <div class="form-check mb-3"><input class="form-check-input" type="checkbox" id="prop-informes"><label class="form-check-label small">${t('Informes periódicos')}</label></div>
+            <button type="submit" class="btn-fz btn-fz-sm">${t('Enviar solicitud')}</button>
           </form>
-        </div></div>` : '<p class="text-muted small">El titular todavía no envió la solicitud de propuesta.</p>';
+        </div></div>` : `<p class="text-muted small">${t('El titular todavía no envió la solicitud de propuesta.')}</p>`;
     } else if (p.estado === 'solicitada') {
-      propuestaHtml = `<div class="alert alert-info small">Solicitud enviada — Farmazed está preparando las condiciones.</div>`;
+      propuestaHtml = `<div class="alert alert-info small">${t('Solicitud enviada — Farmazed está preparando las condiciones.')}</div>`;
     } else if (p.estado === 'aceptada' && !p.gestorCuenta) {
       // El plan terminó (cancelado o cambio al plan de la plataforma): la empresa conserva sus informes;
       // el gestor era parte del plan. Volver exige condiciones nuevas definidas por Farmazed.
-      const hasta = p.gestorHasta ? new Date(p.gestorHasta).toLocaleDateString('es-PA', { day: 'numeric', month: 'long', year: 'numeric' }) : null;
-      propuestaHtml = `<div class="alert alert-secondary small">Tu Plan Empresarial terminó${hasta ? ` el ${esc(hasta)}` : ''}. Tus informes de avance siguen disponibles abajo. Si quieres retomarlo, Farmazed te propondrá condiciones nuevas.</div>`;
+      const hasta = p.gestorHasta ? FZI18N.fecha(p.gestorHasta, { day: 'numeric', month: 'long', year: 'numeric' }) : null;
+      propuestaHtml = `<div class="alert alert-secondary small">${hasta
+        ? t('Tu Plan Empresarial terminó el {fecha}. Tus informes de avance siguen disponibles abajo. Si quieres retomarlo, Farmazed te propondrá condiciones nuevas.', { fecha: esc(hasta) })
+        : t('Tu Plan Empresarial terminó. Tus informes de avance siguen disponibles abajo. Si quieres retomarlo, Farmazed te propondrá condiciones nuevas.')}</div>`;
     } else if (p.estado === 'condiciones_definidas' || !(org.suscripcion?.estado === 'activa' && org.suscripcion.tipo === 'empresarial')) {
       // También con la propuesta ya 'aceptada' si el Plan Empresarial no está activo (no se terminó de
       // aprobar en PayPal, se canceló o la empresa se pasó al plan de la plataforma): se puede retomar.
@@ -2122,15 +2277,15 @@ async function loadEmpresarial() {
       const pendiente = org.suscripcion?.estado === 'pendiente' || org.cambioDePlan;
       propuestaHtml = `
         <div class="card border-0 shadow-sm mb-4"><div class="card-body">
-          <h6 class="mb-2">Condiciones propuestas</h6>
-          <p class="small text-muted mb-1"><strong>Monto:</strong> $${Number(p.monto).toFixed(2)} / ${esc(p.periodo)}</p>
-          <p class="small text-muted mb-3"><strong>Gestor de cuenta:</strong> ${esc(p.gestorCuentaEmail)}</p>
-          ${conOtroPlan ? '<p class="small text-muted mb-3">Ya tienes el plan de la plataforma. Si aceptas, ese plan se cobra hasta terminar su ciclo de facturación y ese mismo día empieza el Plan Empresarial.</p>' : ''}
-          ${pendiente ? '<p class="small text-muted mb-3">Tienes una suscripción por aprobar en PayPal. Puedes volver a intentarlo desde aquí.</p>' : ''}
-          ${esTitular ? `<button class="btn-fz btn-fz-sm" id="btn-aceptar-empresarial">${conOtroPlan ? 'Aceptar y cambiar de plan' : 'Aceptar y suscribirme'}</button>` : ''}
+          <h6 class="mb-2">${t('Condiciones propuestas')}</h6>
+          <p class="small text-muted mb-1"><strong>${t('Monto:')}</strong> $${Number(p.monto).toFixed(2)} / ${esc(t(p.periodo))}</p>
+          <p class="small text-muted mb-3"><strong>${t('Gestor de cuenta:')}</strong> ${esc(p.gestorCuentaEmail)}</p>
+          ${conOtroPlan ? `<p class="small text-muted mb-3">${t('Ya tienes el plan de la plataforma. Si aceptas, ese plan se cobra hasta terminar su ciclo de facturación y ese mismo día empieza el Plan Empresarial.')}</p>` : ''}
+          ${pendiente ? `<p class="small text-muted mb-3">${t('Tienes una suscripción por aprobar en PayPal. Puedes volver a intentarlo desde aquí.')}</p>` : ''}
+          ${esTitular ? `<button class="btn-fz btn-fz-sm" id="btn-aceptar-empresarial">${conOtroPlan ? t('Aceptar y cambiar de plan') : t('Aceptar y suscribirme')}</button>` : ''}
         </div></div>`;
     } else {
-      propuestaHtml = `<div class="alert alert-success small">Suscripción activa — gestor de cuenta: ${esc(p.gestorCuentaEmail)}.</div>`;
+      propuestaHtml = `<div class="alert alert-success small">${t('Suscripción activa — gestor de cuenta: {correo}.', { correo: esc(p.gestorCuentaEmail) })}</div>`;
     }
 
     // "Informes de avance" — todos los casos de la empresa (admin/staff ya
@@ -2141,15 +2296,15 @@ async function loadEmpresarial() {
       <tr>
         <td class="small">${esc(c.product?.nombreComercial || c.caseCode)}</td>
         <td class="small text-muted">${esc(c.caseCode)}</td>
-        <td><span class="badge bg-secondary-subtle text-secondary border">${esc(c.status)}</span></td>
-      </tr>`).join('') : '<tr><td colspan="3" class="text-muted small text-center py-3">Todavía no hay casos.</td></tr>';
+        <td><span class="badge bg-secondary-subtle text-secondary border">${esc(t(window.__fzStatusMeta?.meta?.[c.status]?.label || c.status))}</span></td>
+      </tr>`).join('') : `<tr><td colspan="3" class="text-muted small text-center py-3">${t('Todavía no hay casos.')}</td></tr>`;
 
     box.innerHTML = `
       ${propuestaHtml}
-      <h6 class="mb-2">Informes de avance — todos los casos de tu empresa</h6>
+      <h6 class="mb-2">${t('Informes de avance — todos los casos de tu empresa')}</h6>
       <div class="card border-0 shadow-sm"><div class="table-responsive">
         <table class="table table-sm mb-0">
-          <thead class="table-light"><tr><th class="small">Producto</th><th class="small">Expediente</th><th class="small">Fase</th></tr></thead>
+          <thead class="table-light"><tr><th class="small">${t('Producto')}</th><th class="small">${t('Expediente')}</th><th class="small">${t('Fase')}</th></tr></thead>
           <tbody>${filasHtml}</tbody>
         </table>
       </div></div>`;
@@ -2167,7 +2322,7 @@ async function loadEmpresarial() {
         });
         empresarialLoaded = false;
         loadEmpresarial();
-      } catch (err) { await avisar('Error: ' + err.message); }
+      } catch (err) { await avisar(t('Error: {error}', { error: err.message })); }
     });
     document.getElementById('btn-aceptar-empresarial')?.addEventListener('click', async (e) => {
       e.target.disabled = true;
@@ -2176,7 +2331,7 @@ async function loadEmpresarial() {
         if (approveUrl) { window.location.href = approveUrl; return; } // PayPal real: aprobar en su checkout
         empresarialLoaded = false;
         loadEmpresarial();
-      } catch (err) { await avisar('Error: ' + err.message); e.target.disabled = false; }
+      } catch (err) { await avisar(t('Error: {error}', { error: err.message })); e.target.disabled = false; }
     });
     empresarialLoaded = true;
   } catch (err) {
@@ -2187,20 +2342,22 @@ async function loadEmpresarial() {
 // ── Init topbar ──
 function initTopbar() {
   const c = DATA.cliente;
-  document.getElementById('tb-empresa').textContent = c.empresa;
+  // 'Mi Empresa' es el marcador que pone el módulo de auth (todavía no hay campo de empresa): se traduce; un nombre real, no.
+  const empresa = c.empresa === 'Mi Empresa' ? t('Mi Empresa') : c.empresa;
+  document.getElementById('tb-empresa').textContent = empresa;
   document.getElementById('tb-contacto').textContent = c.contacto;
   // TAREA 34 (§H.15): bienvenida según el plan elegido en el landing.
   const BIENVENIDA_PLAN = {
-    consulta:    'Gracias por tu interés — ya recibimos tus datos. Farmazed está preparando tu diagnóstico regulatorio, lo verás en "Diagnóstico" en cuanto esté listo.',
-    registro:    'Ya puedes crear tu producto en "Solicitar Registro" para empezar tu trámite.',
-    empresarial: 'Envía tu solicitud de propuesta en "Informes de avance" para que Farmazed defina las condiciones de tu Plan Empresarial.',
+    consulta:    t('Gracias por tu interés — ya recibimos tus datos. Farmazed está preparando tu diagnóstico regulatorio, lo verás en "Diagnóstico" en cuanto esté listo.'),
+    registro:    t('Ya puedes crear tu producto en "Solicitar Registro" para empezar tu trámite.'),
+    empresarial: t('Envía tu solicitud de propuesta en "Informes de avance" para que Farmazed defina las condiciones de tu Plan Empresarial.'),
   };
   const bienvenidaPlan = BIENVENIDA_PLAN[window.__fzOrgPlan] || '';
-  document.getElementById('bienvenida-text').textContent = `Bienvenido, ${c.contacto}. ${bienvenidaPlan || 'Aquí tienes el estado de tus trámites con Farmazed.'}`;
+  document.getElementById('bienvenida-text').textContent = t('Bienvenido, {nombre}.', { nombre: c.contacto }) + ' ' + (bienvenidaPlan || t('Aquí tienes el estado de tus trámites con Farmazed.'));
   const ini = c.contacto.split(' ').map(n=>n[0]).slice(0,2).join('').toUpperCase();
   ['tb-avatar','dd-avatar'].forEach(id => document.getElementById(id).textContent = ini);
   document.getElementById('dd-name').textContent = c.contacto;
-  document.getElementById('dd-empresa').textContent = c.empresa;
+  document.getElementById('dd-empresa').textContent = empresa;
 
   const nb = document.getElementById('notif-badge');
   const cnt = DATA.pendientes.length;
@@ -2208,10 +2365,10 @@ function initTopbar() {
 
   let nl = DATA.pendientes.map(p => `
     <a href="#" onclick="showModule('resumen');return false;" class="dropdown-item py-2" style="white-space:normal;font-size:.75rem;">
-      <div style="font-weight:600;color:#1e293b;">${esc(p.producto_nombre)}</div>
-      <div style="color:#6b7280;font-size:.7rem;">${esc(p.descripcion)}</div>
+      <div style="font-weight:600;color:#1e293b;">${esc(p.producto_nombre || t('(sin nombre)'))}</div>
+      <div style="color:#6b7280;font-size:.7rem;">${esc(pendienteTexto(p))}</div>
     </a>`).join('');
-  if (!nl) nl = `<div class="py-3 text-center" style="font-size:.75rem;color:#9ca3af;">Sin notificaciones pendientes</div>`;
+  if (!nl) nl = `<div class="py-3 text-center" style="font-size:.75rem;color:#9ca3af;">${t('Sin notificaciones pendientes')}</div>`;
   document.getElementById('notif-list').innerHTML = nl;
 
   const mb = document.getElementById('msg-badge');
@@ -2243,11 +2400,11 @@ function renderPendientes() {
       <div style="flex:1;min-width:0;">
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px;">
           <span class="fz-mono" style="font-size:.72rem;color:var(--fz-primary);">${esc(p.producto_codigo)}</span>
-          <span style="font-size:.78rem;font-weight:600;color:#1e293b;">${esc(p.producto_nombre)}</span>
-          <span class="fz-badge fz-badge-blue" style="font-size:.63rem;">${esc(p.fase)}</span>
+          <span style="font-size:.78rem;font-weight:600;color:#1e293b;">${esc(p.producto_nombre || t('(sin nombre)'))}</span>
+          <span class="fz-badge fz-badge-blue" style="font-size:.63rem;">${esc(t(p.fase))}</span>
         </div>
-        <p style="font-size:.78rem;color:#374151;margin:0 0 4px;">${esc(p.descripcion)}</p>
-        ${p.fecha_limite ? `<span class="fz-deadline${urg?' urgent':''}">${urg?'⚠ ':''}Límite: ${esc(formatDate(p.fecha_limite))}</span>` : ''}
+        <p style="font-size:.78rem;color:#374151;margin:0 0 4px;">${esc(pendienteTexto(p))}</p>
+        ${p.fecha_limite ? `<span class="fz-deadline${urg?' urgent':''}">${urg?'⚠ ':''}${t('Límite: {fecha}', { fecha: esc(formatDate(p.fecha_limite)) })}</span>` : ''}
       </div>
       <div style="flex-shrink:0;">${pendActionBtn(p, idx)}</div>
     </div>`;
@@ -2276,15 +2433,15 @@ function renderPendientes() {
         let avisoIEA = '';
         try {
           const { excedido, totalPaginas, limite } = await window.__fzApi.getPaqueteIEA(p.caseId);
-          if (excedido) avisoIEA = `\n\n⚠️ El paquete de documentos para el IEA lleva ${totalPaginas} páginas (límite orientativo: ${limite}). No bloquea tu solicitud — Farmazed lo revisa contigo.`;
+          if (excedido) avisoIEA = '\n\n' + t('⚠️ El paquete de documentos para el IEA lleva {paginas} páginas (límite orientativo: {limite}). No bloquea tu solicitud — Farmazed lo revisa contigo.', { paginas: totalPaginas, limite });
         } catch (e) { /* informativo — si falla, no se molesta al cliente */ }
-        await avisar('Documento subido. Farmazed lo revisará.' + avisoIEA);
+        await avisar(t('Documento subido. Farmazed lo revisará.') + avisoIEA);
         // Recarga completa: misma razón que el envío del wizard (TAREA 12) —
         // es la única forma simple de traer datos frescos (el documento ya
         // no está "requested", puede que ya no haya más pendientes, etc.).
         window.location.reload();
       } catch (err) {
-        await avisar('Error al subir: ' + err.message);
+        await avisar(t('Error al subir: {error}', { error: err.message }));
       }
     });
   }
@@ -2331,12 +2488,12 @@ function expandedHTML(p) {
   let docs = '';
   DOC_GROUP_ORDER.forEach(([key, label]) => {
     if (!byEstado[key].length) return;
-    docs += `<div class="fz-doc-phase-label">${esc(label)}</div>`;
+    docs += `<div class="fz-doc-phase-label">${esc(t(label))}</div>`;
     byEstado[key].forEach(d => {
       docs += `<div class="fz-doc-row">
         <div style="flex:1;">
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-            <span style="font-size:.78rem;color:#1e293b;">${esc(d.nombre)}</span>${docBadge(d.estado)}
+            <span style="font-size:.78rem;color:#1e293b;">${esc(t(d.nombre || '(documento)'))}</span>${docBadge(d.estado)}
           </div>
           ${d.nota ? `<div class="fz-rejected-note"><i class="iconoir-warning-triangle me-1"></i>${esc(d.nota)}</div>` : ''}
         </div>
@@ -2344,7 +2501,7 @@ function expandedHTML(p) {
       </div>`;
     });
   });
-  if (!docs) docs = `<p style="font-size:.78rem;color:#9ca3af;">Aún no se han subido documentos para este expediente.</p>`;
+  if (!docs) docs = `<p style="font-size:.78rem;color:#9ca3af;">${t('Aún no se han subido documentos para este expediente.')}</p>`;
 
   // R14 (TAREA 17) — solo los formularios que aplican con certeza a este
   // caso vienen resaltados; los "por confirmar" se listan aparte, sin
@@ -2353,16 +2510,16 @@ function expandedHTML(p) {
   const formulariosHtml = (() => {
     const { aplicables = [], porConfirmar = [] } = p.formularios || {};
     if (!aplicables.length && !porConfirmar.length) {
-      return `<p style="font-size:.78rem;color:#9ca3af;">Sin formularios aplicables identificados todavía.</p>`;
+      return `<p style="font-size:.78rem;color:#9ca3af;">${t('Sin formularios aplicables identificados todavía.')}</p>`;
     }
     const row = (f, dudoso) => `
       <div class="fz-flat-doc">
         <i class="iconoir-page" style="font-size:1.1rem;color:${dudoso ? '#d97706' : '#9ca3af'};flex-shrink:0;"></i>
         <div class="fz-flat-doc-info">
-          <div class="fz-flat-doc-name">${esc(f.titulo)}</div>
-          ${dudoso ? `<div class="text-muted" style="font-size:.7rem">Por confirmar con Farmazed si te corresponde.</div>` : ''}
+          <div class="fz-flat-doc-name">${esc(t(f.titulo))}</div>
+          ${dudoso ? `<div class="text-muted" style="font-size:.7rem">${t('Por confirmar con Farmazed si te corresponde.')}</div>` : ''}
         </div>
-        <a class="btn-fz btn-fz-sm" href="/formularios/${esc(f.archivo)}" download>Descargar</a>
+        <a class="btn-fz btn-fz-sm" href="/formularios/${esc(f.archivo)}" download>${t('Descargar')}</a>
       </div>`;
     return aplicables.map(f => row(f, false)).join('') + porConfirmar.map(f => row(f, true)).join('');
   })();
@@ -2370,7 +2527,7 @@ function expandedHTML(p) {
   const act = p.actividad.map(a => `
     <div class="fz-activity-item">
       <span class="fz-activity-date">${esc(formatDate(a.fecha))}</span>
-      <span>${esc(a.descripcion)}</span>
+      <span>${esc(actividadTexto(a))}</span>
     </div>`).join('');
   // §H.8 (TAREA 21): dos pagos distintos, cada uno con su propio badge — un
   // anticipo no implica nada sobre el saldo, ni viceversa.
@@ -2378,37 +2535,37 @@ function expandedHTML(p) {
   // (mef si no es extranjero, iea si no aplica) — no se muestra como
   // "pendiente" porque nunca va a pagarse.
   function pagoBadge(pagado) {
-    if (pagado === null) return `<span class="badge" style="background:#f1f5f9;color:#64748b;font-weight:600;">No aplica</span>`;
+    if (pagado === null) return `<span class="badge" style="background:#f1f5f9;color:#64748b;font-weight:600;">${t('No aplica')}</span>`;
     return pagado
-      ? `<span class="badge" style="background:#dcfce7;color:#166534;font-weight:600;"><i class="iconoir-check-circle"></i> Pagado</span>`
-      : `<span class="badge" style="background:#fef3c7;color:#92400e;font-weight:600;"><i class="iconoir-warning-triangle"></i> Pendiente</span>`;
+      ? `<span class="badge" style="background:#dcfce7;color:#166534;font-weight:600;"><i class="iconoir-check-circle"></i> ${t('Pagado')}</span>`
+      : `<span class="badge" style="background:#fef3c7;color:#92400e;font-weight:600;"><i class="iconoir-warning-triangle"></i> ${t('Pendiente')}</span>`;
   }
   const CONCEPTO_LABEL_CLIENTE = {
-    honorarios: 'Honorarios', tasa_dnfd: 'Tasa DNFD', mef: 'MEF (producto extranjero)',
-    iea: 'IEA', honorarios_saldo: 'Saldo de honorarios',
+    honorarios: t('Honorarios'), tasa_dnfd: t('Tasa DNFD'), mef: t('MEF (producto extranjero)'),
+    iea: t('IEA'), honorarios_saldo: t('Saldo de honorarios'),
   };
   // §H.8 (TAREA 21): plazo de subsanación (Art. 22 D.E. 27/2024) — solo se
   // muestra mientras el caso está observado por DNFD.
   const plazoHtml = (p.fechaLimiteSubsanacion || p.fechaLimiteSubsanacionNota) ? `
     <div class="alert alert-warning py-2 px-3 mb-3" style="font-size:.78rem;">
-      <strong>DNFD solicitó correcciones.</strong>
+      <strong>${t('DNFD solicitó correcciones.')}</strong>
       ${p.fechaLimiteSubsanacion
-        ? `Fecha límite para subsanar: ${esc(formatDate(p.fechaLimiteSubsanacion))}.`
+        ? t('Fecha límite para subsanar: {fecha}.', { fecha: esc(formatDate(p.fechaLimiteSubsanacion)) })
         : esc(p.fechaLimiteSubsanacionNota)}
     </div>` : '';
 
   return `${plazoHtml}<div class="row g-3">
     <div class="col-md-8">
-      <p style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#9ca3af;margin-bottom:8px;">Documentos del expediente</p>${docs}
-      <p style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#9ca3af;margin:16px 0 8px;">Formularios</p>${formulariosHtml}
+      <p style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#9ca3af;margin-bottom:8px;">${t('Documentos del expediente')}</p>${docs}
+      <p style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#9ca3af;margin:16px 0 8px;">${t('Formularios')}</p>${formulariosHtml}
     </div>
     <div class="col-md-4">
-      <p style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#9ca3af;margin-bottom:8px;">Pagos</p>
+      <p style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#9ca3af;margin-bottom:8px;">${t('Pagos')}</p>
       ${Object.entries(p.pagos || {}).filter(([, v]) => v !== null).map(([k, v]) => `
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
         <span style="font-size:.78rem;color:#1e293b;">${esc(CONCEPTO_LABEL_CLIENTE[k] || k)}</span>${pagoBadge(v)}
       </div>`).join('')}
-      <p style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#9ca3af;margin:14px 0 8px;">Actividad reciente</p>${act}
+      <p style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#9ca3af;margin:14px 0 8px;">${t('Actividad reciente')}</p>${act}
     </div>
   </div>`;
 }
@@ -2419,23 +2576,25 @@ function renderProductos() {
     document.getElementById('productos-list').innerHTML = `
       <div style="text-align:center;padding:48px 24px;color:#9ca3af;">
         <i class="iconoir-package" style="font-size:2rem;display:block;margin-bottom:10px;"></i>
-        <p style="font-size:.85rem;margin-bottom:14px;">Aún no tienes productos registrados.</p>
-        <button class="btn-fz btn-fz-sm" onclick="showModule('solicitar')"><i class="iconoir-add-circle"></i> Solicitar Registro</button>
+        <p style="font-size:.85rem;margin-bottom:14px;">${t('Aún no tienes productos registrados.')}</p>
+        <button class="btn-fz btn-fz-sm" onclick="showModule('solicitar')"><i class="iconoir-add-circle"></i> ${t('Solicitar Registro')}</button>
       </div>`;
     return;
   }
+  // Al repintar (p. ej. cambio de idioma) se conservan las tarjetas que estaban desplegadas.
+  const abiertos = [...document.querySelectorAll('#productos-list .fz-prod-expanded.open')].map(el => el.id);
   document.getElementById('productos-list').innerHTML = DATA.productos.map((p, i) => {
     const d = daysUntil(p.vencimiento);
     const vw = d !== null && d <= 90;
     const vHtml = p.vencimiento
-      ? `<span style="font-size:.7rem;" class="${vw?'fz-text-red':''}" title="${vw?'Vence pronto':''}"> ${vw?'⚠ ':''}${esc(formatDate(p.vencimiento))}</span>`
-      : `<span style="font-size:.7rem;color:#9ca3af;">En trámite</span>`;
+      ? `<span style="font-size:.7rem;" class="${vw?'fz-text-red':''}" title="${vw?t('Vence pronto'):''}"> ${vw?'⚠ ':''}${esc(formatDate(p.vencimiento))}</span>`
+      : `<span style="font-size:.7rem;color:#9ca3af;">${t('En trámite')}</span>`;
     return `
     <div class="fz-product-card">
       <div class="fz-prod-header" onclick="toggleProd(${i})">
         <div class="fz-prod-left">
           <div class="fz-mono" style="font-size:.7rem;color:var(--fz-primary);margin-bottom:1px;">${esc(p.codigo)}</div>
-          <div style="font-size:.85rem;font-weight:700;color:#1e293b;">${esc(p.nombre_comercial)}</div>
+          <div style="font-size:.85rem;font-weight:700;color:#1e293b;">${esc(p.nombre_comercial || t('(sin nombre)'))}</div>
           <div style="margin-top:3px;">${catBadge(p.categoria)}</div>
         </div>
         <div class="fz-prod-center">
@@ -2451,6 +2610,10 @@ function renderProductos() {
       <div class="fz-prod-expanded" id="exp-${i}">${expandedHTML(p)}</div>
     </div>`;
   }).join('');
+  abiertos.forEach(id => {
+    document.getElementById(id)?.classList.add('open');
+    document.getElementById(id.replace('exp-', 'chev-'))?.classList.add('open');
+  });
 }
 
 function toggleProd(i) {
@@ -2470,8 +2633,8 @@ function renderDocs() {
   const list = docFilter === 'todos' ? DATA.documentos : DATA.documentos.filter(d => d.estado === docFilter);
   if (!list.length) {
     const msg = DATA.documentos.length
-      ? 'No hay documentos en esta categoría.'
-      : 'Aún no tienes documentos. Aparecerán aquí cuando inicies un trámite.';
+      ? t('No hay documentos en esta categoría.')
+      : t('Aún no tienes documentos. Aparecerán aquí cuando inicies un trámite.');
     document.getElementById('docs-list').innerHTML = `<p style="font-size:.78rem;color:#9ca3af;text-align:center;padding:24px 0;">${esc(msg)}</p>`;
     return;
   }
@@ -2479,8 +2642,8 @@ function renderDocs() {
     <div class="fz-flat-doc">
       <i class="iconoir-page" style="font-size:1.1rem;color:#9ca3af;flex-shrink:0;"></i>
       <div class="fz-flat-doc-info">
-        <div class="fz-flat-doc-name">${esc(d.nombre)}</div>
-        <div class="fz-flat-doc-meta"><span class="fz-mono">${esc(d.producto)}</span> · ${esc(d.fase)} · ${esc(formatDate(d.fecha))}</div>
+        <div class="fz-flat-doc-name">${esc(t(d.nombre || '(documento)'))}</div>
+        <div class="fz-flat-doc-meta"><span class="fz-mono">${esc(d.producto)}</span> · ${esc(t(d.fase))} · ${esc(formatDate(d.fecha))}</div>
         ${d.nota ? `<div class="fz-rejected-note" style="margin-top:5px;"><i class="iconoir-warning-triangle me-1"></i>${esc(d.nota)}</div>` : ''}
       </div>
       <div class="fz-flat-doc-actions">
@@ -2496,11 +2659,7 @@ function renderDocs() {
 const REMITENTE_MAP = { client: 'client', admin: 'fz' };
 function formatDateTime(iso) {
   if (!iso) return '';
-  const d = new Date(iso);
-  const meses = 'ene feb mar abr may jun jul ago sep oct nov dic'.split(' ');
-  const hh = String(d.getHours()).padStart(2,'0');
-  const mm = String(d.getMinutes()).padStart(2,'0');
-  return `${d.getDate()} ${meses[d.getMonth()]} ${d.getFullYear()}, ${hh}:${mm}`;
+  return FZI18N.fechaHora(iso, { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
 let activeThread = DATA.mensajes.length ? 0 : null;
@@ -2508,7 +2667,7 @@ function renderThreadList() {
   if (!DATA.mensajes.length) {
     document.getElementById('threads-list').innerHTML = `
       <div style="text-align:center;padding:32px 16px;color:#9ca3af;font-size:.78rem;">
-        Aún no tienes conversaciones. Cuando inicies un trámite podrás escribirle aquí a tu equipo de Farmazed.
+        ${t('Aún no tienes conversaciones. Cuando inicies un trámite podrás escribirle aquí a tu equipo de Farmazed.')}
       </div>`;
     return;
   }
@@ -2516,8 +2675,8 @@ function renderThreadList() {
     const last = h.mensajes[h.mensajes.length-1];
     return `<div class="fz-thread-item${i===activeThread?' active':''}" onclick="selectThread(${i})">
       <div class="code">${esc(h.producto_codigo)}</div>
-      <div class="name">${esc(h.producto_nombre)}</div>
-      <div class="preview">${last ? esc(last.texto) : 'Sin mensajes todavía — escribe el primero.'}</div>
+      <div class="name">${esc(h.producto_nombre || t('(sin nombre)'))}</div>
+      <div class="preview">${last ? esc(t(last.texto)) : t('Sin mensajes todavía — escribe el primero.')}</div>
     </div>`;
   }).join('');
 }
@@ -2529,21 +2688,21 @@ function selectThread(i) {
 function renderChatMessages() {
   const container = document.getElementById('chat-messages');
   if (activeThread === null) {
-    document.getElementById('chat-thread-name').textContent = 'Selecciona una conversación';
+    document.getElementById('chat-thread-name').textContent = t('Selecciona una conversación');
     document.getElementById('chat-thread-code').textContent = '';
     container.innerHTML = `
       <div style="display:flex;align-items:center;justify-content:center;height:100%;color:#9ca3af;font-size:.78rem;">
-        Sin conversaciones todavía.
+        ${t('Sin conversaciones todavía.')}
       </div>`;
     return;
   }
   const h = DATA.mensajes[activeThread];
-  document.getElementById('chat-thread-name').textContent = h.producto_nombre;
+  document.getElementById('chat-thread-name').textContent = h.producto_nombre || t('(sin nombre)');
   document.getElementById('chat-thread-code').textContent = h.producto_codigo;
   if (!h.mensajes.length) {
     container.innerHTML = `
       <div style="display:flex;align-items:center;justify-content:center;height:100%;color:#9ca3af;font-size:.78rem;text-align:center;padding:0 24px;">
-        Aún no hay mensajes en este expediente. Escribe abajo para contactar a tu equipo de Farmazed.
+        ${t('Aún no hay mensajes en este expediente. Escribe abajo para contactar a tu equipo de Farmazed.')}
       </div>`;
     return;
   }
@@ -2555,7 +2714,7 @@ function renderChatMessages() {
       <div class="fz-chat-av ${remitente}">${esc(ini)}</div>
       <div>
         <div style="font-size:.63rem;color:#9ca3af;margin-bottom:3px;${fz?'':'text-align:right;'}">${esc(msg.nombre)}</div>
-        <div class="fz-bubble">${esc(msg.texto)}</div>
+        <div class="fz-bubble">${esc(t(msg.texto))}</div>
         <div class="fz-chat-time">${esc(formatDateTime(msg.fecha_hora))}</div>
       </div>
     </div>`;
@@ -2581,7 +2740,7 @@ async function sendMessage() {
     renderChatMessages();
     renderThreadList();
   } catch (err) {
-    await avisar('No se pudo enviar el mensaje: ' + err.message);
+    await avisar(t('No se pudo enviar el mensaje: {error}', { error: err.message }));
   } finally {
     inp.disabled = false;
     if (btn) btn.disabled = false;
@@ -2602,6 +2761,58 @@ function toggleWizard() {
   w.style.display = w.style.display === 'none' ? 'block' : 'none';
 }
 
+// ── Modo demo: "Rellenar con datos de ejemplo" (recorrido, paso "Crea tu primer producto") ──
+// Llena el asistente por el DOM, igual que lo haría la persona: elige Medicamentos / Regular y
+// escribe los campos de producto y empresas; la persona avanza con "Siguiente" y en el paso 4
+// sube el PDF de ejemplo. wizard.js lee los valores del DOM al avanzar (collectStep2/
+// collectEntities), así que no hace falta tocar su estado interno. "Síntesis Química" se marca
+// cuando el paso 2 pinta sus casillas (renderStep2 corre al entrar al paso).
+const DATOS_EJEMPLO = {
+  nombreComercial: 'Producto Ejemplo 1 — Antigripal 500 mg', principioActivo: 'Paracetamol', concentracion: '500 mg',
+  formaFarmaceutica: 'TABLETA', viaAdministracion: 'ORAL', codigoATC: 'N02BE01', vidaUtil: '36 meses',
+  condicionesAlmacenamiento: 'Conservar a temperatura no mayor de 30 °C, en lugar seco.',
+  descripcionEnvase: 'BLÍSTER PVC/ALUMINIO', descripcionPresentacion: 'CAJA CON 20 TABLETAS',
+  'fab-correo': 'calidad@laboratorios-ejemplo.example', 'fab-nombre': 'Laboratorios Ejemplo S.A.', 'fab-pais': 'Panamá', 'fab-direccion': 'Zona Industrial, Ciudad de Panamá',
+  'tit-correo': 'contacto@laboratorios-ejemplo.example', 'tit-nombre': 'Laboratorios Ejemplo S.A.', 'tit-pais': 'Panamá', 'tit-direccion': 'Zona Industrial, Ciudad de Panamá',
+  'sol-ruc': '155600000-2-2026 DV 00', 'sol-nombre': 'Laboratorios Ejemplo S.A.', 'sol-telefono': '+507 6000-0000', 'sol-correo': 'cliente.demo@farmazed.com', 'sol-direccion': 'Zona Industrial, Ciudad de Panamá',
+  'rep-cedula': '8-000-0000', 'rep-nombre': 'Cliente Ejemplo', 'rep-telefono': '+507 6000-0000', 'rep-correo': 'cliente.demo@farmazed.com', 'rep-direccion': 'Ciudad de Panamá',
+  'far-cedula': '8-000-0001', 'far-idoneidad': 'F-0000', 'far-nombre': 'Regente Ejemplo', 'far-telefono': '+507 6000-0002', 'far-correo': 'regente.demo@farmazed.com', 'far-direccion': 'Ciudad de Panamá',
+  'abo-cedula': '8-000-0002', 'abo-idoneidad': 'A-0000', 'abo-nombre': 'Abogado Ejemplo', 'abo-correo': 'abogado@laboratorios-ejemplo.example', 'abo-direccion': 'Ciudad de Panamá',
+};
+function rellenarConDatosDemo() {
+  // Del paso 4 en adelante "rellenar" significa dejar todos los documentos del cliente como subidos:
+  // wizard.js simula la carga con el PDF de ejemplo (los botones "Subir" de la demo hacen lo mismo
+  // de uno en uno, con un aviso que explica la simulación).
+  const wizardDemo = window.__fzWizardDemo;
+  if (wizardDemo && wizardDemo.paso() >= 4) {
+    document.getElementById('wizard-form').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    wizardDemo.simularTodos();
+    return;
+  }
+  document.getElementById('wizard-form').style.display = 'block';
+  document.querySelector('.tramite-card[data-id="medicamentos"]')?.click();
+  const tipoRegistro = document.getElementById('tipoRegistro');
+  if (tipoRegistro) { tipoRegistro.value = 'Regular'; tipoRegistro.dispatchEvent(new Event('change')); }
+  for (const [id, valor] of Object.entries(DATOS_EJEMPLO)) {
+    const campo = document.getElementById(id);
+    if (campo && !campo.value) campo.value = valor;
+  }
+  const marcarSintesis = () => {
+    const casilla = document.getElementById('tm-Síntesis-Química');
+    if (!casilla || casilla.checked) return false;
+    casilla.checked = true;
+    casilla.dispatchEvent(new Event('change', { bubbles: true }));
+    return true;
+  };
+  if (!marcarSintesis()) {
+    const contenedor = document.getElementById('tipo-med-checks');
+    const observador = new MutationObserver(() => { if (marcarSintesis()) observador.disconnect(); });
+    if (contenedor) observador.observe(contenedor, { childList: true });
+  }
+  document.getElementById('wizard-form').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  if (window.avisar) window.avisar(t('Listo: el asistente quedó con los datos de ejemplo. Pulsa "Siguiente" hasta el paso 4 y vuelve a pulsar este botón para simular la subida de todos los documentos.'), { tipo: 'exito' });
+}
+
 // ── Bootstrap ── (triggered by the auth module script above, once real data is loaded)
 window.renderAll = function renderAll() {
   // activeThread se fijó en null/0 cuando este script corrió (DATA.mensajes
@@ -2614,6 +2825,18 @@ window.renderAll = function renderAll() {
   renderDocs();
   renderThreadList();
   renderChatMessages();
+};
+
+// ── Cambio de idioma en vivo ── (lo llama FZI18N.onCambio desde el módulo de auth). Lo marcado con data-i18n ya lo
+// volvió a traducir la capa; aquí se repinta lo que este script genera por JS. `conDatos` = ya corrió renderAll()
+// con datos reales. Los módulos perezosos se invalidan (se recargan en el idioma nuevo al abrirse) y el visible se
+// repinta ahora. Idempotente: cada render reemplaza innerHTML y los oyentes delegados se cablean una sola vez.
+window.repintarIdioma = function repintarIdioma(conDatos) {
+  if (conDatos) window.renderAll();
+  preciosLoaded = false; empresaLoaded = false; diagnosticoLoaded = false; empresarialLoaded = false;
+  if (cotizacionQuotes) renderCotizacion(cotizacionQuotes);
+  const recargar = { precios: loadPrecios, empresa: loadEmpresa, diagnostico: loadDiagnostico, empresarial: loadEmpresarial };
+  if (recargar[currentModule]) recargar[currentModule]();
 };
 </script>
 
@@ -2632,6 +2855,7 @@ window.renderAll = function renderAll() {
     const el = document.createElement('input');
     el.className = 'form-control form-control-sm distribuidor-licencia mb-2';
     el.placeholder = 'Número de Licencia del Distribuidor';
+    el.setAttribute('data-i18n-attr', 'placeholder'); // la capa i18n lo traduce al insertarse y al cambiar de idioma
     document.getElementById('distribuidores-list').appendChild(el);
   });
 </script>

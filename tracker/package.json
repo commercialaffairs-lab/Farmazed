@@ -6,7 +6,9 @@
   "scripts": {
     "start": "node index.js",
     "dev": "node --watch index.js",
-    "test": "bash scripts/run_permission_tests.sh"
+    "test": "bash scripts/run_permission_tests.sh",
+    "manual": "node scripts/generar_manual.js",
+    "i18n": "node scripts/i18n_fusionar.js"
   },
   "dependencies": {
     "@google-cloud/storage": "^7.7.0",

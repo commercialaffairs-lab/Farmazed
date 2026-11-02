@@ -8,6 +8,35 @@
         "value": "arial",
         "createdAt": "2026-10-07T05:13:29.174Z",
         "reason": "Claude: plantilla de correo HTML (tracker/emails/verificacion.html); los clientes de correo no cargan fuentes web, Arial/Georgia son la pila segura"
+      },
+      {
+        "rule": "side-tab",
+        "value": "*",
+        "files": [
+          "farmazed-web/portal/js/recorrido.js",
+          "tracker/scripts/generar_manual.js"
+        ],
+        "createdAt": "2026-11-01T04:58:34.960Z",
+        "reason": "asistente: el borde lateral del paso actual replica el patrón existente del portal (.fz-cta y .fz-thread-item.active en client-dashboard.html) para que el panel se vea de la misma familia; el manual (generar_manual.js) reproduce ese mismo panel"
+      },
+      {
+        "rule": "overused-font",
+        "value": "open sans",
+        "files": [
+          "tracker/scripts/generar_manual.js",
+          "farmazed-web/login.html"
+        ],
+        "createdAt": "2026-11-01T16:00:00.000Z",
+        "reason": "asistente: el manual de usuario y el login usan la tipografía del portal del cliente (--fz-font Open Sans / Oswald en client-dashboard.html); en login.html la fuente es anterior a esta sesión (hallazgo marcado 'attribution unknown' al marcar el archivo para i18n)"
+      },
+      {
+        "rule": "overused-font",
+        "value": "arial",
+        "files": [
+          "tracker/emails/factura.html"
+        ],
+        "createdAt": "2026-11-01T23:55:38.032Z",
+        "reason": "Claude: plantilla de correo HTML; Arial es la fuente web-safe que ya usan invitacion.html y verificacion.html para que se vea igual en todos los clientes de correo"
       }
     ]
   }

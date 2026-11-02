@@ -10,6 +10,29 @@ import { FIREBASE_CONFIG, API_BASE, IS_LOCAL, AUTH_REAL, localAuthPort } from '.
 const firebaseApp = initializeApp(FIREBASE_CONFIG);
 const auth        = getAuth(firebaseApp);
 
+// Idiomas (farmazed-web/i18n/README.md): i18n.js es un script clásico del <head> de las páginas
+// traducidas. Este módulo también lo cargan páginas sin esa capa (login, verificar-correo…), por eso
+// el fallback devuelve el español tal cual.
+const i18n = () => window.FZI18N || null;
+const t = (texto, vars) => (i18n() ? i18n().t(texto, vars) : String(texto ?? ''));
+
+/**
+ * Pinta un texto (o un atributo) traducido y deja el elemento preparado para retraducirse al cambiar
+ * de idioma. Texto: `data-i18n` + data-i18n-es (la capa lo repasa sola). Atributo: se vuelve a poner
+ * desde onCambio (no se usa data-i18n-attr: su clave data-* lleva un guion y el navegador la rechaza).
+ */
+function marcarTraducible(el, textoEs, atributo) {
+  if (atributo) {
+    el.setAttribute(atributo, t(textoEs));
+    i18n()?.onCambio(() => { el.setAttribute(atributo, t(textoEs)); });
+    return el;
+  }
+  el.dataset.i18nEs = textoEs;
+  el.setAttribute('data-i18n', '');
+  el.textContent = t(textoEs);
+  return el;
+}
+
 // Solo en localhost: nunca toca el Auth real de producción. Ver DEV_LOCAL.md.
 // TAREA 32: mismo hostname de la página (no 'localhost' fijo, ver TAREA 31 en
 // config.js) y puerto configurable (localAuthPort() — 9099 por defecto, para
@@ -175,24 +198,111 @@ async function montarBotonDemo(contenedor) {
   btn.type = 'button';
   btn.id = 'btn-reiniciar-demo';
   btn.className = 'btn btn-sm btn-warning fw-semibold';
-  btn.textContent = 'Reiniciar cuenta demo';
-  btn.title = 'Vuelve a dejar la cuenta de demostración como al principio del recorrido';
+  // Texto en un <span data-i18n> y título con data-i18n-attr: la capa los retraduce al cambiar de idioma.
+  btn.appendChild(marcarTraducible(document.createElement('span'), 'Reiniciar cuenta demo'));
+  marcarTraducible(btn, 'Vuelve a dejar la cuenta de demostración como al principio del recorrido', 'title');
   btn.addEventListener('click', async () => {
     const { confirmar, avisar } = await import('./dialogos.js');
-    if (!(await confirmar('Se borrarán los cambios que hiciste en la demo y todo volverá al estado inicial. ¿Reiniciar?'))) return;
+    if (!(await confirmar(t('Se borrarán los cambios que hiciste en la demo y todo volverá al estado inicial. ¿Reiniciar?')))) return;
     btn.disabled = true;
     try {
       const { default: api } = await import('./api.js');
       await api.reiniciarDemo();
-      await avisar('Demo reiniciada. Vuelve a iniciar sesión para empezar el recorrido desde el principio.');
+      await avisar(t('Demo reiniciada. Vuelve a iniciar sesión para empezar el recorrido desde el principio.'));
       await logout();
     } catch (err) {
       btn.disabled = false;
-      await avisar('Error: ' + err.message);
+      await avisar(t('Error: {error}', { error: err.message }));
     }
   });
   contenedor.prepend(btn);
   return btn;
+}
+
+/**
+ * Enlace "Ayuda" del topbar del back-office → manual de usuario (farmazed-web/manual/, generado por
+ * tracker/scripts/generar_manual.js, ES/EN/FR/PT). Para todo el personal, no solo la demo: el manual
+ * también sirve de referencia del flujo. Se inserta antes del nombre del usuario (#user-name); en
+ * las páginas sin ese elemento (expediente.html, topbar oscuro) se cuelga del bloque derecho del topbar.
+ */
+// Manual del regente (solo la demo tiene recorrido de regente; Rick, 01-nov-2026): farmazed-web/manual/regente/.
+const manualUrl = (idioma) => `/manual/regente/${encodeURIComponent(idioma || 'es')}.html`;
+
+function montarEnlaceAyuda(nombre) {
+  if (document.getElementById('tb-ayuda')) return null;
+  const topbar = nombre?.parentElement || document.querySelector('.topbar');
+  if (!topbar) return null;
+  const a = document.createElement('a');
+  a.id = 'tb-ayuda';
+  a.href = manualUrl(i18n()?.idioma());
+  a.target = '_blank';
+  a.rel = 'noopener';
+  marcarTraducible(a, 'Manual de usuario (español, inglés, francés y portugués)', 'title');
+  a.innerHTML = '<i class="bi bi-question-circle me-1"></i>';
+  a.appendChild(marcarTraducible(document.createElement('span'), 'Ayuda'));
+  if (nombre) {
+    a.className = 'small ms-auto me-3 text-decoration-none';
+    nombre.insertAdjacentElement('beforebegin', a);
+  } else {
+    a.className = 'small text-white-50 text-decoration-none';
+    (topbar.querySelector('.ms-auto') || topbar).append(a);
+  }
+  // El manual se abre en el idioma activo (recorrido.js hace lo mismo para las cuentas demo).
+  i18n()?.onCambio((idioma) => { a.href = manualUrl(idioma); });
+  return a;
+}
+
+/**
+ * Selector ES · EN · FR · PT del topbar del back-office, junto al enlace "Ayuda" (o antes del nombre
+ * del usuario, o en el bloque derecho del topbar oscuro). Solo si la página carga i18n.js; idempotente.
+ */
+function montarSelectorIdioma(nombre) {
+  if (!i18n() || document.getElementById('fz-idiomas-topbar')) return null;
+  const topbar = nombre?.parentElement || document.querySelector('.topbar');
+  if (!topbar) return null;
+  const wrapper = document.createElement('span');
+  wrapper.id = 'fz-idiomas-topbar';
+  wrapper.className = 'me-3 d-inline-flex align-items-center';
+  const ayuda = document.getElementById('tb-ayuda');
+  if (ayuda) {
+    // "Ayuda" llevaba el ms-auto que empuja el bloque a la derecha: pasa al selector, que ahora va primero.
+    if (ayuda.classList.contains('ms-auto')) { ayuda.classList.remove('ms-auto'); wrapper.classList.add('ms-auto'); }
+    ayuda.insertAdjacentElement('beforebegin', wrapper);
+  } else if (nombre) {
+    wrapper.classList.add('ms-auto');
+    nombre.insertAdjacentElement('beforebegin', wrapper);
+  } else {
+    (topbar.querySelector('.ms-auto') || topbar).append(wrapper);
+  }
+  try {
+    i18n().montarSelector(wrapper, { oscuro: true });
+  } catch (err) {
+    // Un fallo del selector no puede tumbar el arranque del back-office (initBackoffice).
+    console.error('[i18n] no se pudo montar el selector de idioma', err);
+    wrapper.remove();
+    return null;
+  }
+  return wrapper;
+}
+
+/**
+ * Panel "Recorrido demo" del back-office (regente demo). A dónde lleva "Ir al paso" en cada paso
+ * (services/demo_recorrido.js, PASOS_REGENTE). Import dinámico: recorrido.js importa este módulo.
+ */
+const DESTINOS_RECORRIDO_STAFF = {
+  documento: '/admin/expediente.html?id=demo-caso-3',
+  cotejo:    '/admin/expediente.html?id=demo-caso-3',
+  lead:      '/admin/leads.html',
+};
+async function montarRecorridoBackoffice() {
+  if (!(await esDemo())) return null;
+  const { montarRecorrido } = await import('./recorrido.js');
+  return montarRecorrido({ irA: (paso) => {
+    const destino = DESTINOS_RECORRIDO_STAFF[paso];
+    if (!destino) return;
+    if (window.location.pathname + window.location.search === destino) window.scrollTo({ top: 0, behavior: 'smooth' });
+    else window.location.href = destino;
+  } });
 }
 
 /** ¿Analista, abogado o regente? (empleado Farmazed, no admin ni cliente). */
@@ -218,6 +328,8 @@ function esc(v) {
  * solo-admin (Empresas, Precios, Configuración) visibles para el admin. Devuelve `{ user, admin }`,
  * o `null` si ya se redirigió (login, verificar correo o portal del cliente): la página debe parar.
  */
+// Rótulos en español (clave del diccionario); se traducen al pintarlos: t('Analista'), t('Abogado'),
+// t('Regente'), t('Admin Panel'), t('Personal') — escritos aquí como literales para la prueba de cobertura.
 const ROTULO_STAFF = { analista: 'Analista', abogado: 'Abogado', regente: 'Regente' };
 
 async function initBackoffice() {
@@ -229,10 +341,13 @@ async function initBackoffice() {
   document.getElementById('sidebar-logout')?.addEventListener('click', logout);
   const admin = await isAdmin();
   await montarBotonDemo(nombre?.parentElement || document.querySelector('.topbar'));
+  montarEnlaceAyuda(nombre);
+  montarSelectorIdioma(nombre);
+  await montarRecorridoBackoffice();
   const rotulo = document.getElementById('sidebar-rol');
-  if (rotulo) rotulo.textContent = admin ? 'Admin Panel' : (ROTULO_STAFF[await getRole()] || 'Personal');
+  if (rotulo) marcarTraducible(rotulo, admin ? 'Admin Panel' : (ROTULO_STAFF[await getRole()] || 'Personal'));
   if (admin) {
-    for (const id of ['nav-empresas', 'nav-precios', 'nav-configuracion']) {
+    for (const id of ['nav-empresas', 'nav-precios', 'nav-finanzas', 'nav-configuracion']) {
       const enlace = document.getElementById(id);
       if (enlace) enlace.style.display = '';
     }

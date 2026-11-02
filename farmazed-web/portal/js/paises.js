@@ -1,5 +1,13 @@
 // Países con código telefónico para los desplegables públicos (solicitar-cuenta.html).
 // América completa primero (el mercado de Farmazed), luego los demás por orden alfabético.
+//
+// Idiomas (farmazed-web/i18n/README.md): `nombre` es la fuente en español y es lo que se GUARDA
+// (value de la opción); el texto visible pasa por t(nombre) — las traducciones de los 65 nombres
+// están en i18n/_partes/portal-js.json. Con fallback para las páginas que no cargan i18n.js.
+const i18n = () => (typeof window !== 'undefined' ? window.FZI18N : null) || null;
+const t = (texto) => (i18n() ? i18n().t(texto) : String(texto ?? ''));
+const escapar = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
 export const PAISES = [
   { iso: 'PA', nombre: 'Panamá', codigo: '+507' },
   { iso: 'AR', nombre: 'Argentina', codigo: '+54' },
@@ -68,15 +76,29 @@ export const PAISES = [
   { iso: 'VN', nombre: 'Vietnam', codigo: '+84' },
 ];
 
-export function opcionesPaises({ seleccionado = null, placeholder = 'Elige un país…' } = {}) {
+/** Opciones del desplegable de país: value = nombre en español (lo que se guarda), texto = traducido. */
+export function opcionesPaises({ seleccionado = null, placeholder = t('Elige un país…') } = {}) {
   const conocido = PAISES.some(p => p.nombre === seleccionado);
-  return `<option value="" ${seleccionado ? '' : 'selected'} disabled>${placeholder}</option>`
-    + (seleccionado && !conocido ? `<option value="${seleccionado}" selected>${seleccionado}</option>` : '')
-    + PAISES.map(p => `<option value="${p.nombre}" ${p.nombre === seleccionado ? 'selected' : ''}>${p.nombre}</option>`).join('');
+  return `<option value="" ${seleccionado ? '' : 'selected'} disabled>${escapar(placeholder)}</option>`
+    + (seleccionado && !conocido ? `<option value="${escapar(seleccionado)}" selected>${escapar(seleccionado)}</option>` : '')
+    + PAISES.map(p => `<option value="${escapar(p.nombre)}" ${p.nombre === seleccionado ? 'selected' : ''}>${escapar(t(p.nombre))}</option>`).join('');
 }
 
+/**
+ * Rellena el <select> y, si hay capa de idiomas, lo vuelve a pintar al cambiar de idioma
+ * conservando el país elegido (una sola suscripción por select).
+ */
 export function llenarPaises(select, opciones) {
   select.innerHTML = opcionesPaises(opciones);
+  if (!i18n() || select.dataset.fzI18nPaises) return;
+  select.dataset.fzI18nPaises = '1';
+  i18n().onCambio(() => {
+    const elegido = select.value || (opciones && opciones.seleccionado) || null;
+    // Sin `placeholder` propio se recalcula el de por defecto en el idioma nuevo. Uno propio se pasa en
+    // español como `placeholderEs` y se traduce aquí en cada cambio (un `placeholder` ya traducido quedaría fijo).
+    const placeholder = opciones?.placeholderEs ? t(opciones.placeholderEs) : opciones?.placeholder;
+    select.innerHTML = opcionesPaises({ ...(opciones || {}), seleccionado: elegido, placeholder });
+  });
 }
 
 export function llenarCodigos(select, { seleccionado = 'PA' } = {}) {

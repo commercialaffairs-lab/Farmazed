@@ -19,8 +19,18 @@
  */
 const admin = require('../utils/firebase_admin.js');
 const { createConceptPayment } = require('./payments_ledger');
+const { uploadFile, deleteFile } = require('./storage');
+const { pdfFormulaEjemplo } = require('../utils/pdf_ejemplo');
+const { applyTransition } = require('./transitions');
 
 const DEMO_ORG_ID  = 'demo-org';
+// Ids fijos de lo sembrado: el recorrido (demo_recorrido.js) los usa para distinguir lo que trae
+// el seed de lo que la persona creó durante la demo (su "Producto Ejemplo 1", sus mensajes).
+const CASOS_SEMBRADOS    = ['demo-caso-2', 'demo-caso-3'];
+const MENSAJES_SEMBRADOS = ['demo-msg-1', 'demo-msg-2'];
+const DOC_REGENTE_ID     = 'demo-doc-3-formula'; // fórmula cuali-cuantitativa subida en el Producto 3, la revisa el regente
+// Actor de los avances automáticos de la demo (statusHistory.by / byEmail).
+const ACTOR_DEMO = { uid: 'demo-automatico', email: 'Farmazed (avance automático de la demo)' };
 const DEMO_DOMINIO = process.env.DEMO_DOMINIO || 'farmazed.com';
 const CORREO_DEMO_RE = /^[a-z0-9-]+\.demo@/i;
 
@@ -88,7 +98,15 @@ async function borrarDatosDemo() {
   for (const caso of casos.docs) {
     for (const sub of await caso.ref.listCollections()) {
       const docs = await sub.get();
-      for (const d of docs.docs) await d.ref.delete();
+      for (const d of docs.docs) {
+        // Los archivos de los documentos (los del seed y los que subió la persona en la demo)
+        // también se borran de Storage: si no, cada reinicio dejaría archivos huérfanos.
+        const { storagePath } = d.data();
+        if (sub.id === 'documents' && storagePath) {
+          await deleteFile(storagePath).catch(err => console.error('[demo] no se pudo borrar el archivo', { storagePath, error: err.message }));
+        }
+        await d.ref.delete();
+      }
     }
     await caso.ref.delete();
     borrados.casos++;
@@ -160,6 +178,7 @@ async function sembrarDemo() {
   const mensajes = db().collection('cases').doc('demo-caso-3').collection('messages');
   await mensajes.doc('demo-msg-1').set({ senderRole: 'client', senderId: 'demo-cliente', senderName: 'Cliente Ejemplo', text: 'Hola, ya realizamos el pago de la cotización. ¿Cuál es el siguiente paso?', createdAt: now });
   await mensajes.doc('demo-msg-2').set({ senderRole: 'admin', senderId: 'demo-regente', senderName: 'Regente Ejemplo', text: 'Recibido, gracias. Ya revisamos la documentación digital; en cuanto confirmemos el cotejo técnico pasamos a los originales.', createdAt: now });
+  await sembrarDocumentoRegente(now);
 
   // Lead de ejemplo para el CRM del personal.
   await db().collection('contactLeads').doc('demo-lead-1').set({
@@ -173,4 +192,49 @@ async function sembrarDemo() {
   return { cuentas: CUENTAS.map(c => ({ correo: c.correo, rol: c.role })), orgId: DEMO_ORG_ID };
 }
 
-module.exports = { DEMO_ORG_ID, CUENTAS, esCorreoDemo, esCuentaDemo, visibleParaDemo, sembrarDemo, borrarDatosDemo };
+/**
+ * Documento ya subido en el Producto 3 (fórmula cuali-cuantitativa, 15.5) para que el regente
+ * tenga algo que aprobar o rechazar en su recorrido. Mismos campos que escribe
+ * routes/documents.js al subir un archivo real, con el PDF en Storage.
+ */
+async function sembrarDocumentoRegente(now) {
+  const buffer = await pdfFormulaEjemplo();
+  const nombre = 'formula-cuali-cuantitativa-ejemplo.pdf';
+  const { gcsPath, storagePath } = await uploadFile('demo-caso-3', `${DOC_REGENTE_ID}-v1`, nombre, buffer, 'application/pdf');
+  await db().collection('cases').doc('demo-caso-3').collection('documents').doc(DOC_REGENTE_ID).set({
+    faddiDocId: 'formula', faddiCode: '15.5', faddiDocName: 'Fórmula Cuali-Cuantitativa', faddiStep: 15,
+    fileName: nombre, fileSize: buffer.length, mimeType: 'application/pdf', storagePath, gcsPath, pageCount: 1,
+    status: 'uploaded', reviewNotes: '', reviewedBy: null, reviewedAt: null,
+    uploadedAt: now, uploadedBy: 'demo-cliente', version: 1,
+  });
+}
+
+/**
+ * Tras el pago de una cuenta demo (routes/quotes.js /pago/capturar) los casos pagados avanzan solos
+ * fase_04 -> fase_05 -> fase_06, lo que en la vida real hace el personal de Farmazed: así el
+ * prospecto ve moverse el expediente sin esperar a nadie. Pasa por applyTransition con sus gates
+ * normales (cotización aceptada, pagos por concepto) y queda en statusHistory con ACTOR_DEMO.
+ * Nunca falla el pago: un error aquí solo se registra.
+ */
+async function avanzarTrasPagoDemo(caseIds) {
+  const avanzados = [];
+  for (const caseId of caseIds) {
+    try {
+      const snap = await db().collection('cases').doc(caseId).get();
+      if (!snap.exists || snap.data().orgId !== DEMO_ORG_ID || snap.data().status !== 'fase_04') continue;
+      for (const to of ['fase_05', 'fase_06']) {
+        const r = await applyTransition({ caseId, to, update: { status: to, updatedAt: admin.firestore.Timestamp.now() }, actor: ACTOR_DEMO });
+        if (!r.ok) { console.error('[demo] avance automático detenido', { caseId, to, error: r.error }); break; }
+        avanzados.push({ caseId, to });
+      }
+    } catch (e) {
+      console.error('[demo] avance automático falló', { caseId, error: e.message });
+    }
+  }
+  return avanzados;
+}
+
+module.exports = {
+  DEMO_ORG_ID, CUENTAS, CASOS_SEMBRADOS, MENSAJES_SEMBRADOS, DOC_REGENTE_ID,
+  esCorreoDemo, esCuentaDemo, visibleParaDemo, sembrarDemo, borrarDatosDemo, avanzarTrasPagoDemo,
+};

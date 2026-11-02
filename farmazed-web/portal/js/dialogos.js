@@ -16,13 +16,27 @@
  * prueba ponga `window.__fzDialogosReales = true` para ver y manejar el modal de verdad.
  */
 
+// Idiomas (farmazed-web/i18n/README.md): los títulos y botones se traducen al abrir el modal con
+// FZI18N.t(); los mensajes llegan ya traducidos por quien llama. Con fallback: páginas sin i18n.js.
+const t = (texto) => (window.FZI18N ? window.FZI18N.t(texto) : String(texto ?? ''));
+
 const TIPOS = {
-  info:     { titulo: 'Aviso',          color: '#1B4F8A', icono: 'i' },
-  exito:    { titulo: 'Listo',          color: '#3A7D44', icono: '✓' },
-  error:    { titulo: 'Algo salió mal', color: '#B42318', icono: '!' },
-  pregunta: { titulo: 'Confirmar',      color: '#B26A00', icono: '?' },
-  entrada:  { titulo: 'Un dato más',    color: '#1B4F8A', icono: '✎' },
+  info:     { color: '#1B4F8A', icono: 'i' },
+  exito:    { color: '#3A7D44', icono: '✓' },
+  error:    { color: '#B42318', icono: '!' },
+  pregunta: { color: '#B26A00', icono: '?' },
+  entrada:  { color: '#1B4F8A', icono: '✎' },
 };
+// Título por tipo, en el idioma activo al abrir (literales entre comillas: así los ve la prueba de cobertura).
+function tituloPorTipo(tipo) {
+  switch (tipo) {
+    case 'exito':    return t('Listo');
+    case 'error':    return t('Algo salió mal');
+    case 'pregunta': return t('Confirmar');
+    case 'entrada':  return t('Un dato más');
+    default:         return t('Aviso');
+  }
+}
 
 const CSS = `
 .fz-dialogo-fondo{position:fixed;inset:0;z-index:2000;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(15,50,96,.45);backdrop-filter:blur(2px);animation:fzDialogoFondo .15s ease-out}
@@ -54,9 +68,11 @@ function instalarCss() {
 }
 
 // Tipo deducido del texto cuando quien llama no lo dice (los mensajes ya existentes empiezan así).
+// Los mensajes llegan traducidos (es/en/fr/pt), así que los arranques típicos de los cuatro idiomas
+// cuentan; si no se reconoce, queda 'info' (solo cambia el color y el título).
 function deducirTipo(mensaje) {
-  if (/^(error|no se pudo|no se complet)/i.test(mensaje)) return 'error';
-  if (/^(¡listo|listo|.* (guardad[oa]s?|registrad[oa]|actualizad[oa]s?|creada|enviada|recibido|subido)\b)/i.test(mensaje)) return 'exito';
+  if (/^(error|erreur|erro|no se pudo|no se complet|could not|couldn|impossible de|não foi possível|não se p)/i.test(mensaje)) return 'error';
+  if (/^(¡listo|listo|done|ready|c'est fait|terminé|pronto|feito|.* (guardad[oa]s?|registrad[oa]|actualizad[oa]s?|creada|enviada|recibido|subido|saved|recorded|registered|updated|created|sent|received|uploaded|enregistré[es]?|mis[e]? à jour|créée?|envoyée?|reçue?|téléversé|guardad[oa]s?|registad[oa]|atualizad[oa]s?|criad[oa]|enviad[oa]|recebid[oa]|carregad[oa])\b)/i.test(mensaje)) return 'exito';
   return 'info';
 }
 
@@ -89,11 +105,11 @@ function abrir({ modo, mensaje, tipo, titulo, ok, cancelar, valor, placeholder }
       </div>
     </div>`;
   // Texto siempre por textContent (nunca innerHTML): los mensajes pueden traer datos del usuario.
-  fondo.querySelector('.fz-dialogo-titulo').textContent = titulo || def.titulo;
+  fondo.querySelector('.fz-dialogo-titulo').textContent = titulo || tituloPorTipo(TIPOS[tipo] ? tipo : 'info');
   fondo.querySelector('.fz-dialogo-texto').textContent = mensaje;
-  fondo.querySelector('[data-accion="ok"]').textContent = ok || (modo === 'aviso' ? 'Entendido' : 'Aceptar');
+  fondo.querySelector('[data-accion="ok"]').textContent = ok || (modo === 'aviso' ? t('Entendido') : t('Aceptar'));
   const botonCancelar = fondo.querySelector('[data-accion="cancelar"]');
-  if (botonCancelar) botonCancelar.textContent = cancelar || 'Cancelar';
+  if (botonCancelar) botonCancelar.textContent = cancelar || t('Cancelar');
   const campo = fondo.querySelector('.fz-dialogo-campo');
   if (campo) { campo.value = valor || ''; if (placeholder) campo.placeholder = placeholder; }
 

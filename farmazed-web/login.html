@@ -3,7 +3,8 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-    <title>Acceso | Farmazed</title>
+    <title data-i18n>Acceso | Farmazed</title>
+    <script src="/portal/js/i18n.js"></script>
     <link rel="icon" type="image/png" href="src/images/favicon_Farzed.png">
     <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@300;400;700&family=Open+Sans:wght@400;700&display=swap" rel="stylesheet">
     <style>
@@ -210,34 +211,36 @@
                 <img src="src/images/Logo.png" alt="Farmazed">
                 <div class="fz-card-logo-text">
                     Farmazed
-                    <small>Asuntos Regulatorios</small>
+                    <small data-i18n>Asuntos Regulatorios</small>
                 </div>
             </a>
-            <div class="fz-card-subtitle">Portal de Clientes</div>
+            <div class="fz-card-subtitle" data-i18n>Portal de Clientes</div>
         </div>
 
         <div class="fz-card-body">
             <form id="login-form" autocomplete="off">
                 <div class="fz-field">
-                    <label for="usuario">Usuario</label>
-                    <input type="text" id="usuario" name="usuario" placeholder="Correo electrónico" autocomplete="username">
+                    <label for="usuario" data-i18n>Usuario</label>
+                    <input type="text" id="usuario" name="usuario" placeholder="Correo electrónico" autocomplete="username" data-i18n-attr="placeholder">
                 </div>
                 <div class="fz-field">
-                    <label for="password">Contraseña</label>
+                    <label for="password" data-i18n>Contraseña</label>
                     <input type="password" id="password" name="password" placeholder="••••••••" autocomplete="current-password">
                 </div>
-                <button type="submit" class="fz-login-btn">Ingresar</button>
+                <button type="submit" class="fz-login-btn" data-i18n>Ingresar</button>
                 <div id="login-msg"></div>
             </form>
-            <div class="text-center mt-3">
-                <a href="/solicitar-cuenta.html" style="font-size:.82rem">Solicitar cuenta</a>
+            <div class="text-center mt-3" style="text-align:center;margin-top:14px;">
+                <a href="/solicitar-cuenta.html" style="font-size:.82rem" data-i18n>Solicitar cuenta</a>
             </div>
+            <!-- Idiomas (Rick, 01-nov-2026: la demo oficial en ES/EN/FR/PT, sin mezclas) -->
+            <div id="login-idioma" class="d-flex justify-content-center mt-3" style="display:flex;justify-content:center;margin-top:14px;"></div>
         </div>
 
         <div class="fz-card-footer">
-            <a href="#" id="link-olvido">¿Olvidó su contraseña?</a>
+            <a href="#" id="link-olvido" data-i18n>¿Olvidó su contraseña?</a>
             <span>·</span>
-            <a href="index.html">← Volver al sitio</a>
+            <a href="index.html" data-i18n>← Volver al sitio</a>
         </div>
 
         <div style="padding: 0 32px 24px;">
@@ -253,18 +256,20 @@
                 text-decoration: none;
                 transition: background 0.2s, color 0.2s;
             " onmouseover="this.style.background='#f4f7fa';this.style.color='#2190d7'"
-               onmouseout="this.style.background='';this.style.color='#666'">
-                ← Back to Landing Page
+               onmouseout="this.style.background='';this.style.color='#666'"
+               data-i18n>
+                ← Volver a la página principal
             </a>
         </div>
 
     </div>
 
-    <div class="fz-login-copy">&copy; 2026 Farmazed &middot; Panamá</div>
+    <div class="fz-login-copy" data-i18n>&copy; 2026 Farmazed &middot; Panamá</div>
 
     <script type="module">
         import { login, auth, isAdmin, isStaff } from './portal/js/auth.js';
         import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js';
+        const { t } = window.FZI18N;
 
         // admin -> admin/casos.html (panel v2 real); staff (analista/abogado/
         // regente) -> admin/bandeja.html; cliente (titular/miembro) ->
@@ -289,17 +294,17 @@
             var user = document.getElementById('usuario').value.trim();
             var pass = document.getElementById('password').value;
             if (!user || !pass) {
-                msg.textContent = 'Complete todos los campos.';
+                msg.textContent = t('Complete todos los campos.');
                 return;
             }
             msg.style.color = '#2190d7';
-            msg.textContent = 'Verificando credenciales…';
+            msg.textContent = t('Verificando credenciales…');
             try {
                 await login(user, pass);
                 window.location.href = await destinoSegunRol();
             } catch (err) {
                 msg.style.color = '#c0392b';
-                msg.textContent = 'Usuario o contraseña incorrectos.';
+                msg.textContent = t('Usuario o contraseña incorrectos.');
             }
         });
     </script>
@@ -309,17 +314,18 @@
       // Usuario; el servidor manda el correo de marca con el enlace de Firebase para definir una
       // contraseña nueva. Misma respuesta exista o no la cuenta.
       import { API_BASE } from './portal/js/auth.js';
+      const { t } = window.FZI18N;
       document.getElementById('link-olvido').addEventListener('click', async (e) => {
         e.preventDefault();
         const msg = document.getElementById('login-msg');
         const correo = document.getElementById('usuario').value.trim();
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo)) {
           msg.style.color = '#c0392b';
-          msg.textContent = 'Escribe tu correo en el campo Usuario y vuelve a pulsar "¿Olvidó su contraseña?".';
+          msg.textContent = t('Escribe tu correo en el campo Usuario y vuelve a pulsar "¿Olvidó su contraseña?".');
           return;
         }
         msg.style.color = '#2190d7';
-        msg.textContent = 'Enviando…';
+        msg.textContent = t('Enviando…');
         try {
           const res = await fetch(`${API_BASE}/api/register/restablecer`, {
             method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ correo }),
@@ -327,7 +333,7 @@
           const data = await res.json().catch(() => ({}));
           if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
           msg.style.color = '#2e7d32';
-          msg.textContent = `Si existe una cuenta con ${correo}, te enviamos un correo para definir una contraseña nueva.`;
+          msg.textContent = t('Si existe una cuenta con {correo}, te enviamos un correo para definir una contraseña nueva.', { correo });
         } catch (err) {
           msg.style.color = '#c0392b';
           msg.textContent = err.message;
@@ -336,11 +342,18 @@
     </script>
 
     <script>
-      // aceptar-invitacion.html manda aquí tras crear la contraseña (31-oct-2026)
+      // Selector ES · EN · FR · PT (fondo blanco de la tarjeta -> variante oscura).
+      FZI18N.montarSelector('#login-idioma', { oscuro: true });
+
+      // aceptar-invitacion.html manda aquí tras crear la contraseña (31-oct-2026).
+      // Se espera a que cargue el diccionario (FZI18N.listo) para no pintar el aviso en español
+      // y que un instante después aparezca traducido.
       if (new URLSearchParams(location.search).get("cuenta") === "creada") {
-        var m = document.getElementById("login-msg");
-        m.style.color = "#2e7d32";
-        m.textContent = "Cuenta creada. Inicia sesión con tu correo y la contraseña que acabas de elegir.";
+        FZI18N.listo.then(function () {
+          var m = document.getElementById("login-msg");
+          m.style.color = "#2e7d32";
+          m.textContent = FZI18N.t("Cuenta creada. Inicia sesión con tu correo y la contraseña que acabas de elegir.");
+        });
       }
     </script>
 </body>

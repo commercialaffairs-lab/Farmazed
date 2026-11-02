@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Farmazed Admin — Expediente</title>
+  <script src="/portal/js/i18n.js"></script>
+  <title data-i18n>Farmazed Admin — Expediente</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
   <style>
@@ -30,20 +31,20 @@
 
 <!-- Topbar -->
 <div class="topbar d-flex align-items-center gap-3">
-  <a href="/admin/casos.html" class="text-white-50 text-decoration-none small">← Expedientes</a>
-  <span class="text-white fw-semibold" id="top-title">Cargando...</span>
+  <a href="/admin/casos.html" class="text-white-50 text-decoration-none small" data-i18n>← Expedientes</a>
+  <span class="text-white fw-semibold" id="top-title"><span data-i18n>Cargando...</span></span>
   <div class="ms-auto d-flex gap-2 align-items-center">
     <select class="form-select form-select-sm status-select" id="status-select" style="width:auto"></select>
     <div class="form-check form-check-inline m-0" id="override-wrap">
       <input class="form-check-input" type="checkbox" id="override-check">
-      <label class="form-check-label small text-white-50" for="override-check">Forzar (override)</label>
+      <label class="form-check-label small text-white-50" for="override-check" data-i18n>Forzar (override)</label>
     </div>
-    <button class="btn btn-sm btn-outline-light" id="btn-save-status">Guardar estado</button>
-    <button class="cowork-btn btn btn-sm" id="btn-cowork">⚡ Abrir en Cowork</button>
+    <button class="btn btn-sm btn-outline-light" id="btn-save-status" data-i18n>Guardar estado</button>
+    <button class="cowork-btn btn btn-sm" id="btn-cowork">⚡ <span data-i18n>Abrir en Cowork</span></button>
   </div>
 </div>
 <div class="topbar d-flex align-items-center gap-2 d-none" id="override-reason-row" style="padding-top:0">
-  <input type="text" class="form-control form-control-sm" id="override-reason" placeholder="Motivo del override (obligatorio)" style="max-width:420px">
+  <input type="text" class="form-control form-control-sm" id="override-reason" placeholder="Motivo del override (obligatorio)" data-i18n-attr="placeholder" style="max-width:420px">
 </div>
 
 <div class="container-fluid p-4">
@@ -56,13 +57,13 @@
 
         <!-- Datos del producto -->
         <div class="card border-0 shadow-sm mb-4">
-          <div class="step-header">Datos del Producto — Paso 3 FADDI</div>
+          <div class="step-header" data-i18n>Datos del Producto — Paso 3 FADDI</div>
           <div class="card-body py-2" id="product-fields"></div>
         </div>
 
         <!-- Entidades -->
         <div class="card border-0 shadow-sm mb-4">
-          <div class="step-header">Empresas y Personas — Pasos 4–11 FADDI</div>
+          <div class="step-header" data-i18n>Empresas y Personas — Pasos 4–11 FADDI</div>
           <div class="card-body py-2" id="entities-fields"></div>
         </div>
 
@@ -77,13 +78,13 @@
 
         <!-- §H.8 (TAREA 21): las dos confirmaciones de fase 8 (legal=abogado, técnica/matrices=regente) -->
         <div class="card border-0 shadow-sm mb-4 d-none" id="fase8-card">
-          <div class="step-header">Fase 8 — Confirmaciones</div>
+          <div class="step-header" data-i18n>Fase 8 — Confirmaciones</div>
           <div class="card-body py-2" id="fase8-confirmaciones"></div>
         </div>
 
         <!-- Documentos organizados por paso FADDI -->
         <div class="card border-0 shadow-sm mb-4">
-          <div class="step-header">Documentos Adjuntos — Paso 15 FADDI</div>
+          <div class="step-header" data-i18n>Documentos Adjuntos — Paso 15 FADDI</div>
           <div id="docs-list" class="p-2"></div>
         </div>
 
@@ -92,29 +93,29 @@
       <!-- RIGHT: Info + notas -->
       <div class="col-lg-4">
         <div class="card border-0 shadow-sm mb-3 p-3">
-          <div class="small fw-bold text-muted mb-2 text-uppercase">Información del Expediente</div>
+          <div class="small fw-bold text-muted mb-2 text-uppercase" data-i18n>Información del Expediente</div>
           <div id="case-meta"></div>
         </div>
 
         <div class="card border-0 shadow-sm mb-3 p-3">
-          <div class="small fw-bold text-muted mb-2 text-uppercase">FADDI Tracking</div>
+          <div class="small fw-bold text-muted mb-2 text-uppercase" data-i18n>FADDI Tracking</div>
           <div class="mb-2">
-            <label class="form-label small">N° Expediente FADDI</label>
-            <input type="text" class="form-control form-control-sm" id="faddi-exp" placeholder="Asignar al ingresar">
+            <label class="form-label small" data-i18n>N° Expediente FADDI</label>
+            <input type="text" class="form-control form-control-sm" id="faddi-exp" placeholder="Asignar al ingresar" data-i18n-attr="placeholder">
           </div>
           <div class="mb-2">
-            <label class="form-label small">N° Solicitud FADDI</label>
+            <label class="form-label small" data-i18n>N° Solicitud FADDI</label>
             <input type="text" class="form-control form-control-sm" id="faddi-sol" placeholder="—">
           </div>
           <div class="mb-2">
-            <label class="form-label small">Último estado FADDI</label>
+            <label class="form-label small" data-i18n>Último estado FADDI</label>
             <input type="text" class="form-control form-control-sm" id="faddi-status" placeholder="—">
           </div>
           <div class="mb-2">
-            <label class="form-label small">Observaciones DNFD</label>
+            <label class="form-label small" data-i18n>Observaciones DNFD</label>
             <textarea class="form-control form-control-sm" id="faddi-obs" rows="2" placeholder="—"></textarea>
           </div>
-          <button class="btn btn-sm btn-outline-primary w-100" id="btn-save-faddi">Guardar FADDI info</button>
+          <button class="btn btn-sm btn-outline-primary w-100" id="btn-save-faddi" data-i18n>Guardar FADDI info</button>
         </div>
 
         <!-- TAREA 26 (§H.8, fase 3 "Tipo de registro sanitario y ruta de
@@ -123,88 +124,88 @@
         (cases.edit_via_categoria). El cliente propone en el wizard; el staff
         lo CONFIRMA acá. -->
         <div class="card border-0 shadow-sm mb-3 p-3 d-none" id="via-categoria-card">
-          <div class="small fw-bold text-muted mb-2 text-uppercase">Vía y Categoría — Fase 3</div>
+          <div class="small fw-bold text-muted mb-2 text-uppercase" data-i18n>Vía y Categoría — Fase 3</div>
           <div class="mb-2">
-            <label class="form-label small">Tipo de registro (vía)</label>
+            <label class="form-label small" data-i18n>Tipo de registro (vía)</label>
             <select class="form-select form-select-sm" id="via-tipo-registro">
-              <option value="Regular">Regular</option>
-              <option value="Abreviado">Abreviado</option>
-              <option value="Reconocimiento Mutuo">Reconocimiento Mutuo</option>
-              <option value="Reconocimiento WLA">Reconocimiento WLA</option>
+              <option value="Regular" data-i18n>Regular</option>
+              <option value="Abreviado" data-i18n>Abreviado</option>
+              <option value="Reconocimiento Mutuo" data-i18n>Reconocimiento Mutuo</option>
+              <option value="Reconocimiento WLA" data-i18n>Reconocimiento WLA</option>
             </select>
           </div>
           <div class="mb-2">
-            <label class="form-label small">Tipo de medicamento (categoría)</label>
+            <label class="form-label small" data-i18n>Tipo de medicamento (categoría)</label>
             <div id="via-tipo-med-checks" class="small"></div>
           </div>
           <div class="mb-2">
-            <label class="form-label small">¿Es innovador?</label>
+            <label class="form-label small" data-i18n>¿Es innovador?</label>
             <select class="form-select form-select-sm" id="via-es-innovador">
-              <option value="">Por confirmar</option>
-              <option value="true">Sí</option>
-              <option value="false">No</option>
+              <option value="" data-i18n>Por confirmar</option>
+              <option value="true" data-i18n>Sí</option>
+              <option value="false" data-i18n>No</option>
             </select>
-            <div class="text-muted mt-1" style="font-size:.7rem">Afecta el checklist (estudios clínicos / resumen de seguridad, Síntesis Química) y el tarifario ("Prioridad ... innovadores").</div>
+            <div class="text-muted mt-1" style="font-size:.7rem" data-i18n>Afecta el checklist (estudios clínicos / resumen de seguridad, Síntesis Química) y el tarifario ("Prioridad ... innovadores").</div>
           </div>
           <div class="mb-2">
-            <label class="form-label small">Representación (§H.11)</label>
+            <label class="form-label small" data-i18n>Representación (§H.11)</label>
             <select class="form-select form-select-sm" id="via-representacion">
-              <option value="">Por confirmar</option>
-              <option value="titular_directo">Titular directo</option>
-              <option value="casa_matriz_distribuidor">Casa matriz + distribuidor local</option>
+              <option value="" data-i18n>Por confirmar</option>
+              <option value="titular_directo" data-i18n>Titular directo</option>
+              <option value="casa_matriz_distribuidor" data-i18n>Casa matriz + distribuidor local</option>
             </select>
-            <div class="text-muted mt-1" style="font-size:.7rem">Define si aplica el Formulario 1 (titular directo) o el Formulario 2 (casa matriz + distribuidor).</div>
+            <div class="text-muted mt-1" style="font-size:.7rem" data-i18n>Define si aplica el Formulario 1 (titular directo) o el Formulario 2 (casa matriz + distribuidor).</div>
           </div>
-          <button class="btn btn-sm btn-outline-primary w-100" id="btn-save-via-categoria">Guardar vía y categoría</button>
+          <button class="btn btn-sm btn-outline-primary w-100" id="btn-save-via-categoria" data-i18n>Guardar vía y categoría</button>
         </div>
 
         <div class="card border-0 shadow-sm mb-3 p-3 d-none" id="assign-card">
-          <div class="small fw-bold text-muted mb-2 text-uppercase">Equipo Asignado</div>
+          <div class="small fw-bold text-muted mb-2 text-uppercase" data-i18n>Equipo Asignado</div>
           <div class="mb-2">
-            <label class="form-label small">Analista</label>
+            <label class="form-label small" data-i18n>Analista</label>
             <select class="form-select form-select-sm" id="assign-analista"></select>
           </div>
           <div class="mb-2">
-            <label class="form-label small">Abogado</label>
+            <label class="form-label small" data-i18n>Abogado</label>
             <select class="form-select form-select-sm" id="assign-abogado"></select>
           </div>
           <div class="mb-2">
-            <label class="form-label small">Regente</label>
+            <label class="form-label small" data-i18n>Regente</label>
             <select class="form-select form-select-sm" id="assign-regente"></select>
           </div>
-          <button class="btn btn-sm btn-outline-primary w-100" id="btn-save-assign">Guardar equipo</button>
+          <button class="btn btn-sm btn-outline-primary w-100" id="btn-save-assign" data-i18n>Guardar equipo</button>
         </div>
 
         <div class="card border-0 shadow-sm mb-3 p-3">
-          <div class="small fw-bold text-muted mb-2 text-uppercase">Notas Internas</div>
-          <textarea class="form-control form-control-sm" id="admin-notes" rows="4" placeholder="Notas visibles solo para el equipo Farmazed..."></textarea>
-          <button class="btn btn-sm btn-outline-secondary w-100 mt-2" id="btn-save-notes">Guardar notas</button>
+          <div class="small fw-bold text-muted mb-2 text-uppercase" data-i18n>Notas Internas</div>
+          <textarea class="form-control form-control-sm" id="admin-notes" rows="4" placeholder="Notas visibles solo para el equipo Farmazed..." data-i18n-attr="placeholder"></textarea>
+          <button class="btn btn-sm btn-outline-secondary w-100 mt-2" id="btn-save-notes" data-i18n>Guardar notas</button>
         </div>
 
         <div class="card border-0 shadow-sm mb-3 p-3">
-          <div class="small fw-bold text-muted mb-2 text-uppercase">Pagos (D12)</div>
+          <div class="small fw-bold text-muted mb-2 text-uppercase" data-i18n>Pagos (D12)</div>
           <div id="payments-resumen"></div>
-          <div id="payments-list" class="small mb-2"><div class="text-muted">Cargando…</div></div>
+          <div id="payments-list" class="small mb-2"><div class="text-muted" data-i18n>Cargando…</div></div>
           <form id="payment-form" class="border-top pt-2">
             <div class="mb-2">
-              <label class="form-label small">Tipo de pago</label>
+              <label class="form-label small" data-i18n>Tipo de pago</label>
               <select class="form-select form-select-sm" id="pay-tipo">
-                <option value="cliente_a_farmazed">Cliente → Farmazed (honorarios)</option>
-                <option value="farmazed_a_autoridad">Farmazed → Autoridad (tasas DNFD/IEA/CNF/MEF)</option>
+                <option value="cliente_a_farmazed" data-i18n>Cliente → Farmazed (honorarios)</option>
+                <option value="farmazed_a_autoridad" data-i18n>Farmazed → Autoridad (tasas DNFD/IEA/CNF/MEF)</option>
               </select>
             </div>
             <div class="mb-2" id="pay-concepto-row">
-              <label class="form-label small">Concepto</label>
+              <label class="form-label small" data-i18n>Concepto</label>
               <select class="form-select form-select-sm" id="pay-concepto">
-                <option value="honorarios">Honorarios (anticipo)</option>
-                <option value="tasa_dnfd">Tasa por servicio DNFD (B/.200)</option>
-                <option value="mef">MEF — solo producto extranjero (B/.25)</option>
-                <option value="iea">IEA — solo si aplica (B/.1500 regular / B/.2250 expedita)</option>
-                <option value="honorarios_saldo">Saldo de honorarios (no bloquea)</option>
+                <option value="honorarios" data-i18n>Honorarios (anticipo)</option>
+                <option value="tasa_dnfd" data-i18n>Tasa por servicio DNFD (B/.200)</option>
+                <option value="mef" data-i18n>MEF — solo producto extranjero (B/.25)</option>
+                <option value="iea" data-i18n>IEA — solo si aplica (B/.1500 regular / B/.2250 expedita)</option>
+                <option value="honorarios_saldo" data-i18n>Saldo de honorarios (no bloquea)</option>
               </select>
             </div>
             <div class="mb-2 d-none" id="pay-autoridad-row">
-              <label class="form-label small">Autoridad</label>
+              <label class="form-label small" data-i18n>Autoridad</label>
               <select class="form-select form-select-sm" id="pay-autoridad">
                 <option value="DNFD">DNFD</option>
                 <option value="IEA">IEA</option>
@@ -213,24 +214,24 @@
               </select>
             </div>
             <div class="mb-2">
-              <label class="form-label small">Monto (B/.)</label>
+              <label class="form-label small" data-i18n>Monto (B/.)</label>
               <input type="number" step="0.01" min="0.01" class="form-control form-control-sm" id="pay-monto" required>
             </div>
             <div class="mb-2">
-              <label class="form-label small">Fecha del pago</label>
+              <label class="form-label small" data-i18n>Fecha del pago</label>
               <input type="date" class="form-control form-control-sm" id="pay-fecha">
             </div>
             <div class="mb-2">
-              <label class="form-label small">Comprobante (archivo)</label>
+              <label class="form-label small" data-i18n>Comprobante (archivo)</label>
               <input type="file" class="form-control form-control-sm" id="pay-comprobante" required>
             </div>
-            <button type="submit" class="btn btn-sm btn-outline-success w-100">Registrar pago</button>
+            <button type="submit" class="btn btn-sm btn-outline-success w-100" data-i18n>Registrar pago</button>
           </form>
         </div>
 
         <div class="card border-0 shadow-sm p-3">
-          <div class="small fw-bold text-muted mb-2 text-uppercase">Historial de Estado</div>
-          <div id="status-history" class="small"><div class="text-muted">Cargando…</div></div>
+          <div class="small fw-bold text-muted mb-2 text-uppercase" data-i18n>Historial de Estado</div>
+          <div id="status-history" class="small"><div class="text-muted" data-i18n>Cargando…</div></div>
         </div>
       </div>
     </div>
@@ -243,14 +244,14 @@
   <div class="modal-dialog">
     <div class="modal-content">
       <div class="modal-header">
-        <h6 class="modal-title mb-0">Versiones anteriores — <span id="versions-doc-name"></span></h6>
+        <h6 class="modal-title mb-0"><span data-i18n>Versiones anteriores</span> — <span id="versions-doc-name"></span></h6>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body">
-        <div id="versions-list" class="small"><div class="text-muted">Cargando…</div></div>
+        <div id="versions-list" class="small"><div class="text-muted" data-i18n>Cargando…</div></div>
       </div>
       <div class="modal-footer">
-        <button class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cerrar</button>
+        <button class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal" data-i18n>Cerrar</button>
       </div>
     </div>
   </div>
@@ -261,24 +262,23 @@
   <div class="modal-dialog modal-lg">
     <div class="modal-content">
       <div class="modal-header" style="background:var(--fz-navy)">
-        <h6 class="modal-title text-white mb-0">⚡ Sesión de Llenado FADDI con Claude Cowork</h6>
+        <h6 class="modal-title text-white mb-0">⚡ <span data-i18n>Sesión de Llenado FADDI con Claude Cowork</span></h6>
         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body">
         <div class="alert alert-info small mb-3">
-          <strong>Cómo usar:</strong> Copia el contexto de abajo y pégalo como primer mensaje en Claude Cowork.
-          Claude tendrá todos los datos del expediente y te guiará campo por campo en FADDI.
+          <strong data-i18n>Cómo usar:</strong> <span data-i18n>Copia el contexto de abajo y pégalo como primer mensaje en Claude Cowork. Claude tendrá todos los datos del expediente y te guiará campo por campo en FADDI.</span>
           <br><br>
-          <strong>Alternativa:</strong> Si tienes el plugin MCP de Farmazed instalado en Cowork, simplemente dile:<br>
-          <code>"Obtén el expediente <span id="modal-case-id"></span> y ayúdame a llenar FADDI."</code>
+          <strong data-i18n>Alternativa:</strong> <span data-i18n>Si tienes el plugin MCP de Farmazed instalado en Cowork, simplemente dile:</span><br>
+          <code id="modal-cowork-cmd"></code>
         </div>
-        <label class="form-label small fw-semibold">Contexto para Claude Cowork:</label>
+        <label class="form-label small fw-semibold" data-i18n>Contexto para Claude Cowork:</label>
         <textarea class="form-control font-monospace" id="cowork-context" rows="16" style="font-size:.75rem"></textarea>
       </div>
       <div class="modal-footer">
-        <button class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cerrar</button>
-        <button class="btn btn-primary btn-sm" id="btn-copy-context">📋 Copiar contexto</button>
-        <a class="btn btn-success btn-sm" href="https://claude.ai" target="_blank">Abrir Claude Cowork →</a>
+        <button class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal" data-i18n>Cerrar</button>
+        <button class="btn btn-primary btn-sm" id="btn-copy-context">📋 <span data-i18n>Copiar contexto</span></button>
+        <a class="btn btn-success btn-sm" href="https://claude.ai" target="_blank" data-i18n>Abrir Claude Cowork →</a>
       </div>
     </div>
   </div>
@@ -290,6 +290,12 @@
   import { avisar, confirmar, preguntar } from '../portal/js/dialogos.js';
   import api from '../portal/js/api.js';
   import { getFullMeta, getDocStatusIcon, getDocStatusColor } from '../portal/js/status_ui.js';
+
+  // Idiomas (farmazed-web/i18n/README.md): el español es la fuente. Todo texto generado por JS pasa
+  // por t(); las etiquetas que llegan del tracker (fases, nombres de documentos del checklist) también.
+  // Al cambiar de idioma se repinta todo lo que esta página generó (onCambio, al final del módulo).
+  const I18N = window.FZI18N;
+  const { t } = I18N;
 
   const caseId = new URLSearchParams(window.location.search).get('id');
   let caseData, checklistData, docsData, statusMeta, myPerms;
@@ -310,11 +316,17 @@
     publicidad:'https://sisregsan.minsa.gob.pa/forms/user/publicidad/registrar.aspx',
   };
 
+  // Valores técnicos → etiqueta en español → t() al pintar.
+  const TRAMITE_LABEL = { medicamentos: 'Medicamentos', cosmeticos: 'Cosméticos', higienicos: 'Higiénicos', plaguicidas: 'Plaguicidas', excepcion: 'Excepción de registro', publicidad: 'Publicidad' };
+  const DOC_STATUS_LABEL = { uploaded: 'Subido', reviewing: 'En revisión', approved: 'Aprobado', rejected: 'Rechazado', requested: 'Solicitado', missing: 'Faltante', pending: 'Pendiente' };
+  const etiquetaTramite = (v) => TRAMITE_LABEL[v] ? t(TRAMITE_LABEL[v]) : (v || '—');
+  const etiquetaEstado  = (s) => t(statusMeta?.meta?.[s]?.label || s);
+
   function copyField(val) {
     navigator.clipboard.writeText(val).then(() => {
       const toast = document.createElement('div');
       toast.className = 'position-fixed bottom-0 end-0 m-3 alert alert-success py-1 px-3 small shadow';
-      toast.textContent = '📋 Copiado';
+      toast.textContent = t('📋 Copiado');
       toast.style.zIndex = 9999;
       document.body.appendChild(toast);
       setTimeout(() => toast.remove(), 1500);
@@ -324,9 +336,9 @@
   function fieldRow(label, value, faddiField = '') {
     if (!value || value === '—') return '';
     return `<div class="field-row">
-      <div class="field-label">${faddiField ? `<span class="text-primary">${esc(faddiField)}</span> — ` : ''}${esc(label)}</div>
+      <div class="field-label">${faddiField ? `<span class="text-primary">${esc(faddiField)}</span> — ` : ''}${esc(t(label))}</div>
       <div class="field-value">${esc(value)}</div>
-      <button class="copy-btn" data-copy="${esc(value)}" onclick="navigator.clipboard.writeText(this.dataset.copy).then(()=>{this.textContent='✓';setTimeout(()=>this.textContent='📋',1200)})" title="Copiar">📋</button>
+      <button class="copy-btn" data-copy="${esc(value)}" onclick="navigator.clipboard.writeText(this.dataset.copy).then(()=>{this.textContent='✓';setTimeout(()=>this.textContent='📋',1200)})" title="${esc(t('Copiar'))}">📋</button>
     </div>`;
   }
 
@@ -389,10 +401,10 @@
     if (caseData.tramiteType !== 'medicamentos') return;
     document.getElementById('via-tipo-registro').value = caseData.tipoRegistro || 'Regular';
     const seleccionados = new Set(caseData.tipoMedicamento || []);
-    document.getElementById('via-tipo-med-checks').innerHTML = TIPOS_MED_VIA.map(t => `
+    document.getElementById('via-tipo-med-checks').innerHTML = TIPOS_MED_VIA.map(tm => `
       <div class="form-check">
-        <input class="form-check-input via-tipo-med" type="checkbox" value="${esc(t)}" id="via-med-${esc(t)}" ${seleccionados.has(t) ? 'checked' : ''}>
-        <label class="form-check-label" for="via-med-${esc(t)}">${esc(t)}</label>
+        <input class="form-check-input via-tipo-med" type="checkbox" value="${esc(tm)}" id="via-med-${esc(tm)}" ${seleccionados.has(tm) ? 'checked' : ''}>
+        <label class="form-check-label" for="via-med-${esc(tm)}">${esc(t(tm))}</label>
       </div>`).join('');
     document.getElementById('via-es-innovador').value =
       caseData.esInnovador === true ? 'true' : caseData.esInnovador === false ? 'false' : '';
@@ -403,7 +415,7 @@
     try {
       const { employees } = await api.getEmployees();
       const byRole = (role) => employees.filter(e => e.role === role);
-      const options = (list, selectedUid) => `<option value="">— sin asignar —</option>` +
+      const options = (list, selectedUid) => `<option value="">${esc(t('— sin asignar —'))}</option>` +
         list.map(e => `<option value="${esc(e.uid)}" ${e.uid === selectedUid ? 'selected' : ''}>${esc(e.email)}</option>`).join('');
 
       const asignados = caseData.asignados || {};
@@ -422,7 +434,7 @@
     const e = caseData.entities || {};
 
     // Topbar title
-    document.getElementById('top-title').textContent = `${p.nombreComercial || '(sin nombre)'} — ${caseData.tramiteType}`;
+    document.getElementById('top-title').textContent = `${p.nombreComercial || t('(sin nombre)')} — ${etiquetaTramite(caseData.tramiteType)}`;
     buildStatusOptions();
 
     // Product fields
@@ -439,10 +451,10 @@
       fieldRow('Condiciones Almacenamiento',   p.condicionesAlmacenamiento,'3.1.10'),
       fieldRow('Tipo de Presentación',         p.tipoPresentacion,        '3.2.1'),
       fieldRow('Descripción Presentación',     p.descripcionPresentacion, '3.2.2'),
-      caseData.tipoMedicamento?.length ? fieldRow('Tipo de Medicamento (checkboxes)', caseData.tipoMedicamento.join(', '), '2.1') : '',
+      caseData.tipoMedicamento?.length ? fieldRow('Tipo de Medicamento (checkboxes)', caseData.tipoMedicamento.map(tm => t(tm)).join(', '), '2.1') : '',
       fieldRow('Clasificación',                p.clasificacion,           '2.4'),
       fieldRow('Forma Cosmética',              p.formaCosmetica,          '2.6'),
-    ].filter(Boolean).join('') || '<div class="text-muted small p-3">Sin datos de producto.</div>';
+    ].filter(Boolean).join('') || `<div class="text-muted small p-3">${t('Sin datos de producto.')}</div>`;
 
     // Entities
     const entSections = [
@@ -455,9 +467,9 @@
     ];
     document.getElementById('entities-fields').innerHTML = entSections.map(s => {
       if (!s.obj || !Object.values(s.obj).some(v=>v)) return '';
-      return `<div class="mb-2"><div class="small fw-bold text-muted border-bottom pb-1 mb-1">${esc(s.label)}</div>
+      return `<div class="mb-2"><div class="small fw-bold text-muted border-bottom pb-1 mb-1">${esc(t(s.label))}</div>
         ${s.fields.map(([l,k]) => fieldRow(l, s.obj[k])).filter(Boolean).join('')}</div>`;
-    }).join('') || '<div class="text-muted small p-3">Sin datos de empresas.</div>';
+    }).join('') || `<div class="text-muted small p-3">${t('Sin datos de empresas.')}</div>`;
 
     // Docs
     const docsById = {};
@@ -467,6 +479,9 @@
     document.getElementById('docs-list').innerHTML = checklist.map(item => {
       const doc         = docsById[item.id];
       const status      = doc ? doc.status : 'missing';
+      // El nombre del documento llega del tracker (faddi_checklists.js) en español: también se traduce.
+      const nombreDoc   = t(item.name);
+      const nombreJs    = esc(nombreDoc.replace(/'/g, "\\'"));
       // D11 (03_INSTRUCCIONES_DEV.md fila D11): un doc a cargo de Farmazed no
       // tiene sentido "Solicitarlo" al cliente — es tarea interna del equipo.
       const isFarmazedDoc = item.responsable === 'farmazed';
@@ -475,8 +490,8 @@
       // cuando hay más de 1 (v1 es el caso normal, no vale la pena mostrarlo).
       const versionBadge = doc && doc.version > 1
         ? ` <span class="badge bg-info-subtle text-info border border-info-subtle small" style="cursor:pointer"
-                  onclick="verVersiones('${esc(caseId)}','${esc(doc.id)}','${esc(item.name.replace(/'/g,"\\'"))}')"
-                  title="Ver versiones anteriores">v${esc(doc.version)} · ver versiones anteriores</span>`
+                  onclick="verVersiones('${esc(caseId)}','${esc(doc.id)}','${nombreJs}')"
+                  title="${esc(t('Ver versiones anteriores'))}">${esc(t('v{n} · ver versiones anteriores', { n: doc.version }))}</span>`
         : '';
 
       // TAREA 15/E3 parte 2: abogado ve resaltados los docs legales, regente
@@ -492,29 +507,29 @@
       const puedeRevisar = has('documents.review') && doc && ['uploaded', 'reviewing'].includes(doc.status);
       const reviewButtons = puedeRevisar ? `
         <button class="btn btn-xs btn-outline-success btn-sm py-0 px-2 small ms-1"
-                onclick="revisarDoc('${esc(doc.id)}','approved')" title="Aprobar">✓</button>
+                onclick="revisarDoc('${esc(doc.id)}','approved')" title="${esc(t('Aprobar'))}">✓</button>
         <button class="btn btn-xs btn-outline-danger btn-sm py-0 px-2 small ms-1"
-                onclick="revisarDoc('${esc(doc.id)}','rejected')" title="Rechazar">✗</button>` : '';
+                onclick="revisarDoc('${esc(doc.id)}','rejected')" title="${esc(t('Rechazar'))}">✗</button>` : '';
 
       return `<div class="doc-item" ${rowStyle}>
         <span class="doc-code">${esc(item.faddiCode)}</span>
         <span class="${getDocStatusColor(status)}">${getDocStatusIcon(status)}</span>
-        <span class="doc-name">${esc(item.name)}${!item.required ? ' <span class="text-muted" style="font-size:.7rem">(opcional)</span>' : ''}${isFarmazedDoc ? ' <span class="badge bg-primary-subtle text-primary border border-primary-subtle" style="font-size:.65rem">Tarea interna Farmazed</span>' : ''}${versionBadge}</span>
+        <span class="doc-name">${esc(nombreDoc)}${!item.required ? ` <span class="text-muted" style="font-size:.7rem">${esc(t('(opcional)'))}</span>` : ''}${isFarmazedDoc ? ` <span class="badge bg-primary-subtle text-primary border border-primary-subtle" style="font-size:.65rem">${esc(t('Tarea interna Farmazed'))}</span>` : ''}${versionBadge}</span>
         ${doc ? `<a href="#" class="btn btn-xs btn-outline-primary btn-sm py-0 px-2 small"
-                    onclick="openDoc('${esc(caseId)}','${esc(doc.id)}');return false">Ver</a>${reviewButtons}` :
-          isFarmazedDoc ? `<span class="badge bg-secondary-subtle text-secondary border small">Pendiente (interno)</span>` :
+                    onclick="openDoc('${esc(caseId)}','${esc(doc.id)}');return false">${esc(t('Ver'))}</a>${reviewButtons}` :
+          isFarmazedDoc ? `<span class="badge bg-secondary-subtle text-secondary border small">${esc(t('Pendiente (interno)'))}</span>` :
                  `<button class="btn btn-xs btn-outline-warning btn-sm py-0 px-2 small"
-                    onclick="requestDoc('${esc(item.id)}','${esc(item.name.replace(/'/g,"\\'"))}')">Solicitar</button>`}
+                    onclick="requestDoc('${esc(item.id)}','${nombreJs}')">${esc(t('Solicitar'))}</button>`}
       </div>`;
     }).join('');
 
     // Meta
     document.getElementById('case-meta').innerHTML = `
-      <div class="field-row"><div class="field-label">ID</div><div class="field-value font-monospace small">${esc(caseId)}</div></div>
-      <div class="field-row"><div class="field-label">Cliente</div><div class="field-value">${esc(caseData.clientEmail)}</div></div>
-      <div class="field-row"><div class="field-label">Tipo trámite</div><div class="field-value">${esc(caseData.tramiteType)}</div></div>
-      <div class="field-row"><div class="field-label">Tipo registro</div><div class="field-value">${esc(caseData.tipoRegistro||'—')}</div></div>
-      <div class="field-row"><div class="field-label">Docs subidos</div>
+      <div class="field-row"><div class="field-label">${esc(t('ID'))}</div><div class="field-value font-monospace small">${esc(caseId)}</div></div>
+      <div class="field-row"><div class="field-label">${esc(t('Cliente'))}</div><div class="field-value">${esc(caseData.clientEmail)}</div></div>
+      <div class="field-row"><div class="field-label">${esc(t('Tipo trámite'))}</div><div class="field-value">${esc(etiquetaTramite(caseData.tramiteType))}</div></div>
+      <div class="field-row"><div class="field-label">${esc(t('Tipo registro'))}</div><div class="field-value">${esc(caseData.tipoRegistro ? t(caseData.tipoRegistro) : '—')}</div></div>
+      <div class="field-row"><div class="field-label">${esc(t('Docs subidos'))}</div>
         <div class="field-value">${checklistData.progress?.uploaded||0} / ${checklistData.progress?.total||0}</div></div>`;
 
     // FADDI tracking fields
@@ -526,10 +541,12 @@
     document.getElementById('admin-notes').value  = caseData.notes         || '';
 
     // Cowork modal content
-    document.getElementById('modal-case-id').textContent = caseId;
+    document.getElementById('modal-cowork-cmd').textContent = t('"Obtén el expediente {id} y ayúdame a llenar FADDI."', { id: caseId });
     buildCoworkContext();
   }
 
+  // El contexto para Claude Cowork es un prompt interno para la herramienta (no texto de pantalla):
+  // se deja en español a propósito.
   function buildCoworkContext() {
     const p  = caseData.product || {};
     const e  = caseData.entities || {};
@@ -583,9 +600,9 @@
       : [current, ...(statusMeta.transitions[current] || [])];
 
     select.innerHTML = options.map(s => {
-      const label = statusMeta.meta[s]?.label || s;
-      const tag   = s === current ? ' (actual)' : '';
-      return `<option value="${esc(s)}" ${s === current ? 'selected' : ''}>${esc(label)}${tag}</option>`;
+      const label = etiquetaEstado(s);
+      const texto = s === current ? t('{estado} (actual)', { estado: label }) : label;
+      return `<option value="${esc(s)}" ${s === current ? 'selected' : ''}>${esc(texto)}</option>`;
     }).join('');
   }
 
@@ -598,15 +615,15 @@
     const box = document.getElementById('status-history');
     try {
       const { history } = await api.getCaseHistory(caseId);
-      if (!history.length) { box.innerHTML = '<div class="text-muted">Sin cambios de estado todavía.</div>'; return; }
+      if (!history.length) { box.innerHTML = `<div class="text-muted">${t('Sin cambios de estado todavía.')}</div>`; return; }
       box.innerHTML = history.map(h => {
-        const fromLabel = statusMeta.meta[h.from]?.label || h.from;
-        const toLabel   = statusMeta.meta[h.to]?.label   || h.to;
-        const date = h.at ? new Date(h.at).toLocaleString('es-PA', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' }) : '—';
+        const fromLabel = etiquetaEstado(h.from);
+        const toLabel   = etiquetaEstado(h.to);
+        const date = h.at ? I18N.fechaHora(h.at, { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' }) : '—';
         return `<div class="field-row">
           <div class="field-value">
-            ${esc(fromLabel)} → <strong>${esc(toLabel)}</strong>${h.override ? ' <span class="badge bg-warning text-dark">override</span>' : ''}
-            ${h.reason ? `<div class="text-muted" style="font-size:.72rem">Motivo: ${esc(h.reason)}</div>` : ''}
+            ${esc(fromLabel)} → <strong>${esc(toLabel)}</strong>${h.override ? ` <span class="badge bg-warning text-dark">${esc(t('override'))}</span>` : ''}
+            ${h.reason ? `<div class="text-muted" style="font-size:.72rem">${t('Motivo: {motivo}', { motivo: esc(h.reason) })}</div>` : ''}
             <div class="text-muted" style="font-size:.7rem">${date} — ${esc(h.byEmail || h.by || '—')}</div>
           </div>
         </div>`;
@@ -633,15 +650,16 @@
     const box = document.getElementById('payments-list');
     try {
       const { payments } = await api.getPayments(caseId);
-      if (!payments.length) { box.innerHTML = '<div class="text-muted">Sin pagos registrados todavía.</div>'; return; }
+      if (!payments.length) { box.innerHTML = `<div class="text-muted">${t('Sin pagos registrados todavía.')}</div>`; return; }
       box.innerHTML = payments.map(p => {
-        const date = p.fecha ? new Date(p.fecha).toLocaleDateString('es-PA', { day:'2-digit', month:'short', year:'numeric' }) : '—';
-        const detalle = p.concepto ? (CONCEPTO_LABEL[p.concepto] || p.concepto) : (p.autoridad || '');
+        const date = p.fecha ? I18N.fecha(p.fecha, { day:'2-digit', month:'short', year:'numeric' }) : '—';
+        const detalle = p.concepto ? (CONCEPTO_LABEL[p.concepto] ? t(CONCEPTO_LABEL[p.concepto]) : p.concepto) : (p.autoridad || '');
+        const tipo = TIPO_LABEL[p.tipo] ? t(TIPO_LABEL[p.tipo]) : p.tipo;
         return `<div class="field-row">
           <div class="field-value">
-            <strong>${esc(TIPO_LABEL[p.tipo] || p.tipo)}</strong>${detalle ? ` — ${esc(detalle)}` : ''} — B/. ${Number(p.monto).toFixed(2)}
-            <div class="text-muted" style="font-size:.72rem">${date} — registrado por ${esc(p.registradoPorEmail || p.registradoPor)}</div>
-            <button class="btn btn-xs btn-link p-0 small" onclick="verComprobante('${esc(p.id)}')">Ver comprobante</button>
+            <strong>${esc(tipo)}</strong>${detalle ? ` — ${esc(detalle)}` : ''} — B/. ${Number(p.monto).toFixed(2)}
+            <div class="text-muted" style="font-size:.72rem">${t('{fecha} — registrado por {quien}', { fecha: date, quien: esc(p.registradoPorEmail || p.registradoPor) })}</div>
+            <button class="btn btn-xs btn-link p-0 small" onclick="verComprobante('${esc(p.id)}')">${esc(t('Ver comprobante'))}</button>
           </div>
         </div>`;
       }).join('');
@@ -666,9 +684,9 @@
       if (linea?.aplicaIEA) requeridos.push('iea');
       const pagados = new Set(payments.filter(p => p.tipo === 'cliente_a_farmazed').map(p => p.concepto));
       box.innerHTML = `<div class="small mb-2">
-        <div class="text-muted" style="font-size:.72rem">Conceptos requeridos para salir de fase 5:</div>
-        ${requeridos.map(c => `<span class="badge ${pagados.has(c) ? 'bg-success-subtle text-success border-success-subtle' : 'bg-warning-subtle text-warning border-warning-subtle'} border me-1">${esc(CONCEPTO_LABEL[c])}${pagados.has(c) ? ' ✓' : ' pendiente'}</span>`).join('')}
-        ${pagados.has('honorarios_saldo') ? '' : '<span class="badge bg-light text-muted border me-1">Saldo pendiente (no bloquea)</span>'}
+        <div class="text-muted" style="font-size:.72rem">${t('Conceptos requeridos para salir de fase 5:')}</div>
+        ${requeridos.map(c => `<span class="badge ${pagados.has(c) ? 'bg-success-subtle text-success border-success-subtle' : 'bg-warning-subtle text-warning border-warning-subtle'} border me-1">${esc(pagados.has(c) ? `${t(CONCEPTO_LABEL[c])} ✓` : t('{concepto} pendiente', { concepto: t(CONCEPTO_LABEL[c]) }))}</span>`).join('')}
+        ${pagados.has('honorarios_saldo') ? '' : `<span class="badge bg-light text-muted border me-1">${esc(t('Saldo pendiente (no bloquea)'))}</span>`}
       </div>`;
     } catch (e) {
       box.innerHTML = '';
@@ -680,8 +698,8 @@
       const { payments } = await api.getPayments(caseId);
       const p = payments.find(x => x.id === paymentId);
       if (p?.comprobanteUrl) { window.open(p.comprobanteUrl, '_blank'); return; }
-      await avisar('No se pudo obtener el comprobante.');
-    } catch (e) { await avisar('Error: ' + e.message); }
+      await avisar(t('No se pudo obtener el comprobante.'));
+    } catch (e) { await avisar(t('Error: {error}', { error: e.message })); }
   };
 
   // R13 (TAREA 19): conteo de páginas del paquete IEA — advierte, nunca
@@ -694,8 +712,8 @@
       if (!documentos.length) { box.innerHTML = ''; return; }
       const cls = excedido ? 'alert-warning' : 'alert-light border';
       box.innerHTML = `<div class="alert ${cls} py-2 px-3 mb-0 small">
-        <strong>Paquete IEA: ${totalPaginas} / ${limite} páginas</strong>
-        ${excedido ? ' — supera el límite orientativo de IEA (no bloquea; contactar al IEA si hace falta consolidar/recortar).' : ''}
+        <strong>${t('Paquete IEA: {total} / {limite} páginas', { total: totalPaginas, limite })}</strong>
+        ${excedido ? ` ${t('— supera el límite orientativo de IEA (no bloquea; contactar al IEA si hace falta consolidar/recortar).')}` : ''}
       </div>`;
     } catch (e) {
       box.innerHTML = '';
@@ -712,7 +730,7 @@
     const box = document.getElementById('cotizacion-error-banner');
     const err = caseData.cotizacionBorradorError;
     box.innerHTML = err
-      ? `<div class="alert alert-danger py-2 px-3 mb-0 small"><strong>Cotización pendiente:</strong> ${esc(err.mensaje)} Completa la línea a mano en Cotizaciones o corrige el tarifario.</div>`
+      ? `<div class="alert alert-danger py-2 px-3 mb-0 small"><strong>${t('Cotización pendiente:')}</strong> ${esc(err.mensaje)} ${t('Completa la línea a mano en Cotizaciones o corrige el tarifario.')}</div>`
       : '';
   }
 
@@ -721,7 +739,7 @@
     if (caseData.status !== 'observado_dnfd') { box.innerHTML = ''; return; }
     if (caseData.fechaLimiteSubsanacionNota) {
       box.innerHTML = `<div class="alert alert-secondary py-2 px-3 mb-0 small">
-        <strong>Observado por DNFD.</strong> ${esc(caseData.fechaLimiteSubsanacionNota)}
+        <strong>${t('Observado por DNFD.')}</strong> ${esc(caseData.fechaLimiteSubsanacionNota)}
       </div>`;
       return;
     }
@@ -729,10 +747,10 @@
     const fecha = new Date(caseData.fechaLimiteSubsanacion);
     const dias  = Math.ceil((fecha - new Date()) / 86400000);
     const cls   = dias <= 15 ? 'alert-danger' : 'alert-warning';
+    const restante = dias >= 0 ? t('{dias} días restantes', { dias }) : t('VENCIDO');
     box.innerHTML = `<div class="alert ${cls} py-2 px-3 mb-0 small">
-      <strong>Observado por DNFD — plazo de subsanación (Art. 22 D.E. 27/2024):</strong>
-      vence el ${fecha.toLocaleDateString('es-PA', { day: '2-digit', month: 'long', year: 'numeric' })}
-      (${dias >= 0 ? `${dias} días restantes` : 'VENCIDO'}).
+      <strong>${t('Observado por DNFD — plazo de subsanación (Art. 22 D.E. 27/2024):')}</strong>
+      ${t('vence el {fecha} ({restante}).', { fecha: I18N.fecha(fecha, { day: '2-digit', month: 'long', year: 'numeric' }), restante })}
     </div>`;
   }
 
@@ -751,11 +769,11 @@
     function fila(tipo, label, dato, puede) {
       const hecha  = !!dato;
       const estado = hecha
-        ? `<span class="badge bg-success-subtle text-success border border-success-subtle">Confirmada — ${esc(dato.byEmail || dato.by)} (${new Date(dato.at).toLocaleString('es-PA', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })})</span>`
-        : `<span class="badge bg-warning-subtle text-warning border border-warning-subtle">Pendiente</span>`;
-      const boton = (!hecha && puede) ? `<button class="btn btn-sm btn-outline-primary btn-confirmar-fase8" data-tipo="${esc(tipo)}">Confirmar</button>` : '';
+        ? `<span class="badge bg-success-subtle text-success border border-success-subtle">${t('Confirmada — {quien} ({fecha})', { quien: esc(dato.byEmail || dato.by), fecha: I18N.fechaHora(dato.at, { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) })}</span>`
+        : `<span class="badge bg-warning-subtle text-warning border border-warning-subtle">${t('Pendiente')}</span>`;
+      const boton = (!hecha && puede) ? `<button class="btn btn-sm btn-outline-primary btn-confirmar-fase8" data-tipo="${esc(tipo)}">${t('Confirmar')}</button>` : '';
       return `<div class="field-row">
-        <div class="field-label">${label}</div>
+        <div class="field-label">${esc(t(label))}</div>
         <div class="field-value d-flex justify-content-between align-items-center">${estado}${boton}</div>
       </div>`;
     }
@@ -770,8 +788,8 @@
           await api.confirmarFase8(caseId, btn.dataset.tipo);
           caseData = await api.getCase(caseId);
           await renderFase8Confirmaciones();
-          await avisar('Confirmación registrada.');
-        } catch (e) { await avisar('Error: ' + e.message); }
+          await avisar(t('Confirmación registrada.'));
+        } catch (e) { await avisar(t('Error: {error}', { error: e.message })); }
       });
     });
   }
@@ -798,14 +816,14 @@
         concepto:  tipo === 'cliente_a_farmazed'   ? concepto  : undefined,
         monto, fecha, comprobante,
       });
-      await avisar('Pago registrado.');
+      await avisar(t('Pago registrado.'));
       e.target.reset();
       document.getElementById('pay-concepto-row').classList.remove('d-none');
       document.getElementById('pay-autoridad-row').classList.add('d-none');
       renderPayments();
       renderPaymentsResumen();
     } catch (err) {
-      await avisar('Error: ' + err.message);
+      await avisar(t('Error: {error}', { error: err.message }));
     }
   });
 
@@ -814,24 +832,25 @@
     try {
       const doc = await api.getDocument(caseId, docId);
       window.open(doc.signedUrl, '_blank');
-    } catch(e) { await avisar('Error: ' + e.message); }
+    } catch(e) { await avisar(t('Error: {error}', { error: e.message })); }
   };
   window.verVersiones = async (caseId, docId, name) => {
     document.getElementById('versions-doc-name').textContent = name;
     const box = document.getElementById('versions-list');
-    box.innerHTML = '<div class="text-muted">Cargando…</div>';
+    box.innerHTML = `<div class="text-muted">${t('Cargando…')}</div>`;
     new bootstrap.Modal(document.getElementById('versionsModal')).show();
     try {
       const { versions } = await api.getDocumentVersions(caseId, docId);
-      if (!versions.length) { box.innerHTML = '<div class="text-muted">Sin versiones anteriores.</div>'; return; }
+      if (!versions.length) { box.innerHTML = `<div class="text-muted">${t('Sin versiones anteriores.')}</div>`; return; }
       box.innerHTML = versions.map(v => {
-        const date = v.archivedAt ? new Date(v.archivedAt).toLocaleString('es-PA', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' }) : '—';
+        const date = v.archivedAt ? I18N.fechaHora(v.archivedAt, { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' }) : '—';
+        const estadoDoc = DOC_STATUS_LABEL[v.status] ? t(DOC_STATUS_LABEL[v.status]) : v.status;
         return `<div class="field-row">
           <div class="field-value">
-            <strong>v${esc(v.version)}</strong> — ${esc(v.fileName)} — <span class="badge bg-${esc(getDocStatusColor(v.status).replace('text-',''))}-subtle">${esc(v.status)}</span>
-            ${v.reviewNotes ? `<div class="text-muted" style="font-size:.72rem">Motivo: ${esc(v.reviewNotes)}</div>` : ''}
-            <div class="text-muted" style="font-size:.7rem">Reemplazada el ${date} — subida por ${esc(v.uploadedBy)}</div>
-            ${v.signedUrl ? `<a href="${esc(v.signedUrl)}" target="_blank" class="small">Ver archivo</a>` : ''}
+            <strong>v${esc(v.version)}</strong> — ${esc(v.fileName)} — <span class="badge bg-${esc(getDocStatusColor(v.status).replace('text-',''))}-subtle">${esc(estadoDoc)}</span>
+            ${v.reviewNotes ? `<div class="text-muted" style="font-size:.72rem">${t('Motivo: {motivo}', { motivo: esc(v.reviewNotes) })}</div>` : ''}
+            <div class="text-muted" style="font-size:.7rem">${t('Reemplazada el {fecha} — subida por {quien}', { fecha: date, quien: esc(v.uploadedBy) })}</div>
+            ${v.signedUrl ? `<a href="${esc(v.signedUrl)}" target="_blank" class="small">${esc(t('Ver archivo'))}</a>` : ''}
           </div>
         </div>`;
       }).join('');
@@ -842,7 +861,7 @@
   window.revisarDoc = async (docId, status) => {
     let reviewNotes = '';
     if (status === 'rejected') {
-      reviewNotes = await preguntar('Motivo del rechazo (el cliente lo verá):');
+      reviewNotes = await preguntar(t('Motivo del rechazo (el cliente lo verá):'));
       if (!reviewNotes) return;
     }
     try {
@@ -850,19 +869,19 @@
       docsData = await api.listDocuments(caseId);
       render();
     } catch (e) {
-      await avisar('Error: ' + e.message);
+      await avisar(t('Error: {error}', { error: e.message }));
     }
   };
   window.requestDoc = async (faddiDocId, name) => {
-    const msg = await preguntar(`Instrucciones para el cliente sobre "${name}":`);
+    const msg = await preguntar(t('Instrucciones para el cliente sobre "{documento}":', { documento: name }));
     if (!msg) return;
     try {
       await api.requestDocument(caseId, faddiDocId, msg);
-      await avisar('Solicitud enviada al cliente.');
+      await avisar(t('Solicitud enviada al cliente.'));
       docsData = await api.listDocuments(caseId);
       render();
     } catch (e) {
-      await avisar('Error: ' + e.message);
+      await avisar(t('Error: {error}', { error: e.message }));
     }
   };
 
@@ -875,21 +894,22 @@
     // §H.8 (TAREA 21): fase_08 -> fase_08 es un salto real (nuevo ciclo de
     // subsanación, se registra) — la única excepción al "no cambió".
     const isFase8Recycle = newStatus === 'fase_08' && caseData.status === 'fase_08';
-    if (newStatus === caseData.status && !isFase8Recycle) { await avisar('El estado no cambió.'); return; }
-    if (override && !reason) { await avisar('El override necesita un motivo.'); return; }
+    if (newStatus === caseData.status && !isFase8Recycle) { await avisar(t('El estado no cambió.')); return; }
+    if (override && !reason) { await avisar(t('El override necesita un motivo.')); return; }
 
     // §H.8 / TAREA 21: fase_08/10 son control de calidad — no avanzan
     // solas, piden confirmacion explicita antes de salir de ellas.
     if (statusMeta.manual.includes(caseData.status)) {
-      const label = statusMeta.meta[caseData.status]?.label || caseData.status;
-      if (!(await confirmar(`Verifique: ${label}. ¿Confirma el avance a "${statusMeta.meta[newStatus]?.label || newStatus}"?`))) return;
+      const label = etiquetaEstado(caseData.status);
+      if (!(await confirmar(t('Verifique: {fase}. ¿Confirma el avance a "{nuevaFase}"?', { fase: label, nuevaFase: etiquetaEstado(newStatus) })))) return;
     }
 
     try {
       const body = { status: newStatus };
       if (override) { body.override = true; body.reason = reason; }
       const respuesta = await api.updateCase(caseId, body);
-      await avisar('Estado actualizado.' + (respuesta.avisos?.length ? `\n\n⚠ ${respuesta.avisos.join('\n⚠ ')}` : ''));
+      // Los avisos llegan del tracker y se muestran tal cual.
+      await avisar(t('Estado actualizado.') + (respuesta.avisos?.length ? `\n\n⚠ ${respuesta.avisos.join('\n⚠ ')}` : ''));
       caseData = await api.getCase(caseId);
       document.getElementById('override-check').checked = false;
       document.getElementById('override-reason').value = '';
@@ -902,7 +922,7 @@
       renderFase8Confirmaciones();
       renderPaymentsResumen();
     } catch (e) {
-      await avisar('Error: ' + e.message);
+      await avisar(t('Error: {error}', { error: e.message }));
     }
   });
 
@@ -915,9 +935,9 @@
     try {
       await api.updateCase(caseId, { asignados });
       caseData.asignados = asignados;
-      await avisar('Equipo actualizado.');
+      await avisar(t('Equipo actualizado.'));
     } catch (e) {
-      await avisar('Error: ' + e.message);
+      await avisar(t('Error: {error}', { error: e.message }));
     }
   });
 
@@ -937,9 +957,9 @@
       render();
       renderViaCategoria();
       checklistData = await api.getChecklist(caseId);
-      await avisar('Vía y categoría actualizadas.');
+      await avisar(t('Vía y categoría actualizadas.'));
     } catch (e) {
-      await avisar('Error: ' + e.message);
+      await avisar(t('Error: {error}', { error: e.message }));
     }
   });
 
@@ -950,12 +970,12 @@
       lastFaddiStatus:  document.getElementById('faddi-status').value,
       observations:     document.getElementById('faddi-obs').value,
     }});
-    await avisar('Info FADDI guardada.');
+    await avisar(t('Info FADDI guardada.'));
   });
 
   document.getElementById('btn-save-notes').addEventListener('click', async () => {
     await api.updateCase(caseId, { notes: document.getElementById('admin-notes').value });
-    await avisar('Notas guardadas.');
+    await avisar(t('Notas guardadas.'));
   });
 
   document.getElementById('btn-cowork').addEventListener('click', () => {
@@ -964,7 +984,23 @@
 
   document.getElementById('btn-copy-context').addEventListener('click', () => {
     navigator.clipboard.writeText(document.getElementById('cowork-context').value)
-      .then(() => { document.getElementById('btn-copy-context').textContent = '✓ Copiado'; });
+      .then(() => { document.getElementById('btn-copy-context').textContent = t('✓ Copiado'); });
+  });
+
+  // Cambio de idioma en vivo: lo estático lo repinta i18n.js; aquí se vuelve a pintar todo lo que
+  // generó esta página (idempotente: cada render reemplaza su contenedor). Antes de cargar el caso
+  // no hay nada que repintar.
+  // repintarConservando: notas, campos FADDI y selects a medio editar sobreviven al repintado.
+  I18N.onCambio(() => {
+    if (!caseData || !statusMeta) return;
+    I18N.repintarConservando(async () => {
+      await render();
+      await Promise.all([
+        renderStatusHistory(), renderPayments(), renderPaymentsResumen(), renderPaqueteIEA(),
+        renderPlazoSubsanacion(), renderCotizacionError(), renderFase8Confirmaciones(), renderViaCategoria(),
+        has('cases.assign') ? loadAssignCard() : null,
+      ]);
+    });
   });
 
   init();

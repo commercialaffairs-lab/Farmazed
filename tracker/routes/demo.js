@@ -9,6 +9,8 @@ const { Router } = require('express');
 const { requireAuth } = require('../middleware/auth');
 const { crearLimitador } = require('../utils/rate_limit');
 const { esCuentaDemo, sembrarDemo, CUENTAS, DEMO_ORG_ID } = require('../services/demo');
+const { recorridoDemo } = require('../services/demo_recorrido');
+const { normalizarIdioma } = require('../services/demo_recorrido_textos');
 
 const router = Router();
 
@@ -20,6 +22,17 @@ function soloDemo(req, res, next) {
 // ─── GET /api/demo/estado — ¿esta sesión es demo? (el front decide si muestra el botón) ───
 router.get('/estado', requireAuth, (req, res) => {
   res.json({ demo: esCuentaDemo(req.user), orgId: DEMO_ORG_ID, cuentas: CUENTAS.map(c => ({ correo: c.correo, rol: c.role })) });
+});
+
+// ─── GET /api/demo/recorrido?idioma=es|en|fr|pt — pasos del recorrido guiado, cuál toca ahora y los
+// rótulos del panel "Recorrido demo", en el idioma pedido (otro valor o ninguno → español) ─────────
+router.get('/recorrido', requireAuth, soloDemo, async (req, res) => {
+  try {
+    res.json(await recorridoDemo(req.user, normalizarIdioma(req.query.idioma)));
+  } catch (e) {
+    console.error('[demo] recorrido', { uid: req.user.uid, error: e.message });
+    res.status(500).json({ error: 'No se pudo leer el estado del recorrido.' });
+  }
 });
 
 // Reiniciar reescribe toda la demo: una vez por minuto por cuenta es más que suficiente.

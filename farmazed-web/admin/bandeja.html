@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Farmazed — Mi Bandeja</title>
+  <script src="/portal/js/i18n.js"></script>
+  <title data-i18n>Farmazed — Mi Bandeja</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
   <style>
@@ -29,23 +30,24 @@
     <div style="font-family:Georgia,serif;color:#fff;font-size:1.2rem;font-weight:700">Farmazed</div>
     <div id="sidebar-rol" style="color:rgba(255,255,255,.4);font-size:.72rem">Admin Panel</div>
   </div>
-  <div class="section-label">Gestión</div>
-  <a href="/admin/casos.html"><i class="bi bi-folder2-open me-2"></i>Expedientes</a>
-  <a href="/admin/bandeja.html" class="active"><i class="bi bi-inbox me-2"></i>Mi Bandeja</a>
-  <a href="/admin/leads.html"><i class="bi bi-person-lines-fill me-2"></i>Leads</a>
-  <a href="/admin/cotizaciones.html"><i class="bi bi-receipt me-2"></i>Cotizaciones</a>
-  <a href="/admin/formularios.html"><i class="bi bi-file-earmark-text me-2"></i>Formularios</a>
-  <a href="/admin/empresas.html" id="nav-empresas" style="display:none"><i class="bi bi-building me-2"></i>Empresas</a>
-  <a href="/admin/precios.html" id="nav-precios" style="display:none"><i class="bi bi-cash-coin me-2"></i>Precios</a>
-  <div class="section-label">Sistema</div>
-  <a href="/admin/configuracion.html" id="nav-configuracion" style="display:none"><i class="bi bi-gear me-2"></i>Configuración</a>
-  <a href="#" id="sidebar-logout"><i class="bi bi-box-arrow-left me-2"></i>Cerrar Sesión</a>
+  <div class="section-label" data-i18n>Gestión</div>
+  <a href="/admin/casos.html"><i class="bi bi-folder2-open me-2"></i><span data-i18n>Expedientes</span></a>
+  <a href="/admin/bandeja.html" class="active"><i class="bi bi-inbox me-2"></i><span data-i18n>Mi Bandeja</span></a>
+  <a href="/admin/leads.html"><i class="bi bi-person-lines-fill me-2"></i><span data-i18n>Leads</span></a>
+  <a href="/admin/cotizaciones.html"><i class="bi bi-receipt me-2"></i><span data-i18n>Cotizaciones</span></a>
+  <a href="/admin/formularios.html"><i class="bi bi-file-earmark-text me-2"></i><span data-i18n>Formularios</span></a>
+  <a href="/admin/empresas.html" id="nav-empresas" style="display:none"><i class="bi bi-building me-2"></i><span data-i18n>Empresas</span></a>
+  <a href="/admin/precios.html" id="nav-precios" style="display:none"><i class="bi bi-cash-coin me-2"></i><span data-i18n>Precios</span></a>
+  <a href="/admin/finanzas.html" id="nav-finanzas" style="display:none"><i class="bi bi-graph-up-arrow me-2"></i><span data-i18n>Finanzas</span></a>
+  <div class="section-label" data-i18n>Sistema</div>
+  <a href="/admin/configuracion.html" id="nav-configuracion" style="display:none"><i class="bi bi-gear me-2"></i><span data-i18n>Configuración</span></a>
+  <a href="#" id="sidebar-logout"><i class="bi bi-box-arrow-left me-2"></i><span data-i18n>Cerrar Sesión</span></a>
 </div>
 
 <!-- Main -->
 <div class="main">
   <div class="topbar d-flex align-items-center justify-content-between">
-    <h6 class="mb-0 fw-bold">Mi Bandeja</h6>
+    <h6 class="mb-0 fw-bold" data-i18n>Mi Bandeja</h6>
     <span class="text-muted small" id="user-name"></span>
   </div>
 
@@ -57,21 +59,21 @@
          admin (orgs.read_leads), no son expedientes (no tienen caso
          todavía) — card aparte, arriba de la bandeja de casos. -->
     <div class="card border-0 shadow-sm mb-3 d-none" id="leads-card">
-      <div class="card-header bg-white fw-semibold small">Clientes nuevos — revisar captación</div>
+      <div class="card-header bg-white fw-semibold small" data-i18n>Clientes nuevos — revisar captación</div>
       <div class="list-group list-group-flush" id="leads-list"></div>
     </div>
 
     <!-- TAREA 34 (§H.15): "Enviar consulta" del hero — SIN cuenta todavía
          (a diferencia de la card de arriba). -->
     <div class="card border-0 shadow-sm mb-3 d-none" id="contact-leads-card">
-      <div class="card-header bg-white fw-semibold small d-flex justify-content-between align-items-center">Consultas del sitio (sin cuenta) <a href="/admin/leads.html" class="small fw-normal">Abrir CRM de leads →</a></div>
+      <div class="card-header bg-white fw-semibold small d-flex justify-content-between align-items-center"><span data-i18n>Consultas del sitio (sin cuenta)</span> <a href="/admin/leads.html" class="small fw-normal" data-i18n>Abrir CRM de leads →</a></div>
       <div class="list-group list-group-flush" id="contact-leads-list"></div>
     </div>
 
     <!-- Avisos de PayPal que una persona tiene que mirar (pago fallido, reembolso,
          cobro sin registro, suscripción anterior sin cancelar). Solo admin. -->
     <div class="card border-0 shadow-sm mb-3 d-none" id="revisiones-card">
-      <div class="card-header bg-white fw-semibold small">Pagos por revisar</div>
+      <div class="card-header bg-white fw-semibold small" data-i18n>Pagos por revisar</div>
       <div class="list-group list-group-flush" id="revisiones-list"></div>
     </div>
 
@@ -80,10 +82,10 @@
         <table class="table table-hover mb-0" id="bandeja-table">
           <thead class="table-light">
             <tr>
-              <th class="small fw-semibold ps-4">Producto</th>
-              <th class="small fw-semibold">Expediente</th>
-              <th class="small fw-semibold">Fase actual</th>
-              <th class="small fw-semibold">Acción pendiente</th>
+              <th class="small fw-semibold ps-4" data-i18n>Producto</th>
+              <th class="small fw-semibold" data-i18n>Expediente</th>
+              <th class="small fw-semibold" data-i18n>Fase actual</th>
+              <th class="small fw-semibold" data-i18n>Acción pendiente</th>
               <th></th>
             </tr>
           </thead>
@@ -102,6 +104,11 @@
   import api from '../portal/js/api.js';
   import { getFullMeta } from '../portal/js/status_ui.js';
 
+  // Idiomas (farmazed-web/i18n/README.md): el español es la fuente; todo texto que esta página
+  // genera por JS pasa por t(), y al cambiar de idioma se repinta lo ya cargado (onCambio).
+  const I18N = window.FZI18N;
+  const { t } = I18N;
+
   // §H.8/TAREA 21: fase_08 y fase_10 son las únicas fases manuales. fase_08
   // exige DOS confirmaciones (legal=abogado, técnica/matrices=regente) antes
   // de que el ANALISTA la avance a fase_09; fase_10 la confirma el analista
@@ -111,6 +118,20 @@
   // igual cualquier intento fuera de rol aunque esta etiqueta se equivoque.
 
   let statusMeta, role;
+
+  // Lo último que se cargó de cada bloque, para repintarlo al cambiar de idioma sin volver a pedirlo.
+  const cache = { filas: null, revisiones: null, leads: null, contactLeads: null };
+
+  const ROL_INTRO = {
+    analista: 'Casos asignados a ti — avanzas todas las fases secuenciales, y la fase 8 (cuando las dos confirmaciones ya estén) y la fase 10.',
+    abogado:  'Casos asignados a ti — confirmas la parte LEGAL de la fase 8 (poderes/declaraciones); la técnica/matrices la confirma el regente.',
+    regente:  'Casos asignados a ti — confirmas la parte TÉCNICA/matrices de la fase 8; la legal la confirma el abogado.',
+    admin:    'Todos los expedientes — usa Expedientes para el listado completo o Empresas para gestión.',
+  };
+
+  function renderRolIntro() {
+    document.getElementById('rol-intro').textContent = ROL_INTRO[role] ? t(ROL_INTRO[role]) : '';
+  }
 
   async function init() {
     if (!(await initBackoffice())) return;
@@ -124,12 +145,7 @@
     if (myPerms.permissions.includes('orgs.list')) {
       document.getElementById('nav-empresas').style.display = '';
     }
-    document.getElementById('rol-intro').textContent = {
-      analista: 'Casos asignados a ti — avanzas todas las fases secuenciales, y la fase 8 (cuando las dos confirmaciones ya estén) y la fase 10.',
-      abogado:  'Casos asignados a ti — confirmas la parte LEGAL de la fase 8 (poderes/declaraciones); la técnica/matrices la confirma el regente.',
-      regente:  'Casos asignados a ti — confirmas la parte TÉCNICA/matrices de la fase 8; la legal la confirma el abogado.',
-      admin:    'Todos los expedientes — usa Expedientes para el listado completo o Empresas para gestión.',
-    }[role] || '';
+    renderRolIntro();
 
     statusMeta = await getFullMeta();
     await loadBandeja();
@@ -138,6 +154,16 @@
     if (myPerms.permissions.includes('payments.review')) await loadRevisionesPago();
   }
 
+  // Cambio de idioma en vivo: lo estático lo repinta i18n.js; lo generado aquí se vuelve a pintar
+  // desde la caché (idempotente: cada render reemplaza innerHTML y vuelve a enganchar los botones).
+  I18N.onCambio(() => I18N.repintarConservando(() => {
+    if (role) renderRolIntro();
+    if (cache.filas) renderTable(cache.filas);
+    if (cache.revisiones) renderRevisionesPago(cache.revisiones);
+    if (cache.leads) renderLeads(cache.leads);
+    if (cache.contactLeads) renderContactLeads(cache.contactLeads);
+  }));
+
   // Pagos por revisar: lo que dejó el webhook de PayPal o un cambio de plan. Marcar
   // resuelta pide una nota corta (qué se hizo), que queda guardada con la revisión.
   async function loadRevisionesPago() {
@@ -145,44 +171,52 @@
     const list = document.getElementById('revisiones-list');
     try {
       const { revisiones } = await api.getRevisionesPago();
-      if (!revisiones.length) { card.classList.add('d-none'); return; }
-
-      list.innerHTML = revisiones.map(r => `
-        <div class="list-group-item d-flex justify-content-between align-items-start gap-3" data-revision-id="${esc(r.id)}">
-          <div>
-            <span class="badge bg-danger-subtle text-danger border border-danger-subtle me-2">PayPal</span>
-            <span class="small">${esc(r.motivo)}</span>
-            <div class="text-muted" style="font-size:.72rem">
-              ${new Date(r.creadaEn).toLocaleString('es-PA')}
-              ${r.orgId ? ` · Empresa ${esc(r.orgId)}` : ''}${r.quoteId ? ` · Cotización ${esc(r.quoteId)}` : ''}${r.recursoId ? ` · Ref. PayPal ${esc(r.recursoId)}` : ''}
-            </div>
-          </div>
-          <button class="btn btn-sm btn-outline-secondary flex-shrink-0 btn-resolver-revision">Marcar resuelta</button>
-        </div>`).join('');
-
-      list.querySelectorAll('.btn-resolver-revision').forEach(btn => {
-        btn.addEventListener('click', async (e) => {
-          const row = e.target.closest('[data-revision-id]');
-          const nota = await preguntar('¿Qué se hizo? (opcional)');
-          if (nota === null) return;
-          btn.disabled = true;
-          try {
-            await api.resolverRevisionPago(row.dataset.revisionId, nota);
-            row.remove();
-            if (!list.children.length) card.classList.add('d-none');
-          } catch (err) {
-            btn.disabled = false;
-            await avisar(err.message);
-          }
-        });
-      });
-
-      card.classList.remove('d-none');
+      cache.revisiones = revisiones;
+      renderRevisionesPago(revisiones);
     } catch (err) {
       // Que falle la carga no puede parecer "no hay nada por revisar".
-      list.innerHTML = `<div class="list-group-item small text-danger">No se pudieron cargar los pagos por revisar: ${esc(err.message)}</div>`;
+      list.innerHTML = `<div class="list-group-item small text-danger">${t('No se pudieron cargar los pagos por revisar: {error}', { error: esc(err.message) })}</div>`;
       card.classList.remove('d-none');
     }
+  }
+
+  function renderRevisionesPago(revisiones) {
+    const card = document.getElementById('revisiones-card');
+    const list = document.getElementById('revisiones-list');
+    if (!revisiones.length) { card.classList.add('d-none'); return; }
+
+    list.innerHTML = revisiones.map(r => `
+      <div class="list-group-item d-flex justify-content-between align-items-start gap-3" data-revision-id="${esc(r.id)}">
+        <div>
+          <span class="badge bg-danger-subtle text-danger border border-danger-subtle me-2">PayPal</span>
+          <span class="small">${esc(r.motivo)}</span>
+          <div class="text-muted" style="font-size:.72rem">
+            ${I18N.fechaHora(r.creadaEn)}
+            ${r.orgId ? ` · ${t('Empresa {id}', { id: esc(r.orgId) })}` : ''}${r.quoteId ? ` · ${t('Cotización {id}', { id: esc(r.quoteId) })}` : ''}${r.recursoId ? ` · ${t('Ref. PayPal {id}', { id: esc(r.recursoId) })}` : ''}
+          </div>
+        </div>
+        <button class="btn btn-sm btn-outline-secondary flex-shrink-0 btn-resolver-revision">${t('Marcar resuelta')}</button>
+      </div>`).join('');
+
+    list.querySelectorAll('.btn-resolver-revision').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const row = e.target.closest('[data-revision-id]');
+        const nota = await preguntar(t('¿Qué se hizo? (opcional)'));
+        if (nota === null) return;
+        btn.disabled = true;
+        try {
+          await api.resolverRevisionPago(row.dataset.revisionId, nota);
+          cache.revisiones = cache.revisiones.filter(x => x.id !== row.dataset.revisionId);
+          row.remove();
+          if (!list.children.length) card.classList.add('d-none');
+        } catch (err) {
+          btn.disabled = false;
+          await avisar(err.message);
+        }
+      });
+    });
+
+    card.classList.remove('d-none');
   }
 
   // TAREA 32 (§H.13): leads de registro abierto, todavía sin caso — por eso
@@ -192,37 +226,43 @@
   async function loadLeads() {
     try {
       const { leads } = await api.getLeads();
-      const card = document.getElementById('leads-card');
-      const list = document.getElementById('leads-list');
-      if (!leads.length) { card.classList.add('d-none'); return; }
-
-      list.innerHTML = leads.map(org => `
-        <div class="list-group-item d-flex justify-content-between align-items-center" data-org-id="${esc(org.id)}">
-          <div>
-            <span class="badge bg-warning text-dark me-2">Cliente nuevo</span>
-            <strong class="small">${esc(org.nombre)}</strong>
-            <span class="text-muted small"> — ${esc(org.captacion.paisYNombreFabricante)}, ${esc((org.captacion.categoriasProducto || []).join('/'))}</span>
-          </div>
-          <button class="btn btn-sm btn-outline-secondary btn-marcar-revisado">Marcar revisado</button>
-        </div>`).join('');
-
-      list.querySelectorAll('.btn-marcar-revisado').forEach(btn => {
-        btn.addEventListener('click', async (e) => {
-          const row = e.target.closest('[data-org-id]');
-          btn.disabled = true;
-          try {
-            await api.marcarLeadRevisado(row.dataset.orgId);
-            row.remove();
-            if (!list.children.length) card.classList.add('d-none');
-          } catch (err) {
-            btn.disabled = false;
-            await avisar(err.message);
-          }
-        });
-      });
-
-      card.classList.remove('d-none');
+      cache.leads = leads;
+      renderLeads(leads);
     } catch (e) { /* sin permiso o sin leads — no romper el resto de la bandeja */ }
+  }
+
+  function renderLeads(leads) {
+    const card = document.getElementById('leads-card');
+    const list = document.getElementById('leads-list');
+    if (!leads.length) { card.classList.add('d-none'); return; }
+
+    list.innerHTML = leads.map(org => `
+      <div class="list-group-item d-flex justify-content-between align-items-center" data-org-id="${esc(org.id)}">
+        <div>
+          <span class="badge bg-warning text-dark me-2">${t('Cliente nuevo')}</span>
+          <strong class="small">${esc(org.nombre)}</strong>
+          <span class="text-muted small"> — ${esc(org.captacion.paisYNombreFabricante)}, ${esc((org.captacion.categoriasProducto || []).join('/'))}</span>
+        </div>
+        <button class="btn btn-sm btn-outline-secondary btn-marcar-revisado">${t('Marcar revisado')}</button>
+      </div>`).join('');
+
+    list.querySelectorAll('.btn-marcar-revisado').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const row = e.target.closest('[data-org-id]');
+        btn.disabled = true;
+        try {
+          await api.marcarLeadRevisado(row.dataset.orgId);
+          cache.leads = cache.leads.filter(x => x.id !== row.dataset.orgId);
+          row.remove();
+          if (!list.children.length) card.classList.add('d-none');
+        } catch (err) {
+          btn.disabled = false;
+          await avisar(err.message);
+        }
+      });
+    });
+
+    card.classList.remove('d-none');
   }
 
   // TAREA 34 (§H.15): "Enviar consulta" del hero — sin cuenta, por eso
@@ -231,52 +271,63 @@
   async function loadContactLeads() {
     try {
       const { leads } = await api.getContactLeads();
-      const card = document.getElementById('contact-leads-card');
-      const list = document.getElementById('contact-leads-list');
-      if (!leads.length) { card.classList.add('d-none'); return; }
-
-      // solicitar-cuenta.html (31-oct): interés, intención, fuente y plan. Los leads del
-      // formulario viejo (contacto.html) no traen esos campos y se pintan como antes.
-      const INTERES = { medicamentos: 'Medicamentos', cosmeticos: 'Cosméticos', higienicos: 'Higiénicos', plaguicidas: 'Plaguicidas', excepcion: 'Excepción', publicidad: 'Publicidad' };
-      const FUENTE  = { google: 'Google', youtube: 'YouTube', instagram: 'Instagram', facebook: 'Facebook', linkedin: 'LinkedIn', x: 'X', referido: 'Referido', otro: 'Otro' };
-      const detalle = (l) => [
-        l.intencion ? (l.intencion === 'cuenta' ? '<span class="badge bg-success-subtle text-success border">Quiere cuenta</span>' : '<span class="badge bg-secondary-subtle text-secondary border">Solo información</span>') : '',
-        l.plan ? `<span class="badge bg-primary-subtle text-primary border">Plan ${esc(l.plan)}</span>` : '',
-        l.interes?.length ? `Interés: ${l.interes.map(i => esc(INTERES[i] || i)).join(', ')}` : '',
-        l.fuente ? `Se enteró por: ${esc(FUENTE[l.fuente] || l.fuente)}` : '',
-        [l.telefono, l.pais].filter(Boolean).map(esc).join(' · '),
-      ].filter(Boolean).join(' <span class="text-muted">·</span> ');
-      list.innerHTML = leads.map(l => `
-        <div class="list-group-item d-flex justify-content-between align-items-center" data-lead-id="${esc(l.id)}" data-lead-empresa="${esc(l.empresa || '')}">
-          <div>
-            <strong class="small">${esc(l.nombre)}</strong>
-            <span class="text-muted small"> — ${esc(l.correo)}${l.empresa ? `, ${esc(l.empresa)}` : ''}${l.tipoProducto ? ` (${esc(l.tipoProducto)})` : ''}</span>
-            ${detalle(l) ? `<div class="small mt-1">${detalle(l)}</div>` : ''}
-            ${l.mensaje ? `<div class="small text-muted fst-italic mt-1">“${esc(l.mensaje)}”</div>` : ''}
-          </div>
-          <button class="btn btn-sm btn-outline-primary btn-invitar-lead">Invitar a crear cuenta</button>
-        </div>`).join('');
-
-      list.querySelectorAll('.btn-invitar-lead').forEach(btn => {
-        btn.addEventListener('click', async (e) => {
-          const row = e.target.closest('[data-lead-id]');
-          const orgName = await preguntar('Nombre de la empresa para esta invitación:', { valor: row.dataset.leadEmpresa || '' });
-          if (!orgName) return;
-          btn.disabled = true;
-          try {
-            const inv = await api.invitarContactLead(row.dataset.leadId, orgName);
-            row.remove();
-            if (!list.children.length) card.classList.add('d-none');
-            await avisar(inv.correoEnviado ? `Invitación enviada por correo a ${inv.email}.` : 'Invitación creada. No hay envío de correo configurado: copia el enlace desde Empresas → Invitaciones.');
-          } catch (err) {
-            btn.disabled = false;
-            await avisar(err.message);
-          }
-        });
-      });
-
-      card.classList.remove('d-none');
+      cache.contactLeads = leads;
+      renderContactLeads(leads);
     } catch (e) { /* sin permiso o sin leads — no romper el resto de la bandeja */ }
+  }
+
+  // solicitar-cuenta.html (31-oct): interés, intención, fuente y plan. Los leads del
+  // formulario viejo (contacto.html) no traen esos campos y se pintan como antes.
+  // Valores técnicos → etiqueta en español → t() (misma convención que leads.html).
+  const INTERES = { medicamentos: 'Medicamentos', cosmeticos: 'Cosméticos', higienicos: 'Higiénicos', plaguicidas: 'Plaguicidas', excepcion: 'Excepción', publicidad: 'Publicidad' };
+  const FUENTE  = { google: 'Google', youtube: 'YouTube', instagram: 'Instagram', facebook: 'Facebook', linkedin: 'LinkedIn', x: 'X', referido: 'Referido', otro: 'Otro' };
+  const PLAN    = { consulta: 'Consulta', registro: 'Registro', empresarial: 'Empresarial' };
+
+  function renderContactLeads(leads) {
+    const card = document.getElementById('contact-leads-card');
+    const list = document.getElementById('contact-leads-list');
+    if (!leads.length) { card.classList.add('d-none'); return; }
+
+    const detalle = (l) => [
+      l.intencion ? (l.intencion === 'cuenta' ? `<span class="badge bg-success-subtle text-success border">${t('Quiere cuenta')}</span>` : `<span class="badge bg-secondary-subtle text-secondary border">${t('Solo información')}</span>`) : '',
+      l.plan ? `<span class="badge bg-primary-subtle text-primary border">${t('Plan {plan}', { plan: esc(t(PLAN[l.plan] || l.plan)) })}</span>` : '',
+      l.interes?.length ? t('Interés: {lista}', { lista: l.interes.map(i => esc(t(INTERES[i] || i))).join(', ') }) : '',
+      l.fuente ? t('Se enteró por: {fuente}', { fuente: esc(t(FUENTE[l.fuente] || l.fuente)) }) : '',
+      [l.telefono, l.pais].filter(Boolean).map(esc).join(' · '),
+    ].filter(Boolean).join(' <span class="text-muted">·</span> ');
+    list.innerHTML = leads.map(l => `
+      <div class="list-group-item d-flex justify-content-between align-items-center" data-lead-id="${esc(l.id)}" data-lead-empresa="${esc(l.empresa || '')}">
+        <div>
+          <strong class="small">${esc(l.nombre)}</strong>
+          <span class="text-muted small"> — ${esc(l.correo)}${l.empresa ? `, ${esc(l.empresa)}` : ''}${l.tipoProducto ? ` (${esc(l.tipoProducto)})` : ''}</span>
+          ${detalle(l) ? `<div class="small mt-1">${detalle(l)}</div>` : ''}
+          ${l.mensaje ? `<div class="small text-muted fst-italic mt-1">“${esc(t(l.mensaje))}”</div>` : ''}
+        </div>
+        <button class="btn btn-sm btn-outline-primary btn-invitar-lead">${t('Invitar a crear cuenta')}</button>
+      </div>`).join('');
+
+    list.querySelectorAll('.btn-invitar-lead').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const row = e.target.closest('[data-lead-id]');
+        const orgName = await preguntar(t('Nombre de la empresa para esta invitación:'), { valor: row.dataset.leadEmpresa || '' });
+        if (!orgName) return;
+        btn.disabled = true;
+        try {
+          const inv = await api.invitarContactLead(row.dataset.leadId, orgName);
+          cache.contactLeads = cache.contactLeads.filter(x => x.id !== row.dataset.leadId);
+          row.remove();
+          if (!list.children.length) card.classList.add('d-none');
+          await avisar(inv.correoEnviado
+            ? t('Invitación enviada por correo a {correo}.', { correo: inv.email })
+            : t('Invitación creada. No hay envío de correo configurado: copia el enlace desde Empresas → Invitaciones.'));
+        } catch (err) {
+          btn.disabled = false;
+          await avisar(err.message);
+        }
+      });
+    });
+
+    card.classList.remove('d-none');
   }
 
   async function loadBandeja() {
@@ -291,58 +342,74 @@
         return { caso: c, docsPendientes };
       });
 
+      cache.filas = rows;
       renderTable(rows);
     } catch (e) {
       document.getElementById('bandeja-tbody').innerHTML = `<tr><td colspan="5" class="text-danger text-center py-4">${esc(e.message)}</td></tr>`;
     }
   }
 
+  // Etiqueta de la fase: llega del tracker en español (case_status.js) y también pasa por t().
+  function etiquetaFase(c) {
+    return statusMeta.statuses.includes(c.status)
+      ? t(statusMeta.meta[c.status]?.label || c.status)
+      : t('{estado} (sin migrar)', { estado: c.status });
+  }
+
   function accionPendiente(c, docsPendientes) {
-    const faseLabel = statusMeta.statuses.includes(c.status) ? (statusMeta.meta[c.status]?.label || c.status) : `${c.status} (sin migrar)`;
+    const faseLabel = etiquetaFase(c);
     const partes = [];
 
     if (c.status === 'fase_08') {
       const conf = c.confirmacionesFase8 || {};
       if (role === 'abogado') {
         partes.push(conf.legal
-          ? { texto: 'Fase 8 — tu confirmación legal ya quedó registrada (esperando la técnica/matrices)', actionable: false }
-          : { texto: 'Fase 8 — confirmar revisión legal (poderes/declaraciones)', actionable: true });
+          ? { texto: t('Fase 8 — tu confirmación legal ya quedó registrada (esperando la técnica/matrices)'), actionable: false }
+          : { texto: t('Fase 8 — confirmar revisión legal (poderes/declaraciones)'), actionable: true });
       } else if (role === 'regente') {
         partes.push(conf.tecnica
-          ? { texto: 'Fase 8 — tu confirmación técnica/matrices ya quedó registrada (esperando la legal)', actionable: false }
-          : { texto: 'Fase 8 — confirmar cotejo técnico/matrices', actionable: true });
+          ? { texto: t('Fase 8 — tu confirmación técnica/matrices ya quedó registrada (esperando la legal)'), actionable: false }
+          : { texto: t('Fase 8 — confirmar cotejo técnico/matrices'), actionable: true });
       } else if (role === 'analista' || role === 'admin') {
-        const faltan = [!conf.legal && 'legal', !conf.tecnica && 'técnica/matrices'].filter(Boolean);
-        partes.push(faltan.length
-          ? { texto: `Fase 8 — esperando confirmación ${faltan.join(' y ')}`, actionable: false }
-          : { texto: 'Fase 8 — las dos confirmaciones están listas, avanzar a fase 9', actionable: true });
+        if (!conf.legal && !conf.tecnica) {
+          partes.push({ texto: t('Fase 8 — esperando confirmación legal y técnica/matrices'), actionable: false });
+        } else if (!conf.legal) {
+          partes.push({ texto: t('Fase 8 — esperando confirmación legal'), actionable: false });
+        } else if (!conf.tecnica) {
+          partes.push({ texto: t('Fase 8 — esperando confirmación técnica/matrices'), actionable: false });
+        } else {
+          partes.push({ texto: t('Fase 8 — las dos confirmaciones están listas, avanzar a fase 9'), actionable: true });
+        }
       } else {
-        partes.push({ texto: `En ${faseLabel} — sin acción tuya pendiente ahora`, actionable: false });
+        partes.push({ texto: t('En {fase} — sin acción tuya pendiente ahora', { fase: faseLabel }), actionable: false });
       }
     } else if (c.status === 'fase_10') {
       if (role === 'analista' || role === 'admin') {
-        partes.push({ texto: 'Fase 10 — confirmar recepción y verificación de originales', actionable: true });
+        partes.push({ texto: t('Fase 10 — confirmar recepción y verificación de originales'), actionable: true });
       } else {
-        partes.push({ texto: `En ${faseLabel} — no es tu confirmación todavía`, actionable: false });
+        partes.push({ texto: t('En {fase} — no es tu confirmación todavía', { fase: faseLabel }), actionable: false });
       }
     } else if (role === 'analista' || role === 'admin') {
-      partes.push({ texto: `En curso: ${faseLabel}`, actionable: false });
+      partes.push({ texto: t('En curso: {fase}', { fase: faseLabel }), actionable: false });
     } else {
-      partes.push({ texto: `En ${faseLabel} — sin acción tuya pendiente ahora`, actionable: false });
+      partes.push({ texto: t('En {fase} — sin acción tuya pendiente ahora', { fase: faseLabel }), actionable: false });
     }
 
     if (docsPendientes > 0) {
-      partes.push({ texto: `${docsPendientes} documento${docsPendientes > 1 ? 's' : ''} por revisar`, actionable: true });
+      partes.push({
+        texto: docsPendientes === 1 ? t('1 documento por revisar') : t('{n} documentos por revisar', { n: docsPendientes }),
+        actionable: true,
+      });
     }
     return partes;
   }
 
   function renderTable(rows) {
     const tbody = document.getElementById('bandeja-tbody');
-    if (!rows.length) { tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-4">No tienes expedientes asignados.</td></tr>'; return; }
+    if (!rows.length) { tbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted py-4">${t('No tienes expedientes asignados.')}</td></tr>`; return; }
 
     tbody.innerHTML = rows.map(({ caso: c, docsPendientes }) => {
-      const faseLabel = statusMeta.statuses.includes(c.status) ? (statusMeta.meta[c.status]?.label || c.status) : `${c.status} (sin migrar)`;
+      const faseLabel = etiquetaFase(c);
       const acciones = accionPendiente(c, docsPendientes);
       const accionesHtml = acciones.map(a =>
         `<span class="badge ${a.actionable ? 'accion-actionable' : 'accion-waiting'} d-block mb-1 text-start">${esc(a.texto)}</span>`
@@ -350,7 +417,7 @@
 
       return `<tr class="bandeja-row" onclick="window.location.href='/admin/expediente.html?id=${encodeURIComponent(c.id)}'">
         <td class="ps-4 py-3">
-          <div class="fw-semibold small">${esc(c.productName || '(sin nombre)')}</div>
+          <div class="fw-semibold small">${esc(c.productName || t('(sin nombre)'))}</div>
           <div class="text-muted" style="font-size:.72rem">${esc(c.caseCode || c.id)}</div>
         </td>
         <td class="small text-muted">${esc(c.clientEmail || '—')}</td>

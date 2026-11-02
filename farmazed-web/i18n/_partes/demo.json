@@ -1,0 +1,18 @@
+{
+  "_comentario": "Contenido sembrado por tracker/services/demo.js que la demo muestra como datos (mensajes del hilo, mensaje del lead). La interfaz pinta los cuerpos con t(): estos textos fijos se traducen y lo que escriba la persona se muestra tal cual. Los nombres propios (Laboratorios Ejemplo S.A., Producto Ejemplo 2…) no se traducen.",
+  "en": {
+    "Hola, ya realizamos el pago de la cotización. ¿Cuál es el siguiente paso?": "Hello, we have already paid the quote. What is the next step?",
+    "Recibido, gracias. Ya revisamos la documentación digital; en cuanto confirmemos el cotejo técnico pasamos a los originales.": "Received, thank you. We have already reviewed the digital documentation; as soon as we confirm the technical check we move on to the originals.",
+    "Queremos registrar dos cremas dermatológicas.": "We want to register two dermatological creams."
+  },
+  "fr": {
+    "Hola, ya realizamos el pago de la cotización. ¿Cuál es el siguiente paso?": "Bonjour, nous avons déjà réglé le devis. Quelle est la prochaine étape ?",
+    "Recibido, gracias. Ya revisamos la documentación digital; en cuanto confirmemos el cotejo técnico pasamos a los originales.": "Bien reçu, merci. Nous avons déjà examiné la documentation numérique ; dès que nous confirmerons la vérification technique, nous passerons aux originaux.",
+    "Queremos registrar dos cremas dermatológicas.": "Nous souhaitons enregistrer deux crèmes dermatologiques."
+  },
+  "pt": {
+    "Hola, ya realizamos el pago de la cotización. ¿Cuál es el siguiente paso?": "Olá, já efetuámos o pagamento do orçamento. Qual é o próximo passo?",
+    "Recibido, gracias. Ya revisamos la documentación digital; en cuanto confirmemos el cotejo técnico pasamos a los originales.": "Recebido, obrigado. Já revimos a documentação digital; assim que confirmarmos a verificação técnica passamos aos originais.",
+    "Queremos registrar dos cremas dermatológicas.": "Queremos registar dois cremes dermatológicos."
+  }
+}

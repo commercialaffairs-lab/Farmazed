@@ -20,6 +20,7 @@ const crypto       = require('crypto');
 const admin         = require('../utils/firebase_admin.js');
 const { requireAuth } = require('../middleware/auth');
 const { requirePermission, ROLES } = require('../middleware/permissions');
+const { esCuentaDemo } = require('../services/demo'); // modo demo: sin invitaciones desde la cuenta demo
 const { serializeTimestamps } = require('../utils/serialize');
 const { HttpError, responderError } = require('../utils/http_error');
 const { textoError, errorPassword, enmascararCorreo } = require('../utils/validar_texto');
@@ -119,6 +120,8 @@ router.post('/empleado', requireAuth, requirePermission('invitations.create_empl
 // titular malicioso puede mandar un orgId ajeno porque no se lee del body.
 router.post('/miembro', requireAuth, requirePermission('invitations.create_miembro'), async (req, res) => {
   try {
+    // Modo demo: la cuenta de demostración no invita a nadie (mandaría un correo real a un tercero).
+    if (esCuentaDemo(req.user)) return res.status(403).json({ error: 'En la cuenta de demostración no se pueden enviar invitaciones.' });
     const { email } = req.body;
     if (!email) return res.status(400).json({ error: 'email is required' });
     if (!req.user.orgId) return res.status(400).json({ error: 'Tu cuenta no tiene una empresa asociada (orgId) — contacta a Farmazed.' });

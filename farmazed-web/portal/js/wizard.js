@@ -4,6 +4,14 @@
  */
 import { esc, requireLogin } from './auth.js';
 import api from './api.js';
+import { confirmar } from './dialogos.js';
+
+// Idiomas (farmazed-web/i18n/README.md): i18n.js es un script clásico del <head>. Con fallback
+// porque portal/nuevo.html también carga este módulo y puede no traer la capa.
+const i18n = () => window.FZI18N || null;
+// Sin la capa (portal/nuevo.html) se interpolan igual los {marcadores}, para no mostrarlos literales.
+const interpolar = (texto, vars) => String(texto ?? '').replace(/\{(\w+)\}/g, (m, k) => (vars && k in vars ? String(vars[k]) : m));
+const t = (texto, vars) => (i18n() ? i18n().t(texto, vars) : interpolar(texto, vars));
 
 // ── State ─────────────────────────────────────────────────────────────────────
 const state = {
@@ -110,11 +118,11 @@ function setLoading(btn, loading) {
   btn.disabled = loading;
   btn.dataset.orig = btn.dataset.orig || btn.innerHTML;
   btn.innerHTML = loading
-    ? '<span class="spinner-border spinner-border-sm me-2"></span>Guardando...'
+    ? `<span class="spinner-border spinner-border-sm me-2"></span>${esc(t('Guardando...'))}`
     : btn.dataset.orig;
 }
 
-function showLoadingModal(msg = 'Procesando...') {
+function showLoadingModal(msg = t('Procesando...')) {
   const modal = $('#fz-loading-modal');
   if (!modal) return;
   const msgEl = $('#fz-loading-msg');
@@ -137,23 +145,36 @@ function toast(msg, type = 'success') {
 }
 
 // ── Step 1: Tipo de trámite ───────────────────────────────────────────────────
-function renderStep1() {
-  const grid = $('#tramite-grid');
-  grid.innerHTML = tramitesVisibles().map(t => `
+// Solo pinta (sin cablear eventos): se vuelve a llamar al cambiar de idioma.
+function pintarTramites(grid) {
+  grid.innerHTML = tramitesVisibles().map(tr => `
     <div class="col-md-4 col-sm-6">
-      <label class="tramite-card ${state.data.tramiteType === t.id ? 'selected' : ''}" data-id="${t.id}">
-        <input type="radio" name="tramiteType" value="${t.id}" class="d-none" ${state.data.tramiteType === t.id ? 'checked' : ''}>
-        <div class="tramite-icon">${t.icon}</div>
-        <div class="tramite-label">${t.label}</div>
-        <div class="tramite-desc text-muted small">${t.desc}</div>
+      <label class="tramite-card ${state.data.tramiteType === tr.id ? 'selected' : ''}" data-id="${tr.id}">
+        <input type="radio" name="tramiteType" value="${tr.id}" class="d-none" ${state.data.tramiteType === tr.id ? 'checked' : ''}>
+        <div class="tramite-icon">${tr.icon}</div>
+        <div class="tramite-label">${esc(t(tr.label))}</div>
+        <div class="tramite-desc text-muted small">${esc(t(tr.desc))}</div>
       </label>
     </div>`).join('');
+}
+
+// Opciones de la vía de registro (valor = español, texto = traducido). Conserva la elegida.
+function pintarViasRegistro(tipoRegSelect) {
+  tipoRegSelect.innerHTML = TIPOS_REGISTRO.map(id => `<option value="${esc(id)}">${esc(t(getVia(id)?.label || id))}</option>`).join('');
+  tipoRegSelect.value = state.data.tipoRegistro;
+}
+
+function renderStep1() {
+  const grid = $('#tramite-grid');
+  pintarTramites(grid);
 
   // Sync visibility for a resumed case (state.data.tramiteType already set before first render)
   $('#med-extra')?.classList.toggle('d-none', state.data.tramiteType !== 'medicamentos');
   $('#excepcion-disclaimer')?.classList.toggle('d-none', state.data.tramiteType !== 'excepcion');
 
   // Tipo de solicitud / registro (only for medicamentos)
+  if (grid.dataset.wired) return; // el repintado por idioma no vuelve a cablear
+  grid.dataset.wired = '1';
   grid.addEventListener('click', e => {
     const card = e.target.closest('.tramite-card');
     if (!card) return;
@@ -170,8 +191,7 @@ function renderStep1() {
   // Tipo de registro (Medicamentos only)
   const tipoRegSelect = $('#tipoRegistro');
   if (tipoRegSelect) {
-    tipoRegSelect.innerHTML = TIPOS_REGISTRO.map(t => `<option value="${t}">${t}</option>`).join('');
-    tipoRegSelect.value = state.data.tipoRegistro;
+    pintarViasRegistro(tipoRegSelect);
     // Gap E (auditoría regulatoria PM 2026-08-26): panel informativo de países
     // habilitados (D.E. 29/2023). Ahora sale del flag `paisesARR` de VIAS_REGISTRO.
     const syncContactenos = () => {
@@ -200,35 +220,47 @@ function renderStep2() {
   });
 
   // Tipo medicamento checkboxes
+  // (valor = español tal como lo espera faddi_checklists.js; texto visible = traducido)
   const container = $('#tipo-med-checks');
   if (container && isMed) {
-    container.innerHTML = TIPOS_MED.map(t => `
+    container.innerHTML = TIPOS_MED.map(tm => `
       <div class="form-check form-check-inline">
-        <input class="form-check-input" type="checkbox" value="${t}" id="tm-${t.replace(/\s/g,'-')}"
-          ${state.data.tipoMedicamento.includes(t) ? 'checked' : ''}>
-        <label class="form-check-label" for="tm-${t.replace(/\s/g,'-')}">${t}</label>
+        <input class="form-check-input" type="checkbox" value="${tm}" id="tm-${tm.replace(/\s/g,'-')}"
+          ${state.data.tipoMedicamento.includes(tm) ? 'checked' : ''}>
+        <label class="form-check-label" for="tm-${tm.replace(/\s/g,'-')}">${esc(t(tm))}</label>
       </div>`).join('');
-    container.addEventListener('change', () => {
-      state.data.tipoMedicamento = $$('input[type=checkbox]:checked', container).map(cb => cb.value);
-    });
+    if (!container.dataset.wired) {
+      container.dataset.wired = '1';
+      container.addEventListener('change', () => {
+        state.data.tipoMedicamento = $$('input[type=checkbox]:checked', container).map(cb => cb.value);
+      });
+    }
   }
 
   // Tipo publicidad checkboxes
   const pubContainer = $('#tipo-pub-checks');
   if (pubContainer && isPub) {
     const selected = state.data.product.tipoPublicidad || [];
-    pubContainer.innerHTML = TIPOS_PUBLICIDAD.map(t => `
+    pubContainer.innerHTML = TIPOS_PUBLICIDAD.map(tp => `
       <div class="form-check form-check-inline">
-        <input class="form-check-input" type="checkbox" value="${t}" id="tp-${t.replace(/\s/g,'-')}"
-          ${selected.includes(t) ? 'checked' : ''}>
-        <label class="form-check-label" for="tp-${t.replace(/\s/g,'-')}">${t}</label>
+        <input class="form-check-input" type="checkbox" value="${tp}" id="tp-${tp.replace(/\s/g,'-')}"
+          ${selected.includes(tp) ? 'checked' : ''}>
+        <label class="form-check-label" for="tp-${tp.replace(/\s/g,'-')}">${esc(t(tp))}</label>
       </div>`).join('');
+    // Igual que tipo de medicamento: lo marcado se guarda al vuelo, así un cambio de idioma (que
+    // repinta el paso) no borra la selección.
+    if (!pubContainer.dataset.wired) {
+      pubContainer.dataset.wired = '1';
+      pubContainer.addEventListener('change', () => {
+        state.data.product.tipoPublicidad = $$('input[type=checkbox]:checked', pubContainer).map(cb => cb.value);
+      });
+    }
   }
 
   // Condición de venta
   const condSelect = $('#condicionVenta');
   if (condSelect) {
-    condSelect.innerHTML = CONDICION_VENTA.map(c => `<option>${c}</option>`).join('');
+    condSelect.innerHTML = CONDICION_VENTA.map(c => `<option value="${esc(c)}">${esc(t(c))}</option>`).join('');
     if (state.data.product.condicionVenta) condSelect.value = state.data.product.condicionVenta;
   }
 
@@ -310,20 +342,32 @@ async function renderChecklist() {
     const farmazedDocs = checklist.filter(d => d.responsable === 'farmazed');
 
     container.innerHTML = `
-      ${renderDocGroup('Documentos que subes tú', clienteDocs)}
-      ${farmazedDocs.length ? renderDocGroup('Documentos que aporta Farmazed', farmazedDocs) : ''}`;
+      ${enDemo() ? avisoDocumentosDemo() : ''}
+      ${renderDocGroup(t('Documentos que subes tú'), clienteDocs)}
+      ${farmazedDocs.length ? renderDocGroup(t('Documentos que aporta Farmazed'), farmazedDocs) : ''}`;
 
     // Attach upload handler once — innerHTML above replaces children but not
     // the container node itself, so re-adding here on every refresh would
     // stack duplicate listeners and cause repeated uploads.
     if (!container.dataset.wired) {
       container.dataset.wired = '1';
+      // Cuenta demo: los botones "Subir" no abren el explorador de archivos, van al aviso que simula
+      // la carga (ver "Modo demo" más abajo). preventDefault sobre el <label> evita que active al
+      // <input type="file">. Fuera de la demo no interviene.
+      container.addEventListener('click', e => {
+        if (!enDemo()) return;
+        if (e.target.closest('#btn-demo-docs')) { e.preventDefault(); simularTodosLosDocumentosDemo(); return; }
+        const etiqueta = e.target.closest('.doc-upload-action label');
+        if (!etiqueta) return;
+        e.preventDefault();
+        abrirSimulacionDemo(etiqueta.querySelector('input[type=file]')?.dataset.docid);
+      });
       container.addEventListener('change', e => {
         if (e.target.type === 'file' && e.target.files[0]) {
           const docId = e.target.dataset.docid;
           const file  = e.target.files[0];
           if (file.size > 52 * 1024 * 1024) {
-            toast('El archivo supera los 50 MB.', 'danger');
+            toast(t('El archivo supera los 50 MB.'), 'danger');
             e.target.value = '';
             return;
           }
@@ -351,7 +395,7 @@ function updateNextButtonState() {
   );
   btn.disabled = missingCliente.length > 0;
   btn.title = missingCliente.length
-    ? `Faltan ${missingCliente.length} documento(s) obligatorio(s) tuyo(s) por subir`
+    ? t('Faltan {n} documento(s) obligatorio(s) tuyo(s) por subir', { n: missingCliente.length })
     : '';
 }
 
@@ -360,7 +404,7 @@ function renderProgressBar({ uploaded, total, percent }) {
   if (!bar) return;
   bar.innerHTML = `
     <div class="d-flex justify-content-between mb-1">
-      <small><strong>${uploaded}</strong> de <strong>${total}</strong> documentos subidos</small>
+      <small>${t('<strong>{subidos}</strong> de <strong>{total}</strong> documentos subidos', { subidos: Number(uploaded) || 0, total: Number(total) || 0 })}</small>
       <small>${percent}%</small>
     </div>
     <div class="progress" style="height:8px">
@@ -397,26 +441,26 @@ function renderDocCard(doc) {
         <div class="doc-status-icon fs-5 mt-1">${isPhysicalOnly ? '📍' : (icons[status] || '⬜')}</div>
         <div class="flex-grow-1">
           <div class="d-flex align-items-center gap-2 flex-wrap">
-            <span class="fw-semibold small">${esc(doc.faddiCode)} — ${esc(doc.name)}</span>
-            ${doc.required ? '<span class="badge bg-danger-subtle text-danger border border-danger-subtle small">Obligatorio</span>' : '<span class="badge bg-secondary-subtle text-secondary border small">Opcional</span>'}
+            <span class="fw-semibold small">${esc(doc.faddiCode)} — ${esc(t(doc.name))}</span>
+            ${doc.required ? `<span class="badge bg-danger-subtle text-danger border border-danger-subtle small">${esc(t('Obligatorio'))}</span>` : `<span class="badge bg-secondary-subtle text-secondary border small">${esc(t('Opcional'))}</span>`}
             ${!isPhysicalOnly ? `<span class="badge bg-${badge[status] || 'secondary'} small">${esc(status)}</span>` : ''}
           </div>
-          <div class="text-muted small mt-1">${esc(doc.description)}</div>
+          <div class="text-muted small mt-1">${esc(t(doc.description))}</div>
           ${up?.file ? `<div class="small text-success mt-1">📎 ${esc(up.file.name)}</div>` : ''}
-          ${doc.condition ? `<div class="small text-warning-emphasis mt-1">⚡ ${esc(doc.condition)}</div>` : ''}
-          ${isPhysicalOnly ? `<div class="small text-info mt-1">📍 Este documento se presenta físicamente en DNFD, no se carga en FADDI. Farmazed coordinará la entrega.</div>` : ''}
-          ${isFarmazedDoc ? `<div class="small text-primary mt-1">🏢 Este documento lo aporta Farmazed — no necesitas subirlo tú, y no bloquea tu avance.</div>` : ''}
+          ${doc.condition ? `<div class="small text-warning-emphasis mt-1">⚡ ${esc(t(doc.condition))}</div>` : ''}
+          ${isPhysicalOnly ? `<div class="small text-info mt-1">📍 ${esc(t('Este documento se presenta físicamente en DNFD, no se carga en FADDI. Farmazed coordinará la entrega.'))}</div>` : ''}
+          ${isFarmazedDoc ? `<div class="small text-primary mt-1">🏢 ${esc(t('Este documento lo aporta Farmazed — no necesitas subirlo tú, y no bloquea tu avance.'))}</div>` : ''}
         </div>
         <div class="doc-upload-action" style="min-width:120px">
           ${isFarmazedDoc
-            ? '<span class="badge bg-primary-subtle text-primary border border-primary-subtle small">A cargo de Farmazed</span>'
+            ? `<span class="badge bg-primary-subtle text-primary border border-primary-subtle small">${esc(t('A cargo de Farmazed'))}</span>`
             : isPhysicalOnly
-            ? '<span class="badge bg-info-subtle text-info border border-info-subtle small">Presencial</span>'
+            ? `<span class="badge bg-info-subtle text-info border border-info-subtle small">${esc(t('Presencial'))}</span>`
             : status === 'uploaded' || status === 'approved'
-            ? '<span class="text-success small">✓ Subido</span>'
+            ? `<span class="text-success small">✓ ${esc(t('Subido'))}</span>`
             : `<label class="btn btn-sm btn-outline-primary" style="cursor:pointer">
                  <input type="file" class="d-none" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" data-docid="${esc(doc.id)}">
-                 ${status === 'pending_upload' ? '<span class="spinner-border spinner-border-sm"></span>' : '📎 Subir'}
+                 ${status === 'pending_upload' ? '<span class="spinner-border spinner-border-sm"></span>' : `📎 ${esc(t('Subir'))}`}
                </label>`}
         </div>
       </div>
@@ -426,7 +470,7 @@ function renderDocCard(doc) {
 async function uploadDoc(faddiDocId, file, docMeta) {
   const card = $(`#doc-${faddiDocId}`);
   if (card) card.querySelector('.doc-upload-action').innerHTML = '<span class="spinner-border spinner-border-sm text-primary"></span>';
-  showLoadingModal('Subiendo documento...');
+  showLoadingModal(t('Subiendo documento...'));
 
   try {
     await api.uploadDocument(state.caseId, file, {
@@ -440,20 +484,153 @@ async function uploadDoc(faddiDocId, file, docMeta) {
     // happens behind the modal instead of flashing in front of the user —
     // the modal fade-out is what reveals the already-updated list.
     await renderChecklist();
-    toast(`✅ ${docMeta?.name || faddiDocId} subido correctamente.`);
+    toast(t('✅ {documento} subido correctamente.', { documento: t(docMeta?.name) || faddiDocId }));
     await warnIfPaqueteIEAExcedido();
   } catch (err) {
     state.uploads[faddiDocId] = { file, status: 'error' };
-    toast(`❌ Error al subir ${docMeta?.name}: ${err.message}`, 'danger');
+    toast(t('❌ Error al subir {documento}: {error}', { documento: t(docMeta?.name) || faddiDocId, error: err.message }), 'danger');
     if (card) card.querySelector('.doc-upload-action').innerHTML =
       `<label class="btn btn-sm btn-outline-danger" style="cursor:pointer">
          <input type="file" class="d-none" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" data-docid="${esc(faddiDocId)}">
-         Reintentar
+         ${esc(t('Reintentar'))}
        </label>`;
   } finally {
     hideLoadingModal();
   }
 }
+
+// ── Modo demo: carga de documentos simulada (Rick, 01-nov-2026) ──────────────
+// En la cuenta de demostración (client-dashboard.html pone body.fz-demo) los
+// botones "Subir" del paso 4 no abren el explorador de archivos: un aviso
+// explica que en un trámite real ahí se elige el archivo y, al confirmar, se
+// adjunta por el cliente el PDF de ejemplo por la MISMA ruta que una subida
+// real (POST /api/cases/:id/documents), así el expediente, el regente y el
+// recorrido ven un documento normal. "Rellenar con datos de ejemplo" (banner
+// del paso 4 y botón del portal) simula todos los documentos del cliente de
+// una vez: los que faltan y los que el regente pidió o rechazó (subsanar).
+const enDemo = () => document.body.classList.contains('fz-demo');
+const PDF_EJEMPLO_DEMO = '/demo/documento-ejemplo.pdf';
+const SIMULACIONES_PARALELAS = 3;
+const ESTADOS_POR_SUBSANAR = ['requested', 'rejected'];
+let pdfEjemploDemo = null; // Promise<File>: se descarga una sola vez por página
+
+function archivoEjemploDemo() {
+  if (!pdfEjemploDemo) {
+    pdfEjemploDemo = fetch(PDF_EJEMPLO_DEMO)
+      .then(r => { if (!r.ok) throw new Error(t('No se pudo cargar el PDF de ejemplo.')); return r.blob(); })
+      .then(blob => new File([blob], 'documento-ejemplo.pdf', { type: 'application/pdf' }))
+      .catch(err => { pdfEjemploDemo = null; throw err; });
+  }
+  return pdfEjemploDemo;
+}
+
+function avisoDocumentosDemo() {
+  return `
+    <div class="alert alert-info d-flex flex-wrap align-items-center justify-content-between gap-2 small mb-4" id="demo-docs-aviso">
+      <span>✨ ${esc(t('Modo demo: los botones "Subir" no abren el explorador de archivos, simulan la carga con un PDF de ejemplo. Para dejar todos los documentos listos de una vez:'))}</span>
+      <button type="button" class="btn btn-sm btn-primary" id="btn-demo-docs">${esc(t('Rellenar con datos de ejemplo'))}</button>
+    </div>`;
+}
+
+/** Ids de los documentos del cliente que la simulación "todos" deja como subidos: los que faltan y
+ *  los pedidos o rechazados por el regente. Nunca los de Farmazed ni los presenciales. */
+async function documentosPorSimularDemo() {
+  const delCliente = currentChecklist.filter(d => d.responsable !== 'farmazed' && d.physicalOnly !== true);
+  let porSubsanar = new Set();
+  try {
+    const docs = await api.listDocuments(state.caseId);
+    porSubsanar = new Set((Array.isArray(docs) ? docs : []).filter(d => ESTADOS_POR_SUBSANAR.includes(d.status)).map(d => d.faddiDocId));
+  } catch (e) {
+    toast(t('No se pudo comprobar qué documentos pidió o rechazó el regente; se simulan solo los que faltan.'), 'warning');
+  }
+  return delCliente.filter(d => !d.uploaded || porSubsanar.has(d.id)).map(d => d.id);
+}
+
+// Una simulación a la vez: un doble clic en "Rellenar" (o un "Subir" mientras se lista) no debe
+// duplicar subidas. El botón del banner se deshabilita mientras dura.
+let simulacionEnCurso = false;
+async function conSimulacionExclusiva(fn) {
+  if (simulacionEnCurso || !state.caseId) return;
+  simulacionEnCurso = true;
+  const boton = $('#btn-demo-docs');
+  if (boton) boton.disabled = true;
+  try { await fn(); } finally {
+    simulacionEnCurso = false;
+    const b = $('#btn-demo-docs');
+    if (b) b.disabled = false;
+  }
+}
+
+const simularSubidasDemo = (ids) => conSimulacionExclusiva(() => ejecutarSimulacionDemo(ids));
+
+async function simularTodosLosDocumentosDemo() {
+  await conSimulacionExclusiva(async () => {
+    showLoadingModal(t('Procesando...'));
+    let ids = [];
+    try {
+      if (!currentChecklist.length) await renderChecklist(); // el botón del portal puede llegar antes de pintar la lista
+      ids = await documentosPorSimularDemo();
+    } finally { hideLoadingModal(); }
+    await ejecutarSimulacionDemo(ids);
+  });
+}
+
+async function ejecutarSimulacionDemo(ids) {
+  if (!ids.length) { toast(t('Todos tus documentos ya están subidos.'), 'info'); return; }
+  const progreso = (n) => showLoadingModal(t('Simulando la subida {n} de {total}...', { n: Math.min(n, ids.length), total: ids.length }));
+  const errores = [];
+  let subidas = 0;
+  let iniciadas = 0;
+  progreso(1);
+  try {
+    const archivo = await archivoEjemploDemo();
+    const cola = [...ids];
+    const trabajador = async () => {
+      while (cola.length) {
+        const id = cola.shift();
+        const meta = currentChecklist.find(d => d.id === id);
+        iniciadas += 1;
+        progreso(iniciadas);
+        try {
+          await api.uploadDocument(state.caseId, archivo, {
+            faddiDocId: id, faddiCode: meta?.faddiCode || '', faddiDocName: meta?.name || '', faddiStep: meta?.faddiStep || 0,
+          });
+          state.uploads[id] = { file: archivo, status: 'uploaded' };
+          subidas += 1;
+        } catch (err) {
+          errores.push(`${meta?.faddiCode || id}: ${err.message}`);
+        }
+      }
+    };
+    await Promise.all(Array.from({ length: Math.min(SIMULACIONES_PARALELAS, ids.length) }, trabajador));
+    // Repintar detrás del modal de carga; si falla, no es un error de subida (la lista se vuelve a
+    // pintar al cambiar de paso o de idioma).
+    try {
+      await renderChecklist();
+      if (state.step === 5) await renderConfirmation();
+    } catch (e) { /* informativo */ }
+  } catch (err) {
+    errores.push(err.message);
+  } finally {
+    hideLoadingModal();
+  }
+  if (subidas) toast(t('✅ Simulación lista: {n} documento(s) registrados como subidos.', { n: subidas }));
+  if (errores.length) toast(t('❌ No se pudo simular {n} documento(s): {error}', { n: errores.length, error: errores[0] }), 'danger');
+}
+
+async function abrirSimulacionDemo(docId) {
+  if (!docId) return;
+  const meta = currentChecklist.find(d => d.id === docId);
+  const ok = await confirmar(
+    t('En un trámite real, al pulsar "Subir" se abre el explorador de archivos y eliges el documento desde tu equipo (PDF, JPG, PNG o DOCX, hasta 50 MB). En la cuenta de demostración no hace falta buscar nada: al confirmar, se adjunta por ti un PDF de ejemplo y queda registrado como si lo hubieras subido. Con "Rellenar con datos de ejemplo" se simula la carga de todos los documentos a la vez.'),
+    { titulo: t('Simulación de carga: {documento}', { documento: meta ? `${meta.faddiCode} — ${t(meta.name)}` : docId }), tipo: 'info', ok: t('Simular la subida'), cancelar: t('Cancelar') },
+  );
+  if (ok) await simularSubidasDemo([docId]);
+}
+
+// Lo usa rellenarConDatosDemo() en client-dashboard.html: del paso 4 en adelante, "rellenar" es
+// simular todos los documentos.
+window.__fzWizardDemo = { paso: () => state.step, simularTodos: simularTodosLosDocumentosDemo };
 
 // R13 (TAREA 19): tras cada subida, si el paquete IEA (formula,
 // metodo_analisis, cert_analisis, especificaciones, etiquetas — ver
@@ -463,7 +640,7 @@ async function warnIfPaqueteIEAExcedido() {
   try {
     const { excedido, totalPaginas, limite } = await api.getPaqueteIEA(state.caseId);
     if (excedido) {
-      toast(`⚠️ El paquete de documentos para el IEA lleva ${totalPaginas} páginas (límite orientativo: ${limite}). No bloquea tu solicitud — Farmazed lo revisa contigo.`, 'warning');
+      toast(t('⚠️ El paquete de documentos para el IEA lleva {paginas} páginas (límite orientativo: {limite}). No bloquea tu solicitud — Farmazed lo revisa contigo.', { paginas: totalPaginas, limite }), 'warning');
     }
   } catch (e) { /* informativo — si falla, no se molesta al cliente */ }
 }
@@ -480,19 +657,19 @@ async function renderConfirmation() {
   // updateNextButtonState() y renderChecklist() ya aplican en este archivo.
   const missing = cl.checklist.filter(d => d.required && !d.uploaded && d.responsable !== 'farmazed');
 
-  $('#confirm-product-name').textContent = cs.product?.nombreComercial || '(sin nombre)';
+  $('#confirm-product-name').textContent = cs.product?.nombreComercial || t('(sin nombre)');
   $('#confirm-tramite').textContent      = cs.tramiteType;
-  $('#confirm-progress').textContent     = `${cl.progress.uploaded}/${cl.progress.total} documentos`;
+  $('#confirm-progress').textContent     = t('{subidos}/{total} documentos', { subidos: cl.progress.uploaded, total: cl.progress.total });
 
   const missingEl = $('#confirm-missing');
   if (missing.length) {
     missingEl.innerHTML = `<div class="alert alert-warning">
-      <strong>⚠️ Documentos obligatorios faltantes (${missing.length}):</strong>
-      <ul class="mb-0 mt-2">${missing.map(d => `<li>${esc(d.faddiCode)} — ${esc(d.name)}</li>`).join('')}</ul>
-      <p class="mb-0 mt-2 small">Puedes enviar ahora y subir los documentos faltantes luego, o regresar al Paso 4.</p>
+      <strong>${esc(t('⚠️ Documentos obligatorios faltantes ({n}):', { n: missing.length }))}</strong>
+      <ul class="mb-0 mt-2">${missing.map(d => `<li>${esc(d.faddiCode)} — ${esc(t(d.name))}</li>`).join('')}</ul>
+      <p class="mb-0 mt-2 small">${esc(t('Puedes enviar ahora y subir los documentos faltantes luego, o regresar al Paso 4.'))}</p>
     </div>`;
   } else {
-    missingEl.innerHTML = '<div class="alert alert-success">✅ Todos los documentos obligatorios están subidos.</div>';
+    missingEl.innerHTML = `<div class="alert alert-success">${esc(t('✅ Todos los documentos obligatorios están subidos.'))}</div>`;
   }
 }
 
@@ -503,23 +680,23 @@ async function nextStep() {
 
   try {
     if (state.step === 1) {
-      if (!state.data.tramiteType) { toast('Selecciona el tipo de trámite.', 'warning'); return; }
+      if (!state.data.tramiteType) { toast(t('Selecciona el tipo de trámite.'), 'warning'); return; }
       // Guarda 1 — trámite apagado. Cubre el caso de un ?caseId= antiguo cuyo
       // trámite ya no está disponible: la tarjeta no se ve, pero el estado
       // restaurado (init(), resume from URL param) sí la trae.
       const tramite = getTramite(state.data.tramiteType);
       if (!tramite || !tramite.disponible) {
-        toast('Este trámite no está disponible en el portal. Contáctanos y un especialista de Farmazed te guiará.', 'warning');
+        toast(t('Este trámite no está disponible en el portal. Contáctanos y un especialista de Farmazed te guiará.'), 'warning');
         return;
       }
       // Guarda 2 — trámite visible pero sin flujo propio (opción (b)).
       if (!tramite.flujoPropio) {
-        toast('Este trámite requiere gestión personalizada. Contáctenos directamente.', 'warning');
+        toast(t('Este trámite requiere gestión personalizada. Contáctenos directamente.'), 'warning');
         return;
       }
       // Guarda 3 — vía de medicamentos sin flujo propio (comportamiento actual).
       if (state.data.tramiteType === 'medicamentos' && TIPOS_REGISTRO_SIN_FLUJO.includes(state.data.tipoRegistro)) {
-        toast('Este tipo de trámite requiere gestión personalizada. Contáctenos directamente.', 'warning');
+        toast(t('Este tipo de trámite requiere gestión personalizada. Contáctenos directamente.'), 'warning');
         return;
       }
       // Create case in Firestore
@@ -560,14 +737,14 @@ async function nextStep() {
         d => d.required && d.responsable !== 'farmazed' && !d.uploaded
       );
       if (missingCliente.length) {
-        toast(`Faltan ${missingCliente.length} documento(s) obligatorio(s) tuyo(s) por subir.`, 'warning');
+        toast(t('Faltan {n} documento(s) obligatorio(s) tuyo(s) por subir.', { n: missingCliente.length }), 'warning');
         return;
       }
     }
 
     if (state.step === 5) {
       await api.updateCase(state.caseId, { status: 'submitted' });
-      toast('🎉 Expediente enviado a Farmazed para revisión.');
+      toast(t('🎉 Expediente enviado a Farmazed para revisión.'));
       // Bug encontrado en TAREA 12/D16: el modo embebido (showModule existe)
       // solo cambiaba de módulo SIN recargar — el caso recién creado quedaba
       // invisible en "Mis Productos" porque DATA.productos se carga una sola
@@ -591,7 +768,7 @@ async function nextStep() {
     if (state.step === 5) await renderConfirmation();
 
   } catch (err) {
-    toast(`Error: ${err.message}`, 'danger');
+    toast(t('Error: {error}', { error: err.message }), 'danger');
   } finally {
     setLoading(btn, false);
     // setLoading() siempre re-habilita el botón — updateNextButtonState()
@@ -635,6 +812,25 @@ async function init() {
   // Name in nav
   const nameEl = $('#user-name');
   if (nameEl) nameEl.textContent = state.user.displayName || state.user.email;
+
+  // Cambio de idioma en vivo: se repinta lo que este módulo generó por JS en el paso actual
+  // (lo estático con data-i18n lo retraduce la capa sola). Una sola suscripción.
+  if (i18n() && !init.i18nSuscrito) {
+    init.i18nSuscrito = true;
+    i18n().onCambio(() => { repintarPasoActual().catch(() => { /* informativo: el paso ya está pintado en español */ }); });
+  }
+}
+
+async function repintarPasoActual() {
+  const grid = $('#tramite-grid');
+  if (grid) pintarTramites(grid);
+  const tipoRegSelect = $('#tipoRegistro');
+  if (tipoRegSelect) pintarViasRegistro(tipoRegSelect);
+  const btn = $('#btn-next');
+  if (btn) delete btn.dataset.orig; // el rótulo "Guardando..." se vuelve a tomar en el idioma nuevo
+  if (state.step === 2) renderStep2();
+  if (state.step === 4) await renderChecklist();
+  if (state.step === 5) await renderConfirmation();
 }
 
 document.addEventListener('DOMContentLoaded', init);

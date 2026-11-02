@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Guide du portail client · Farmazed</title>
+<meta name="description" content="Comment mener l&#39;enregistrement sanitaire de votre produit avec Farmazed, pas à pas">
+<meta name="robots" content="noindex">
+<link rel="icon" href="/favicon_Farzed.png">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;600&family=Open+Sans:wght@400;600;700&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+
+:root{--azul:#1B4F8A;--navy:#0F3260;--verde:#3A7D44;--ambar:#BA7517;--rojo:#A32D2D;--tinte:#E8EFF8;--fondo:#F4F6FB;--tarjeta:#fff;--texto:#1e293b;--mudo:#64748b;--borde:rgba(15,50,96,.12);--fuente:'Open Sans',sans-serif;--titulos:'Oswald',sans-serif;--mono:'IBM Plex Mono',monospace;--radio:10px}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:16px}
+body{margin:0;background:var(--fondo);color:var(--texto);font-family:var(--fuente);font-size:16px;line-height:1.6}
+.ancho{max-width:860px;margin:0 auto;padding:0 16px}
+h1,h2,h3,h4,h5{font-family:var(--titulos);font-weight:600;line-height:1.2;margin:0}
+a{color:var(--azul)}
+.cabecera{background:var(--navy);color:#fff;padding:28px 0 36px}
+.cabecera .marca{font-family:var(--titulos);letter-spacing:.14em;text-transform:uppercase;font-size:.8rem;color:rgba(255,255,255,.7);margin:0 0 6px}
+.cabecera h1{font-size:clamp(1.9rem,4vw,2.6rem);font-weight:400}
+.cabecera .subtitulo{color:rgba(255,255,255,.78);margin:8px 0 0;font-size:1.05rem}
+.idiomas{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;margin-bottom:14px}
+.idiomas a{color:rgba(255,255,255,.75);text-decoration:none;font-size:.82rem;padding:4px 10px;border-radius:999px;border:1px solid rgba(255,255,255,.25)}
+.idiomas a[aria-current]{background:#fff;color:var(--navy);border-color:#fff;font-weight:600}
+.cabecera-acciones{display:flex;gap:10px;flex-wrap:wrap;margin-top:20px}
+.enlace-boton{display:inline-block;font:600 .9rem var(--fuente);text-decoration:none;color:#fff;background:var(--azul);border:1px solid var(--azul);padding:9px 16px;border-radius:var(--radio);cursor:pointer}
+.enlace-boton.claro{background:transparent;border-color:rgba(255,255,255,.45)}
+.enlace-boton.claro:hover{background:rgba(255,255,255,.1)}
+main{padding:28px 16px 40px}
+.intro p{font-size:1.08rem;margin:0 0 14px}
+.indice{background:var(--tarjeta);border:1px solid var(--borde);border-radius:var(--radio);padding:18px 22px;margin-top:22px}
+.indice h2{font-size:.85rem;letter-spacing:.1em;text-transform:uppercase;color:var(--mudo);margin-bottom:8px}
+.indice ol{margin:0;padding-left:20px;columns:2;column-gap:28px}
+.indice li{margin:4px 0;break-inside:avoid}
+.seccion{margin-top:44px;padding-top:28px;border-top:1px solid var(--borde)}
+.seccion h2{font-size:1.75rem;color:var(--navy);margin-bottom:10px}
+.seccion-intro{color:var(--mudo);margin:0 0 20px}
+.seccion > p{margin:0 0 12px}
+.paso{background:var(--tarjeta);border:1px solid var(--borde);border-radius:14px;padding:22px 24px;margin:18px 0}
+.paso-cab{display:flex;align-items:center;gap:14px}
+.paso-num{flex:none;width:38px;height:38px;border-radius:50%;background:var(--azul);color:#fff;font:600 1.05rem var(--titulos);display:grid;place-items:center}
+.seccion-regente .paso-num{background:var(--verde)}
+.paso h3{font-size:1.3rem;color:var(--navy)}
+.paso-desc{margin:12px 0 0;font-size:1.02rem}
+.paso-extra{margin:12px 0 0}
+.paso-sig{margin:16px 0 0;font-size:.92rem;color:var(--mudo)}
+.paso-sig a{font-weight:600;text-decoration:none}
+.paso-sig .fin{color:var(--verde);font-weight:600}
+.pantalla{margin:18px 0 0;border:1px solid var(--borde);border-radius:12px;overflow:hidden;background:#F4F6FB}
+.pantalla figcaption{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:center;background:var(--azul);color:#fff;padding:8px 14px;font-size:.78rem}
+.pantalla-regente figcaption{background:var(--verde)}
+.pantalla-ruta{font-weight:600}
+.pantalla-nota{color:rgba(255,255,255,.75)}
+.pantalla-cuerpo{padding:16px;font-size:.86rem;display:grid;gap:14px}
+.dos .pantalla-cuerpo{justify-items:end}
+.dos .m-topbar{justify-self:stretch}
+/* Réplicas de la interfaz */
+.m-card,.m-modal,.m-panel{background:#fff;border:1px solid var(--borde);border-radius:10px;padding:16px;box-shadow:0 1px 2px rgba(15,50,96,.06)}
+.m-modal{border-top:4px solid var(--azul)}
+.m-card h4,.m-modal h4,.m-panel strong{font:600 1rem var(--titulos);color:var(--navy)}
+.m-card h5{font:600 .9rem var(--titulos);color:var(--texto);margin:12px 0 8px}
+.m-modal p{color:var(--mudo);margin:6px 0 12px;font-size:.82rem}
+.m-card-cab{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.m-btn{display:inline-block;padding:6px 14px;border-radius:7px;border:1px solid var(--azul);background:#fff;color:var(--azul);font-weight:600;font-size:.84rem;line-height:1.3;white-space:nowrap}
+.m-btn-primario{background:var(--azul);color:#fff}
+.m-btn-contorno{background:#fff}
+.m-btn-aviso{background:#ffc107;border-color:#ffc107;color:#1e293b}
+.m-btn-ok{color:var(--verde);border-color:var(--verde)}
+.m-btn-no{color:var(--rojo);border-color:var(--rojo)}
+.m-btn-sm{padding:4px 10px;font-size:.78rem}
+.m-badge{display:inline-block;padding:3px 9px;border-radius:999px;font-size:.72rem;font-weight:700;border:1px solid transparent;white-space:nowrap}
+.m-badge.azul{background:var(--tinte);color:var(--azul)}
+.m-badge.verde{background:#e6f1e7;color:var(--verde)}
+.m-badge.ambar{background:#fbf1e1;color:var(--ambar)}
+.m-campo{margin:12px 0 0}
+.m-campo label{display:block;font-weight:600;font-size:.82rem;margin-bottom:6px}
+.m-radio{display:inline-flex;align-items:center;gap:6px;margin-right:16px;font-size:.84rem}
+.m-radio i{width:14px;height:14px;border-radius:50%;border:1.5px solid #94a3b8;display:inline-block}
+.m-radio i.on{border-color:var(--azul);background:radial-gradient(var(--azul) 45%,#fff 50%)}
+.m-input{display:inline-block;min-width:160px;padding:6px 10px;border:1px solid #cbd5e1;border-radius:7px;background:#fff;font-size:.84rem}
+.m-input-sel{padding-right:8px}
+.m-input-vacio{color:#94a3b8}
+.m-input-area{display:block;min-height:54px}
+.m-acciones{display:flex;gap:8px;justify-content:flex-end;margin-top:14px;flex-wrap:wrap}
+.m-tabs{display:flex;gap:4px;flex-wrap:wrap;margin:12px 0 4px;border-bottom:1px solid var(--borde)}
+.m-tabs span{padding:6px 10px;font-size:.76rem;color:var(--mudo);border-bottom:2px solid transparent}
+.m-tabs span.on{color:var(--azul);border-bottom-color:var(--azul);font-weight:700}
+.m-opciones{display:flex;gap:8px;flex-wrap:wrap}
+.m-opciones span{padding:8px 14px;border:1px solid var(--borde);border-radius:8px;font-weight:600;font-size:.84rem}
+.m-opciones span.on{border-color:var(--azul);background:var(--tinte);color:var(--azul)}
+.m-fila{display:flex;align-items:center;gap:10px;padding:9px 0;border-top:1px solid var(--borde);flex-wrap:wrap}
+.m-fila:first-of-type{border-top:0}
+.m-fila small{color:var(--mudo)}
+.m-fila-mas{color:var(--mudo);justify-content:center}
+.m-crece{flex:1 1 180px}
+.m-cod{font-family:var(--mono);font-size:.78rem;color:var(--mudo);min-width:36px}
+.m-mono{font-family:var(--mono);font-weight:500}
+.m-desglose{margin-top:8px;border-top:1px dashed var(--borde);padding-top:8px;font-size:.84rem}
+.m-desglose div{display:flex;justify-content:space-between;padding:3px 0}
+.m-desglose .m-total{border-top:1px solid var(--borde);margin-top:6px;padding-top:8px;font-weight:700}
+.m-fase{margin-top:14px;padding-top:12px;border-top:1px solid var(--borde);display:flex;align-items:center;gap:8px;font-weight:600}
+.m-hilo{display:grid;gap:8px;margin:12px 0}
+.m-msg{max-width:85%;background:var(--fondo);border-radius:10px;padding:8px 12px;font-size:.84rem}
+.m-msg.mio{justify-self:end;background:var(--tinte)}
+.m-msg small{display:block;color:var(--mudo);font-size:.7rem;margin-bottom:2px}
+.m-topbar{display:flex;align-items:center;gap:12px;background:var(--azul);color:#fff;border-radius:8px;padding:8px 12px;flex-wrap:wrap}
+.m-topbar-bo{background:#fff;color:var(--texto);border:1px solid var(--borde)}
+.m-topbar-bo .m-link{color:var(--azul)}
+.m-topbar-bo .m-idioma{border-color:#cfd8e3;color:var(--mudo)}
+.m-topbar-bo .m-idioma.activo{background:var(--navy);border-color:var(--navy);color:#fff}
+.m-topbar-txt{font-size:.78rem;margin-left:auto}
+.m-topbar .m-link{text-decoration:underline;font-size:.82rem}
+.m-avatar{width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.2);display:grid;place-items:center;font:600 .72rem var(--titulos)}
+.m-panel{max-width:340px;width:100%}
+.m-panel-cab{display:flex;justify-content:space-between;align-items:center}
+.m-barra{height:4px;background:var(--tinte);border-radius:2px;margin:10px 0;overflow:hidden}
+.m-barra span{display:block;height:100%;background:var(--azul)}
+.m-idiomas{display:flex;justify-content:flex-end;gap:4px;margin:8px 0 2px}
+.m-idioma{font-size:.62rem;font-weight:700;letter-spacing:.04em;padding:2px 7px;border-radius:999px;border:1px solid #cfd8e3;color:var(--mudo)}
+.m-idioma.activo{background:var(--navy);border-color:var(--navy);color:#fff}
+.m-pasos{list-style:none;margin:0;padding:0;font-size:.82rem}
+.m-pasos li{padding:6px 0 6px 8px;color:var(--mudo)}
+.m-pasos li.actual{color:var(--texto);border-left:3px solid var(--azul);background:var(--fondo);border-radius:0 6px 6px 0;padding:8px 10px}
+.m-pasos li small{display:block;color:var(--mudo);margin:4px 0 8px;font-size:.76rem}
+.fases{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.fases li{display:flex;align-items:center;gap:12px;background:var(--tarjeta);border:1px solid var(--borde);border-radius:10px;padding:10px 14px;flex-wrap:wrap}
+.fase-num{flex:none;width:30px;height:30px;border-radius:50%;background:var(--tinte);color:var(--azul);font:600 .9rem var(--titulos);display:grid;place-items:center}
+.fase-demo{border-color:var(--azul)}
+.fase-regente{border-color:var(--verde)}
+.fase-regente .fase-num{background:#e6f1e7;color:var(--verde)}
+.fase-nombre{flex:1 1 200px}
+.fase-tag{font-size:.72rem;font-weight:700;color:var(--azul);background:var(--tinte);padding:3px 9px;border-radius:999px}
+.fase-regente .fase-tag{color:var(--verde);background:#e6f1e7}
+.notas{margin:0;padding-left:22px}
+.notas li{margin:8px 0}
+.pie{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;padding-top:20px;padding-bottom:40px;border-top:1px solid var(--borde);color:var(--mudo);font-size:.88rem}
+@media (max-width:640px){.indice ol{columns:1}.paso{padding:18px 16px}.pantalla-cuerpo{padding:12px}}
+@media print{
+  body{background:#fff;font-size:12pt}
+  .cabecera{background:none;color:#000;padding:0 0 12pt;border-bottom:2pt solid #000}
+  .cabecera .marca,.cabecera .subtitulo{color:#444}
+  .idiomas,.cabecera-acciones,.pie a{display:none}
+  .seccion{break-before:page;border-top:0;margin-top:0;padding-top:0}
+  .seccion#empezar{break-before:auto}
+  .paso,.pantalla,.fases li{break-inside:avoid;box-shadow:none}
+  .pantalla figcaption,.m-topbar,.paso-num,.m-btn-primario{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  a{color:inherit;text-decoration:none}
+}
+
+</style>
+</head>
+<body>
+<header class="cabecera">
+  <div class="ancho">
+    <nav class="idiomas" aria-label="Langue"><a href="./es.html"  lang="es">Español</a><a href="./en.html"  lang="en">English</a><a href="./fr.html" aria-current="page" lang="fr">Français</a><a href="./pt.html"  lang="pt">Português</a></nav>
+    <p class="marca">Farmazed</p>
+    <h1>Guide du portail client</h1>
+    <p class="subtitulo">Comment mener l&#39;enregistrement sanitaire de votre produit avec Farmazed, pas à pas</p>
+    <div class="cabecera-acciones">
+      <a class="enlace-boton claro" href="/login.html">Se connecter</a>
+      <button type="button" class="enlace-boton claro" onclick="window.print()">Imprimer ou enregistrer en PDF</button>
+    </div>
+  </div>
+</header>
+<main class="ancho">
+  <section class="intro">
+    <p>Le portail client de Farmazed vous accompagne dans l&#39;enregistrement sanitaire d&#39;un médicament, d&#39;un cosmétique ou d&#39;un produit similaire au Panama : des données de votre entreprise jusqu&#39;au paiement et au suivi de chaque dossier.</p><p>Ce guide suit les six étapes du parcours guidé que vous pouvez activer dans le portail. Chaque étape reproduit l&#39;écran réel, vous dit quoi faire et ce qui vient ensuite.</p>
+    <nav class="indice" aria-label="Sommaire"><h2>Sommaire</h2><ol><li><a href="#empezar">Avant de commencer</a></li><li><a href="#panel">Le parcours guidé</a></li><li><a href="#pasos">Les six étapes</a></li><li><a href="#demo">Si vous utilisez le compte de démonstration</a></li><li><a href="#fases">Les 13 phases d&#39;un dossier</a></li><li><a href="#notas">Bon à savoir</a></li></ol></nav>
+  </section>
+
+  <section class="seccion" id="empezar">
+    <h2>Avant de commencer</h2>
+    <p>Connectez-vous sur la page de connexion avec le courriel et le mot de passe fournis par Farmazed. Si votre entreprise n&#39;a pas encore de compte, demandez-en un via « Demander un compte » sur cette même page.</p><p>Le sélecteur de langue (ES · EN · FR · PT) est dans la barre du haut : toute l&#39;application et le lien « Aide » (qui ouvre ce guide) passent dans la langue choisie.</p>
+  </section>
+
+  <section class="seccion" id="panel">
+    <h2>Le parcours guidé</h2>
+    <p>Dans « Mon compte » (menu de votre avatar, en haut à droite), activez « Afficher le parcours guidé ». Une carte avec les six étapes apparaît en bas à droite : elle coche ce que vous avez déjà fait, met en évidence l&#39;étape en cours, et le bouton « Aller à cette étape » vous amène au bon écran.</p><p>La progression se déduit des données de votre entreprise : rien à enregistrer. Vous pouvez réduire la carte ou la fermer avec la ✕, et la réactiver quand vous voulez dans « Mon compte ».</p>
+    <div class="dos">
+      <figure class="pantalla pantalla-cliente"><figcaption><span class="pantalla-ruta">Portail client</span><span class="pantalla-nota">Ce que vous verrez dans l&#39;application</span></figcaption><div class="pantalla-cuerpo">
+<div class="m-topbar"><span class="m-idiomas"><span class="m-idioma " lang="es">ES</span><span class="m-idioma " lang="en">EN</span><span class="m-idioma activo" lang="fr">FR</span><span class="m-idioma " lang="pt">PT</span></span><span class="m-topbar-txt"><b>Laboratorios ABC, S.A.</b> · María Pérez</span><span class="m-link">Aide</span><span class="m-avatar">MP</span></div>
+<div class="m-panel" lang="fr">
+  <div class="m-panel-cab"><strong>Parcours guidé</strong><span class="m-badge azul">1 sur 6</span></div>
+  <div class="m-barra"><span style="width:17%"></span></div>
+  <ol class="m-pasos">
+    <li class="actual">○ Confirmez les données de votre entreprise<small>À la première connexion, le portail vous demande la collecte d&#39;informations préliminaires : pays et laboratoire fabricant, catégories de produits et trois questions. Relisez-la et enregistrez ; vous pourrez la modifier ensuite dans « Mon entreprise ».</small><span class="m-btn m-btn-primario m-btn-sm">Aller à cette étape</span></li>
+    <li class="">○ Créez votre premier produit</li>
+    <li class="">○ Téléversez votre documentation</li>
+    <li class="">○ Vérifiez et acceptez votre devis</li>
+    <li class="">○ Payez les frais de la procédure</li>
+    <li class="">○ Écrivez à votre équipe Farmazed</li>
+  </ol>
+</div></div></figure>
+    </div>
+  </section>
+  
+<section class="seccion seccion-cliente" id="pasos">
+  <h2>Les six étapes</h2>
+  <p class="seccion-intro">Dans l&#39;ordre du parcours. Une dizaine de minutes la première fois.</p>
+  
+<article class="paso" id="cliente-captacion">
+  <div class="paso-cab"><span class="paso-num">1</span><h3>Confirmez les données de votre entreprise</h3></div>
+  <p class="paso-desc">À la première connexion, le portail vous demande la collecte d&#39;informations préliminaires : pays et laboratoire fabricant, catégories de produits et trois questions. Relisez-la et enregistrez ; vous pourrez la modifier ensuite dans « Mon entreprise ».</p>
+  <figure class="pantalla pantalla-cliente"><figcaption><span class="pantalla-ruta">Portail client › Mon entreprise</span><span class="pantalla-nota">Ce que vous verrez dans l&#39;application</span></figcaption><div class="pantalla-cuerpo">
+<div class="m-modal">
+  <h4>Collecte des informations préliminaires</h4>
+  <p>Avant de commencer, nous avons besoin de ces informations sur votre entreprise (demandées une seule fois — vous pourrez ensuite les modifier dans « Mon entreprise »).</p>
+  <div class="m-campo"><label>Enregistrement préalable auprès d&#39;une autorité reconnue (FDA, EMA, TGA…) ?</label><label class="m-radio"><i class=""></i>Oui</label><label class="m-radio"><i class="on"></i>Non</label></div>
+  <div class="m-campo"><label>Nouveau client, ou avez-vous déjà des produits enregistrés au Panama ?</label><label class="m-radio"><i class="on"></i>Nouveau client</label><label class="m-radio"><i class=""></i>A déjà des produits enregistrés</label></div>
+  <div class="m-campo"><label>Un produit fait-il l&#39;objet d&#39;une modification en cours ?</label><label class="m-radio"><i class=""></i>Oui</label><label class="m-radio"><i class="on"></i>Non</label></div>
+  <div class="m-acciones"><span class="m-btn m-btn-primario">Enregistrer</span></div>
+</div></div></figure>
+  <p class="paso-sig"><span>Étape suivante:</span> <a href="#cliente-producto">2. Créez votre premier produit</a></p>
+</article>
+<article class="paso" id="cliente-producto">
+  <div class="paso-cab"><span class="paso-num">2</span><h3>Créez votre premier produit</h3></div>
+  <p class="paso-desc">Dans « Demander l&#39;enregistrement », lancez une demande : type de procédure, données du produit et entreprises. Avancez avec « Suivant » jusqu&#39;à l&#39;étape 4 (Documents).</p>
+  <figure class="pantalla pantalla-cliente"><figcaption><span class="pantalla-ruta">Portail client › Demander l&#39;enregistrement</span><span class="pantalla-nota">Ce que vous verrez dans l&#39;application</span></figcaption><div class="pantalla-cuerpo">
+<div class="m-card">
+  <div class="m-card-cab"><h4>Vous avez un nouveau produit à enregistrer ?</h4></div>
+  <div class="m-tabs"><span class="on">1. Type de procédure</span><span class="">2. Données du produit</span><span class="">3. Entreprises</span><span class="">4. Documents</span><span class="">5. Confirmer</span></div>
+  <h5>Quel type d&#39;enregistrement vous faut-il ?</h5>
+  <div class="m-opciones"><span class="on">Médicaments</span><span>Cosmétiques</span><span>Produits d&#39;hygiène</span></div>
+  <div class="m-campo"><label>Tipo de registro</label><span class="m-input">Régulière</span></div>
+  <div class="m-acciones"><span class="m-btn m-btn-primario">Suivant</span></div>
+</div></div></figure>
+  <p class="paso-sig"><span>Étape suivante:</span> <a href="#cliente-documento">3. Téléversez votre documentation</a></p>
+</article>
+<article class="paso" id="cliente-documento">
+  <div class="paso-cab"><span class="paso-num">3</span><h3>Téléversez votre documentation</h3></div>
+  <p class="paso-desc">À l&#39;étape 4 de l&#39;assistant, déposez chaque document dans sa case (PDF, JPG, PNG ou DOCX). Une fois les documents obligatoires réunis, vous pourrez envoyer la demande ; en attendant, elle reste enregistrée comme brouillon.</p>
+  <figure class="pantalla pantalla-cliente"><figcaption><span class="pantalla-ruta">Portail client › Demander l&#39;enregistrement › 4. Documents</span><span class="pantalla-nota">Ce que vous verrez dans l&#39;application</span></figcaption><div class="pantalla-cuerpo">
+<div class="m-card">
+  <div class="m-tabs"><span class="">1. Type de procédure</span><span class="">2. Données du produit</span><span class="">3. Entreprises</span><span class="on">4. Documents</span><span class="">5. Confirmer</span></div>
+  <h5>Téléversement des documents</h5>
+  <div class="m-fila"><span class="m-cod">15.5</span><span class="m-crece">Formule qualitative et quantitative</span><span class="m-badge verde">documento-ejemplo.pdf · Téléversé ✓</span></div>
+  <div class="m-fila"><span class="m-cod">15.1</span><span class="m-crece">Certificado de libre venta</span><span class="m-btn m-btn-contorno m-btn-sm">Subir PDF</span></div>
+  <div class="m-fila"><span class="m-cod">15.2</span><span class="m-crece">Poder notarial</span><span class="m-btn m-btn-contorno m-btn-sm">Subir PDF</span></div>
+  <div class="m-fila m-fila-mas">…</div>
+</div></div></figure>
+  <p class="paso-sig"><span>Étape suivante:</span> <a href="#cliente-cotizacion">4. Vérifiez et acceptez votre devis</a></p>
+</article>
+<article class="paso" id="cliente-cotizacion">
+  <div class="paso-cab"><span class="paso-num">4</span><h3>Vérifiez et acceptez votre devis</h3></div>
+  <p class="paso-desc">Quand Farmazed vous envoie le devis, ouvrez-le dans « Devis », vérifiez le détail (honoraires, taxe DNFD, MEF et IEA) et acceptez-le pour continuer.</p>
+  <figure class="pantalla pantalla-cliente"><figcaption><span class="pantalla-ruta">Portail client › Devis</span><span class="pantalla-nota">Ce que vous verrez dans l&#39;application</span></figcaption><div class="pantalla-cuerpo">
+<div class="m-card">
+  <div class="m-card-cab"><h4>Devis FZ-DEMO-2026-0002</h4><span class="m-badge azul">Envoyée</span></div>
+  <div class="m-fila"><span class="m-crece"><b>Producto Ejemplo 2 — Analgésico 500 mg</b><br><small>Tableta · Laboratorios Ejemplo S.A.</small></span><span class="m-mono">B/. 4,130.00</span></div>
+  
+  <div class="m-desglose"><div><span>Honoraires Farmazed</span><span class="m-mono">B/. 1,855.00</span></div><div><span>Taxe DNFD</span><span class="m-mono">B/. 750.00</span></div><div><span>MEF (produit étranger)</span><span class="m-mono">B/. 25.00</span></div><div><span>IEA</span><span class="m-mono">B/. 1,500.00</span></div>
+    <div class="m-total"><span>Total</span><span class="m-mono">B/. 4,130.00</span></div></div>
+  <div class="m-acciones"><span class="m-btn m-btn-primario m-btn-sm">Accepter</span><span class="m-btn m-btn-contorno m-btn-sm">Refuser</span></div>
+</div></div></figure>
+  <p class="paso-sig"><span>Étape suivante:</span> <a href="#cliente-pago">5. Payez les frais de la procédure</a></p>
+</article>
+<article class="paso" id="cliente-pago">
+  <div class="paso-cab"><span class="paso-num">5</span><h3>Payez les frais de la procédure</h3></div>
+  <p class="paso-desc">Cliquez sur « Payer avec PayPal » ou utilisez le lien de paiement envoyé par Farmazed. Une fois le paiement confirmé, votre dossier passe à la phase d&#39;ouverture et l&#39;équipe se met au travail.</p>
+  <figure class="pantalla pantalla-cliente"><figcaption><span class="pantalla-ruta">Portail client › Devis</span><span class="pantalla-nota">Ce que vous verrez dans l&#39;application</span></figcaption><div class="pantalla-cuerpo">
+<div class="m-card">
+  <div class="m-card-cab"><h4>Devis FZ-DEMO-2026-0002</h4><span class="m-badge verde">Acceptée</span></div>
+  <div class="m-fila"><span class="m-crece"><b>Producto Ejemplo 2 — Analgésico 500 mg</b><br><small>Tableta · Laboratorios Ejemplo S.A.</small></span><span class="m-mono">B/. 4,130.00</span></div>
+  
+  <div class="m-desglose"><div><span>Honoraires Farmazed</span><span class="m-mono">B/. 1,855.00</span></div><div><span>Taxe DNFD</span><span class="m-mono">B/. 750.00</span></div><div><span>MEF (produit étranger)</span><span class="m-mono">B/. 25.00</span></div><div><span>IEA</span><span class="m-mono">B/. 1,500.00</span></div>
+    <div class="m-total"><span>Total</span><span class="m-mono">B/. 4,130.00</span></div></div>
+  <div class="m-acciones"><span class="m-btn m-btn-primario m-btn-sm">Payer avec PayPal</span></div>
+</div>
+<div class="m-card">
+  <div class="m-card-cab"><h4>Devis FZ-DEMO-2026-0002</h4><span class="m-badge verde">Pagada ✓</span></div>
+  <div class="m-fila"><span class="m-crece"><b>Producto Ejemplo 2 — Analgésico 500 mg</b><br><small>Tableta · Laboratorios Ejemplo S.A.</small></span><span class="m-mono">B/. 4,130.00</span></div>
+  <div class="m-fase"><span class="m-badge azul">Phase 6</span> Ouverture du dossier interne (CRM)</div>
+</div></div></figure>
+  <p class="paso-sig"><span>Étape suivante:</span> <a href="#cliente-mensaje">6. Écrivez à votre équipe Farmazed</a></p>
+</article>
+<article class="paso" id="cliente-mensaje">
+  <div class="paso-cab"><span class="paso-num">6</span><h3>Écrivez à votre équipe Farmazed</h3></div>
+  <p class="paso-desc">Dans « Messages », choisissez un produit et écrivez : c&#39;est ainsi que vous communiquez avec votre régent tout au long de la procédure. Dans « Mes produits », vous suivez l&#39;avancement de chaque dossier à travers les phases.</p>
+  <figure class="pantalla pantalla-cliente"><figcaption><span class="pantalla-ruta">Portail client › Messages</span><span class="pantalla-nota">Ce que vous verrez dans l&#39;application</span></figcaption><div class="pantalla-cuerpo">
+<div class="m-card">
+  <div class="m-card-cab"><h4>Messages</h4><span class="m-input m-input-sel">Producto Ejemplo 3 — Jarabe pediátrico ▾</span></div>
+  <div class="m-hilo">
+    <div class="m-msg mio"><small>Cliente Ejemplo</small>Bonjour, nous avons déjà réglé le devis. Quelle est la prochaine étape ?</div>
+    <div class="m-msg"><small>Regente Ejemplo</small>Bien reçu, merci. Nous avons déjà examiné la documentation numérique ; dès que nous confirmerons la vérification technique, nous passerons aux originaux.</div>
+  </div>
+  <div class="m-fila"><span class="m-input m-crece m-input-vacio">Écrivez un message…</span><span class="m-btn m-btn-primario m-btn-sm">Envoyer</span></div>
+</div></div></figure>
+  <p class="paso-sig"><span class="fin">✓ Parcours terminé : vous avez vu l&#39;essentiel.</span></p>
+</article>
+</section>
+  
+<section class="seccion" id="demo">
+  <h2>Si vous utilisez le compte de démonstration</h2>
+  <p>Farmazed remet aux prospects un compte de démonstration (« Laboratorios Ejemplo S.A. ») avec des données d&#39;exemple. Le parcours y est toujours actif et les étapes parlent de ces données : un devis déjà envoyé pour le « Producto Ejemplo 2 », un bouton « Remplir avec des données d&#39;exemple » dans l&#39;assistant et un téléversement de documents simulé (les boutons « Téléverser » affichent un message au lieu d&#39;ouvrir l&#39;explorateur de fichiers).</p><p>Rien de ce que vous faites dans la démo ne touche des données réelles ni n&#39;envoie de courriel, et le paiement passe par un prestataire de test même si le bouton indique « Payer avec PayPal ». Le bouton « Réinitialiser le compte démo », dans la barre du haut, efface ce que vous avez fait et remet tout à l&#39;état initial ; il faudra vous reconnecter.</p><p>Inviter des membres et changer de forfait sont masqués dans la démo ; le reste du portail fonctionne comme en production.</p>
+  <figure class="pantalla pantalla-cliente"><figcaption><span class="pantalla-ruta">Portail client</span><span class="pantalla-nota">Ce que vous verrez dans l&#39;application</span></figcaption><div class="pantalla-cuerpo">
+<div class="m-topbar"><span class="m-idiomas"><span class="m-idioma " lang="es">ES</span><span class="m-idioma " lang="en">EN</span><span class="m-idioma activo" lang="fr">FR</span><span class="m-idioma " lang="pt">PT</span></span><span class="m-btn m-btn-aviso m-btn-sm">Réinitialiser le compte démo</span><span class="m-topbar-txt"><b>Laboratorios Ejemplo S.A.</b> · Cliente Ejemplo</span><span class="m-link">Aide</span><span class="m-avatar">CE</span></div>
+<div class="m-card">
+  <div class="m-card-cab"><h4>Vous avez un nouveau produit à enregistrer ?</h4><span class="m-btn m-btn-contorno m-btn-sm">Remplir avec des données d&#39;exemple</span></div>
+  <div class="m-tabs"><span class="on">1. Type de procédure</span><span class="">2. Données du produit</span><span class="">3. Entreprises</span><span class="">4. Documents</span><span class="">5. Confirmer</span></div>
+  <h5>Quel type d&#39;enregistrement vous faut-il ?</h5>
+  <div class="m-opciones"><span class="on">Médicaments</span><span>Cosmétiques</span><span>Produits d&#39;hygiène</span></div>
+  <div class="m-campo"><label>Tipo de registro</label><span class="m-input">Régulière</span></div>
+  <div class="m-acciones"><span class="m-btn m-btn-primario">Suivant</span></div>
+</div></div></figure>
+</section>
+  
+<section class="seccion" id="fases">
+  <h2>Les 13 phases d&#39;un dossier</h2>
+  <p class="seccion-intro">Chaque produit avance à travers ces phases ; « Mes produits » indique où en est le vôtre. Les phases surlignées sont celles que vous touchez pendant le parcours.</p>
+  <ol class="fases"><li class=""><span class="fase-num">1</span><span class="fase-nombre">Premier contact</span></li><li class=""><span class="fase-num">2</span><span class="fase-nombre">Collecte des informations préliminaires</span></li><li class=""><span class="fase-num">3</span><span class="fase-nombre">Type d&#39;enregistrement sanitaire et voie d&#39;enregistrement</span></li><li class="fase-demo fase-cliente"><span class="fase-num">4</span><span class="fase-nombre">Préparation et envoi du devis</span><span class="fase-tag">dans le parcours</span></li><li class="fase-demo fase-cliente"><span class="fase-num">5</span><span class="fase-nombre">Paiement des frais de la procédure</span><span class="fase-tag">dans le parcours</span></li><li class="fase-demo fase-cliente"><span class="fase-num">6</span><span class="fase-nombre">Ouverture du dossier interne (CRM)</span><span class="fase-tag">dans le parcours</span></li><li class=""><span class="fase-num">7</span><span class="fase-nombre">Instructions au client : documentation requise</span></li><li class=""><span class="fase-num">8</span><span class="fase-nombre">Réception et examen de la documentation numérique (point de contrôle)</span></li><li class=""><span class="fase-num">9</span><span class="fase-nombre">Demande et envoi des documents originaux</span></li><li class=""><span class="fase-num">10</span><span class="fase-nombre">Réception et vérification des originaux (point de contrôle)</span></li><li class=""><span class="fase-num">11</span><span class="fase-nombre">Constitution des dossiers DNFD et IEA</span></li><li class=""><span class="fase-num">12</span><span class="fase-nombre">Dépôt auprès de la DNFD et de l&#39;IEA</span></li><li class=""><span class="fase-num">13</span><span class="fase-nombre">Suivi et gestion après dépôt</span></li></ol>
+</section>
+
+  <section class="seccion" id="notas">
+    <h2>Bon à savoir</h2>
+    <ul class="notas"><li>L&#39;assistant exige les documents obligatoires de votre type de procédure pour envoyer la demande ; tant qu&#39;ils manquent, le produit reste enregistré comme brouillon et vous pouvez le reprendre.</li><li>Le devis regroupe vos procédures en cours avec le détail des honoraires Farmazed et des taxes officielles (DNFD, MEF, IEA). En cas de doute, écrivez à votre équipe dans « Messages » avant de l&#39;accepter.</li><li>Les messages sont rattachés à chaque produit : votre régent les voit dans le dossier et vous répond par la même voie.</li><li>L&#39;application et ce guide existent en espagnol, anglais, français et portugais ; choisissez la langue dans la barre du haut. Les noms de produits et d&#39;entreprises ne sont pas traduits.</li></ul>
+  </section>
+</main>
+<footer class="pie ancho">
+  <span><a href="/client-dashboard.html">Aller au portail</a></span>
+  <span>Guide généré le 2026-11-02</span>
+</footer>
+</body>
+</html>

@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Regent guide (demo account) · Farmazed</title>
+<meta name="description" content="The Farmazed back office as a regent sees it, step by step">
+<meta name="robots" content="noindex">
+<link rel="icon" href="/favicon_Farzed.png">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;600&family=Open+Sans:wght@400;600;700&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+
+:root{--azul:#1B4F8A;--navy:#0F3260;--verde:#3A7D44;--ambar:#BA7517;--rojo:#A32D2D;--tinte:#E8EFF8;--fondo:#F4F6FB;--tarjeta:#fff;--texto:#1e293b;--mudo:#64748b;--borde:rgba(15,50,96,.12);--fuente:'Open Sans',sans-serif;--titulos:'Oswald',sans-serif;--mono:'IBM Plex Mono',monospace;--radio:10px}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:16px}
+body{margin:0;background:var(--fondo);color:var(--texto);font-family:var(--fuente);font-size:16px;line-height:1.6}
+.ancho{max-width:860px;margin:0 auto;padding:0 16px}
+h1,h2,h3,h4,h5{font-family:var(--titulos);font-weight:600;line-height:1.2;margin:0}
+a{color:var(--azul)}
+.cabecera{background:var(--navy);color:#fff;padding:28px 0 36px}
+.cabecera .marca{font-family:var(--titulos);letter-spacing:.14em;text-transform:uppercase;font-size:.8rem;color:rgba(255,255,255,.7);margin:0 0 6px}
+.cabecera h1{font-size:clamp(1.9rem,4vw,2.6rem);font-weight:400}
+.cabecera .subtitulo{color:rgba(255,255,255,.78);margin:8px 0 0;font-size:1.05rem}
+.idiomas{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;margin-bottom:14px}
+.idiomas a{color:rgba(255,255,255,.75);text-decoration:none;font-size:.82rem;padding:4px 10px;border-radius:999px;border:1px solid rgba(255,255,255,.25)}
+.idiomas a[aria-current]{background:#fff;color:var(--navy);border-color:#fff;font-weight:600}
+.cabecera-acciones{display:flex;gap:10px;flex-wrap:wrap;margin-top:20px}
+.enlace-boton{display:inline-block;font:600 .9rem var(--fuente);text-decoration:none;color:#fff;background:var(--azul);border:1px solid var(--azul);padding:9px 16px;border-radius:var(--radio);cursor:pointer}
+.enlace-boton.claro{background:transparent;border-color:rgba(255,255,255,.45)}
+.enlace-boton.claro:hover{background:rgba(255,255,255,.1)}
+main{padding:28px 16px 40px}
+.intro p{font-size:1.08rem;margin:0 0 14px}
+.indice{background:var(--tarjeta);border:1px solid var(--borde);border-radius:var(--radio);padding:18px 22px;margin-top:22px}
+.indice h2{font-size:.85rem;letter-spacing:.1em;text-transform:uppercase;color:var(--mudo);margin-bottom:8px}
+.indice ol{margin:0;padding-left:20px;columns:2;column-gap:28px}
+.indice li{margin:4px 0;break-inside:avoid}
+.seccion{margin-top:44px;padding-top:28px;border-top:1px solid var(--borde)}
+.seccion h2{font-size:1.75rem;color:var(--navy);margin-bottom:10px}
+.seccion-intro{color:var(--mudo);margin:0 0 20px}
+.seccion > p{margin:0 0 12px}
+.paso{background:var(--tarjeta);border:1px solid var(--borde);border-radius:14px;padding:22px 24px;margin:18px 0}
+.paso-cab{display:flex;align-items:center;gap:14px}
+.paso-num{flex:none;width:38px;height:38px;border-radius:50%;background:var(--azul);color:#fff;font:600 1.05rem var(--titulos);display:grid;place-items:center}
+.seccion-regente .paso-num{background:var(--verde)}
+.paso h3{font-size:1.3rem;color:var(--navy)}
+.paso-desc{margin:12px 0 0;font-size:1.02rem}
+.paso-extra{margin:12px 0 0}
+.paso-sig{margin:16px 0 0;font-size:.92rem;color:var(--mudo)}
+.paso-sig a{font-weight:600;text-decoration:none}
+.paso-sig .fin{color:var(--verde);font-weight:600}
+.pantalla{margin:18px 0 0;border:1px solid var(--borde);border-radius:12px;overflow:hidden;background:#F4F6FB}
+.pantalla figcaption{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:center;background:var(--azul);color:#fff;padding:8px 14px;font-size:.78rem}
+.pantalla-regente figcaption{background:var(--verde)}
+.pantalla-ruta{font-weight:600}
+.pantalla-nota{color:rgba(255,255,255,.75)}
+.pantalla-cuerpo{padding:16px;font-size:.86rem;display:grid;gap:14px}
+.dos .pantalla-cuerpo{justify-items:end}
+.dos .m-topbar{justify-self:stretch}
+/* Réplicas de la interfaz */
+.m-card,.m-modal,.m-panel{background:#fff;border:1px solid var(--borde);border-radius:10px;padding:16px;box-shadow:0 1px 2px rgba(15,50,96,.06)}
+.m-modal{border-top:4px solid var(--azul)}
+.m-card h4,.m-modal h4,.m-panel strong{font:600 1rem var(--titulos);color:var(--navy)}
+.m-card h5{font:600 .9rem var(--titulos);color:var(--texto);margin:12px 0 8px}
+.m-modal p{color:var(--mudo);margin:6px 0 12px;font-size:.82rem}
+.m-card-cab{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.m-btn{display:inline-block;padding:6px 14px;border-radius:7px;border:1px solid var(--azul);background:#fff;color:var(--azul);font-weight:600;font-size:.84rem;line-height:1.3;white-space:nowrap}
+.m-btn-primario{background:var(--azul);color:#fff}
+.m-btn-contorno{background:#fff}
+.m-btn-aviso{background:#ffc107;border-color:#ffc107;color:#1e293b}
+.m-btn-ok{color:var(--verde);border-color:var(--verde)}
+.m-btn-no{color:var(--rojo);border-color:var(--rojo)}
+.m-btn-sm{padding:4px 10px;font-size:.78rem}
+.m-badge{display:inline-block;padding:3px 9px;border-radius:999px;font-size:.72rem;font-weight:700;border:1px solid transparent;white-space:nowrap}
+.m-badge.azul{background:var(--tinte);color:var(--azul)}
+.m-badge.verde{background:#e6f1e7;color:var(--verde)}
+.m-badge.ambar{background:#fbf1e1;color:var(--ambar)}
+.m-campo{margin:12px 0 0}
+.m-campo label{display:block;font-weight:600;font-size:.82rem;margin-bottom:6px}
+.m-radio{display:inline-flex;align-items:center;gap:6px;margin-right:16px;font-size:.84rem}
+.m-radio i{width:14px;height:14px;border-radius:50%;border:1.5px solid #94a3b8;display:inline-block}
+.m-radio i.on{border-color:var(--azul);background:radial-gradient(var(--azul) 45%,#fff 50%)}
+.m-input{display:inline-block;min-width:160px;padding:6px 10px;border:1px solid #cbd5e1;border-radius:7px;background:#fff;font-size:.84rem}
+.m-input-sel{padding-right:8px}
+.m-input-vacio{color:#94a3b8}
+.m-input-area{display:block;min-height:54px}
+.m-acciones{display:flex;gap:8px;justify-content:flex-end;margin-top:14px;flex-wrap:wrap}
+.m-tabs{display:flex;gap:4px;flex-wrap:wrap;margin:12px 0 4px;border-bottom:1px solid var(--borde)}
+.m-tabs span{padding:6px 10px;font-size:.76rem;color:var(--mudo);border-bottom:2px solid transparent}
+.m-tabs span.on{color:var(--azul);border-bottom-color:var(--azul);font-weight:700}
+.m-opciones{display:flex;gap:8px;flex-wrap:wrap}
+.m-opciones span{padding:8px 14px;border:1px solid var(--borde);border-radius:8px;font-weight:600;font-size:.84rem}
+.m-opciones span.on{border-color:var(--azul);background:var(--tinte);color:var(--azul)}
+.m-fila{display:flex;align-items:center;gap:10px;padding:9px 0;border-top:1px solid var(--borde);flex-wrap:wrap}
+.m-fila:first-of-type{border-top:0}
+.m-fila small{color:var(--mudo)}
+.m-fila-mas{color:var(--mudo);justify-content:center}
+.m-crece{flex:1 1 180px}
+.m-cod{font-family:var(--mono);font-size:.78rem;color:var(--mudo);min-width:36px}
+.m-mono{font-family:var(--mono);font-weight:500}
+.m-desglose{margin-top:8px;border-top:1px dashed var(--borde);padding-top:8px;font-size:.84rem}
+.m-desglose div{display:flex;justify-content:space-between;padding:3px 0}
+.m-desglose .m-total{border-top:1px solid var(--borde);margin-top:6px;padding-top:8px;font-weight:700}
+.m-fase{margin-top:14px;padding-top:12px;border-top:1px solid var(--borde);display:flex;align-items:center;gap:8px;font-weight:600}
+.m-hilo{display:grid;gap:8px;margin:12px 0}
+.m-msg{max-width:85%;background:var(--fondo);border-radius:10px;padding:8px 12px;font-size:.84rem}
+.m-msg.mio{justify-self:end;background:var(--tinte)}
+.m-msg small{display:block;color:var(--mudo);font-size:.7rem;margin-bottom:2px}
+.m-topbar{display:flex;align-items:center;gap:12px;background:var(--azul);color:#fff;border-radius:8px;padding:8px 12px;flex-wrap:wrap}
+.m-topbar-bo{background:#fff;color:var(--texto);border:1px solid var(--borde)}
+.m-topbar-bo .m-link{color:var(--azul)}
+.m-topbar-bo .m-idioma{border-color:#cfd8e3;color:var(--mudo)}
+.m-topbar-bo .m-idioma.activo{background:var(--navy);border-color:var(--navy);color:#fff}
+.m-topbar-txt{font-size:.78rem;margin-left:auto}
+.m-topbar .m-link{text-decoration:underline;font-size:.82rem}
+.m-avatar{width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.2);display:grid;place-items:center;font:600 .72rem var(--titulos)}
+.m-panel{max-width:340px;width:100%}
+.m-panel-cab{display:flex;justify-content:space-between;align-items:center}
+.m-barra{height:4px;background:var(--tinte);border-radius:2px;margin:10px 0;overflow:hidden}
+.m-barra span{display:block;height:100%;background:var(--azul)}
+.m-idiomas{display:flex;justify-content:flex-end;gap:4px;margin:8px 0 2px}
+.m-idioma{font-size:.62rem;font-weight:700;letter-spacing:.04em;padding:2px 7px;border-radius:999px;border:1px solid #cfd8e3;color:var(--mudo)}
+.m-idioma.activo{background:var(--navy);border-color:var(--navy);color:#fff}
+.m-pasos{list-style:none;margin:0;padding:0;font-size:.82rem}
+.m-pasos li{padding:6px 0 6px 8px;color:var(--mudo)}
+.m-pasos li.actual{color:var(--texto);border-left:3px solid var(--azul);background:var(--fondo);border-radius:0 6px 6px 0;padding:8px 10px}
+.m-pasos li small{display:block;color:var(--mudo);margin:4px 0 8px;font-size:.76rem}
+.fases{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.fases li{display:flex;align-items:center;gap:12px;background:var(--tarjeta);border:1px solid var(--borde);border-radius:10px;padding:10px 14px;flex-wrap:wrap}
+.fase-num{flex:none;width:30px;height:30px;border-radius:50%;background:var(--tinte);color:var(--azul);font:600 .9rem var(--titulos);display:grid;place-items:center}
+.fase-demo{border-color:var(--azul)}
+.fase-regente{border-color:var(--verde)}
+.fase-regente .fase-num{background:#e6f1e7;color:var(--verde)}
+.fase-nombre{flex:1 1 200px}
+.fase-tag{font-size:.72rem;font-weight:700;color:var(--azul);background:var(--tinte);padding:3px 9px;border-radius:999px}
+.fase-regente .fase-tag{color:var(--verde);background:#e6f1e7}
+.notas{margin:0;padding-left:22px}
+.notas li{margin:8px 0}
+.pie{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;padding-top:20px;padding-bottom:40px;border-top:1px solid var(--borde);color:var(--mudo);font-size:.88rem}
+@media (max-width:640px){.indice ol{columns:1}.paso{padding:18px 16px}.pantalla-cuerpo{padding:12px}}
+@media print{
+  body{background:#fff;font-size:12pt}
+  .cabecera{background:none;color:#000;padding:0 0 12pt;border-bottom:2pt solid #000}
+  .cabecera .marca,.cabecera .subtitulo{color:#444}
+  .idiomas,.cabecera-acciones,.pie a{display:none}
+  .seccion{break-before:page;border-top:0;margin-top:0;padding-top:0}
+  .seccion#empezar{break-before:auto}
+  .paso,.pantalla,.fases li{break-inside:avoid;box-shadow:none}
+  .pantalla figcaption,.m-topbar,.paso-num,.m-btn-primario{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  a{color:inherit;text-decoration:none}
+}
+
+</style>
+</head>
+<body>
+<header class="cabecera">
+  <div class="ancho">
+    <nav class="idiomas" aria-label="Language"><a href="./es.html"  lang="es">Español</a><a href="./en.html" aria-current="page" lang="en">English</a><a href="./fr.html"  lang="fr">Français</a><a href="./pt.html"  lang="pt">Português</a></nav>
+    <p class="marca">Farmazed</p>
+    <h1>Regent guide (demo account)</h1>
+    <p class="subtitulo">The Farmazed back office as a regent sees it, step by step</p>
+    <div class="cabecera-acciones">
+      <a class="enlace-boton claro" href="/login.html">Sign in</a>
+      <button type="button" class="enlace-boton claro" onclick="window.print()">Print or save as PDF</button>
+    </div>
+  </div>
+</header>
+<main class="ancho">
+  <section class="intro">
+    <p>The regent demo account lets you work a sample file the way the Farmazed team does: review documents, confirm the technical check and handle a CRM lead, with sample data and without touching anything real.</p><p>This guide follows the &quot;Demo tour&quot; panel you will see inside the back office. Each step reproduces the real screen and tells you what to do and what comes next.</p>
+    <nav class="indice" aria-label="Contents"><h2>Contents</h2><ol><li><a href="#empezar">Before you start</a></li><li><a href="#panel">The &quot;Demo tour&quot; panel</a></li><li><a href="#pasos">The three steps</a></li><li><a href="#fases">The 13 phases of a file</a></li><li><a href="#notas">Good to know</a></li></ol></nav>
+  </section>
+
+  <section class="seccion" id="empezar">
+    <h2>Before you start</h2>
+    <p>Sign in on the login page with the demo regent&#39;s e-mail and the password you were given; passwords are not printed in this guide. The regent tour only exists in the demo account.</p><p>The language switch (ES · EN · FR · PT) is in the top bar: the whole back office and the &quot;Help&quot; link (which opens this guide) change to the language you pick.</p>
+  </section>
+
+  <section class="seccion" id="panel">
+    <h2>The &quot;Demo tour&quot; panel</h2>
+    <p>At the bottom right you will see a card with the three steps of the tour. It ticks off what you have done, highlights the step you are on, and the &quot;Go to this step&quot; button takes you to the right screen. Progress is derived from the data: there is nothing to save.</p><p>The &quot;Reset demo account&quot; button in the top bar wipes what you did (including the demo client&#39;s work) and puts everything back to the start. You will have to sign in again.</p>
+    <div class="dos">
+      <figure class="pantalla pantalla-regente"><figcaption><span class="pantalla-ruta">Back office</span><span class="pantalla-nota">What it looks like in the application</span></figcaption><div class="pantalla-cuerpo">
+<div class="m-topbar m-topbar-bo"><b class="m-topbar-txt">My Inbox</b><span class="m-idiomas"><span class="m-idioma " lang="es">ES</span><span class="m-idioma activo" lang="en">EN</span><span class="m-idioma " lang="fr">FR</span><span class="m-idioma " lang="pt">PT</span></span><span class="m-link">Help</span><span class="m-topbar-txt">Regente Ejemplo</span></div>
+<div class="m-panel" lang="en">
+  <div class="m-panel-cab"><strong>Demo tour</strong><span class="m-badge azul">1 of 3</span></div>
+  <div class="m-barra"><span style="width:17%"></span></div>
+  <ol class="m-pasos">
+    <li class="actual">○ Review the document for Producto Ejemplo 3<small>The client uploaded the qualitative-quantitative formula. Open the file from &quot;My Inbox&quot;, find document 15.5 and approve it (✓) or reject it (✗) with a reason the client will see in their portal.</small><span class="m-btn m-btn-primario m-btn-sm">Go to this step</span></li>
+    <li class="">○ Confirm the technical check (phase 8)</li>
+    <li class="">○ Handle the &quot;Farmacia Ejemplo&quot; lead</li>
+  </ol>
+</div></div></figure>
+    </div>
+  </section>
+  
+<section class="seccion seccion-regente" id="pasos">
+  <h2>The three steps</h2>
+  <p class="seccion-intro">Around &quot;Producto Ejemplo 3&quot; (phase 8) and the &quot;Farmacia Ejemplo&quot; lead.</p>
+  
+<article class="paso" id="regente-documento">
+  <div class="paso-cab"><span class="paso-num">1</span><h3>Review the document for Producto Ejemplo 3</h3></div>
+  <p class="paso-desc">The client uploaded the qualitative-quantitative formula. Open the file from &quot;My Inbox&quot;, find document 15.5 and approve it (✓) or reject it (✗) with a reason the client will see in their portal.</p>
+  <figure class="pantalla pantalla-regente"><figcaption><span class="pantalla-ruta">Back office › My Inbox › File</span><span class="pantalla-nota">What it looks like in the application</span></figcaption><div class="pantalla-cuerpo">
+<div class="m-card">
+  <div class="m-card-cab"><h4>FZ-DEMO-2026-0003 · Producto Ejemplo 3 — Jarabe pediátrico</h4><span class="m-badge ambar">Phase 8</span></div>
+  <h5>Attached Documents — FADDI Step 15</h5>
+  <div class="m-fila"><span class="m-cod">15.5</span><span class="m-crece">Qualitative and quantitative formula <small>· v1 · Uploaded</small></span><span class="m-btn m-btn-ok m-btn-sm" title="Approve">✓</span><span class="m-btn m-btn-no m-btn-sm" title="Reject">✗</span></div>
+  <div class="m-fila m-fila-mas"><span class="m-input m-crece m-input-vacio">Reason for rejection (the client will see it):</span></div>
+</div></div></figure>
+  <p class="paso-sig"><span>Next step:</span> <a href="#regente-cotejo">2. Confirm the technical check (phase 8)</a></p>
+</article>
+<article class="paso" id="regente-cotejo">
+  <div class="paso-cab"><span class="paso-num">2</span><h3>Confirm the technical check (phase 8)</h3></div>
+  <p class="paso-desc">&quot;Producto Ejemplo 3&quot; is in phase 8, review of digital documentation. In the &quot;Phase 8 — Confirmations&quot; card record your technical/matrices confirmation; the legal one is entered by the lawyer.</p>
+  <figure class="pantalla pantalla-regente"><figcaption><span class="pantalla-ruta">Back office › File › Phase 8 — Confirmations</span><span class="pantalla-nota">What it looks like in the application</span></figcaption><div class="pantalla-cuerpo">
+<div class="m-card">
+  <h4>Phase 8 — Confirmations</h4>
+  <div class="m-fila"><span class="m-crece">Legal (powers of attorney/affidavits)</span><span class="m-badge ambar">Pending</span></div>
+  <div class="m-fila"><span class="m-crece">Technical/matrices</span><span class="m-badge ambar">Pending</span><span class="m-btn m-btn-contorno m-btn-sm">Confirm</span></div>
+</div></div></figure>
+  <p class="paso-sig"><span>Next step:</span> <a href="#regente-lead">3. Handle the &quot;Farmacia Ejemplo&quot; lead</a></p>
+</article>
+<article class="paso" id="regente-lead">
+  <div class="paso-cab"><span class="paso-num">3</span><h3>Handle the &quot;Farmacia Ejemplo&quot; lead</h3></div>
+  <p class="paso-desc">Under &quot;Leads&quot; you will find the request from &quot;Farmacia Ejemplo&quot; (status New). Open it, change the status to Contacted or leave a note: this is how the CRM is worked before the admin invites the client to create their account.</p>
+  <figure class="pantalla pantalla-regente"><figcaption><span class="pantalla-ruta">Back office › Leads</span><span class="pantalla-nota">What it looks like in the application</span></figcaption><div class="pantalla-cuerpo">
+<div class="m-card">
+  <div class="m-card-cab"><h4>Leads</h4></div>
+  <div class="m-fila"><span class="m-crece"><b>Farmacia Ejemplo</b><br><small>Panama · account request</small></span><span class="m-badge azul">New</span></div>
+  <div class="m-campo"><label>Status</label><span class="m-input m-input-sel">Contacted ▾</span></div>
+  <div class="m-campo"><label>Internal notes</label><span class="m-input m-input-area">We called on Monday; interested in registering 2 products.</span></div>
+  <div class="m-acciones"><span class="m-btn m-btn-primario m-btn-sm">Save</span></div>
+</div></div></figure>
+  <p class="paso-sig"><span class="fin">✓ Tour complete: you have seen the essentials.</span></p>
+</article>
+</section>
+  
+  
+<section class="seccion" id="fases">
+  <h2>The 13 phases of a file</h2>
+  <p class="seccion-intro">Every file moves through these phases; &quot;My Inbox&quot; shows where each of yours is. The highlighted one is the one you touch during the tour.</p>
+  <ol class="fases"><li class=""><span class="fase-num">1</span><span class="fase-nombre">First contact</span></li><li class=""><span class="fase-num">2</span><span class="fase-nombre">Preliminary information intake</span></li><li class=""><span class="fase-num">3</span><span class="fase-nombre">Type of sanitary registration and registration route</span></li><li class=""><span class="fase-num">4</span><span class="fase-nombre">Preparing and sending the quote</span></li><li class=""><span class="fase-num">5</span><span class="fase-nombre">Payment of procedure costs</span></li><li class=""><span class="fase-num">6</span><span class="fase-nombre">Opening of the internal file (CRM)</span></li><li class=""><span class="fase-num">7</span><span class="fase-nombre">Instructions to the client: required documentation</span></li><li class="fase-demo fase-regente"><span class="fase-num">8</span><span class="fase-nombre">Receipt and review of digital documentation (control point)</span><span class="fase-tag">in the tour</span></li><li class=""><span class="fase-num">9</span><span class="fase-nombre">Request and shipment of original documents</span></li><li class=""><span class="fase-num">10</span><span class="fase-nombre">Receipt and verification of originals (control point)</span></li><li class=""><span class="fase-num">11</span><span class="fase-nombre">Preparation of DNFD and IEA dossiers</span></li><li class=""><span class="fase-num">12</span><span class="fase-nombre">Filing with DNFD and IEA</span></li><li class=""><span class="fase-num">13</span><span class="fase-nombre">Post-filing follow-up and management</span></li></ol>
+</section>
+
+  <section class="seccion" id="notas">
+    <h2>Good to know</h2>
+    <ul class="notas"><li>When you reject a document, the reason you write is shown to the client in their portal: be specific about what must be corrected.</li><li>Phase 8 requires two confirmations: technical/matrices (yours) and legal (the lawyer&#39;s). The file does not move on until both are in.</li><li>Leads are requests from the public website form; changing their status or leaving notes is how they are worked before the admin invites the company to create its account.</li><li>The application and this guide exist in Spanish, English, French and Portuguese; pick the language in the top bar.</li></ul>
+  </section>
+</main>
+<footer class="pie ancho">
+  <span><a href="/admin/bandeja.html">Go to the back office</a></span>
+  <span>Guide generated on 2026-11-02</span>
+</footer>
+</body>
+</html>

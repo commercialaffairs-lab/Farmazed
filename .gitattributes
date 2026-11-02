@@ -1,0 +1,3 @@
+# Los manuales generados (tracker/scripts/generar_manual.js) se comparan byte a byte en
+# tracker/tests/manual.test.js: deben quedar con LF también en un clon Windows con core.autocrlf=true.
+farmazed-web/manual/**/*.html text eol=lf

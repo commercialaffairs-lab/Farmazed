@@ -1,0 +1,27 @@
+{
+  "_comentario": "Rótulos que solo usan las pantallas reproducidas del manual (tracker/scripts/generar_manual.js): rutas de navegación y textos de ejemplo escritos a mano en las réplicas. Todo lo demás del manual sale del diccionario de la aplicación.",
+  "en": {
+    "Portal del cliente": "Client portal",
+    "Back-office": "Back office",
+    "solicitud de cuenta": "account request",
+    "Llamamos el lunes; interesados en registrar 2 productos.": "We called on Monday; interested in registering 2 products.",
+    "Siguiente": "Next",
+    "Anterior": "Back"
+  },
+  "fr": {
+    "Portal del cliente": "Portail client",
+    "Back-office": "Back-office",
+    "solicitud de cuenta": "demande de compte",
+    "Llamamos el lunes; interesados en registrar 2 productos.": "Appel passé lundi ; intéressés par l'enregistrement de 2 produits.",
+    "Siguiente": "Suivant",
+    "Anterior": "Précédent"
+  },
+  "pt": {
+    "Portal del cliente": "Portal do cliente",
+    "Back-office": "Back-office",
+    "solicitud de cuenta": "pedido de conta",
+    "Llamamos el lunes; interesados en registrar 2 productos.": "Ligámos na segunda-feira; interessados em registar 2 produtos.",
+    "Siguiente": "Seguinte",
+    "Anterior": "Anterior"
+  }
+}

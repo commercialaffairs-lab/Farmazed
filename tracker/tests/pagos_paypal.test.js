@@ -162,7 +162,9 @@ describe('Pago de la cotización aceptada con PayPal', () => {
     await quoteRef.update({ 'pagoPaypal.expectedAmount': antes.expectedAmount }); // deshacer la corrupción
   });
 
-  test('capturar de verdad -> crea los pagos por concepto (honorarios + tasa_dnfd, sin mef/iea — esExtranjero/aplicaIEA son false por defecto)', async () => {
+  // Decisión de Rick (01-nov-2026, commit c53a04a): se cobra el 100% del tarifario y al capturar se
+  // registra TODO concepto con monto > 0 (MEF e IEA son desglose, no casillas) — 4 pagos, no 2.
+  test('capturar de verdad -> crea los pagos por concepto (todos los conceptos con monto: honorarios, tasa_dnfd, mef, iea)', async () => {
     const quoteRef = admin.firestore().collection('quotes').doc(quoteId);
     const { orderId } = (await quoteRef.get()).data().pagoPaypal;
 
@@ -172,11 +174,12 @@ describe('Pago de la cotización aceptada con PayPal', () => {
     assert.equal(json.amount, montoEsperado);
 
     const conceptos = json.pagos.map(p => p.concepto).sort();
-    assert.deepEqual(conceptos, ['honorarios', 'tasa_dnfd']);
+    assert.deepEqual(conceptos, ['honorarios', 'iea', 'mef', 'tasa_dnfd']);
     for (const p of json.pagos) assert.ok(p.monto > 0);
+    assert.equal(json.pagos.reduce((s, p) => s + p.monto, 0), montoEsperado, 'el libro de pagos cuadra con lo cobrado');
 
     const pagos = await api('admin', 'GET', `/api/cases/${CASE_ID}/payments`);
-    assert.equal(pagos.json.total, 2);
+    assert.equal(pagos.json.total, 4);
     assert.ok(pagos.json.payments.every(p => p.origen === 'paypal' && p.paypalOrderId === orderId));
   });
 
@@ -196,7 +199,7 @@ describe('Pago de la cotización aceptada con PayPal', () => {
     assert.equal(segunda.json.yaEstaba, true);
 
     const pagos = await api('admin', 'GET', `/api/cases/${CASE_ID}/payments`);
-    assert.equal(pagos.json.total, 2, 'seguía siendo 2, no 4');
+    assert.equal(pagos.json.total, 4, 'seguían siendo los 4 conceptos, no 8');
   });
 
   test('crear-orden sobre una cotización ya pagada -> 409', async () => {

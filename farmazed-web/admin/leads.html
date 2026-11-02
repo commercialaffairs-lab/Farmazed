@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Farmazed Admin — Leads</title>
+  <script src="/portal/js/i18n.js"></script>
+  <title data-i18n>Farmazed Admin — Leads</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
   <style>
@@ -32,41 +33,38 @@
     <div style="font-family:Georgia,serif;color:#fff;font-size:1.2rem;font-weight:700">Farmazed</div>
     <div id="sidebar-rol" style="color:rgba(255,255,255,.4);font-size:.72rem">Admin Panel</div>
   </div>
-  <div class="section-label">Gestión</div>
-  <a href="/admin/casos.html"><i class="bi bi-folder2-open me-2"></i>Expedientes</a>
-  <a href="/admin/bandeja.html"><i class="bi bi-inbox me-2"></i>Mi Bandeja</a>
-  <a href="/admin/leads.html" class="active"><i class="bi bi-person-lines-fill me-2"></i>Leads</a>
-  <a href="/admin/cotizaciones.html"><i class="bi bi-receipt me-2"></i>Cotizaciones</a>
-  <a href="/admin/formularios.html"><i class="bi bi-file-earmark-text me-2"></i>Formularios</a>
-  <a href="/admin/empresas.html" id="nav-empresas" style="display:none"><i class="bi bi-building me-2"></i>Empresas</a>
-  <a href="/admin/precios.html" id="nav-precios" style="display:none"><i class="bi bi-cash-coin me-2"></i>Precios</a>
-  <div class="section-label">Sistema</div>
-  <a href="/admin/configuracion.html" id="nav-configuracion" style="display:none"><i class="bi bi-gear me-2"></i>Configuración</a>
-  <a href="#" id="sidebar-logout"><i class="bi bi-box-arrow-left me-2"></i>Cerrar Sesión</a>
+  <div class="section-label" data-i18n>Gestión</div>
+  <a href="/admin/casos.html"><i class="bi bi-folder2-open me-2"></i><span data-i18n>Expedientes</span></a>
+  <a href="/admin/bandeja.html"><i class="bi bi-inbox me-2"></i><span data-i18n>Mi Bandeja</span></a>
+  <a href="/admin/leads.html" class="active"><i class="bi bi-person-lines-fill me-2"></i><span data-i18n>Leads</span></a>
+  <a href="/admin/cotizaciones.html"><i class="bi bi-receipt me-2"></i><span data-i18n>Cotizaciones</span></a>
+  <a href="/admin/formularios.html"><i class="bi bi-file-earmark-text me-2"></i><span data-i18n>Formularios</span></a>
+  <a href="/admin/empresas.html" id="nav-empresas" style="display:none"><i class="bi bi-building me-2"></i><span data-i18n>Empresas</span></a>
+  <a href="/admin/precios.html" id="nav-precios" style="display:none"><i class="bi bi-cash-coin me-2"></i><span data-i18n>Precios</span></a>
+  <a href="/admin/finanzas.html" id="nav-finanzas" style="display:none"><i class="bi bi-graph-up-arrow me-2"></i><span data-i18n>Finanzas</span></a>
+  <div class="section-label" data-i18n>Sistema</div>
+  <a href="/admin/configuracion.html" id="nav-configuracion" style="display:none"><i class="bi bi-gear me-2"></i><span data-i18n>Configuración</span></a>
+  <a href="#" id="sidebar-logout"><i class="bi bi-box-arrow-left me-2"></i><span data-i18n>Cerrar Sesión</span></a>
 </div>
 
 <!-- Main -->
 <div class="main">
   <div class="topbar d-flex align-items-center justify-content-between">
-    <h6 class="mb-0 fw-bold">Leads — primer contacto</h6>
+    <h6 class="mb-0 fw-bold" data-i18n>Leads — primer contacto</h6>
     <span class="text-muted small" id="user-name"></span>
   </div>
 
   <div class="p-4">
-    <p class="text-muted small mb-3">
-      Solicitudes del formulario "Solicitar cuenta" del sitio (y consultas de contacto). Cada lead es una
-      empresa, un regente independiente o un abogado tramitante. Trabájalo aquí (estado, notas, datos) y,
-      cuando esté listo, el admin lo invita a crear su cuenta: recibe el correo con el enlace.
-    </p>
+    <p class="text-muted small mb-3" data-i18n>Solicitudes del formulario "Solicitar cuenta" del sitio (y consultas de contacto). Cada lead es una empresa, un regente independiente o un abogado tramitante. Trabájalo aquí (estado, notas, datos) y, cuando esté listo, el admin lo invita a crear su cuenta: recibe el correo con el enlace.</p>
 
     <div class="d-flex flex-wrap gap-2 mb-3" id="kpis"></div>
 
     <div class="row g-2 mb-3">
-      <div class="col-md-4"><input type="search" class="form-control form-control-sm" id="f-buscar" placeholder="Buscar nombre, correo, empresa…"></div>
-      <div class="col-6 col-md-2"><select class="form-select form-select-sm" id="f-tipo"><option value="">Tipo: todos</option></select></div>
-      <div class="col-6 col-md-2"><select class="form-select form-select-sm" id="f-intencion"><option value="">Busca: todo</option></select></div>
-      <div class="col-6 col-md-2"><select class="form-select form-select-sm" id="f-fuente"><option value="">Fuente: todas</option></select></div>
-      <div class="col-6 col-md-2"><select class="form-select form-select-sm" id="f-plan"><option value="">Plan: todos</option></select></div>
+      <div class="col-md-4"><input type="search" class="form-control form-control-sm" id="f-buscar" placeholder="Buscar nombre, correo, empresa…" data-i18n-attr="placeholder"></div>
+      <div class="col-6 col-md-2"><select class="form-select form-select-sm" id="f-tipo"><option value="" data-i18n>Tipo: todos</option></select></div>
+      <div class="col-6 col-md-2"><select class="form-select form-select-sm" id="f-intencion"><option value="" data-i18n>Busca: todo</option></select></div>
+      <div class="col-6 col-md-2"><select class="form-select form-select-sm" id="f-fuente"><option value="" data-i18n>Fuente: todas</option></select></div>
+      <div class="col-6 col-md-2"><select class="form-select form-select-sm" id="f-plan"><option value="" data-i18n>Plan: todos</option></select></div>
     </div>
 
     <div class="row g-3">
@@ -76,8 +74,8 @@
             <table class="table table-sm table-hover mb-0 align-middle">
               <thead class="table-light">
                 <tr>
-                  <th class="small ps-3">Fecha</th><th class="small">Contacto</th><th class="small">Tipo</th>
-                  <th class="small">Busca</th><th class="small">Fuente</th><th class="small">Estado</th>
+                  <th class="small ps-3" data-i18n>Fecha</th><th class="small" data-i18n>Contacto</th><th class="small" data-i18n>Tipo</th>
+                  <th class="small" data-i18n>Busca</th><th class="small" data-i18n>Fuente</th><th class="small" data-i18n>Estado</th>
                 </tr>
               </thead>
               <tbody id="leads-tbody"><tr><td colspan="6" class="text-center py-4"><div class="spinner-border spinner-border-sm text-primary"></div></td></tr></tbody>
@@ -87,7 +85,7 @@
       </div>
       <div class="col-lg-5">
         <div class="detalle p-3" id="detalle">
-          <div class="text-muted small text-center py-4">Elige un lead de la lista para ver y editar su ficha.</div>
+          <div class="text-muted small text-center py-4" data-i18n>Elige un lead de la lista para ver y editar su ficha.</div>
         </div>
       </div>
     </div>
@@ -100,15 +98,22 @@
   import api from '../portal/js/api.js';
   import { opcionesPaises } from '../portal/js/paises.js';
 
+  // Idiomas (farmazed-web/i18n/README.md): los mapas de abajo van de valor técnico → etiqueta en
+  // español; la etiqueta pasa por t() al pintarse. Al cambiar de idioma se repinta todo (onCambio).
+  const I18N = window.FZI18N;
+  const { t } = I18N;
+
   const TIPO    = { empresa: 'Empresa', regente: 'Regente independiente', abogado: 'Abogado tramitante' };
   const INTERES = { medicamentos: 'Medicamentos', cosmeticos: 'Cosméticos', higienicos: 'Higiénicos', plaguicidas: 'Plaguicidas', excepcion: 'Excepción de registro', publicidad: 'Publicidad' };
   const INTENCION = { informacion: 'Solo información', cuenta: 'Quiere cuenta' };
   const FUENTE  = { google: 'Google', youtube: 'YouTube', instagram: 'Instagram', facebook: 'Facebook', linkedin: 'LinkedIn', x: 'X', referido: 'Referido', otro: 'Otro' };
   const ESTADO  = { nuevo: 'Nuevo', contactado: 'Contactado', calificado: 'Calificado', invitado: 'Invitado', descartado: 'Descartado' };
+  const PLAN    = { consulta: 'Consulta', registro: 'Registro', empresarial: 'Empresarial' };
   const ESTADO_BADGE = { nuevo: 'bg-primary-subtle text-primary', contactado: 'bg-info-subtle text-info', calificado: 'bg-warning-subtle text-warning', invitado: 'bg-success-subtle text-success', descartado: 'bg-secondary-subtle text-secondary' };
-  const fecha = (iso) => iso ? new Date(iso).toLocaleDateString('es-PA', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
+  const fecha = (iso) => iso ? I18N.fecha(iso, { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
+  const etiqueta = (mapa, valor, vacio = '—') => (valor && mapa[valor]) ? t(mapa[valor]) : (valor || vacio);
 
-  let leads = [], catalogos = {}, perms = [], seleccionado = null, filtroEstado = '';
+  let leads = [], catalogos = {}, perms = [], seleccionado = null, filtroEstado = '', cargado = false;
 
   async function init() {
     const sesion = await initBackoffice();
@@ -122,30 +127,43 @@
   async function cargar() {
     const r = await api.getContactLeads(true);
     leads = r.leads; catalogos = r.catalogos || {};
+    cargado = true;
+    repintar();
+  }
+
+  function repintar() {
     llenarFiltros();
     renderKpis();
     renderTabla();
-    if (seleccionado) { seleccionado = leads.find(l => l.id === seleccionado.id) || null; renderDetalle(); }
+    if (seleccionado) seleccionado = leads.find(l => l.id === seleccionado.id) || null;
+    renderDetalle();
   }
+
+  // Cambio de idioma en vivo: se repinta todo lo generado por JS (la primera opción de cada filtro es
+  // estática y la traduce i18n.js; las demás se vuelven a crear con t(), conservando lo elegido).
+  // repintarConservando: lo que la persona tenga escrito (notas, filtros) sobrevive al repintado.
+  I18N.onCambio(() => { if (cargado) I18N.repintarConservando(() => repintar()); });
 
   function llenarFiltros() {
     const opciones = (id, lista, etiquetas) => {
       const sel = document.getElementById(id);
-      if (sel.options.length > 1) return;
-      lista.forEach(v => { const o = document.createElement('option'); o.value = v; o.textContent = etiquetas[v] || v; sel.appendChild(o); });
+      const valorActual = sel.value;
+      Array.from(sel.options).slice(1).forEach(o => o.remove());
+      lista.forEach(v => { const o = document.createElement('option'); o.value = v; o.textContent = etiquetas[v] ? t(etiquetas[v]) : v; sel.appendChild(o); });
+      sel.value = valorActual;
     };
     opciones('f-tipo', catalogos.tipos || Object.keys(TIPO), TIPO);
     opciones('f-intencion', catalogos.intenciones || Object.keys(INTENCION), INTENCION);
     opciones('f-fuente', catalogos.fuentes || Object.keys(FUENTE), FUENTE);
-    opciones('f-plan', ['consulta', 'registro', 'empresarial'], { consulta: 'Consulta', registro: 'Registro', empresarial: 'Empresarial' });
+    opciones('f-plan', Object.keys(PLAN), PLAN);
   }
 
   function renderKpis() {
     const estados = catalogos.estados || Object.keys(ESTADO);
     const conteo = Object.fromEntries(estados.map(e => [e, leads.filter(l => l.estado === e).length]));
     document.getElementById('kpis').innerHTML = [
-      `<div class="kpi ${filtroEstado === '' ? 'activo' : ''}" data-estado=""><div class="n">${leads.length}</div><div class="l">Todos</div></div>`,
-      ...estados.map(e => `<div class="kpi ${filtroEstado === e ? 'activo' : ''}" data-estado="${esc(e)}"><div class="n">${conteo[e]}</div><div class="l">${esc(ESTADO[e] || e)}</div></div>`),
+      `<div class="kpi ${filtroEstado === '' ? 'activo' : ''}" data-estado=""><div class="n">${leads.length}</div><div class="l">${t('Todos')}</div></div>`,
+      ...estados.map(e => `<div class="kpi ${filtroEstado === e ? 'activo' : ''}" data-estado="${esc(e)}"><div class="n">${conteo[e]}</div><div class="l">${esc(etiqueta(ESTADO, e, e))}</div></div>`),
     ].join('');
     document.querySelectorAll('.kpi').forEach(k => k.addEventListener('click', () => { filtroEstado = k.dataset.estado; renderKpis(); renderTabla(); }));
   }
@@ -169,12 +187,12 @@
       <tr class="lead-row ${seleccionado?.id === l.id ? 'activa' : ''}" data-id="${esc(l.id)}">
         <td class="small ps-3 text-nowrap">${esc(fecha(l.createdAt))}</td>
         <td class="small"><div class="fw-semibold">${esc(l.nombre)}</div><div class="text-muted">${esc(l.correo)}${l.empresa ? ` · ${esc(l.empresa)}` : ''}</div></td>
-        <td class="small">${esc(TIPO[l.tipoSolicitante] || '—')}</td>
-        <td class="small">${esc(INTENCION[l.intencion] || '—')}</td>
-        <td class="small">${esc(FUENTE[l.fuente] || '—')}</td>
-        <td><span class="badge border ${esc(ESTADO_BADGE[l.estado] || '')}">${esc(ESTADO[l.estado] || l.estado)}</span></td>
+        <td class="small">${esc(etiqueta(TIPO, l.tipoSolicitante))}</td>
+        <td class="small">${esc(etiqueta(INTENCION, l.intencion))}</td>
+        <td class="small">${esc(etiqueta(FUENTE, l.fuente))}</td>
+        <td><span class="badge border ${esc(ESTADO_BADGE[l.estado] || '')}">${esc(etiqueta(ESTADO, l.estado, l.estado))}</span></td>
       </tr>`).join('')
-      : '<tr><td colspan="6" class="text-center text-muted py-4">Sin leads con estos filtros.</td></tr>';
+      : `<tr><td colspan="6" class="text-center text-muted py-4">${t('Sin leads con estos filtros.')}</td></tr>`;
     document.querySelectorAll('tr.lead-row').forEach(tr => tr.addEventListener('click', () => {
       seleccionado = leads.find(l => l.id === tr.dataset.id); renderTabla(); renderDetalle();
     }));
@@ -182,45 +200,49 @@
 
   function renderDetalle() {
     const l = seleccionado, box = document.getElementById('detalle');
-    if (!l) { box.innerHTML = '<div class="text-muted small text-center py-4">Elige un lead de la lista para ver y editar su ficha.</div>'; return; }
+    if (!l) { box.innerHTML = `<div class="text-muted small text-center py-4">${t('Elige un lead de la lista para ver y editar su ficha.')}</div>`; return; }
     const puedeEditar = perms.includes('contact_leads.edit') && !l.invitado;
     const puedeInvitar = perms.includes('invitations.create_org') && !l.invitado;
     const dis = puedeEditar ? '' : 'disabled';
     const esEmpresa = (l.tipoSolicitante || 'empresa') === 'empresa';
     const estados = (catalogos.estados || Object.keys(ESTADO)).filter(e => e !== 'invitado');
+    const siNo = (v) => v ? t('Sí') : t('No');
+    // El mensaje y las notas del lead también pasan por t(): el lead sembrado de la demo tiene textos
+    // fijos que están en el diccionario (parte de datos); el texto real de una persona vuelve tal cual.
+    const notasMostradas = t(l.notas || '');
     box.innerHTML = `
       <div class="d-flex justify-content-between align-items-start mb-2">
-        <div><div class="fw-bold">${esc(l.nombre)}</div><div class="small text-muted">${esc(l.correo)} · llegó el ${esc(fecha(l.createdAt))}${l.plan ? ` · plan ${esc(l.plan)}` : ''}</div></div>
-        <span class="badge border ${esc(ESTADO_BADGE[l.estado] || '')}">${esc(ESTADO[l.estado] || l.estado)}</span>
+        <div><div class="fw-bold">${esc(l.nombre)}</div><div class="small text-muted">${esc(l.correo)} · ${t('llegó el {fecha}', { fecha: esc(fecha(l.createdAt)) })}${l.plan ? ` · ${t('plan {plan}', { plan: esc(etiqueta(PLAN, l.plan, l.plan)) })}` : ''}</div></div>
+        <span class="badge border ${esc(ESTADO_BADGE[l.estado] || '')}">${esc(etiqueta(ESTADO, l.estado, l.estado))}</span>
       </div>
       <form id="form-lead" class="row g-2">
-        <div class="col-6"><div class="campo-label">Tipo</div>
-          <select class="form-select form-select-sm" name="tipoSolicitante" ${dis}>${(catalogos.tipos || Object.keys(TIPO)).map(t => `<option value="${esc(t)}" ${l.tipoSolicitante === t ? 'selected' : ''}>${esc(TIPO[t])}</option>`).join('')}</select></div>
-        <div class="col-6"><div class="campo-label">Estado</div>
-          <select class="form-select form-select-sm" name="estado" ${l.invitado ? 'disabled' : dis}>${l.invitado ? '<option selected>Invitado</option>' : estados.map(e => `<option value="${esc(e)}" ${l.estado === e ? 'selected' : ''}>${esc(ESTADO[e])}</option>`).join('')}</select></div>
-        <div class="col-6"><div class="campo-label">Teléfono</div><input class="form-control form-control-sm" name="telefono" value="${esc(l.telefono || '')}" ${dis}></div>
-        <div class="col-6"><div class="campo-label">Busca</div>
-          <select class="form-select form-select-sm" name="intencion" ${dis}><option value="">—</option>${Object.keys(INTENCION).map(i => `<option value="${i}" ${l.intencion === i ? 'selected' : ''}>${INTENCION[i]}</option>`).join('')}</select></div>
-        <div class="col-6"><div class="campo-label">Se enteró por</div>
-          <select class="form-select form-select-sm" name="fuente" ${dis}><option value="">—</option>${Object.keys(FUENTE).map(f => `<option value="${f}" ${l.fuente === f ? 'selected' : ''}>${FUENTE[f]}</option>`).join('')}</select></div>
-        <div class="col-6 ${esEmpresa ? '' : 'd-none'} campo-empresa"><div class="campo-label">Empresa</div><input class="form-control form-control-sm" name="empresa" value="${esc(l.empresa || '')}" ${dis}></div>
-        <div class="col-6 ${esEmpresa ? '' : 'd-none'} campo-empresa"><div class="campo-label">Sitio web</div><input class="form-control form-control-sm" name="website" value="${esc(l.website || '')}" placeholder="https://" ${dis}></div>
-        <div class="col-6 ${esEmpresa ? '' : 'd-none'} campo-empresa"><div class="campo-label">Registrada en</div><select class="form-select form-select-sm" name="pais" ${dis}>${opcionesPaises({ seleccionado: l.pais || null, placeholder: '—' })}</select></div>
-        <div class="col-6 ${esEmpresa ? '' : 'd-none'} campo-empresa"><div class="campo-label">Productos que maneja</div><input type="number" min="0" class="form-control form-control-sm" name="cantidadProductos" value="${l.cantidadProductos ?? ''}" ${dis}></div>
-        <div class="col-12 ${esEmpresa ? '' : 'd-none'} campo-empresa"><div class="campo-label">Productos de interés</div>
-          <div class="d-flex flex-wrap gap-3">${Object.keys(INTERES).map(i => `<label class="small"><input type="checkbox" class="form-check-input me-1" name="interes" value="${i}" ${(l.interes || []).includes(i) ? 'checked' : ''} ${dis}>${INTERES[i]}</label>`).join('')}</div></div>
+        <div class="col-6"><div class="campo-label">${t('Tipo')}</div>
+          <select class="form-select form-select-sm" name="tipoSolicitante" ${dis}>${(catalogos.tipos || Object.keys(TIPO)).map(tp => `<option value="${esc(tp)}" ${l.tipoSolicitante === tp ? 'selected' : ''}>${esc(etiqueta(TIPO, tp, tp))}</option>`).join('')}</select></div>
+        <div class="col-6"><div class="campo-label">${t('Estado')}</div>
+          <select class="form-select form-select-sm" name="estado" ${l.invitado ? 'disabled' : dis}>${l.invitado ? `<option selected>${t('Invitado')}</option>` : estados.map(e => `<option value="${esc(e)}" ${l.estado === e ? 'selected' : ''}>${esc(etiqueta(ESTADO, e, e))}</option>`).join('')}</select></div>
+        <div class="col-6"><div class="campo-label">${t('Teléfono')}</div><input class="form-control form-control-sm" name="telefono" value="${esc(l.telefono || '')}" ${dis}></div>
+        <div class="col-6"><div class="campo-label">${t('Busca')}</div>
+          <select class="form-select form-select-sm" name="intencion" ${dis}><option value="">—</option>${Object.keys(INTENCION).map(i => `<option value="${i}" ${l.intencion === i ? 'selected' : ''}>${esc(t(INTENCION[i]))}</option>`).join('')}</select></div>
+        <div class="col-6"><div class="campo-label">${t('Se enteró por')}</div>
+          <select class="form-select form-select-sm" name="fuente" ${dis}><option value="">—</option>${Object.keys(FUENTE).map(f => `<option value="${f}" ${l.fuente === f ? 'selected' : ''}>${esc(t(FUENTE[f]))}</option>`).join('')}</select></div>
+        <div class="col-6 ${esEmpresa ? '' : 'd-none'} campo-empresa"><div class="campo-label">${t('Empresa')}</div><input class="form-control form-control-sm" name="empresa" value="${esc(l.empresa || '')}" ${dis}></div>
+        <div class="col-6 ${esEmpresa ? '' : 'd-none'} campo-empresa"><div class="campo-label">${t('Sitio web')}</div><input class="form-control form-control-sm" name="website" value="${esc(l.website || '')}" placeholder="https://" ${dis}></div>
+        <div class="col-6 ${esEmpresa ? '' : 'd-none'} campo-empresa"><div class="campo-label">${t('Registrada en')}</div><select class="form-select form-select-sm" name="pais" ${dis}>${opcionesPaises({ seleccionado: l.pais || null, placeholder: '—' })}</select></div>
+        <div class="col-6 ${esEmpresa ? '' : 'd-none'} campo-empresa"><div class="campo-label">${t('Productos que maneja')}</div><input type="number" min="0" class="form-control form-control-sm" name="cantidadProductos" value="${l.cantidadProductos ?? ''}" ${dis}></div>
+        <div class="col-12 ${esEmpresa ? '' : 'd-none'} campo-empresa"><div class="campo-label">${t('Productos de interés')}</div>
+          <div class="d-flex flex-wrap gap-3">${Object.keys(INTERES).map(i => `<label class="small"><input type="checkbox" class="form-check-input me-1" name="interes" value="${i}" ${(l.interes || []).includes(i) ? 'checked' : ''} ${dis}>${esc(t(INTERES[i]))}</label>`).join('')}</div></div>
         ${l.captacion ? `<div class="col-12 border rounded p-2 mt-2" style="background:#f6f9fd">
-          <div class="campo-label mb-1">Última información del cliente en el portal <span class="text-success">· ${esc(fecha(l.captacion.actualizadaEn))}</span></div>
-          <div class="small"><strong>Fabricante:</strong> ${esc(l.captacion.paisYNombreFabricante || '—')} · <strong>Productos:</strong> ${esc(l.captacion.numeroProductosPorCategoria || '—')}</div>
-          <div class="small"><strong>Registro previo (FDA/EMA/TGA…):</strong> ${l.captacion.registroPrevioAutoridadReconocida ? 'Sí' : 'No'} · <strong>Cliente:</strong> ${l.captacion.clienteNuevoOYaRegistrado === 'nuevo' ? 'nuevo' : 'ya tiene registros'} · <strong>Modificación en curso:</strong> ${l.captacion.productoConModificacionEnCurso ? 'Sí' : 'No'}</div>
-          <div class="small text-muted mt-1">Los campos "Productos de interés" y "Productos que maneja" de arriba ya reflejan esta versión.</div>
+          <div class="campo-label mb-1">${t('Última información del cliente en el portal')} <span class="text-success">· ${esc(fecha(l.captacion.actualizadaEn))}</span></div>
+          <div class="small"><strong>${t('Fabricante:')}</strong> ${esc(l.captacion.paisYNombreFabricante || '—')} · <strong>${t('Productos:')}</strong> ${esc(l.captacion.numeroProductosPorCategoria || '—')}</div>
+          <div class="small"><strong>${t('Registro previo (FDA/EMA/TGA…):')}</strong> ${siNo(l.captacion.registroPrevioAutoridadReconocida)} · <strong>${t('Cliente:')}</strong> ${l.captacion.clienteNuevoOYaRegistrado === 'nuevo' ? t('nuevo') : t('ya tiene registros')} · <strong>${t('Modificación en curso:')}</strong> ${siNo(l.captacion.productoConModificacionEnCurso)}</div>
+          <div class="small text-muted mt-1">${t('Los campos "Productos de interés" y "Productos que maneja" de arriba ya reflejan esta versión.')}</div>
         </div>` : ''}
-        ${l.mensaje ? `<div class="col-12"><div class="campo-label">Mensaje del contacto</div><div class="small fst-italic text-muted">“${esc(l.mensaje)}”</div></div>` : ''}
-        <div class="col-12"><div class="campo-label">Notas internas</div><textarea class="form-control form-control-sm" name="notas" rows="3" ${dis}>${esc(l.notas || '')}</textarea></div>
+        ${l.mensaje ? `<div class="col-12"><div class="campo-label">${t('Mensaje del contacto')}</div><div class="small fst-italic text-muted">“${esc(t(l.mensaje))}”</div></div>` : ''}
+        <div class="col-12"><div class="campo-label">${t('Notas internas')}</div><textarea class="form-control form-control-sm" name="notas" rows="3" ${dis}>${esc(notasMostradas)}</textarea></div>
         <div class="col-12 d-flex gap-2 mt-2">
-          ${puedeEditar ? '<button type="submit" class="btn btn-sm btn-primary">Guardar</button>' : ''}
-          ${puedeInvitar ? '<button type="button" class="btn btn-sm btn-outline-success" id="btn-invitar">Invitar a crear cuenta</button>' : ''}
-          ${l.invitado ? `<span class="small text-success align-self-center"><i class="bi bi-check-circle"></i> Invitado el ${esc(fecha(l.invitadoEn))}</span>` : ''}
+          ${puedeEditar ? `<button type="submit" class="btn btn-sm btn-primary">${t('Guardar')}</button>` : ''}
+          ${puedeInvitar ? `<button type="button" class="btn btn-sm btn-outline-success" id="btn-invitar">${t('Invitar a crear cuenta')}</button>` : ''}
+          ${l.invitado ? `<span class="small text-success align-self-center"><i class="bi bi-check-circle"></i> ${t('Invitado el {fecha}', { fecha: esc(fecha(l.invitadoEn)) })}</span>` : ''}
         </div>
       </form>`;
 
@@ -233,7 +255,9 @@
       const fd = new FormData(e.target);
       const datos = {
         tipoSolicitante: fd.get('tipoSolicitante'), estado: fd.get('estado'), telefono: fd.get('telefono'),
-        intencion: fd.get('intencion') || null, fuente: fd.get('fuente') || null, notas: fd.get('notas'),
+        intencion: fd.get('intencion') || null, fuente: fd.get('fuente') || null,
+        // Si la persona no tocó las notas, se guarda el original (no la traducción que se mostró).
+        notas: fd.get('notas') === notasMostradas ? (l.notas || '') : fd.get('notas'),
         empresa: fd.get('empresa'), website: fd.get('website'), pais: fd.get('pais'),
         cantidadProductos: fd.get('cantidadProductos') === '' ? null : Number(fd.get('cantidadProductos')),
         interes: fd.getAll('interes'),
@@ -241,22 +265,24 @@
       try {
         await api.updateContactLead(l.id, datos);
         await cargar();
-        await avisar('Lead actualizado.');
-      } catch (err) { await avisar('Error: ' + err.message); }
+        await avisar(t('Lead actualizado.'));
+      } catch (err) { await avisar(t('Error: {error}', { error: err.message })); }
     });
 
     box.querySelector('#btn-invitar')?.addEventListener('click', async () => {
       const sugerido = l.tipoSolicitante === 'empresa' ? (l.empresa || '') : l.nombre;
       const orgName = await preguntar(l.tipoSolicitante === 'empresa'
-        ? 'Nombre de la empresa para la invitación:'
-        : 'Nombre con el que se creará su espacio en el portal (profesional independiente):', { valor: sugerido });
+        ? t('Nombre de la empresa para la invitación:')
+        : t('Nombre con el que se creará su espacio en el portal (profesional independiente):'), { valor: sugerido });
       if (!orgName) return;
-      if (!(await confirmar(`Se creará la empresa "${orgName}" y se enviará a ${l.correo} el correo para crear su cuenta. ¿Continuar?`))) return;
+      if (!(await confirmar(t('Se creará la empresa "{empresa}" y se enviará a {correo} el correo para crear su cuenta. ¿Continuar?', { empresa: orgName, correo: l.correo })))) return;
       try {
         const inv = await api.invitarContactLead(l.id, orgName);
         await cargar();
-        await avisar(inv.correoEnviado ? `Invitación enviada por correo a ${l.correo}.` : 'Invitación creada. No hay envío de correo configurado: copia el enlace desde Empresas → Invitaciones.');
-      } catch (err) { await avisar('Error: ' + err.message); }
+        await avisar(inv.correoEnviado
+          ? t('Invitación enviada por correo a {correo}.', { correo: l.correo })
+          : t('Invitación creada. No hay envío de correo configurado: copia el enlace desde Empresas → Invitaciones.'));
+      } catch (err) { await avisar(t('Error: {error}', { error: err.message })); }
     });
   }
 

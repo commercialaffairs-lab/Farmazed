@@ -10,6 +10,10 @@
  */
 import api from './api.js';
 
+// Idiomas (farmazed-web/i18n/README.md §4): las etiquetas que llegan del tracker también pasan por
+// t(); sus textos en español están en el diccionario (parte datos.json). Con fallback: páginas sin i18n.js.
+const t = (texto) => (window.FZI18N ? window.FZI18N.t(texto) : String(texto ?? ''));
+
 let _metaPromise = null;
 function getMeta() {
   if (!_metaPromise) _metaPromise = api.getStatusMeta();
@@ -43,9 +47,11 @@ async function getFullMeta() {
   return getMeta();
 }
 
+/** Etiqueta legible del estado, en el idioma activo (el español viene del tracker; es la clave). */
 async function getCaseStatusLabel(status) {
   const meta = await getMeta();
-  return meta.meta[status]?.label || status;
+  const label = meta.meta[status]?.label;
+  return label ? t(label) : status;
 }
 
 async function getCaseStatusBadgeClass(status) {
