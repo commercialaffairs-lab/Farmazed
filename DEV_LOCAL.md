@@ -19,18 +19,14 @@ las deny-all. **No correr `firebase deploy` sin que Rick lo decida** (ver DEPLOY
 `e2e/run.sh`, `demo_local.sh` y `run_permission_tests.sh` ya lo hacen). Sin emulador y sin
 `NODE_ENV=production` se niega, para no escribir en producción por accidente.
 
-## Mapa del código (página admin "Configuración")
+## Página admin "Configuración"
 
-`admin/configuracion.html` muestra un grafo interactivo del código (backend, pruebas y portal),
-solo para el admin: lo sirve `GET /api/admin/code-graph` (permiso `system.code_graph`) desde
-`tracker/assets/code-graph.html`, que SÍ se versiona — nunca se copia a `farmazed-web/` (todo
-lo que está ahí se sirve sin auth y el grafo expone la estructura interna).
-
-Regenerarlo con `./tracker/scripts/actualizar_grafo.sh` (necesita `graphify`: `pipx install
-graphifyy`; solo AST, sin LLM ni API keys; ~20 s; las comunidades se nombran solas con `tracker/scripts/nombrar_comunidades.py`; vis-network va vendorizado e inline desde `tracker/assets/vendor/`, el HTML no carga nada de internet).
-**Cuándo**: después de un cambio estructural (refactors, archivos o servicios nuevos/movidos,
-rutas nuevas) y antes de un deploy que lo incluya; no hace falta por cada commit. El HTML trae
-la fecha de generación (cabecera `Last-Modified`) y la página la muestra, así se ve si está viejo.
+Desde el 02-nov-2026 (decisión de Rick) `admin/configuracion.html` es la sección de ajustes del
+back-office para todo el personal: perfil (nombre), seguridad (cambio de contraseña, cerrar sesión en
+todos los dispositivos), idioma, ayuda (manual y soporte) y, solo para el admin, el estado de los
+servicios (`GET /api/admin/estado`: pagos, facturación, correo, demo, versión). El mapa interactivo
+del código (graphify, `tracker/assets/code-graph.html`, `actualizar_grafo.sh`, `nombrar_comunidades.py`,
+permiso `system.code_graph`) se retiró por completo del repo y de producción.
 
 ## Prerrequisito: Java 21+ (una sola vez)
 

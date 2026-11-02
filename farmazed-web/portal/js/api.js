@@ -173,17 +173,15 @@ const api = {
 
   getInvitations: () => apiFetch('/api/invitations'),
 
-  // TAREA 41b: el HTML del mapa del código (admin) — no es JSON, así que no pasa por apiFetch.
-  // `generadoEn` sale de Last-Modified (cabecera CORS-safelisted).
-  getCodeGraph: async () => {
-    const res = await fetch(`${API_BASE}/api/admin/code-graph`, { headers: { Authorization: `Bearer ${await getToken()}` } });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({ error: res.statusText }));
-      throw new Error(err.error || `HTTP ${res.status}`);
-    }
-    const lm = res.headers.get('last-modified');
-    return { html: await res.text(), generadoEn: lm ? new Date(lm) : null };
-  },
+  // ── Configuración del back-office (admin/configuracion.html; tracker/routes/me.js y routes/system.js) ──
+  // Perfil propio → { uid, correo, nombre, rol, correoVerificado, creadoEn, ultimoAcceso }.
+  getPerfil: () => apiFetch('/api/me/perfil'),
+  setPerfil: ({ nombre }) => apiFetch('/api/me/perfil', { method: 'PUT', body: JSON.stringify({ nombre }) }),
+  // Revoca los tokens de la cuenta en todos los dispositivos (la sesión actual incluida: quien llama cierra sesión después).
+  cerrarSesiones: () => apiFetch('/api/me/cerrar-sesiones', { method: 'POST' }),
+  // Solo admin → { version, revision, entorno, pagos, facturacion, correo, demo }.
+  getEstadoSistema: () => apiFetch('/api/admin/estado'),
+
   getInvitation:  (token) => apiFetch(`/api/invitations/${token}`),
   inviteTitular:  (email, orgName) => apiFetch('/api/invitations/titular', { method: 'POST', body: JSON.stringify({ email, orgName }) }),
   inviteEmpleado: (email, role) => apiFetch('/api/invitations/empleado', { method: 'POST', body: JSON.stringify({ email, role }) }),

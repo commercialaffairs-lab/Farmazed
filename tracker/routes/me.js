@@ -19,6 +19,35 @@ const router = Router();
 const db     = () => admin.firestore();
 
 // ─── GET /api/me/permissions ──────────────────────────────────────────────────
+// ─── Perfil (Configuración del back-office y "Mi cuenta", 02-nov-2026) ────────────────────────
+const perfilDe = (u, user) => ({
+  uid: u.uid, correo: u.email, nombre: u.displayName || '', rol: effectiveRole(user), correoVerificado: !!u.emailVerified,
+  creadoEn: u.metadata.creationTime || null, ultimoAcceso: u.metadata.lastSignInTime || null,
+});
+
+router.get('/perfil', requireAuth, async (req, res) => {
+  try { res.json(perfilDe(await admin.auth().getUser(req.user.uid), req.user)); }
+  catch (e) { res.status(500).json({ error: 'No se pudo leer el perfil.' }); }
+});
+
+router.put('/perfil', requireAuth, async (req, res) => {
+  const nombre = typeof req.body?.nombre === 'string' ? req.body.nombre.trim().replace(/\s+/g, ' ') : '';
+  if (nombre.length < 2 || nombre.length > 80) return res.status(400).json({ error: 'El nombre debe tener entre 2 y 80 caracteres.' });
+  try {
+    await admin.auth().updateUser(req.user.uid, { displayName: nombre });
+    res.json(perfilDe(await admin.auth().getUser(req.user.uid), req.user));
+  } catch (e) { res.status(500).json({ error: 'No se pudo guardar el perfil.' }); }
+});
+
+// Revoca los tokens de la cuenta: todas las sesiones (incluida esta) dejan de valer en cuanto
+// expira el token actual; el front cierra sesión de inmediato. requireVerifiedLogin usa checkRevoked.
+router.post('/cerrar-sesiones', requireAuth, async (req, res) => {
+  try {
+    await admin.auth().revokeRefreshTokens(req.user.uid);
+    res.json({ revocadas: true });
+  } catch (e) { res.status(500).json({ error: 'No se pudieron cerrar las sesiones.' }); }
+});
+
 router.get('/permissions', requireAuth, (req, res) => {
   const role = effectiveRole(req.user);
   res.json({

@@ -3,7 +3,7 @@
  */
 import { initializeApp }          from 'https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js';
 import { getAuth, connectAuthEmulator, createUserWithEmailAndPassword, signInWithEmailAndPassword,
-         signOut, onAuthStateChanged, updateProfile }
+         signOut, onAuthStateChanged, updateProfile, EmailAuthProvider, reauthenticateWithCredential, updatePassword }
   from 'https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js';
 import { FIREBASE_CONFIG, API_BASE, IS_LOCAL, AUTH_REAL, localAuthPort } from './config.js';
 
@@ -74,6 +74,20 @@ async function logout() {
   _currentToken = null;
   _currentUser  = null;
   window.location.href = '/login.html';
+}
+
+/**
+ * Cambio de contraseña desde Configuración (admin/configuracion.html). Firebase exige volver a
+ * autenticar con la contraseña actual justo antes de cambiarla: si no coincide lanza
+ * auth/wrong-password o auth/invalid-credential; si la nueva no pasa la política, auth/weak-password.
+ * La página valida antes (mínimo 10 caracteres con letras y números) y traduce esos códigos.
+ */
+async function cambiarContrasena(actual, nueva) {
+  await auth.authStateReady();
+  const user = auth.currentUser;
+  if (!user || !user.email) throw Object.assign(new Error(t('No hay una sesión activa.')), { code: 'auth/no-current-user' });
+  await reauthenticateWithCredential(user, EmailAuthProvider.credential(user.email, actual));
+  await updatePassword(user, nueva);
 }
 
 /**
@@ -325,7 +339,8 @@ function esc(v) {
 /**
  * Arranque común de las páginas del back-office (admin/staff): login verificado, acceso de
  * back-office (si no, al portal del cliente), nombre y "Cerrar sesión" en el menú, y los enlaces
- * solo-admin (Empresas, Precios, Configuración) visibles para el admin. Devuelve `{ user, admin }`,
+ * solo-admin (Empresas, Precios, Finanzas) visibles para el admin; Configuración la ve todo el
+ * personal (perfil, contraseña, idioma, ayuda). Devuelve `{ user, admin }`,
  * o `null` si ya se redirigió (login, verificar correo o portal del cliente): la página debe parar.
  */
 // Rótulos en español (clave del diccionario); se traducen al pintarlos: t('Analista'), t('Abogado'),
@@ -347,7 +362,7 @@ async function initBackoffice() {
   const rotulo = document.getElementById('sidebar-rol');
   if (rotulo) marcarTraducible(rotulo, admin ? 'Admin Panel' : (ROTULO_STAFF[await getRole()] || 'Personal'));
   if (admin) {
-    for (const id of ['nav-empresas', 'nav-precios', 'nav-finanzas', 'nav-configuracion']) {
+    for (const id of ['nav-empresas', 'nav-precios', 'nav-finanzas']) {
       const enlace = document.getElementById(id);
       if (enlace) enlace.style.display = '';
     }
@@ -357,5 +372,5 @@ async function initBackoffice() {
 
 export {
   initBackoffice, esc, auth, register, login, logout, getToken, requireLogin, requireVerifiedLogin, isAdmin, API_BASE,
-  getRole, getOrgId, isStaff, hasBackofficeAccess, esDemo, montarBotonDemo,
+  getRole, getOrgId, isStaff, hasBackofficeAccess, esDemo, montarBotonDemo, cambiarContrasena,
 };

@@ -26,7 +26,7 @@ const WEB = path.join(__dirname, '..', '..', 'farmazed-web');
 const leer = (ruta) => fs.readFileSync(ruta, 'utf8');
 
 // Páginas que cargan la capa y se traducen enteras.
-const PAGINAS = ['client-dashboard.html', 'login.html', 'admin/bandeja.html', 'admin/expediente.html', 'admin/leads.html', 'admin/finanzas.html']
+const PAGINAS = ['client-dashboard.html', 'login.html', 'admin/bandeja.html', 'admin/expediente.html', 'admin/leads.html', 'admin/finanzas.html', 'admin/configuracion.html']
   .map(p => path.join(WEB, p));
 // JS con texto de interfaz que pasa por t().
 const SCRIPTS = fs.readdirSync(path.join(WEB, 'portal', 'js')).filter(f => f.endsWith('.js') && f !== 'i18n.js')

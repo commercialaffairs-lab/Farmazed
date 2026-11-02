@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Farmazed Admin — Configuración</title>
+  <script src="/portal/js/i18n.js"></script>
+  <title data-i18n>Farmazed — Configuración</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
   <style>
@@ -15,112 +16,413 @@
     .sidebar .section-label { color:rgba(255,255,255,.35); font-size:.68rem; text-transform:uppercase; letter-spacing:.06em; padding:.5rem 1.25rem; margin-top:.75rem; }
     .main { flex:1; overflow-x:auto; min-width:0; }
     .topbar { background:#fff; border-bottom:1px solid #dee2e6; padding:.75rem 1.5rem; }
-    #grafo-frame { width:100%; height:calc(100vh - 230px); min-height:560px; border:1px solid #dee2e6; border-radius:6px; background:#fff; }
+    .form-label { font-size:.8rem; font-weight:600; color:#334155; margin-bottom:.2rem; }
+    .fz-seccion { font-size:.72rem; text-transform:uppercase; letter-spacing:.06em; color:var(--fz-blue); font-weight:700; margin-bottom:.75rem; }
+    .fz-fila { display:grid; grid-template-columns:180px 1fr; gap:.25rem 1rem; padding:.65rem 0; border-top:1px solid #eef1f5; align-items:start; }
+    .fz-fila:first-child { border-top:0; padding-top:0; }
+    .fz-fila .fz-etq { font-size:.76rem; font-weight:600; color:#334155; text-transform:uppercase; letter-spacing:.04em; padding-top:.2rem; }
+    .fz-ayuda { display:flex; gap:.75rem; padding:.65rem 0; border-top:1px solid #eef1f5; }
+    .fz-ayuda:first-child { border-top:0; padding-top:0; }
+    .fz-ayuda .bi { font-size:1.15rem; color:var(--fz-blue); line-height:1.2; }
+    .fz-ayuda a { font-weight:600; }
+    .fz-valor { font-size:.9rem; min-height:calc(1.5em + .75rem + 2px); }
+    @media (max-width:575px) { .fz-fila { grid-template-columns:1fr; } }
   </style>
 </head>
 <body class="d-flex">
 
-<!-- Sidebar -->
+<!-- Sidebar (misma estructura que admin/bandeja.html; los enlaces solo-admin los muestra initBackoffice) -->
 <div class="sidebar py-3 d-flex flex-column">
   <div class="px-4 mb-4">
     <div style="font-family:Georgia,serif;color:#fff;font-size:1.2rem;font-weight:700">Farmazed</div>
     <div id="sidebar-rol" style="color:rgba(255,255,255,.4);font-size:.72rem">Admin Panel</div>
   </div>
-  <div class="section-label">Gestión</div>
-  <a href="/admin/casos.html"><i class="bi bi-folder2-open me-2"></i>Expedientes</a>
-  <a href="/admin/bandeja.html"><i class="bi bi-inbox me-2"></i>Mi Bandeja</a>
-  <a href="/admin/leads.html"><i class="bi bi-person-lines-fill me-2"></i>Leads</a>
-  <a href="/admin/cotizaciones.html"><i class="bi bi-receipt me-2"></i>Cotizaciones</a>
-  <a href="/admin/formularios.html"><i class="bi bi-file-earmark-text me-2"></i>Formularios</a>
-  <a href="/admin/empresas.html"><i class="bi bi-building me-2"></i>Empresas</a>
-  <a href="/admin/precios.html"><i class="bi bi-cash-coin me-2"></i>Precios</a>
-  <a href="/admin/finanzas.html"><i class="bi bi-graph-up-arrow me-2"></i>Finanzas</a>
-  <div class="section-label">Sistema</div>
-  <a href="/admin/configuracion.html" class="active"><i class="bi bi-gear me-2"></i>Configuración</a>
-  <a href="#" id="sidebar-logout"><i class="bi bi-box-arrow-left me-2"></i>Cerrar Sesión</a>
+  <div class="section-label" data-i18n>Gestión</div>
+  <a href="/admin/casos.html"><i class="bi bi-folder2-open me-2"></i><span data-i18n>Expedientes</span></a>
+  <a href="/admin/bandeja.html"><i class="bi bi-inbox me-2"></i><span data-i18n>Mi Bandeja</span></a>
+  <a href="/admin/leads.html"><i class="bi bi-person-lines-fill me-2"></i><span data-i18n>Leads</span></a>
+  <a href="/admin/cotizaciones.html"><i class="bi bi-receipt me-2"></i><span data-i18n>Cotizaciones</span></a>
+  <a href="/admin/formularios.html"><i class="bi bi-file-earmark-text me-2"></i><span data-i18n>Formularios</span></a>
+  <a href="/admin/empresas.html" id="nav-empresas" style="display:none"><i class="bi bi-building me-2"></i><span data-i18n>Empresas</span></a>
+  <a href="/admin/precios.html" id="nav-precios" style="display:none"><i class="bi bi-cash-coin me-2"></i><span data-i18n>Precios</span></a>
+  <a href="/admin/finanzas.html" id="nav-finanzas" style="display:none"><i class="bi bi-graph-up-arrow me-2"></i><span data-i18n>Finanzas</span></a>
+  <div class="section-label" data-i18n>Sistema</div>
+  <a href="/admin/configuracion.html" class="active"><i class="bi bi-gear me-2"></i><span data-i18n>Configuración</span></a>
+  <a href="#" id="sidebar-logout"><i class="bi bi-box-arrow-left me-2"></i><span data-i18n>Cerrar Sesión</span></a>
 </div>
 
 <!-- Main -->
 <div class="main">
   <div class="topbar d-flex align-items-center justify-content-between">
-    <h6 class="mb-0 fw-bold">Configuración</h6>
+    <h6 class="mb-0 fw-bold" data-i18n>Configuración</h6>
     <span class="text-muted small" id="user-name"></span>
   </div>
 
+  <!-- Configuración del back-office (Rick, 02-nov-2026): perfil, seguridad, idioma y ayuda para todo el
+       personal; la tarjeta Sistema solo para el admin. API: tracker/routes/me.js y routes/system.js. -->
   <div class="p-4" id="content" style="display:none">
-    <div class="card border-0 shadow-sm">
-      <div class="card-header bg-white d-flex flex-wrap align-items-center justify-content-between gap-2">
-        <div>
-          <span class="fw-semibold small">Mapa del código</span>
-          <span class="text-muted small ms-2" id="grafo-fecha"></span>
-        </div>
-        <button class="btn btn-sm btn-outline-primary" id="btn-nueva-pestana" disabled>
-          <i class="bi bi-box-arrow-up-right me-1"></i>Abrir en pestaña nueva
-        </button>
+    <div class="mb-3">
+      <h5 class="fw-bold mb-1" data-i18n>Tu cuenta</h5>
+      <p class="text-muted small mb-0" data-i18n>Datos de tu perfil, seguridad de la cuenta, idioma de la interfaz y ayuda. Lo que cambies aquí es personal: no afecta al resto del equipo.</p>
+    </div>
+
+    <div class="row g-3">
+
+      <!-- Perfil -->
+      <div class="col-lg-6">
+        <div class="card border-0 shadow-sm h-100"><div class="card-body">
+          <div class="fz-seccion"><i class="bi bi-person-circle me-1"></i><span data-i18n>Perfil</span></div>
+          <form id="form-perfil" novalidate>
+            <div class="mb-3">
+              <label class="form-label" for="perfil-nombre" data-i18n>Nombre visible</label>
+              <input id="perfil-nombre" class="form-control" maxlength="80" autocomplete="name" required>
+              <div class="form-text" data-i18n>Es el nombre que ve el equipo y el que queda en los expedientes y mensajes (de 2 a 80 caracteres).</div>
+            </div>
+            <div class="row g-2 mb-3">
+              <div class="col-sm-7">
+                <span class="form-label d-block" data-i18n>Correo</span>
+                <div class="form-control bg-light fz-valor" id="perfil-correo">—</div>
+                <div class="form-text" data-i18n>Es tu usuario de acceso. Para cambiarlo, pide al administrador una invitación con el correo nuevo.</div>
+              </div>
+              <div class="col-sm-5">
+                <span class="form-label d-block" data-i18n>Rol</span>
+                <div class="form-control bg-light fz-valor" id="perfil-rol">—</div>
+              </div>
+            </div>
+            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+              <span class="text-muted small" id="perfil-acceso"></span>
+              <button type="submit" class="btn btn-primary" id="btn-guardar-perfil"><i class="bi bi-check2 me-1"></i><span data-i18n>Guardar</span></button>
+            </div>
+          </form>
+        </div></div>
       </div>
-      <div class="card-body">
-        <p class="text-muted small mb-3">
-          Grafo interactivo de la estructura del backend, las pruebas y el portal (generado con
-          <code>tracker/scripts/actualizar_grafo.sh</code>). Solo lo ve el administrador: expone cómo está armado el código.
-        </p>
-        <div id="grafo-estado" class="text-center py-5"><div class="spinner-border text-primary"></div></div>
-        <div id="grafo-error" class="alert alert-danger d-none"></div>
-        <iframe id="grafo-frame" title="Mapa del código" class="d-none"></iframe>
+
+      <!-- Seguridad -->
+      <div class="col-lg-6">
+        <div class="card border-0 shadow-sm h-100"><div class="card-body">
+          <div class="fz-seccion"><i class="bi bi-shield-lock me-1"></i><span data-i18n>Seguridad</span></div>
+          <form id="form-contrasena" novalidate>
+            <div class="fw-semibold small mb-2" data-i18n>Cambiar contraseña</div>
+            <div class="row g-2">
+              <div class="col-12">
+                <label class="form-label" for="pass-actual" data-i18n>Contraseña actual</label>
+                <input id="pass-actual" type="password" class="form-control" autocomplete="current-password" required>
+              </div>
+              <div class="col-sm-6">
+                <label class="form-label" for="pass-nueva" data-i18n>Nueva contraseña</label>
+                <input id="pass-nueva" type="password" class="form-control" autocomplete="new-password" minlength="10" required>
+              </div>
+              <div class="col-sm-6">
+                <label class="form-label" for="pass-confirmar" data-i18n>Confirmar</label>
+                <input id="pass-confirmar" type="password" class="form-control" autocomplete="new-password" required>
+              </div>
+            </div>
+            <div class="form-text mb-2" data-i18n>Mínimo 10 caracteres, con letras y números.</div>
+            <div class="d-flex justify-content-end">
+              <button type="submit" class="btn btn-outline-primary" id="btn-cambiar-pass"><i class="bi bi-key me-1"></i><span data-i18n>Cambiar contraseña</span></button>
+            </div>
+          </form>
+          <hr class="my-3">
+          <div class="d-flex align-items-start justify-content-between flex-wrap gap-2">
+            <div class="flex-grow-1" style="flex-basis:220px">
+              <div class="fw-semibold small" data-i18n>Cerrar sesión en todos los dispositivos</div>
+              <div class="form-text mt-0" data-i18n>Revoca todas las sesiones abiertas con tu cuenta, incluida esta. Úsalo si entraste desde un equipo ajeno o sospechas que alguien más tiene tu contraseña.</div>
+            </div>
+            <button type="button" class="btn btn-outline-danger btn-sm text-nowrap" id="btn-cerrar-sesiones"><i class="bi bi-box-arrow-right me-1"></i><span data-i18n>Cerrar en todos</span></button>
+          </div>
+        </div></div>
       </div>
+
+      <!-- Idioma -->
+      <div class="col-lg-6">
+        <div class="card border-0 shadow-sm h-100"><div class="card-body">
+          <div class="fz-seccion"><i class="bi bi-translate me-1"></i><span data-i18n>Idioma</span></div>
+          <p class="small text-muted" data-i18n>El idioma elegido se aplica a todo el back-office (menús, expedientes, mensajes y manual) y se recuerda en este navegador.</p>
+          <div id="config-idioma"></div>
+        </div></div>
+      </div>
+
+      <!-- Ayuda -->
+      <div class="col-lg-6">
+        <div class="card border-0 shadow-sm h-100"><div class="card-body">
+          <div class="fz-seccion"><i class="bi bi-question-circle me-1"></i><span data-i18n>Ayuda</span></div>
+          <div class="fz-ayuda">
+            <i class="bi bi-book"></i>
+            <div>
+              <a id="ayuda-manual" href="/manual/regente/es.html" target="_blank" rel="noopener" data-i18n>Manual de usuario</a>
+              <div class="form-text mt-0" data-i18n>El recorrido del back-office paso a paso, en el idioma activo.</div>
+            </div>
+          </div>
+          <div class="fz-ayuda">
+            <i class="bi bi-envelope"></i>
+            <div>
+              <a href="mailto:info@farmazed.com">info@farmazed.com</a>
+              <div class="form-text mt-0" data-i18n>Soporte de Farmazed: dudas de uso, accesos y errores.</div>
+            </div>
+          </div>
+          <div class="fz-ayuda" id="ayuda-version" style="display:none">
+            <i class="bi bi-tag"></i>
+            <div>
+              <span class="fw-semibold small" data-i18n>Versión</span>
+              <span class="small font-monospace ms-1" id="ayuda-version-valor">—</span>
+              <div class="form-text mt-0" data-i18n>Versión desplegada del tracker (solo la ve el administrador).</div>
+            </div>
+          </div>
+        </div></div>
+      </div>
+
+      <!-- Sistema (solo admin) -->
+      <div class="col-12" id="card-sistema" style="display:none">
+        <div class="card border-0 shadow-sm"><div class="card-body">
+          <div class="d-flex align-items-start justify-content-between flex-wrap gap-2 mb-2">
+            <div class="fz-seccion mb-0"><i class="bi bi-hdd-network me-1"></i><span data-i18n>Sistema</span></div>
+            <span class="text-muted small" data-i18n>Solo lo ve el administrador. Estos valores se definen en el servidor (variables y secretos del despliegue); aquí solo se consultan.</span>
+          </div>
+          <div id="sistema-estado"><div class="text-muted small" data-i18n>Cargando…</div></div>
+        </div></div>
+      </div>
+
     </div>
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script type="module">
-  import { initBackoffice } from '../portal/js/auth.js';
+  import { initBackoffice, esc, logout, cambiarContrasena, auth } from '../portal/js/auth.js';
+  import { avisar, confirmar } from '../portal/js/dialogos.js';
   import api from '../portal/js/api.js';
 
-  let grafoHtml = null;
-  // CSP del iframe: sin connect-src, no puede enviar datos a ningún host.
-  const CSP_GRAFO = "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:";
+  // Idiomas (farmazed-web/i18n/README.md): lo estático lleva data-i18n; lo que se genera aquí pasa
+  // por t() y se repinta desde la caché al cambiar de idioma (onCambio).
+  const I18N = window.FZI18N;
+  const t = (s, v) => I18N.t(s, v);
+  const $ = (id) => document.getElementById(id);
+
+  const NOMBRE_MIN = 2;
+  const NOMBRE_MAX = 80;
+  const CONTRASENA_MIN = 10;
+  const ETIQUETA_ROL = { admin: 'Admin', analista: 'Analista', abogado: 'Abogado', regente: 'Regente' };
+  // Códigos de Firebase Auth al volver a autenticar / cambiar la contraseña (auth.js cambiarContrasena).
+  const ERRORES_CONTRASENA = {
+    'auth/wrong-password':             'La contraseña actual no es correcta.',
+    'auth/invalid-credential':         'La contraseña actual no es correcta.',
+    'auth/invalid-login-credentials':  'La contraseña actual no es correcta.',
+    'auth/weak-password':              'La nueva contraseña es demasiado débil: usa al menos 10 caracteres con letras y números.',
+    'auth/too-many-requests':          'Demasiados intentos. Espera unos minutos y vuelve a intentarlo.',
+  };
+  const manualUrl = () => `/manual/regente/${encodeURIComponent(I18N.idioma() || 'es')}.html`;
+  const etiquetaRol = (rol) => (ETIQUETA_ROL[rol] ? t(ETIQUETA_ROL[rol]) : rol || '—');
+
+  // Lo último cargado, para repintarlo al cambiar de idioma sin volver a pedirlo.
+  const cache = { perfil: null, estado: null };
+  let sesion = null;
 
   async function init() {
-    const sesion = await initBackoffice();
+    sesion = await initBackoffice();
     if (!sesion) return;
-    if (!sesion.admin) { window.location.href = '/admin/bandeja.html'; return; } // el staff vuelve a su bandeja
-    document.getElementById('content').style.display = '';
-    cargarGrafo();
+    $('content').style.display = '';
+    $('ayuda-manual').href = manualUrl();
+    I18N.montarSelector('#config-idioma', { oscuro: true });
+    engancharEventos();
+    const tareas = [cargarPerfil()];
+    if (sesion.admin) {
+      $('card-sistema').style.display = '';
+      $('ayuda-version').style.display = '';
+      tareas.push(cargarSistema());
+    }
+    await Promise.all(tareas);
   }
 
-  async function cargarGrafo() {
-    const estado = document.getElementById('grafo-estado');
-    const error  = document.getElementById('grafo-error');
-    try {
-      const { html, generadoEn } = await api.getCodeGraph();
-      grafoHtml = html;
-      if (generadoEn && !isNaN(generadoEn)) document.getElementById('grafo-fecha').textContent = `· generado ${generadoEn.toLocaleString('es-PA')}`;
+  // ── Perfil ────────────────────────────────────────────────────────────────────────────────────
 
-      // El HTML del grafo trae sus propios scripts: va en un iframe SIN allow-same-origin, así corre
-      // aislado y no puede leer el token ni la sesión de esta página (ni hablar con la API como admin).
-      const frame = document.getElementById('grafo-frame');
-      frame.setAttribute('sandbox', 'allow-scripts');
-      frame.setAttribute('csp', CSP_GRAFO);
-      frame.srcdoc = html;
-      frame.classList.remove('d-none');
-      document.getElementById('btn-nueva-pestana').disabled = false;
+  async function cargarPerfil() {
+    try {
+      cache.perfil = await api.getPerfil();
+      renderPerfil(cache.perfil);
     } catch (e) {
-      error.textContent = e.message;
-      error.classList.remove('d-none');
-    } finally {
-      estado.classList.add('d-none');
+      cache.perfil = null;
+      await avisar(t('No se pudo cargar el perfil: {error}', { error: e.message }), { tipo: 'error' });
     }
   }
 
-  // Pestaña nueva: una URL blob hereda el ORIGEN de esta página, así que NO se abre el grafo
-  // directo — se abre una envoltura mínima (sin scripts) con el mismo iframe sandbox.
-  document.getElementById('btn-nueva-pestana').addEventListener('click', () => {
-    if (!grafoHtml) return;
-    const srcdoc = grafoHtml.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
-    const envoltura = `<!doctype html><html><head><meta charset="utf-8"><title>Mapa del código — Farmazed</title></head>`
-      + `<body style="margin:0"><iframe sandbox="allow-scripts" csp="${CSP_GRAFO}" style="border:0;width:100vw;height:100vh" srcdoc="${srcdoc}"></iframe></body></html>`;
-    const url = URL.createObjectURL(new Blob([envoltura], { type: 'text/html' }));
-    window.open(url, '_blank', 'noopener');
-    setTimeout(() => URL.revokeObjectURL(url), 60_000);
+  function renderPerfil(p) {
+    $('perfil-nombre').value = p.nombre || '';
+    $('perfil-correo').textContent = p.correo || '—';
+    renderPerfilTraducible(p);
+  }
+
+  function renderPerfilTraducible(p) {
+    $('perfil-rol').textContent = etiquetaRol(p.rol);
+    const ultimo = p.ultimoAcceso ? I18N.fechaHora(p.ultimoAcceso) : '';
+    $('perfil-acceso').textContent = ultimo ? t('Último acceso: {fecha}', { fecha: ultimo }) : '';
+  }
+
+  async function guardarPerfil() {
+    const nombre = $('perfil-nombre').value.trim();
+    if (nombre.length < NOMBRE_MIN || nombre.length > NOMBRE_MAX) {
+      await avisar(t('El nombre debe tener entre 2 y 80 caracteres.'), { tipo: 'error' });
+      return;
+    }
+    const btn = $('btn-guardar-perfil');
+    btn.disabled = true;
+    try {
+      cache.perfil = await api.setPerfil({ nombre });
+      renderPerfil(cache.perfil);
+      $('user-name').textContent = cache.perfil.nombre || cache.perfil.correo;
+      // El displayName de Firebase lo actualiza el tracker; se refresca aquí para que las demás
+      // páginas lo muestren sin volver a entrar.
+      await auth.currentUser?.reload().catch(() => {});
+      await avisar(t('Perfil guardado.'), { tipo: 'exito' });
+    } catch (e) {
+      await avisar(t('No se pudo guardar el perfil: {error}', { error: e.message }), { tipo: 'error' });
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  // ── Seguridad ─────────────────────────────────────────────────────────────────────────────────
+
+  function validarContrasena(actual, nueva, confirmar) {
+    if (!actual || !nueva || !confirmar) return 'Completa los tres campos.';
+    if (nueva.length < CONTRASENA_MIN || !/[a-zA-Z]/.test(nueva) || !/\d/.test(nueva)) return 'La nueva contraseña debe tener al menos 10 caracteres, con letras y números.';
+    if (nueva !== confirmar) return 'La confirmación no coincide con la nueva contraseña.';
+    if (nueva === actual) return 'La nueva contraseña debe ser distinta de la actual.';
+    return null;
+  }
+
+  async function cambiarPass() {
+    const actual = $('pass-actual').value;
+    const nueva = $('pass-nueva').value;
+    const confirmacion = $('pass-confirmar').value;
+    const problema = validarContrasena(actual, nueva, confirmacion);
+    if (problema) { await avisar(t(problema), { tipo: 'error' }); return; }
+    const btn = $('btn-cambiar-pass');
+    btn.disabled = true;
+    try {
+      await cambiarContrasena(actual, nueva);
+      $('form-contrasena').reset();
+      await avisar(t('Contraseña actualizada.'), { tipo: 'exito' });
+    } catch (e) {
+      const conocido = ERRORES_CONTRASENA[e?.code];
+      await avisar(conocido ? t(conocido) : t('No se pudo cambiar la contraseña: {error}', { error: e.message }), { tipo: 'error' });
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  async function cerrarSesiones() {
+    if (!(await confirmar(t('¿Cerrar la sesión en todos los dispositivos? Tendrás que volver a entrar, también aquí.')))) return;
+    const btn = $('btn-cerrar-sesiones');
+    btn.disabled = true;
+    try {
+      await api.cerrarSesiones();
+      await logout(); // la sesión actual también queda revocada
+    } catch (e) {
+      btn.disabled = false;
+      await avisar(t('No se pudieron cerrar las sesiones: {error}', { error: e.message }), { tipo: 'error' });
+    }
+  }
+
+  // ── Sistema (solo admin) ──────────────────────────────────────────────────────────────────────
+
+  async function cargarSistema() {
+    try {
+      cache.estado = await api.getEstadoSistema();
+      renderSistema(cache.estado);
+    } catch (e) {
+      cache.estado = null;
+      $('sistema-estado').innerHTML = `<div class="alert alert-danger mb-0">${esc(t('No se pudo cargar el estado del sistema: {error}', { error: e.message }))}</div>`;
+    }
+  }
+
+  function renderSistema(s) {
+    const revision = s.revision ? ` (${s.revision})` : '';
+    $('ayuda-version-valor').textContent = `${s.version || '—'}${revision}`;
+    $('sistema-estado').innerHTML = [filaEntorno(s), filaPagos(s), filaFacturacion(s), filaCorreo(s), filaDemo(s)].join('');
+  }
+
+  // Una fila por componente: rótulo, semáforo (ok / atención), valor y una línea que lo explica.
+  function fila({ etiqueta, ok, valor, detalle, extra }) {
+    const badge = ok
+      ? `<span class="badge text-bg-success">${esc(t('OK'))}</span>`
+      : `<span class="badge text-bg-warning">${esc(t('Atención'))}</span>`;
+    return `<div class="fz-fila">
+      <div class="fz-etq">${esc(etiqueta)}</div>
+      <div>
+        <div class="d-flex align-items-center flex-wrap gap-2">${badge}<span class="fw-semibold small">${esc(valor)}</span>${extra || ''}</div>
+        <div class="text-muted small">${esc(detalle)}</div>
+      </div>
+    </div>`;
+  }
+
+  function filaEntorno(s) {
+    const produccion = s.entorno === 'produccion';
+    return fila({
+      etiqueta: t('Entorno'), ok: produccion,
+      valor: produccion ? t('Producción') : t('Local (desarrollo)'),
+      detalle: produccion ? t('Datos reales: Firestore y Auth de producción.') : t('Emuladores locales: nada de lo que hagas aquí llega a producción.'),
+    });
+  }
+
+  function filaPagos(s) {
+    const p = s.pagos || {};
+    const paypal = p.proveedor === 'paypal';
+    const live = paypal && p.entorno === 'live';
+    return fila({
+      etiqueta: t('Pagos'), ok: live,
+      valor: !paypal ? t('Simulado') : live ? t('PayPal en vivo') : t('PayPal sandbox (pruebas)'),
+      detalle: !paypal ? t('Pasarela simulada: los pagos se aprueban solos, sin PayPal.')
+        : live ? t('Los clientes pagan de verdad con PayPal.') : t('PayPal de pruebas: los pagos no mueven dinero.'),
+    });
+  }
+
+  function filaFacturacion(s) {
+    const proveedor = s.facturacion?.proveedor;
+    const real = proveedor === 'ebi_pac';
+    const detalle = real ? 'Las facturas se emiten en la DGI a través de EBI-PAC.'
+      : proveedor === 'mock' ? 'Las facturas se emiten contra un PAC simulado, sin validez fiscal.'
+      : 'No se emite ninguna factura; los pagos solo se registran.';
+    return fila({
+      etiqueta: t('Facturación electrónica'), ok: real,
+      valor: real ? 'EBI-PAC (DGI)' : proveedor === 'mock' ? t('PAC simulado') : t('Desactivado'),
+      detalle: t(detalle),
+      extra: `<a href="/admin/finanzas.html" class="small">${esc(t('Ir a Finanzas'))} <i class="bi bi-arrow-right"></i></a>`,
+    });
+  }
+
+  function filaCorreo(s) {
+    const c = s.correo || {};
+    return fila({
+      etiqueta: t('Correo saliente'), ok: !!c.configurado,
+      valor: c.configurado ? t('Configurado') : t('Sin configurar'),
+      detalle: c.configurado ? t('Los correos salen desde {remitente}.', { remitente: c.remitente || '—' }) : t('Sin SMTP: los correos se simulan y no le llegan a nadie.'),
+    });
+  }
+
+  function filaDemo(s) {
+    const cuentas = s.demo?.cuentas || [];
+    const lista = cuentas.map(c => `<span class="badge text-bg-light border fw-normal">${esc(c.correo)} · ${esc(etiquetaRol(c.rol))}</span>`).join(' ');
+    return fila({
+      etiqueta: t('Cuentas demo'), ok: true,
+      valor: cuentas.length ? t('{n} cuenta(s)', { n: cuentas.length }) : t('Ninguna'),
+      detalle: t('Cuentas de demostración para enseñar el sistema; se reinician desde su propio botón.'),
+      extra: lista ? `<span class="d-inline-flex flex-wrap gap-1">${lista}</span>` : '',
+    });
+  }
+
+  // ── Eventos ───────────────────────────────────────────────────────────────────────────────────
+
+  function engancharEventos() {
+    $('form-perfil').addEventListener('submit', (ev) => { ev.preventDefault(); guardarPerfil(); });
+    $('form-contrasena').addEventListener('submit', (ev) => { ev.preventDefault(); cambiarPass(); });
+    $('btn-cerrar-sesiones').addEventListener('click', cerrarSesiones);
+  }
+
+  // Cambio de idioma en vivo: lo estático lo repinta i18n.js; lo generado aquí se vuelve a pintar desde la caché.
+  I18N.onCambio(() => {
+    $('ayuda-manual').href = manualUrl();
+    if (cache.perfil) renderPerfilTraducible(cache.perfil);
+    if (cache.estado) renderSistema(cache.estado);
   });
 
   init();

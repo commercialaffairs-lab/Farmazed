@@ -876,3 +876,14 @@ cuentas `richypb@gmail.com` y la de prueba de agosto quedan sin rol).
    entienda, la web se despliega con `gcloud builds submit --tag gcr.io/farmazed/farmazed-web:<tag>` +
    `deploy --image` (DEPLOY.md). Revisar también el checklist "Antes del deploy" de PENDIENTES.md (quedan los
    puntos de PayPal).
+
+## H.19 — 02-nov-2026: Configuración del back-office; fuera el mapa del código (Rick)
+
+Rick, al ver en producción la página Configuración con el grafo de graphify (que él mismo pidió en
+§H.16): "vamos a crear una seccion de configuracion que siga las normas logicas que un software como
+farmazed necesita, como info del perfil, seguridad para la contrasena, Ayda, etc. remueve eso de
+graphify del todo." Hecho (handover TAREA 61): Configuración = Perfil, Seguridad (cambio de
+contraseña, cerrar sesión en todos los dispositivos), Idioma, Ayuda y, solo admin, Sistema (estado de
+pagos, facturación, correo, demo, versión); visible para todo el personal. Graphify eliminado del repo
+y de producción. Además: modal "Correo enviado" en "¿Olvidó su contraseña?" (pedido de Rick el mismo
+día) y la cuenta `admin@pbtradingsolutions.com` marcada como verificada en producción.

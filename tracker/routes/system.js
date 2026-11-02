@@ -1,39 +1,37 @@
 /**
- * system.js — TAREA 41b (PM_COMMENTS §H.16). Endpoints de "Configuración" del admin.
+ * system.js — Endpoints de "Configuración" del back-office.
  *
- *   GET /api/admin/code-graph  → el HTML interactivo del grafo del código
- *                                (tracker/assets/code-graph.html, generado con
- *                                tracker/scripts/actualizar_grafo.sh).
+ *   GET /api/admin/estado  → estado de los servicios (pagos, facturación, correo, demo, versión),
+ *                            solo para el admin (`system.estado`). Nunca devuelve credenciales.
  *
- * El grafo expone la ESTRUCTURA interna del backend, así que solo lo ve quien tenga
- * `system.code_graph` (admin) y NUNCA se publica como archivo estático en farmazed-web/
- * (todo lo que está ahí se sirve sin auth). `Last-Modified` (cabecera CORS-safelisted)
- * lleva la fecha de generación para que la página la muestre.
+ * Historia: hasta el 02-nov-2026 aquí vivía el mapa interactivo del código (graphify, TAREA 41b);
+ * Rick pidió retirarlo del todo y convertir Configuración en una sección normal de perfil,
+ * seguridad, idioma y ayuda (ver farmazed-web/admin/configuracion.html).
  */
 const { Router } = require('express');
-const fs         = require('node:fs/promises');
-const path       = require('node:path');
 const { requireAuth } = require('../middleware/auth');
 const { requirePermission } = require('../middleware/permissions');
+const { resolverProveedorPagos, esProduccion } = require('../config');
+const { proveedorActual } = require('../services/facturacion/pac');
+const { correoConfigurado } = require('../services/correo');
+const { CUENTAS } = require('../services/demo');
+const PAQUETE = require('../package.json');
 
 const router = Router();
-const GRAFO  = path.join(__dirname, '..', 'assets', 'code-graph.html');
 
-router.get('/code-graph', requireAuth, requirePermission('system.code_graph'), async (req, res, next) => {
-  try {
-    const [html, stat] = await Promise.all([fs.readFile(GRAFO, 'utf8'), fs.stat(GRAFO)]);
-    res.set({
-      'Content-Type': 'text/html; charset=utf-8',
-      'Last-Modified': stat.mtime.toUTCString(),
-      'Cache-Control': 'private, no-store', // contenido interno: que ningún proxy/caché lo guarde
-    });
-    res.send(html);
-  } catch (e) {
-    if (e.code === 'ENOENT') {
-      return res.status(404).json({ error: 'El mapa del código todavía no se ha generado. Correr tracker/scripts/actualizar_grafo.sh y volver a desplegar.' });
-    }
-    next(e); // otro fallo: el handler global (500 genérico + log)
-  }
+router.get('/estado', requireAuth, requirePermission('system.estado'), (req, res) => {
+  const env = process.env;
+  let pagos = { proveedor: 'desconocido', entorno: null };
+  try { pagos = { proveedor: resolverProveedorPagos(env), entorno: env.PAYPAL_ENV || null }; } catch (e) { /* config inválida: se informa como desconocido */ }
+  res.json({
+    version: PAQUETE.version,
+    revision: env.K_REVISION || null,
+    entorno: esProduccion(env) ? 'produccion' : 'local',
+    pagos,
+    facturacion: { proveedor: proveedorActual() },
+    correo: { configurado: correoConfigurado(), remitente: correoConfigurado() ? (env.SMTP_FROM || env.SMTP_USER || null) : null },
+    demo: { cuentas: CUENTAS.map(c => ({ correo: c.correo, rol: c.role })) },
+  });
 });
 
 module.exports = router;

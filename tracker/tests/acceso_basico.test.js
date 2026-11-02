@@ -31,7 +31,7 @@ const PROTEGIDOS = [
   ['GET', '/api/quotes'], ['POST', '/api/quotes/x/pago/crear-orden'], ['POST', '/api/quotes/x/pago/capturar'],
   ['GET', '/api/orgs'], ['GET', '/api/me/org'], ['GET', '/api/me/permissions'], ['GET', '/api/employees'],
   ['POST', '/api/subscription/subscribe'], ['POST', '/api/subscription/cancel'], ['PUT', '/api/subscription/plan'],
-  ['POST', '/api/admin/set-role'], ['GET', '/api/admin/code-graph'], ['GET', '/api/formularios'],
+  ['POST', '/api/admin/set-role'], ['GET', '/api/admin/estado'], ['GET', '/api/formularios'],
 ];
 
 describe('Sin credenciales válidas -> 401 en todos los routers protegidos', () => {

@@ -154,7 +154,7 @@ const PERMISSIONS = {
   'empresarial.solicitar': { label: 'Enviar/aceptar la solicitud de propuesta del Plan Empresarial', roles: ['cliente_titular'] },
   'empresarial.manage':    { label: 'Definir condiciones (monto/período/gestor) del Plan Empresarial', roles: ['admin'] },
   // TAREA 41b: el grafo del código expone la ESTRUCTURA interna del backend — solo admin, nunca público.
-  'system.code_graph':     { label: 'Ver el mapa interactivo del código (página Configuración)', roles: ['admin'] },
+  'system.estado':         { label: 'Ver el estado de los servicios (Configuración → Sistema)', roles: ['admin'] },
 };
 
 // No están en la tabla, a propósito: `GET /api/invitations/:token` es PÚBLICA
