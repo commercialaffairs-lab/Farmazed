@@ -107,4 +107,26 @@ async function enviarRestablecimiento({ correo, nombre }) {
   return true;
 }
 
-module.exports = { correoConfigurado, enviarVerificacion, enviarInvitacion, enviarRestablecimiento, plantilla };
+/**
+ * Correo con la factura electrónica (Rick, 01-nov-2026): el PDF fiscal va adjunto. Devuelve true si
+ * lo envió, false si no hay SMTP o el destinatario es una cuenta demo (nunca se escribe a las
+ * cuentas de demostración). Lanza si el envío falla: el flujo de facturación lo registra y permite
+ * reintentar desde el panel.
+ */
+async function enviarFactura({ correo, nombre, numero, fecha, total, cufe, pdf, nombreArchivo }) {
+  if (!seEnvia(correo)) return false;
+  const html = plantilla('factura.html', { nombre: nombre || 'cliente', numero, fecha, total, cufe, anio: new Date().getFullYear() });
+  await transportador().sendMail({
+    from: process.env.SMTP_FROM, to: correo,
+    subject: `Factura electrónica ${numero} — Farmazed`,
+    html,
+    text: `Hola ${nombre || ''},\n\nRecibimos tu pago y emitimos la factura electrónica ${numero} (${fecha}) por ${total}. El PDF fiscal va adjunto.\nCUFE: ${cufe}\n\nFarmazed · Asuntos Regulatorios Farmacéuticos · Panamá`,
+    attachments: [
+      { filename: 'logo.png', path: path.join(PLANTILLAS, 'logo.png'), cid: 'logo' },
+      { filename: nombreArchivo || `factura-${numero}.pdf`, content: pdf, contentType: 'application/pdf' },
+    ],
+  });
+  return true;
+}
+
+module.exports = { correoConfigurado, enviarVerificacion, enviarInvitacion, enviarRestablecimiento, enviarFactura, plantilla };

@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>Tu factura electrónica de Farmazed</title>
+  <!-- Plantilla del correo de la factura electrónica (services/correo.js la rellena: {{nombre}},
+       {{numero}}, {{fecha}}, {{total}}, {{cufe}}, {{anio}}; el PDF fiscal va adjunto y el logo como
+       cid:logo). Misma estructura que invitacion.html. -->
+</head>
+<body style="margin:0;padding:0;background:#f0f4fa;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#f0f4fa;">
+    <tr>
+      <td align="center" style="padding:32px 16px;">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:560px;">
+          <tr>
+            <td align="center" style="padding-bottom:20px;">
+              <img src="cid:logo" width="56" height="56" alt="Farmazed" style="display:block;width:56px;height:56px;">
+              <div style="font-family:Georgia,'Times New Roman',serif;font-size:22px;font-weight:bold;color:#0F3260;margin-top:8px;">Farmazed</div>
+            </td>
+          </tr>
+          <tr>
+            <td style="background:#ffffff;border-radius:12px;border-top:4px solid #1B4F8A;padding:36px 36px 32px;font-family:Arial,Helvetica,sans-serif;color:#1f2937;">
+              <h1 style="margin:0 0 16px;font-size:20px;color:#0F3260;">Factura electrónica {{numero}}</h1>
+              <p style="margin:0 0 16px;font-size:15px;line-height:1.6;">Hola {{nombre}},</p>
+              <p style="margin:0 0 24px;font-size:15px;line-height:1.6;">Recibimos tu pago y emitimos la factura electrónica correspondiente ante la DGI. El documento fiscal (CAFE) va adjunto a este correo en PDF.</p>
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#f0f4fa;border-radius:8px;margin-bottom:24px;">
+                <tr><td style="padding:14px 18px 4px;font-size:13px;color:#4b5563;">Número</td><td align="right" style="padding:14px 18px 4px;font-size:13px;font-weight:bold;color:#0F3260;">{{numero}}</td></tr>
+                <tr><td style="padding:4px 18px;font-size:13px;color:#4b5563;">Fecha</td><td align="right" style="padding:4px 18px;font-size:13px;color:#1f2937;">{{fecha}}</td></tr>
+                <tr><td style="padding:4px 18px 14px;font-size:13px;color:#4b5563;">Total</td><td align="right" style="padding:4px 18px 14px;font-size:16px;font-weight:bold;color:#1B4F8A;">{{total}}</td></tr>
+              </table>
+              <p style="margin:0 0 6px;font-size:12px;color:#6b7280;">CUFE (código único de factura electrónica):</p>
+              <p style="margin:0 0 24px;font-size:11px;line-height:1.5;word-break:break-all;font-family:Consolas,Menlo,monospace;color:#374151;">{{cufe}}</p>
+              <p style="margin:0;font-size:13px;line-height:1.6;color:#4b5563;">Puedes verificar el documento en el portal de la DGI con ese código. Si algo no coincide con tu pago, responde a este correo y lo revisamos.</p>
+            </td>
+          </tr>
+          <tr>
+            <td align="center" style="padding:20px 12px 0;font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#6b7280;line-height:1.6;">
+              Farmazed · Asuntos Regulatorios Farmacéuticos · Panamá<br>
+              © {{anio}} Farmazed
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

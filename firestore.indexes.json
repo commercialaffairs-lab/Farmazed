@@ -1,4 +1,21 @@
 {
-  "indexes": [],
-  "fieldOverrides": []
+  "indexes": [
+    { "collectionGroup": "facturas", "queryScope": "COLLECTION", "fields": [ { "fieldPath": "orgId", "order": "ASCENDING" }, { "fieldPath": "creadaEn", "order": "DESCENDING" } ] },
+    { "collectionGroup": "facturas", "queryScope": "COLLECTION", "fields": [ { "fieldPath": "estado", "order": "ASCENDING" }, { "fieldPath": "creadaEn", "order": "DESCENDING" } ] },
+    { "collectionGroup": "facturas", "queryScope": "COLLECTION", "fields": [ { "fieldPath": "origen", "order": "ASCENDING" }, { "fieldPath": "creadaEn", "order": "DESCENDING" } ] },
+    { "collectionGroup": "facturas", "queryScope": "COLLECTION", "fields": [ { "fieldPath": "estado", "order": "ASCENDING" }, { "fieldPath": "origen", "order": "ASCENDING" }, { "fieldPath": "creadaEn", "order": "DESCENDING" } ] },
+    { "collectionGroup": "payments", "queryScope": "COLLECTION_GROUP", "fields": [ { "fieldPath": "tipo", "order": "ASCENDING" }, { "fieldPath": "__name__", "order": "ASCENDING" } ] }
+  ],
+  "fieldOverrides": [
+    {
+      "collectionGroup": "payments",
+      "fieldPath": "tipo",
+      "indexes": [
+        { "order": "ASCENDING", "queryScope": "COLLECTION" },
+        { "order": "DESCENDING", "queryScope": "COLLECTION" },
+        { "arrayConfig": "CONTAINS", "queryScope": "COLLECTION" },
+        { "order": "ASCENDING", "queryScope": "COLLECTION_GROUP" }
+      ]
+    }
+  ]
 }

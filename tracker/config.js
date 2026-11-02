@@ -65,6 +65,27 @@ function resolverProveedorPagos(env) {
   return 'paypal';
 }
 
+/**
+ * PAC de facturación electrónica según el entorno: 'mock' | 'ebi_pac' | 'desactivado'. Nunca
+ * lanza al arrancar (la facturación es opcional): con emulador o FACTURACION_PROVIDER=mock → mock;
+ * con credenciales EBI_TOKEN_USUARIO/EBI_TOKEN_PASSWORD → ebi_pac; en producción sin credenciales
+ * → 'desactivado' (emitir falla con un mensaje claro, los pagos no se ven afectados). El mock se
+ * prohíbe en producción (una "factura" sin validez fiscal llegaría al cliente).
+ */
+function resolverProveedorFacturacion(env) {
+  const prod = esProduccion(env);
+  const enEmulador = !!env.FIRESTORE_EMULATOR_HOST;
+  const pedido = env.FACTURACION_PROVIDER;
+  if (pedido && !['mock', 'ebi_pac'].includes(pedido)) throw new ConfigError([`FACTURACION_PROVIDER inválido: "${pedido}" (válidos: mock, ebi_pac).`]);
+  if (pedido === 'mock' && prod) throw new ConfigError(['FACTURACION_PROVIDER=mock no se permite en producción (emitiría facturas sin validez fiscal).']);
+  const tieneCredenciales = !!(env.EBI_TOKEN_USUARIO && env.EBI_TOKEN_PASSWORD);
+  if (pedido === 'ebi_pac' && !tieneCredenciales) throw new ConfigError(['FACTURACION_PROVIDER=ebi_pac requiere EBI_TOKEN_USUARIO y EBI_TOKEN_PASSWORD.']);
+  if (pedido === 'mock') return 'mock';
+  if (pedido === 'ebi_pac' || tieneCredenciales) return 'ebi_pac';
+  if (enEmulador && !prod) return 'mock';
+  return 'desactivado';
+}
+
 function cargarConfig(env = process.env) {
   const problemas = [];
   const prod = esProduccion(env);
@@ -124,4 +145,4 @@ function obtenerConfig() {
   return _config;
 }
 
-module.exports = { cargarConfig, obtenerConfig, resolverProveedorPagos, origenPermitido, ConfigError, MCP_KEY_MIN };
+module.exports = { cargarConfig, obtenerConfig, resolverProveedorPagos, resolverProveedorFacturacion, esProduccion, origenPermitido, ConfigError, MCP_KEY_MIN };

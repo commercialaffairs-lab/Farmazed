@@ -93,4 +93,10 @@ async function deleteFile(storagePath) {
   await file.delete({ ignoreNotFound: true });
 }
 
-module.exports = { uploadFile, getSignedUrl, deleteFile };
+/** Contenido de un objeto ya subido (p. ej. el PDF fiscal de una factura). @returns {Promise<Buffer>} */
+async function downloadFile(storagePath) {
+  const [contenido] = await gcs().bucket.file(storagePath).download();
+  return contenido;
+}
+
+module.exports = { uploadFile, getSignedUrl, deleteFile, downloadFile };

@@ -21,6 +21,7 @@ const { serializeTimestamps } = require('../utils/serialize');
 const { textoError, trimOrNull } = require('../utils/validar_texto');
 const { conceptosCobrados } = require('../utils/conceptos_fase05');
 const { createConceptPayment } = require('../services/payments_ledger');
+const { registrarPagoConfirmado } = require('../services/facturacion/facturas');
 
 const router = Router({ mergeParams: true });
 const db     = () => admin.firestore();
@@ -120,6 +121,12 @@ router.post('/confirmar', requireAuth, requirePermission('payments.create'), asy
       }),
     });
     await batch.commit();
+    // Facturación electrónica (Rick, 01-nov-2026): con el pago confirmado nace la factura y, según el
+    // workflow de Rapid PayPro, se emite y envía sola. Nunca afecta la confirmación ya guardada.
+    registrarPagoConfirmado({
+      origen: 'rapid_paypro', disparador: 'confirmacion_admin', quoteId: ref.id,
+      pagos: pagos.map(p => ({ ...p, caseId })), usuario: { uid: req.user.uid, email: req.user.email },
+    }).catch(e => console.error('[pago-externo] factura no creada tras confirmar', { quoteId: ref.id, caseId, error: e.message }));
     res.json(serializeTimestamps({ confirmado: true, caseId, pagos }));
   } catch (e) {
     console.error('[pago-externo] confirmar', e);

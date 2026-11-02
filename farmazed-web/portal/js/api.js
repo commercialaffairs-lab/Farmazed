@@ -20,9 +20,23 @@ async function apiFetch(path, options = {}) {
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: res.statusText }));
-    throw Object.assign(new Error(err.error || `HTTP ${res.status}`), { codigo: err.codigo });
+    throw Object.assign(new Error(err.error || `HTTP ${res.status}`), { codigo: err.codigo, detalles: err.detalles });
   }
   return res.json();
+}
+
+/**
+ * Como apiFetch pero para respuestas binarias (el PDF fiscal de una factura): devuelve el Blob.
+ * Los errores llegan igual en JSON `{ error }`. Quien llama abre el Blob con URL.createObjectURL.
+ */
+async function fetchBlob(path) {
+  const token = await getToken();
+  const res = await fetch(`${API_BASE}${path}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw Object.assign(new Error(err.error || `HTTP ${res.status}`), { codigo: err.codigo });
+  }
+  return res.blob();
 }
 
 // ── Cases ─────────────────────────────────────────────────────────────────────
@@ -148,6 +162,13 @@ const api = {
 
   getEmployees: () => apiFetch('/api/employees'),
   reiniciarDemo: () => apiFetch('/api/demo/reiniciar', { method: 'POST' }),
+  // Panel "Recorrido demo" (solo cuentas demo), en el idioma pedido (es|en|fr|pt; el tracker cae al español).
+  getRecorridoDemo: (idioma) => apiFetch(`/api/demo/recorrido${idioma ? `?idioma=${encodeURIComponent(idioma)}` : ''}`),
+  // Recorrido guiado de un cliente real (se activa en "Mi cuenta"; progreso según los datos de su empresa).
+  getRecorridoCliente: (idioma) => apiFetch(`/api/me/recorrido${idioma ? `?idioma=${encodeURIComponent(idioma)}` : ''}`),
+  // Preferencias de la cuenta ({ recorridoGuiado: bool }), guardadas en el tracker (siguen a la persona entre dispositivos).
+  getPreferencias: () => apiFetch('/api/me/preferencias'),
+  setPreferencias: (cambios) => apiFetch('/api/me/preferencias', { method: 'PUT', body: JSON.stringify(cambios) }),
   restablecerContrasena: (correo) => apiFetch('/api/employees/restablecer-contrasena', { method: 'POST', body: JSON.stringify({ correo }) }),
 
   getInvitations: () => apiFetch('/api/invitations'),
@@ -212,6 +233,24 @@ const api = {
   // ── Pagos por revisar (admin): avisos del webhook de PayPal y cambios de plan ──
   getRevisionesPago: () => apiFetch('/api/admin/revisiones-pago'),
   resolverRevisionPago: (id, nota) => apiFetch(`/api/admin/revisiones-pago/${encodeURIComponent(id)}/resolver`, { method: 'POST', body: JSON.stringify({ nota }) }),
+
+  // ── Facturación electrónica (Rick, 01-nov-2026) — admin/finanzas.html; tracker/routes/facturas.js ──
+  // Filtros vacíos no se mandan (el tracker rechaza estado/origen desconocidos, y '' lo sería).
+  listFacturas: (params = {}) => {
+    const q = new URLSearchParams(Object.fromEntries(Object.entries(params).filter(([, v]) => v !== '' && v !== null && v !== undefined))).toString();
+    return apiFetch(`/api/facturas${q ? '?' + q : ''}`);
+  },
+  getFacturasConfig: () => apiFetch('/api/facturas/config'),
+  // `cambios` es parcial: { emisor, conceptos, formasPago, workflows, prefijo } (las claves que se manden).
+  setFacturasConfig: (cambios) => apiFetch('/api/facturas/config', { method: 'PUT', body: JSON.stringify(cambios) }),
+  listPagosSinFactura: () => apiFetch('/api/facturas/sin-factura'),
+  facturarPagos: (caseId, paymentIds) => apiFetch('/api/facturas/desde-pagos', { method: 'POST', body: JSON.stringify({ caseId, paymentIds }) }),
+  // accion: emitir | enviar | reintentar | anular ({ motivo })
+  facturaAccion: (id, accion, body) => apiFetch(`/api/facturas/${encodeURIComponent(id)}/${accion}`, { method: 'POST', ...(body ? { body: JSON.stringify(body) } : {}) }),
+  getFacturaEstadoPac: (id) => apiFetch(`/api/facturas/${encodeURIComponent(id)}/estado-pac`),
+  // Barrido de facturas automáticas a medias → { revisadas, resultados: [{ id, antes, despues | error }] }
+  procesarFacturasPendientes: (minutos = 2) => apiFetch(`/api/facturas/procesar-pendientes?minutos=${encodeURIComponent(minutos)}`, { method: 'POST' }),
+  getFacturaPdf: (id) => fetchBlob(`/api/facturas/${encodeURIComponent(id)}/pdf`),
 
   // ── TAREA 34 (§H.15) — planes del landing ──────────────────────────────────────
   setMiPlan: (plan) => apiFetch('/api/orgs/mine/plan', { method: 'PATCH', body: JSON.stringify({ plan }) }),

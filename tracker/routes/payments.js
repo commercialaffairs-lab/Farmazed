@@ -42,6 +42,7 @@ const { uploadFile, deleteFile } = require('../services/storage');
 const { serializeTimestamps } = require('../utils/serialize');
 const { getCaseOrFail, requirePermission } = require('../middleware/permissions');
 const { TIPOS_PAGO, AUTORIDADES, CONCEPTOS_CLIENTE } = require('../services/payments_ledger');
+const { registrarPagoConfirmado } = require('../services/facturacion/facturas');
 
 const router = Router({ mergeParams: true }); // mergeParams to access :caseId
 const db     = () => admin.firestore();
@@ -147,6 +148,17 @@ router.post('/', requireAuth, requirePermission('payments.create'), upload.singl
       // El registro no se pudo guardar: no se deja el comprobante huérfano en Storage.
       await deleteFile(storagePath).catch(err => console.error('[payments] no se pudo borrar el comprobante huérfano', { storagePath, error: err.message }));
       throw e;
+    }
+
+    // Facturación electrónica (Rick, 01-nov-2026): un pago manual del cliente (cheque/transferencia con
+    // comprobante) crea su factura; por defecto queda pendiente de que el admin la emita desde Finanzas
+    // (workflow `manual` con auto:false). Nunca afecta el registro del pago.
+    if (tipo === 'cliente_a_farmazed') {
+      registrarPagoConfirmado({
+        origen: 'manual', disparador: 'registro_admin',
+        pagos: [{ caseId: req.params.caseId, concepto, monto: montoNum, paymentId }],
+        usuario: { uid: req.user.uid, email: req.user.email },
+      }).catch(e => console.error('[payments] factura no creada tras el registro manual', { caseId: req.params.caseId, paymentId, error: e.message }));
     }
 
     res.status(201).json(serializeTimestamps({ id: paymentId, ...paymentData, comprobanteUrl: signedUrl }));

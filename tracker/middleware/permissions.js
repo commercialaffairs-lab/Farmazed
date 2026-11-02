@@ -100,6 +100,10 @@ const PERMISSIONS = {
   'payments.read':         { label: 'Ver los pagos de un caso',                 roles: ROLES },
   // Lo que el webhook de PayPal o un cambio de plan dejan para que una persona lo mire.
   'payments.review':       { label: 'Ver y resolver los pagos por revisar (avisos de PayPal)', roles: ['admin'] },
+  // Facturación electrónica (Rick, 01-nov-2026): el admin gestiona (configurar, emitir, reenviar,
+  // anular); el cliente solo ve y descarga las facturas de su propia empresa.
+  'facturas.manage':       { label: 'Configurar y gestionar las facturas electrónicas',      roles: ['admin'] },
+  'facturas.read_own':     { label: 'Ver y descargar las facturas de su propia empresa',   roles: ['cliente_titular', 'cliente_miembro', 'admin'] },
   'messages.send':         { label: 'Enviar un mensaje en el caso',             roles: ROLES },
   'messages.read':         { label: 'Leer los mensajes de un caso',             roles: ROLES },
   'formularios.read':      { label: 'Ver/descargar la biblioteca de formularios (R14)', roles: ROLES },

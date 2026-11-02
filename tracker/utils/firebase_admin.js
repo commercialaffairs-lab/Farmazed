@@ -6,7 +6,7 @@
  */
 const app = require('firebase-admin/app');
 const { getAuth } = require('firebase-admin/auth');
-const { getFirestore, FieldValue, Timestamp } = require('firebase-admin/firestore');
+const { getFirestore, FieldValue, FieldPath, Timestamp } = require('firebase-admin/firestore');
 const { getStorage } = require('firebase-admin/storage');
 
 module.exports = {
@@ -15,6 +15,6 @@ module.exports = {
   app: (nombre) => app.getApp(nombre),
   credential: { applicationDefault: app.applicationDefault, cert: app.cert },
   auth: () => getAuth(),
-  firestore: Object.assign(() => getFirestore(), { FieldValue, Timestamp }),
+  firestore: Object.assign(() => getFirestore(), { FieldValue, FieldPath, Timestamp }),
   storage: () => getStorage(),
 };

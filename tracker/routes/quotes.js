@@ -48,6 +48,8 @@ const { getProvider, urlsDeRetorno } = require('../services/payments');
 const { createConceptPayment } = require('../services/payments_ledger');
 const { recomputeTotal } = require('../services/quotes');
 const { HttpError, responderError } = require('../utils/http_error');
+const { esCuentaDemo, avanzarTrasPagoDemo } = require('../services/demo'); // modo demo: avance automático tras el pago
+const { registrarPagoConfirmado } = require('../services/facturacion/facturas'); // factura electrónica tras el pago
 
 const router = Router();
 const db     = () => admin.firestore();
@@ -524,7 +526,19 @@ router.post('/:id/pago/capturar', requireAuth, requirePermission('quotes.pay'), 
       });
     }
 
-    res.json(serializeTimestamps({ capturada: true, orderId, amount: resultado.amount, currency: resultado.currency, pagos: pagosCreados }));
+    // Facturación electrónica (Rick, 01-nov-2026): el pago ya está registrado; la factura se crea y,
+    // según el workflow de PayPal, se emite y envía sola. Un fallo aquí nunca toca el pago: queda
+    // en el log y en Finanzas para resolverlo.
+    registrarPagoConfirmado({
+      origen: 'paypal', disparador: 'captura', quoteId: ref.id, orderId, pagos: pagosCreados,
+      usuario: { uid: req.user.uid, email: req.user.email, demo: esCuentaDemo(req.user) },
+    }).catch(e => console.error('[quotes/pago] factura no creada tras la captura', { quoteId: ref.id, orderId, error: e.message }));
+
+    // Modo demo: el expediente avanza solo fase_04 -> fase_06 para que el prospecto vea el
+    // efecto del pago (en la vida real lo mueve el personal). Nunca afecta el pago ya registrado.
+    const avanceDemo = esCuentaDemo(req.user) ? await avanzarTrasPagoDemo(data.caseIds) : undefined;
+
+    res.json(serializeTimestamps({ capturada: true, orderId, amount: resultado.amount, currency: resultado.currency, pagos: pagosCreados, ...(avanceDemo ? { avanceDemo } : {}) }));
   } catch (e) {
     responderError(res, e);
   }

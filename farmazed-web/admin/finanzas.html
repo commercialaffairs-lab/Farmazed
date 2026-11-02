@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <script src="/portal/js/i18n.js"></script>
+  <title data-i18n>Farmazed — Finanzas</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <style>
+    :root { --fz-blue:#1B4F8A; --fz-navy:#0F3260; --fz-green:#3A7D44; }
+    body  { background:#f0f4fa; }
+    .sidebar { width:220px; background:var(--fz-navy); min-height:100vh; flex-shrink:0; }
+    .sidebar a { color:rgba(255,255,255,.7); text-decoration:none; display:block; padding:.6rem 1.25rem; font-size:.88rem; border-radius:6px; transition:.15s; }
+    .sidebar a:hover, .sidebar a.active { background:rgba(255,255,255,.12); color:#fff; }
+    .sidebar .section-label { color:rgba(255,255,255,.35); font-size:.68rem; text-transform:uppercase; letter-spacing:.06em; padding:.5rem 1.25rem; margin-top:.75rem; }
+    .main { flex:1; overflow-x:auto; min-width:0; }
+    .topbar { background:#fff; border-bottom:1px solid #dee2e6; padding:.75rem 1.5rem; }
+    .nav-tabs .nav-link { color:#5b6b7f; font-size:.9rem; font-weight:600; }
+    .nav-tabs .nav-link.active { color:var(--fz-navy); }
+    .tabla-fz th { font-size:.72rem; text-transform:uppercase; letter-spacing:.05em; color:#6b7a90; font-weight:600; white-space:nowrap; }
+    .tabla-fz td { font-size:.86rem; vertical-align:middle; }
+    .fz-error { font-size:.72rem; color:#B42318; max-width:260px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:.2rem; }
+    .fz-etiqueta { font-size:.62rem; letter-spacing:.04em; text-transform:uppercase; font-weight:600; }
+    .acciones { display:inline-flex; flex-wrap:wrap; gap:.25rem; justify-content:flex-end; }
+    .acciones .btn { --bs-btn-padding-y:.15rem; --bs-btn-padding-x:.5rem; --bs-btn-font-size:.76rem; white-space:nowrap; }
+    .form-label { font-size:.8rem; font-weight:600; color:#334155; margin-bottom:.2rem; }
+    .fz-seccion { font-size:.72rem; text-transform:uppercase; letter-spacing:.06em; color:var(--fz-blue); font-weight:700; margin-bottom:.75rem; }
+  </style>
+</head>
+<body class="d-flex">
+
+<!-- Sidebar (misma estructura que admin/bandeja.html; los enlaces solo-admin los muestra initBackoffice) -->
+<div class="sidebar py-3 d-flex flex-column">
+  <div class="px-4 mb-4">
+    <div style="font-family:Georgia,serif;color:#fff;font-size:1.2rem;font-weight:700">Farmazed</div>
+    <div id="sidebar-rol" style="color:rgba(255,255,255,.4);font-size:.72rem">Admin Panel</div>
+  </div>
+  <div class="section-label" data-i18n>Gestión</div>
+  <a href="/admin/casos.html"><i class="bi bi-folder2-open me-2"></i><span data-i18n>Expedientes</span></a>
+  <a href="/admin/bandeja.html"><i class="bi bi-inbox me-2"></i><span data-i18n>Mi Bandeja</span></a>
+  <a href="/admin/leads.html"><i class="bi bi-person-lines-fill me-2"></i><span data-i18n>Leads</span></a>
+  <a href="/admin/cotizaciones.html"><i class="bi bi-receipt me-2"></i><span data-i18n>Cotizaciones</span></a>
+  <a href="/admin/formularios.html"><i class="bi bi-file-earmark-text me-2"></i><span data-i18n>Formularios</span></a>
+  <a href="/admin/empresas.html" id="nav-empresas" style="display:none"><i class="bi bi-building me-2"></i><span data-i18n>Empresas</span></a>
+  <a href="/admin/precios.html" id="nav-precios" style="display:none"><i class="bi bi-cash-coin me-2"></i><span data-i18n>Precios</span></a>
+  <a href="/admin/finanzas.html" id="nav-finanzas" class="active" style="display:none"><i class="bi bi-graph-up-arrow me-2"></i><span data-i18n>Finanzas</span></a>
+  <div class="section-label" data-i18n>Sistema</div>
+  <a href="/admin/configuracion.html" id="nav-configuracion" style="display:none"><i class="bi bi-gear me-2"></i><span data-i18n>Configuración</span></a>
+  <a href="#" id="sidebar-logout"><i class="bi bi-box-arrow-left me-2"></i><span data-i18n>Cerrar Sesión</span></a>
+</div>
+
+<!-- Main -->
+<div class="main">
+  <div class="topbar d-flex align-items-center justify-content-between">
+    <h6 class="mb-0 fw-bold" data-i18n>Finanzas</h6>
+    <span class="text-muted small" id="user-name"></span>
+  </div>
+
+  <!-- Módulo de facturación electrónica (Rick, 01-nov-2026). API: tracker/routes/facturas.js. -->
+  <div class="p-4" id="content" style="display:none">
+    <div class="d-flex align-items-start justify-content-between flex-wrap gap-3 mb-3">
+      <div>
+        <h5 class="fw-bold mb-1" data-i18n>Facturación electrónica</h5>
+        <p class="text-muted small mb-0" data-i18n>Cada pago confirmado de un cliente genera una factura: se emite en la DGI a través del PAC y se envía por correo con el PDF fiscal.</p>
+      </div>
+      <div class="text-end small" id="proveedor-resumen"></div>
+    </div>
+
+    <ul class="nav nav-tabs mb-3" role="tablist">
+      <li class="nav-item" role="presentation"><button class="nav-link active" type="button" role="tab" data-bs-toggle="tab" data-bs-target="#tab-facturas"><i class="bi bi-receipt-cutoff me-1"></i><span data-i18n>Facturas</span></button></li>
+      <li class="nav-item" role="presentation"><button class="nav-link" type="button" role="tab" data-bs-toggle="tab" data-bs-target="#tab-pagos"><i class="bi bi-cash-stack me-1"></i><span data-i18n>Pagos sin factura</span> <span class="badge rounded-pill text-bg-warning ms-1" id="pagos-conteo" style="display:none"></span></button></li>
+      <li class="nav-item" role="presentation"><button class="nav-link" type="button" role="tab" data-bs-toggle="tab" data-bs-target="#tab-config"><i class="bi bi-sliders me-1"></i><span data-i18n>Configuración</span></button></li>
+    </ul>
+
+    <div class="tab-content">
+
+      <!-- Pestaña 1: Facturas -->
+      <div class="tab-pane fade show active" id="tab-facturas" role="tabpanel">
+        <div class="card border-0 shadow-sm">
+          <div class="card-body">
+            <div class="d-flex flex-wrap align-items-end gap-2 mb-3">
+              <div>
+                <label class="form-label" for="filtro-estado" data-i18n>Estado</label>
+                <select id="filtro-estado" class="form-select form-select-sm">
+                  <option value="" data-i18n>Todos los estados</option>
+                  <option value="pendiente" data-i18n>Pendiente</option>
+                  <option value="emitiendo" data-i18n>Emitiendo…</option>
+                  <option value="emitida" data-i18n>Emitida</option>
+                  <option value="enviando" data-i18n>Enviando…</option>
+                  <option value="enviada" data-i18n>Enviada</option>
+                  <option value="error_emision" data-i18n>Error de emisión</option>
+                  <option value="error_envio" data-i18n>Error de envío</option>
+                  <option value="anulada" data-i18n>Anulada</option>
+                </select>
+              </div>
+              <div>
+                <label class="form-label" for="filtro-origen" data-i18n>Origen</label>
+                <select id="filtro-origen" class="form-select form-select-sm">
+                  <option value="" data-i18n>Todos los orígenes</option>
+                  <option value="paypal">PayPal</option>
+                  <option value="rapid_paypro">Rapid PayPro</option>
+                  <option value="manual" data-i18n>Manual</option>
+                </select>
+              </div>
+              <button type="button" class="btn btn-outline-secondary btn-sm" id="btn-recargar"><i class="bi bi-arrow-clockwise me-1"></i><span data-i18n>Actualizar</span></button>
+              <button type="button" class="btn btn-outline-primary btn-sm" id="btn-procesar" data-i18n-attr="title" title="Retoma las facturas automáticas que quedaron a medias (pendientes, sin enviar o con error) con más de 2 minutos sin actividad."><i class="bi bi-play-circle me-1"></i><span data-i18n>Procesar pendientes</span></button>
+              <span class="text-muted small ms-auto" id="facturas-resumen"></span>
+            </div>
+            <div class="table-responsive">
+              <table class="table table-hover tabla-fz mb-0">
+                <thead><tr>
+                  <th data-i18n>Número</th><th data-i18n>Fecha</th><th data-i18n>Cliente</th><th data-i18n>Origen</th>
+                  <th class="text-end" data-i18n>Total</th><th data-i18n>Estado</th><th class="text-end" data-i18n>Acciones</th>
+                </tr></thead>
+                <tbody id="facturas-tbody"><tr><td colspan="7" class="text-muted text-center py-4" data-i18n>Cargando…</td></tr></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pestaña 2: Pagos sin factura -->
+      <div class="tab-pane fade" id="tab-pagos" role="tabpanel">
+        <p class="text-muted small mb-3" data-i18n>Pagos de clientes registrados sin factura (anteriores al módulo o pendientes de revisar). Selecciona los pagos de un expediente y factúralos juntos: la factura se emite y se envía de una vez.</p>
+        <div id="pagos-contenedor"><div class="text-muted text-center py-4" data-i18n>Cargando…</div></div>
+      </div>
+
+      <!-- Pestaña 3: Configuración -->
+      <div class="tab-pane fade" id="tab-config" role="tabpanel">
+        <form id="form-config" novalidate>
+          <div class="row g-3">
+            <div class="col-lg-7">
+              <div class="card border-0 shadow-sm h-100"><div class="card-body">
+                <div class="fz-seccion" data-i18n>Emisor</div>
+                <div class="row g-2">
+                  <div class="col-sm-4"><label class="form-label" for="emisor-ruc">RUC</label><input id="emisor-ruc" class="form-control form-control-sm" placeholder="155600000-2-2026" maxlength="30"></div>
+                  <div class="col-sm-2"><label class="form-label" for="emisor-dv">DV</label><input id="emisor-dv" class="form-control form-control-sm" maxlength="2" inputmode="numeric"></div>
+                  <div class="col-sm-6"><label class="form-label" for="emisor-razonSocial" data-i18n>Razón social</label><input id="emisor-razonSocial" class="form-control form-control-sm" maxlength="120"></div>
+                  <div class="col-sm-4"><label class="form-label" for="emisor-codigoSucursal" data-i18n>Código de sucursal</label><input id="emisor-codigoSucursal" class="form-control form-control-sm" maxlength="120"></div>
+                  <div class="col-sm-4"><label class="form-label" for="emisor-puntoFacturacion" data-i18n>Punto de facturación</label><input id="emisor-puntoFacturacion" class="form-control form-control-sm" maxlength="120"></div>
+                  <div class="col-sm-4"><label class="form-label" for="emisor-codigoUbicacion" data-i18n>Código de ubicación</label><input id="emisor-codigoUbicacion" class="form-control form-control-sm" maxlength="120"></div>
+                  <div class="col-sm-6"><label class="form-label" for="emisor-correo" data-i18n>Correo</label><input id="emisor-correo" type="email" class="form-control form-control-sm" maxlength="120"></div>
+                  <div class="col-sm-6"><label class="form-label" for="emisor-telefono" data-i18n>Teléfono</label><input id="emisor-telefono" class="form-control form-control-sm" maxlength="120"></div>
+                  <div class="col-12"><label class="form-label" for="emisor-direccion" data-i18n>Dirección</label><input id="emisor-direccion" class="form-control form-control-sm" maxlength="120"></div>
+                </div>
+              </div></div>
+            </div>
+
+            <div class="col-lg-5">
+              <div class="card border-0 shadow-sm h-100"><div class="card-body">
+                <div class="fz-seccion" data-i18n>Numeración y proveedor</div>
+                <div class="row g-2 align-items-end">
+                  <div class="col-5"><label class="form-label" for="config-prefijo" data-i18n>Prefijo</label><input id="config-prefijo" class="form-control form-control-sm text-uppercase" maxlength="5" pattern="[A-Z]{1,5}"></div>
+                  <div class="col-7"><span class="form-label d-block" data-i18n>Último número emitido</span><div class="form-control form-control-sm bg-light" id="config-contador">—</div></div>
+                </div>
+                <div class="form-text" data-i18n>Prefijo de 1 a 5 letras mayúsculas (DEMO está reservado); el número interno sale como FZ-000001 y solo lo consumen las emisiones reales en EBI-PAC.</div>
+                <div class="form-text mb-3"><span data-i18n>Demo/simulado:</span> <span class="fw-semibold" id="config-contador-demo">—</span></div>
+                <hr class="my-3">
+                <div id="proveedor-detalle"></div>
+              </div></div>
+            </div>
+
+            <div class="col-lg-7">
+              <div class="card border-0 shadow-sm h-100"><div class="card-body">
+                <div class="fz-seccion" data-i18n>Conceptos e ITBMS</div>
+                <p class="text-muted small" data-i18n>Los honorarios llevan ITBMS (7 %); las tasas oficiales (DNFD, MEF, IEA) van exentas como gasto reembolsable.</p>
+                <div class="form-check form-switch mb-1">
+                  <input class="form-check-input" type="checkbox" role="switch" id="config-itbmsIncluido">
+                  <label class="form-check-label small fw-semibold" for="config-itbmsIncluido" data-i18n>El ITBMS va incluido en el monto cobrado</label>
+                </div>
+                <div class="form-text mb-3" data-i18n>Encendido: el monto pagado ya trae el ITBMS (neto = monto / 1,07) y el total de la factura es exactamente lo pagado. Apagado: el ITBMS se suma encima del monto cobrado.</div>
+                <div class="table-responsive">
+                  <table class="table table-sm tabla-fz mb-0">
+                    <thead><tr><th data-i18n>Concepto</th><th data-i18n>Descripción en la factura</th><th>ITBMS</th></tr></thead>
+                    <tbody>
+                      <tr><td class="text-nowrap" data-i18n>Honorarios</td><td><input id="concepto-honorarios-descripcion" class="form-control form-control-sm" maxlength="200"></td><td><select id="concepto-honorarios-itbms" class="form-select form-select-sm"><option value="00" data-i18n>Exento</option><option value="01">7 %</option></select></td></tr>
+                      <tr><td class="text-nowrap" data-i18n>Honorarios — saldo</td><td><input id="concepto-honorarios_saldo-descripcion" class="form-control form-control-sm" maxlength="200"></td><td><select id="concepto-honorarios_saldo-itbms" class="form-select form-select-sm"><option value="00" data-i18n>Exento</option><option value="01">7 %</option></select></td></tr>
+                      <tr><td class="text-nowrap" data-i18n>Tasa DNFD</td><td><input id="concepto-tasa_dnfd-descripcion" class="form-control form-control-sm" maxlength="200"></td><td><select id="concepto-tasa_dnfd-itbms" class="form-select form-select-sm"><option value="00" data-i18n>Exento</option><option value="01">7 %</option></select></td></tr>
+                      <tr><td class="text-nowrap" data-i18n>Tasa MEF</td><td><input id="concepto-mef-descripcion" class="form-control form-control-sm" maxlength="200"></td><td><select id="concepto-mef-itbms" class="form-select form-select-sm"><option value="00" data-i18n>Exento</option><option value="01">7 %</option></select></td></tr>
+                      <tr><td class="text-nowrap" data-i18n>Informe IEA</td><td><input id="concepto-iea-descripcion" class="form-control form-control-sm" maxlength="200"></td><td><select id="concepto-iea-itbms" class="form-select form-select-sm"><option value="00" data-i18n>Exento</option><option value="01">7 %</option></select></td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div></div>
+            </div>
+
+            <div class="col-lg-5">
+              <div class="card border-0 shadow-sm h-100"><div class="card-body">
+                <div class="fz-seccion" data-i18n>Métodos de pago</div>
+                <p class="text-muted small" data-i18n>Por cada método: la forma de pago que se declara a la DGI y si la factura se emite y envía sola al confirmarse el pago.</p>
+                <table class="table table-sm tabla-fz mb-0">
+                  <thead><tr><th data-i18n>Método</th><th data-i18n>Forma de pago (DGI)</th><th data-i18n>Automático</th></tr></thead>
+                  <tbody>
+                    <tr><td class="text-nowrap">PayPal</td><td><select id="formaPago-paypal" class="form-select form-select-sm"></select></td><td><div class="form-check form-switch m-0"><input class="form-check-input" type="checkbox" role="switch" id="workflow-paypal" aria-label="PayPal"></div></td></tr>
+                    <tr><td class="text-nowrap">Rapid PayPro</td><td><select id="formaPago-rapid_paypro" class="form-select form-select-sm"></select></td><td><div class="form-check form-switch m-0"><input class="form-check-input" type="checkbox" role="switch" id="workflow-rapid_paypro" aria-label="Rapid PayPro"></div></td></tr>
+                    <tr><td class="text-nowrap" data-i18n>Manual</td><td><select id="formaPago-manual" class="form-select form-select-sm"></select></td><td><div class="form-check form-switch m-0"><input class="form-check-input" type="checkbox" role="switch" id="workflow-manual" aria-label="Manual" data-i18n-attr="aria-label"></div></td></tr>
+                  </tbody>
+                </table>
+                <div class="form-text" data-i18n>Con el automático apagado, la factura queda pendiente hasta que la emitas desde la pestaña Facturas.</div>
+              </div></div>
+            </div>
+
+            <div class="col-12 d-flex justify-content-end gap-2">
+              <button type="button" class="btn btn-outline-secondary" id="btn-descartar-config" data-i18n>Descartar cambios</button>
+              <button type="submit" class="btn btn-primary" id="btn-guardar-config"><i class="bi bi-check2 me-1"></i><span data-i18n>Guardar</span></button>
+            </div>
+          </div>
+        </form>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script type="module">
+  import { initBackoffice, esc } from '../portal/js/auth.js';
+  import { avisar, confirmar, preguntar } from '../portal/js/dialogos.js';
+  import api from '../portal/js/api.js';
+
+  // Idiomas (farmazed-web/i18n/README.md): lo estático lleva data-i18n; lo que se genera aquí pasa
+  // por t() y se repinta desde la caché al cambiar de idioma (onCambio).
+  const I18N = window.FZI18N;
+  const t = (s, v) => I18N.t(s, v);
+  const $ = (id) => document.getElementById(id);
+
+  // Etiquetas de los valores que manda el tracker (sus textos en español están en el diccionario).
+  // `emitiendo` / `enviando` son pasos en curso (con leaseEn; caducan a los 5 min): sin acciones hasta que terminen.
+  const ETIQUETA_ESTADO = { pendiente: 'Pendiente', emitiendo: 'Emitiendo…', emitida: 'Emitida', enviando: 'Enviando…', enviada: 'Enviada', error_emision: 'Error de emisión', error_envio: 'Error de envío', anulada: 'Anulada' };
+  const CLASE_ESTADO = { pendiente: 'text-bg-secondary', emitiendo: 'text-bg-warning', emitida: 'text-bg-info', enviando: 'text-bg-warning', enviada: 'text-bg-success', error_emision: 'text-bg-danger', error_envio: 'text-bg-danger', anulada: 'text-bg-dark' };
+  const ESTADOS_EN_CURSO = ['emitiendo', 'enviando'];
+  const ETIQUETA_ORIGEN = { paypal: 'PayPal', rapid_paypro: 'Rapid PayPro', manual: 'Manual' };
+  const ETIQUETA_CONCEPTO = { honorarios: 'Honorarios', honorarios_saldo: 'Honorarios — saldo', tasa_dnfd: 'Tasa DNFD', mef: 'Tasa MEF', iea: 'Informe IEA' };
+  const CONCEPTOS = Object.keys(ETIQUETA_CONCEPTO);
+  const METODOS = ['paypal', 'rapid_paypro', 'manual'];
+  const CAMPOS_EMISOR = ['ruc', 'dv', 'razonSocial', 'codigoSucursal', 'puntoFacturacion', 'codigoUbicacion', 'correo', 'telefono', 'direccion'];
+  // Catálogo DGI de formas de pago que usa Farmazed (el tracker acepta 01–09 y 99).
+  const FORMAS_PAGO = { '01': 'Crédito', '02': 'Efectivo', '03': 'Tarjeta de crédito', '04': 'Tarjeta de débito', '05': 'Transferencia / ACH', '08': 'Cheque', '99': 'Otro' };
+  const PROVEEDOR = {
+    mock:        { clase: 'text-bg-warning',   nombre: 'PAC simulado',  texto: 'Las facturas se emiten contra un PAC simulado: el CUFE y el PDF no tienen validez fiscal. Es el modo de pruebas y el de las cuentas demo.' },
+    ebi_pac:     { clase: 'text-bg-success',   nombre: 'EBI-PAC (DGI)', texto: 'Las facturas se emiten en la DGI a través de EBI-PAC. Completa los datos del emisor: sin RUC no se emite ninguna factura.' },
+    desactivado: { clase: 'text-bg-secondary', nombre: 'Desactivado',   texto: 'La facturación electrónica está desactivada en el servidor: los pagos se registran, pero no se emite ninguna factura.' },
+  };
+  const MS_PARA_LIBERAR_PDF = 60_000;
+
+  const etiquetaEstado = (e) => t(ETIQUETA_ESTADO[e] || e || '—');
+  const etiquetaOrigen = (o) => (o === 'manual' ? t('Manual') : ETIQUETA_ORIGEN[o] || o || '—');
+  const etiquetaConcepto = (c) => t(ETIQUETA_CONCEPTO[c] || c || '—');
+  const dinero = (n) => `US$ ${(Math.round(Number(n || 0) * 100) / 100).toFixed(2)}`;
+  const mensajeError = (e) => (e?.detalles?.length ? `${e.message}: ${e.detalles.join('; ')}` : e?.message || String(e));
+  function fecha(valor) {
+    if (!valor) return '—';
+    if (typeof I18N.fecha === 'function') return I18N.fecha(valor) || '—';
+    const d = new Date(valor && typeof valor === 'object' && valor._seconds ? valor._seconds * 1000 : valor);
+    return isNaN(d) ? '—' : d.toLocaleDateString();
+  }
+
+  // Lo último cargado de cada pestaña, para repintarlo al cambiar de idioma sin volver a pedirlo.
+  const cache = { facturas: null, pagos: null, config: null };
+
+  async function init() {
+    const sesion = await initBackoffice();
+    if (!sesion) return;
+    if (!sesion.admin) { window.location.href = '/admin/bandeja.html'; return; } // el staff vuelve a su bandeja
+    $('content').style.display = '';
+    engancharEventos();
+    await Promise.all([cargarFacturas(), cargarPagos(), cargarConfig()]);
+  }
+
+  // ── Pestaña Facturas ──────────────────────────────────────────────────────────────────────────
+
+  async function cargarFacturas() {
+    const tbody = $('facturas-tbody');
+    tbody.innerHTML = `<tr><td colspan="7" class="text-muted text-center py-4">${esc(t('Cargando…'))}</td></tr>`;
+    try {
+      const { facturas } = await api.listFacturas({ estado: $('filtro-estado').value, origen: $('filtro-origen').value, limite: 200 });
+      cache.facturas = facturas;
+      renderFacturas(facturas);
+    } catch (e) {
+      cache.facturas = null;
+      tbody.innerHTML = `<tr><td colspan="7" class="text-danger text-center py-4">${esc(t('No se pudieron cargar las facturas: {error}', { error: e.message }))}</td></tr>`;
+    }
+  }
+
+  function renderFacturas(facturas) {
+    $('facturas-resumen').textContent = t('{n} factura(s)', { n: facturas.length });
+    const tbody = $('facturas-tbody');
+    if (!facturas.length) {
+      tbody.innerHTML = `<tr><td colspan="7" class="text-muted text-center py-4">${esc(t('No hay facturas con esos filtros.'))}</td></tr>`;
+      return;
+    }
+    tbody.innerHTML = facturas.map(filaFactura).join('');
+  }
+
+  function filaFactura(f) {
+    const receptor = f.receptor || {};
+    const ultimoError = f.errores?.length ? f.errores[f.errores.length - 1] : null;
+    const etiquetas = [
+      f.demo ? '<span class="badge fz-etiqueta text-bg-light border ms-1">demo</span>' : '',
+      f.correo?.simulado ? `<span class="badge fz-etiqueta text-bg-light border ms-1">${esc(t('correo simulado'))}</span>` : '',
+    ].join('');
+    const expedientes = (f.caseIds || []).map(c => `<a href="/admin/expediente.html?id=${encodeURIComponent(c)}">${esc(c)}</a>`).join(', ');
+    return `<tr>
+      <td><div class="fw-semibold">${esc(f.numero || '—')}</div><div class="text-muted small font-monospace">${esc(f.id)}</div></td>
+      <td class="text-nowrap">${esc(fecha(f.fechaEmision || f.creadaEn))}</td>
+      <td><div>${esc(receptor.razonSocial || '—')}</div>
+        ${receptor.ruc ? `<div class="text-muted small">RUC ${esc(receptor.ruc)}${receptor.dv ? ` DV ${esc(receptor.dv)}` : ''}</div>` : ''}
+        ${expedientes ? `<div class="text-muted small">${esc(t('Expediente'))}: ${expedientes}</div>` : ''}</td>
+      <td class="text-nowrap">${esc(etiquetaOrigen(f.origen))}</td>
+      <td class="text-end text-nowrap">${esc(dinero(f.totales?.total))}${Number(f.totales?.itbms) ? `<div class="text-muted small">ITBMS ${esc(dinero(f.totales.itbms))}</div>` : ''}</td>
+      <td><span class="badge ${CLASE_ESTADO[f.estado] || 'text-bg-secondary'}">${esc(etiquetaEstado(f.estado))}</span>${etiquetas}
+        ${ultimoError ? `<div class="fz-error" title="${esc(ultimoError.mensaje)}"><i class="bi bi-exclamation-circle me-1"></i>${esc(ultimoError.mensaje)}</div>` : ''}</td>
+      <td class="text-end"><div class="acciones">${botonesFactura(f)}</div></td>
+    </tr>`;
+  }
+
+  // Acciones según el estado (ver el flujo en tracker/services/facturacion/facturas.js).
+  function botonesFactura(f) {
+    const boton = (accion, texto, clase, icono) => `<button type="button" class="btn ${clase}" data-accion="${accion}" data-id="${esc(f.id)}"><i class="bi ${icono} me-1"></i>${esc(texto)}</button>`;
+    const botones = [];
+    if (ESTADOS_EN_CURSO.includes(f.estado)) return f.pac?.cufe ? boton('pdf', 'PDF', 'btn-outline-secondary', 'bi-file-earmark-pdf') : '';
+    if (f.estado === 'pendiente') botones.push(boton('reintentar', t('Emitir y enviar'), 'btn-primary', 'bi-send'));
+    if (f.estado === 'error_emision') botones.push(boton('reintentar', t('Reintentar'), 'btn-outline-danger', 'bi-arrow-repeat'));
+    if (['emitida', 'error_envio'].includes(f.estado)) botones.push(boton('enviar', t('Enviar correo'), 'btn-outline-primary', 'bi-envelope'));
+    if (f.pac?.cufe) botones.push(boton('pdf', 'PDF', 'btn-outline-secondary', 'bi-file-earmark-pdf'));
+    if (['emitida', 'enviada'].includes(f.estado)) {
+      botones.push(boton('estado-pac', t('Estado DGI'), 'btn-outline-secondary', 'bi-patch-check'));
+      botones.push(boton('anular', t('Anular'), 'btn-outline-danger', 'bi-x-circle'));
+    }
+    return botones.join('');
+  }
+
+  async function ejecutarAccion(id, accion) {
+    if (accion === 'pdf') return abrirPdf(id);
+    if (accion === 'estado-pac') return consultarEstadoPac(id);
+    let body;
+    if (accion === 'anular') {
+      if (!(await confirmar(t('¿Anular esta factura ante la DGI? La anulación es definitiva y queda registrada.')))) return;
+      const motivo = await preguntar(t('Motivo de la anulación (obligatorio):'));
+      if (motivo === null) return;
+      if (!motivo.trim()) { await avisar(t('El motivo es obligatorio.'), { tipo: 'error' }); return; }
+      body = { motivo: motivo.trim() };
+    }
+    try {
+      const r = await api.facturaAccion(id, accion, body);
+      await avisar(mensajeExito(accion, r), { tipo: 'exito' });
+    } catch (e) {
+      await avisar(t('No se pudo completar la acción: {error}', { error: mensajeError(e) }), { tipo: 'error' });
+    }
+    await Promise.all([cargarFacturas(), cargarPagos()]);
+  }
+
+  // Barrido de lo que quedó a medias (workflows automáticos): POST /procesar-pendientes?minutos=2.
+  async function procesarPendientes() {
+    const btn = $('btn-procesar');
+    btn.disabled = true;
+    try {
+      const { revisadas, resultados } = await api.procesarFacturasPendientes(2);
+      const errores = (resultados || []).filter(r => r.error).length;
+      const completadas = (resultados || []).filter(r => !r.error && r.despues === 'enviada').length;
+      await avisar(t('Barrido terminado: {revisadas} revisada(s), {completadas} completada(s), {errores} con error.', { revisadas, completadas, errores }), { tipo: errores ? 'info' : 'exito' });
+    } catch (e) {
+      await avisar(t('No se pudo procesar las pendientes: {error}', { error: e.message }), { tipo: 'error' });
+    } finally {
+      btn.disabled = false;
+    }
+    await cargarFacturas();
+  }
+
+  function mensajeExito(accion, r) {
+    if (accion === 'anular') return t('Factura anulada.');
+    if (accion === 'enviar') return t('Correo enviado a {correo}.', { correo: r.correo?.enviadoA || '—' });
+    return r.correo?.simulado ? t('Factura emitida; el correo se simuló (sin SMTP o cuenta demo).') : t('Factura emitida y enviada.');
+  }
+
+  // La pestaña se abre en el clic (síncrono) para que el bloqueador de ventanas no la pare; el PDF
+  // llega después con el token y se carga en ella.
+  async function abrirPdf(id) {
+    const ventana = window.open('', '_blank');
+    try {
+      const blob = await api.getFacturaPdf(id);
+      const url = URL.createObjectURL(blob);
+      if (ventana) ventana.location.href = url;
+      else { const a = document.createElement('a'); a.href = url; a.download = `factura-${id}.pdf`; a.click(); }
+      setTimeout(() => URL.revokeObjectURL(url), MS_PARA_LIBERAR_PDF);
+    } catch (e) {
+      if (ventana) ventana.close();
+      await avisar(t('No se pudo obtener el PDF: {error}', { error: e.message }), { tipo: 'error' });
+    }
+  }
+
+  async function consultarEstadoPac(id) {
+    try {
+      const r = await api.getFacturaEstadoPac(id);
+      if (!r.pac) { await avisar(t('La factura todavía no tiene número fiscal: no hay nada que consultar en la DGI.')); return; }
+      const codigo = r.pac.codigo ?? r.pac.Codigo ?? '—';
+      const mensaje = r.pac.mensaje ?? r.pac.Mensaje ?? JSON.stringify(r.pac);
+      await avisar(t('Respuesta de la DGI (código {codigo}): {mensaje}', { codigo, mensaje }), { titulo: t('Estado DGI') });
+    } catch (e) {
+      await avisar(t('No se pudo consultar el estado: {error}', { error: e.message }), { tipo: 'error' });
+    }
+  }
+
+  // ── Pestaña Pagos sin factura ─────────────────────────────────────────────────────────────────
+
+  async function cargarPagos() {
+    try {
+      const { pagos } = await api.listPagosSinFactura();
+      cache.pagos = pagos;
+      renderPagos(pagos);
+    } catch (e) {
+      cache.pagos = null;
+      $('pagos-contenedor').innerHTML = `<div class="alert alert-danger">${esc(t('No se pudieron cargar los pagos: {error}', { error: e.message }))}</div>`;
+    }
+  }
+
+  function renderPagos(pagos) {
+    const conteo = $('pagos-conteo');
+    conteo.textContent = String(pagos.length);
+    conteo.style.display = pagos.length ? '' : 'none';
+    const cont = $('pagos-contenedor');
+    if (!pagos.length) {
+      cont.innerHTML = `<div class="card border-0 shadow-sm"><div class="card-body text-center text-muted py-5"><i class="bi bi-check2-circle fs-3 d-block mb-2 text-success"></i>${esc(t('Todos los pagos de clientes tienen su factura.'))}</div></div>`;
+      return;
+    }
+    const porCaso = pagos.reduce((m, p) => m.set(p.caseId, [...(m.get(p.caseId) || []), p]), new Map());
+    cont.innerHTML = [...porCaso.entries()].map(([caseId, lista]) => tarjetaCaso(caseId, lista)).join('');
+  }
+
+  function tarjetaCaso(caseId, lista) {
+    const total = lista.reduce((s, p) => s + Number(p.monto || 0), 0);
+    const filas = lista.map(p => `<tr>
+      <td><input class="form-check-input" type="checkbox" data-pago="${esc(p.paymentId)}" aria-label="${esc(t('Seleccionar pago'))}"></td>
+      <td class="text-nowrap">${esc(fecha(p.fecha))}</td>
+      <td>${esc(etiquetaConcepto(p.concepto))}</td>
+      <td class="text-nowrap">${esc(etiquetaOrigen(p.origen))}</td>
+      <td class="text-end text-nowrap">${esc(dinero(p.monto))}</td>
+      <td class="text-muted small">${esc(p.registradoPorEmail || '—')}</td>
+    </tr>`).join('');
+    return `<div class="card border-0 shadow-sm mb-3" data-case="${esc(caseId)}">
+      <div class="card-header bg-white d-flex flex-wrap align-items-center gap-2 py-2">
+        <input class="form-check-input m-0" type="checkbox" data-todos aria-label="${esc(t('Seleccionar todos'))}">
+        <span class="fw-semibold"><i class="bi bi-folder2-open me-1 text-muted"></i>${esc(t('Expediente'))} <a href="/admin/expediente.html?id=${encodeURIComponent(caseId)}">${esc(caseId)}</a></span>
+        <span class="text-muted small">${esc(t('{n} pago(s) · {total}', { n: lista.length, total: dinero(total) }))}</span>
+        <button type="button" class="btn btn-primary btn-sm ms-auto" data-facturar disabled><i class="bi bi-receipt me-1"></i>${esc(t('Facturar seleccionados'))}</button>
+      </div>
+      <div class="table-responsive"><table class="table tabla-fz mb-0">
+        <thead><tr><th></th><th>${esc(t('Fecha'))}</th><th>${esc(t('Concepto'))}</th><th>${esc(t('Origen'))}</th><th class="text-end">${esc(t('Monto'))}</th><th>${esc(t('Registrado por'))}</th></tr></thead>
+        <tbody>${filas}</tbody>
+      </table></div>
+    </div>`;
+  }
+
+  function actualizarSeleccion(tarjeta, marcarTodos) {
+    const casillas = [...tarjeta.querySelectorAll('input[data-pago]')];
+    if (marcarTodos !== undefined) casillas.forEach(c => { c.checked = marcarTodos; });
+    const marcadas = casillas.filter(c => c.checked).length;
+    const todos = tarjeta.querySelector('[data-todos]');
+    todos.checked = marcadas > 0 && marcadas === casillas.length;
+    todos.indeterminate = marcadas > 0 && marcadas < casillas.length;
+    tarjeta.querySelector('[data-facturar]').disabled = marcadas === 0;
+  }
+
+  async function facturarSeleccionados(tarjeta, btn) {
+    const caseId = tarjeta.dataset.case;
+    const ids = [...tarjeta.querySelectorAll('input[data-pago]:checked')].map(c => c.dataset.pago);
+    if (!ids.length) return;
+    if (!(await confirmar(t('¿Facturar {n} pago(s) del expediente {caso}? La factura se emite en la DGI y se envía al cliente.', { n: ids.length, caso: caseId })))) return;
+    btn.disabled = true;
+    try {
+      const r = await api.facturarPagos(caseId, ids);
+      const f = r.factura || {};
+      await avisar(t('Factura {numero} generada ({estado}).', { numero: f.numero || r.id, estado: etiquetaEstado(f.estado) }), { tipo: 'exito' });
+    } catch (e) {
+      await avisar(t('No se pudo facturar: {error}', { error: mensajeError(e) }), { tipo: 'error' });
+    }
+    await Promise.all([cargarPagos(), cargarFacturas()]);
+  }
+
+  // ── Pestaña Configuración ─────────────────────────────────────────────────────────────────────
+
+  async function cargarConfig() {
+    try {
+      cache.config = await api.getFacturasConfig();
+      renderConfig(cache.config);
+    } catch (e) {
+      $('proveedor-detalle').innerHTML = `<div class="alert alert-danger mb-0">${esc(t('No se pudo cargar la configuración: {error}', { error: e.message }))}</div>`;
+    }
+  }
+
+  function renderConfig(c) {
+    for (const k of CAMPOS_EMISOR) $(`emisor-${k}`).value = c.emisor?.[k] ?? '';
+    for (const k of CONCEPTOS) {
+      $(`concepto-${k}-descripcion`).value = c.conceptos?.[k]?.descripcion ?? '';
+      $(`concepto-${k}-itbms`).value = c.conceptos?.[k]?.itbms ?? '00';
+    }
+    for (const m of METODOS) {
+      llenarFormasPago($(`formaPago-${m}`), String(c.formasPago?.[m] ?? '99'));
+      $(`workflow-${m}`).checked = c.workflows?.[m]?.auto === true;
+    }
+    $('config-prefijo').value = c.prefijo || 'FZ';
+    $('config-itbmsIncluido').checked = c.itbmsIncluidoEnMonto !== false;
+    renderConfigTraducible(c);
+  }
+
+  // Lo de la configuración que lleva texto traducido (se repinta al cambiar de idioma).
+  function renderConfigTraducible(c) {
+    // `contador` solo lo consumen las emisiones reales (EBI-PAC); demo y PAC simulado numeran DEMO-000001.
+    $('config-contador').textContent = c.contador ? `${c.prefijo}-${String(c.contador).padStart(6, '0')}` : t('Ninguno todavía');
+    $('config-contador-demo').textContent = c.contadorDemo ? `DEMO-${String(c.contadorDemo).padStart(6, '0')}` : t('Ninguno todavía');
+    for (const m of METODOS) { const sel = $(`formaPago-${m}`); llenarFormasPago(sel, sel.value); }
+    const p = PROVEEDOR[c.proveedor] || PROVEEDOR.desactivado;
+    $('proveedor-resumen').innerHTML = `<span class="text-muted me-2">${esc(t('Proveedor activo'))}</span><span class="badge ${p.clase}">${esc(t(p.nombre))}</span>`;
+    $('proveedor-detalle').innerHTML = `
+      <div class="d-flex align-items-center gap-2 mb-2"><span class="badge ${p.clase}">${esc(t(p.nombre))}</span><span class="small fw-semibold">${esc(t('Proveedor activo'))}</span></div>
+      <p class="small text-muted mb-1">${esc(t(p.texto))}</p>
+      <p class="small text-muted mb-0">${esc(t('El proveedor se define en el servidor (FACTURACION_PROVIDER o las credenciales de EBI-PAC); no se cambia desde aquí.'))}</p>`;
+  }
+
+  function llenarFormasPago(select, valor) {
+    const codigos = valor in FORMAS_PAGO ? Object.keys(FORMAS_PAGO) : [...Object.keys(FORMAS_PAGO), valor];
+    select.innerHTML = codigos.map(c => `<option value="${esc(c)}">${esc(c)} · ${esc(FORMAS_PAGO[c] ? t(FORMAS_PAGO[c]) : t('Código DGI {codigo}', { codigo: c }))}</option>`).join('');
+    select.value = valor;
+  }
+
+  function leerConfigFormulario() {
+    return {
+      emisor: Object.fromEntries(CAMPOS_EMISOR.map(k => [k, $(`emisor-${k}`).value.trim()])),
+      conceptos: Object.fromEntries(CONCEPTOS.map(k => [k, { descripcion: $(`concepto-${k}-descripcion`).value.trim(), itbms: $(`concepto-${k}-itbms`).value }])),
+      formasPago: Object.fromEntries(METODOS.map(m => [m, $(`formaPago-${m}`).value])),
+      workflows: Object.fromEntries(METODOS.map(m => [m, { auto: $(`workflow-${m}`).checked }])),
+      prefijo: $('config-prefijo').value.trim().toUpperCase(),
+      itbmsIncluidoEnMonto: $('config-itbmsIncluido').checked,
+    };
+  }
+
+  async function guardarConfig() {
+    const btn = $('btn-guardar-config');
+    btn.disabled = true;
+    try {
+      cache.config = await api.setFacturasConfig(leerConfigFormulario());
+      renderConfig(cache.config);
+      await avisar(t('Configuración guardada.'), { tipo: 'exito' });
+    } catch (e) {
+      await avisar(t('No se pudo guardar la configuración: {error}', { error: mensajeError(e) }), { tipo: 'error' });
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  // ── Eventos ───────────────────────────────────────────────────────────────────────────────────
+
+  function engancharEventos() {
+    $('filtro-estado').addEventListener('change', cargarFacturas);
+    $('filtro-origen').addEventListener('change', cargarFacturas);
+    $('btn-recargar').addEventListener('click', () => Promise.all([cargarFacturas(), cargarPagos()]));
+    $('btn-procesar').addEventListener('click', procesarPendientes);
+
+    $('facturas-tbody').addEventListener('click', async (ev) => {
+      const btn = ev.target.closest('button[data-accion]');
+      if (!btn) return;
+      const botones = [...btn.closest('tr').querySelectorAll('button')];
+      botones.forEach(b => { b.disabled = true; });
+      try { await ejecutarAccion(btn.dataset.id, btn.dataset.accion); }
+      finally { botones.forEach(b => { b.disabled = false; }); }
+    });
+
+    $('pagos-contenedor').addEventListener('change', (ev) => {
+      const tarjeta = ev.target.closest('[data-case]');
+      if (!tarjeta) return;
+      actualizarSeleccion(tarjeta, ev.target.hasAttribute('data-todos') ? ev.target.checked : undefined);
+    });
+    $('pagos-contenedor').addEventListener('click', (ev) => {
+      const btn = ev.target.closest('[data-facturar]');
+      if (btn) facturarSeleccionados(btn.closest('[data-case]'), btn);
+    });
+
+    $('form-config').addEventListener('submit', (ev) => { ev.preventDefault(); guardarConfig(); });
+    $('btn-descartar-config').addEventListener('click', () => { if (cache.config) renderConfig(cache.config); });
+  }
+
+  // Cambio de idioma en vivo: lo estático lo repinta i18n.js; lo generado aquí se vuelve a pintar
+  // desde la caché, conservando lo que la persona tenga escrito en el formulario.
+  I18N.onCambio(() => I18N.repintarConservando(() => {
+    if (cache.facturas) renderFacturas(cache.facturas);
+    if (cache.pagos) renderPagos(cache.pagos);
+    if (cache.config) renderConfigTraducible(cache.config);
+  }));
+
+  init();
+</script>
+</body>
+</html>

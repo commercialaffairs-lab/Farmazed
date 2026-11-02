@@ -13,6 +13,7 @@
  * transacción que su efecto (PayPal reintenta un evento hasta que recibe un 2xx).
  */
 const admin = require('../utils/firebase_admin.js');
+const { registrarPagoConfirmado } = require('./facturacion/facturas'); // factura electrónica tras conciliar la captura
 const { abrirRevision } = require('./revisiones_pago');
 const { cambiosDeCambioDePlan, cancelarAnterior, tipoDeSuscripcion, camposFinPlanEmpresarial } = require('./suscripciones');
 
@@ -168,7 +169,30 @@ async function eventoDeCaptura({ id, event_type: tipo, resource }) {
     }
     t.create(eventoRef, { tipo, recursoId: captureId || resource.id, resultado, procesadoEn: ahora });
     return resultado;
+  }).then(async (resultado) => {
+    // Facturación electrónica (Rick, 01-nov-2026): el webhook es el segundo disparador de PayPal. Si
+    // la captura ya dejó su factura (id determinista fac_pp_<orderId>) no pasa nada; si no (p. ej. la
+    // captura se registró pero el proceso murió antes), se crea aquí con los pagos ya registrados.
+    if (resultado === 'conciliado' && quoteRef) await facturarCapturaConciliada(quoteRef);
+    return resultado;
   });
+}
+
+async function facturarCapturaConciliada(quoteRef) {
+  try {
+    const quote = (await quoteRef.get()).data();
+    const orderId = quote?.pagoPaypal?.orderId;
+    if (!orderId) return;
+    const pagos = [];
+    for (const caseId of quote.caseIds || []) {
+      const snap = await db().collection('cases').doc(caseId).collection('payments').where('paypalOrderId', '==', orderId).get();
+      // Un pago que ya tiene factura (la dejó la captura o el admin) no se vuelve a facturar.
+      snap.docs.filter(d => !d.data().facturaId).forEach(d => pagos.push({ caseId, concepto: d.data().concepto, monto: d.data().monto, paymentId: d.id }));
+    }
+    await registrarPagoConfirmado({ origen: 'paypal', disparador: 'webhook', quoteId: quoteRef.id, orderId, pagos });
+  } catch (e) {
+    console.error('[webhook] factura no creada tras conciliar la captura', { quoteId: quoteRef.id, error: e.message });
+  }
 }
 
 /** Procesa un evento ya verificado. Devuelve una etiqueta del resultado (para el log). */
