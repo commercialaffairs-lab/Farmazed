@@ -153,3 +153,66 @@ Estimación: 4–5 sesiones (datos+reinicio · recorrido cliente · recorrido pe
 - Cuentas de producción decididas por Rick (claves por `DEMO_PASSWORD_*`, fuera del repo): `cliente.demo@farmazed.com` (titular de "Laboratorios Ejemplo S.A.") y `regente.demo@farmazed.com` (regente; solo ve sus casos asignados, por eso convive con datos reales). **Sin admin demo.** Detalle, garantías y cómo sembrar: `DEMO.md`.
 - Hecho: `services/demo.js` (seed + borrado aislado por `demo-org`/`demo:true`), `scripts/seed_demo.js`, `POST /api/demo/reiniciar` (solo claim `demo:true`, 1/min, revoca sesiones), botón **[Reiniciar cuenta demo]** en el topbar del portal del cliente y del back-office, pago de cuentas demo siempre con el proveedor de prueba (`getProvider(user)`), sin correos a `*.demo@`, paso 9b en `DEPLOY.md`, suite `tests/demo.test.js`.
 - Siguientes puntos del plan: 2) recorrido guiado con pasos predeterminados, 3) manual ES/EN/FR/PT, 4) e2e del recorrido.
+
+### Modo demo — punto 2 HECHO (01-nov-2026): recorrido guiado
+
+- Panel flotante **"Recorrido demo"** (`farmazed-web/portal/js/recorrido.js`) en el portal del cliente y en todo el back-office del regente, solo para cuentas `demo:true`: lista de pasos, cuál toca, "Ir al paso" y "Descargar PDF de ejemplo". El progreso lo calcula el tracker a partir de los datos (`GET /api/demo/recorrido`, `services/demo_recorrido.js`): nada que guardar, el reinicio vuelve solo al paso 1. Pasos y textos en `DEMO.md`.
+- Cliente: captación → crear producto (botón **Rellenar con datos de ejemplo**, solo demo) → subir el PDF de ejemplo → aceptar la cotización 2 → pagar con el proveedor de prueba (**el caso avanza solo a fase 6**, `avanzarTrasPagoDemo`, actor `demo-automatico`) → escribir un mensaje. Regente: aprobar/rechazar el documento sembrado en el Producto 3 (`demo-doc-3-formula`, PDF en Storage) → confirmar cotejo técnico → atender el lead.
+- Fuera del recorrido se oculta invitar miembros y la suscripción (`body.fz-demo`); el tracker además rechaza invitaciones de la cuenta demo (403). El reinicio borra también los archivos de Storage de los documentos demo.
+- Suite `tests/demo.test.js` ampliada (12 pruebas). **Ajuste colateral**: `tests/pagos_paypal.test.js` esperaba 2 pagos al capturar; desde c53a04a (01-nov) se registran los 4 conceptos con monto, así que las dos aserciones se pusieron al día.
+- Siguientes: 3) manual ES/EN/FR/PT (hecho abajo), 4) e2e del recorrido completo (cliente y regente).
+
+### Modo demo — punto 3 HECHO (01-nov-2026): manual de usuario ES/EN/FR/PT
+
+- `farmazed-web/manual/{es,en,fr,pt}.html`, generados por `tracker/scripts/generar_manual.js` (`npm run manual`) a partir de los textos de los pasos de `services/demo_recorrido.js` (una sola fuente) y de `scripts/manual_textos.js` (traducciones por id de paso, prosa, 13 fases por idioma). Cada paso reproduce en HTML/CSS la tarjeta o modal real con sus rótulos en español (la app sigue sin traducir, como dice el plan) y enlaza al siguiente paso; selector de idioma; imprimible/guardable como PDF desde el navegador (`@media print`). Sin claves: Rick las entrega aparte.
+- Enlace **"Ayuda"** en el topbar del portal (`#tb-ayuda` → `/manual/es.html#cliente`) y del back-office (`auth.js montarEnlaceAyuda` → `/manual/es.html#regente`), visible para todos.
+- `tests/manual.test.js` (4 pruebas, sin emuladores): HTML del repo = salida del generador, español = `demo_recorrido.js`, todos los pasos traducidos en cada idioma, enlaces "Ayuda". Si cambia un texto del recorrido, regenerar y commitear.
+- Siguientes: 3b) panel en 4 idiomas (hecho abajo, lo pidió Rick al revisar el manual), 4) e2e.
+
+### Modo demo — punto 3b HECHO (01-nov-2026): el panel "Recorrido demo" en ES/EN/FR/PT
+
+- Rick, al revisar el manual: "we shall also make the clients panels to be in the 4 language versions as well". El panel flotante (cliente y regente) ahora tiene selector ES · EN · FR · PT; la elección se recuerda (`localStorage`) y por defecto se toma el idioma del navegador. El enlace "Ayuda" abre el manual en ese idioma.
+- Una sola fuente: `tracker/services/demo_recorrido_textos.js` (pasos en español, traducciones por id, avisos, rótulos del panel). `GET /api/demo/recorrido?idioma=xx` devuelve pasos y rótulos traducidos (desconocido → español); `recorrido.js` ya no trae ningún texto en duro. El manual se regenera desde el mismo módulo y reproduce el panel en su idioma. El resto de la app sigue en español (traducirla es otro proyecto); los rótulos de pantalla citados en los pasos quedan en español en todos los idiomas.
+- Pruebas: `tests/demo.test.js` +1 (13, idiomas por API, incl. `pt-BR` y un valor raro), `tests/manual.test.js` 6 (traducciones completas, marcadores, réplica del panel por idioma, `recorrido.js` sin rótulos en duro).
+- Siguientes: 3c) la aplicación demo entera en 4 idiomas (hecho abajo, lo pidió Rick al ver el manual en inglés con la interfaz en español), 4) e2e.
+
+### Modo demo — punto 3c HECHO (01-nov-2026): la demo y los manuales en ES/EN/FR/PT sin mezclas
+
+- Rick: "I see that in the english version of the demo shows the layout with spanish words, make sure also the official demo has the 4 languages as well and so the manuals, so we dont have language mixtures." Se tradujeron enteras las páginas que usan las cuentas demo: `login.html`, `client-dashboard.html` (portal, asistente, cotización, mensajes, captación…), `admin/bandeja.html`, `admin/expediente.html`, `admin/leads.html`, más los módulos `wizard.js`, `dialogos.js`, `status_ui.js`, `auth.js`, `paises.js` (65 países) y las etiquetas que manda el tracker (13 fases y estados, ~200 nombres/descripciones de documentos FADDI, estados de lead, conceptos, grupos de precios). 1040 claves por idioma.
+- Capa `farmazed-web/portal/js/i18n.js` (`FZI18N.t`, `data-i18n`, selector ES · EN · FR · PT en el topbar y el login, `localStorage fzIdioma`, por defecto español, repintado en vivo por `onCambio`); diccionarios por área en `farmazed-web/i18n/_partes/` fusionados con `npm run i18n` → `i18n/{en,fr,pt}.json`; convenciones y glosario en `farmazed-web/i18n/README.md`. El manual reproduce las pantallas con el mismo diccionario y el panel "Recorrido demo" sigue el idioma de la interfaz (ya no tiene selector propio). Los textos de los pasos citan los rótulos reales de cada idioma ("Request Registration", [Reset demo account]…).
+- Pruebas: `tests/i18n.test.js` (6: diccionarios = fusión de partes, toda clave usada y toda etiqueta del tracker traducida en los 3 idiomas, marcadores, i18n.js primero en el `<head>`, rótulos citados en el recorrido = rótulos de la interfaz, la capa en Node), `tests/manual.test.js` 6, `tests/demo.test.js` 13 (Docker). Revisión de código: sin CRITICAL/HIGH; corregidos los MEDIUM (carrera al cambiar de idioma, pérdida de lo tecleado al repintar, checkboxes de publicidad) y LOW. Verificado en Chrome: portal en EN/FR y back-office en PT sin claves faltantes ni errores de consola.
+- Sigue en español a propósito: nombres propios de los datos de ejemplo, códigos, correos, valores técnicos, `error.message` del tracker, y las páginas de admin que no usa la demo (casos, cotizaciones, empresas, configuración, precios, formularios). Traducir esas y los correos del tracker sería otro punto.
+- Siguientes: 3d) recorridos separados y recorrido del cliente para cuentas reales (hecho abajo), 4) e2e.
+
+### Modo demo — punto 3d HECHO (01-nov-2026): recorrido del cliente ≠ recorrido del regente; el del cliente también para cuentas reales
+
+- Rick: "lets separate the client tour from the regent tour, the regent tour will be only available from the demo version for regents, and clients will be from the demo version and also from the settings section in some part to be added and easy to activate."
+- **Regente**: solo en la cuenta demo (igual que antes), con manual propio `manual/regente/`. **Cliente**: en la demo como siempre, y para cualquier cliente real desde **"Mi cuenta"** (menú del avatar → interruptor "Mostrar el recorrido guiado"); preferencia guardada en el tracker (`userPrefs/{uid}`, `GET/PUT /api/me/preferencias`), panel con ✕ para ocultarlo. Variante de pasos `clienteReal` (genérica, sin datos de ejemplo) y progreso deducido de la empresa real (`services/recorrido_cliente.js`, `GET /api/me/recorrido`). "Mi cuenta" agrupa además el selector de idioma y el enlace al manual.
+- **Manuales**: `manual/cliente/{es,en,fr,pt}.html` (pasos de cliente real + apartado "Si usas la cuenta de demostración" con el PDF de ejemplo) y `manual/regente/{es,en,fr,pt}.html`; el manual único anterior desaparece. "Ayuda" del portal → cliente; del back-office → regente.
+- Pruebas: `tests/demo.test.js` +1 (14; preferencias con validación, recorrido real en EN, 403 al personal), `tests/manual.test.js` 6 (dos manuales), `tests/i18n.test.js` 6 (rótulos citados también en la variante real).
+- Queda: 4) e2e del recorrido completo (cliente y regente).
+
+### Modo demo — punto 3e HECHO (01-nov-2026): carga de documentos simulada en el paso 4 de la demo
+
+- Rick: en la demo, al pulsar **Subir** no debe abrirse el explorador de archivos sino un modal que explique que ahí el cliente real elige su archivo y que la demo lo simula; **Rellenar con datos de ejemplo** equivale a "subió todo y subsanó todo"; nada debe bloquear el flujo hasta el final del recorrido.
+- Hecho (solo front, `portal/js/wizard.js` + `client-dashboard.html`, solo con `body.fz-demo`): cada "Subir" abre un modal (`dialogos.confirmar`) y al confirmar adjunta el PDF de ejemplo por la ruta real `POST /api/cases/:id/documents` (el regente y el recorrido ven un documento normal). Banner "Modo demo" en el paso 4 con **Rellenar con datos de ejemplo**; el botón del portal hace lo mismo del paso 4 en adelante (pasos 1–3 sigue rellenando el formulario). "Todos" = documentos del cliente que faltan + los `requested`/`rejected` (subsanar), 3 subidas en paralelo con progreso en el modal de carga. Cuentas reales y `portal/nuevo.html` sin cambios.
+- Textos del paso "documento" del recorrido demo y del manual actualizados en ES/EN/FR/PT; 11 claves nuevas en `i18n/_partes/portal-js.json`. Pruebas `i18n` 6/6 y `manual` 6/6; verificado en Chrome contra la demo Docker (modal, 1 doc, 22 de golpe → 24/27, paso 5 "Todos los documentos obligatorios están subidos").
+- Rick (después): el manual ya no enlaza el PDF de ejemplo en ningún idioma ("⬇ Descargar el PDF de ejemplo" quitado de `generar_manual.js`; la prueba exige que ningún manual lo enlace). El botón "Descargar PDF de ejemplo" del panel flotante sigue ahí: decidir si también se quita.
+- Queda: 4) e2e del recorrido completo (cliente y regente).
+
+### Admin — módulo "Finanzas" (contenedor, 01-nov-2026)
+
+- Rick va a traer código propio de un módulo financiero. Mientras tanto: entrada **Finanzas** en la barra lateral de todas las páginas del admin (después de Precios; solo-admin, la muestra `initBackoffice` como Empresas/Precios/Configuración) y página `admin/finanzas.html` con guardia de administrador (el staff vuelve a su bandeja), i18n en ES/EN/FR/PT (8 claves en `backoffice.json`, página incluida en `PAGINAS` del test) y una tarjeta "En preparación" con el contenedor `#finanzas-modulo` donde va el módulo.
+- Hecho después (misma fecha): el módulo ya tiene contenido, ver "Facturación electrónica" abajo.
+
+## Facturación electrónica tras el pago (Rick, 01-nov-2026) — HECHO, falta lo fiscal de Rick
+
+- Rick: "analiza el modulo de facturaccion que se integra con EBI-PAC [del repo PBS-Agentic-Website] … implementar un workflow de emision de factura digital una vez el cliente en efecto ejecute el pago, ya sea que el procedimiento de facturacion se dispare por un webhook, o por via manual por parte del admin, que cada metodo de pago tenga definido su workflow que termine con el envio de la factura digital al cliente via email."
+- Construido (ver `tracker/FACTURACION.md`): `services/facturacion/` (PAC EBI-PAC portado + PAC simulado + flujo pendiente → emitida → enviada con reintentos y anulación), `routes/facturas.js` (`/api/facturas`), hooks en captura PayPal, webhook PayPal, confirmación Rapid PayPro y registro manual; correo `emails/factura.html` con el PDF fiscal; panel **Finanzas** (facturas, pagos sin factura, configuración) en ES/EN/FR/PT; `tests/facturacion.test.js` 17/17.
+- Workflows por defecto: PayPal y Rapid PayPro automáticos (emite y envía solos); manual queda pendiente hasta que el admin pulse "Emitir y enviar". Editables en Finanzas → Configuración.
+- **Decisiones que debe tomar Rick antes de facturar de verdad** (hoy el sistema corre con el PAC simulado):
+  1. Credenciales de EBI-PAC para Farmazed (`EBI_TOKEN_USUARIO`/`EBI_TOKEN_PASSWORD` en Secret Manager) y RUC/DV/razón social/sucursal/punto de facturación del emisor (se cargan en Finanzas).
+  2. ITBMS por concepto: hoy honorarios 7 % y tasas DNFD/MEF/IEA exentas (gasto reembolsable). Confirmar con el contador.
+  3. Códigos DGI de forma de pago: PayPal y Rapid PayPro como tarjeta (03), manual como transferencia (05).
+  4. Si el cliente debe ver sus facturas en el portal (la API `GET /api/facturas/mias` y el PDF ya existen; falta la pantalla).
+- Pendiente técnico: smoke test contra `integraciondemo.ebi-pac.com` con credenciales reales (horario Panamá); desplegar `firestore.indexes.json` (índice de grupo `payments.tipo`).
