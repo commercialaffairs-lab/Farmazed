@@ -63,8 +63,10 @@ Rick terminó lo que dependía de él; solo esperan respuesta externa: **PayPal*
 
 ## Antes del deploy a producción
 
-- [ ] Cuenta PayPal Business y app (sandbox primero): `PAYPAL_SETUP.md` §1–3.
-- [ ] Variables de Cloud Run. Sin ellas, el tracker no arranca:
+> **01-nov-2026 — desplegado a producción** (tracker `00006`, web nueva; ver DEPLOY.md "Cómo redesplegar"). Lo que sigue abierto de esta lista: registrar el webhook de PayPal sandbox y subir su ID a `paypal-webhook-id`; probar una suscripción y un pago sandbox reales; `api.farmazed.com` ya apunta al tracker (verificado). Las migraciones NO se aplicaron por decisión de Rick: solo `admin@pbtradingsolutions.com` tiene rol; `richypb@gmail.com` y la cuenta de prueba de agosto quedaron sin rol (borrarlas desde la consola si no se van a usar).
+
+- [ ] Cuenta PayPal Business y app (sandbox primero): `PAYPAL_SETUP.md` §1–3. (App sandbox: credenciales ya en Secret Manager; falta el webhook.)
+- [x] Variables de Cloud Run (01-nov-2026, ver DEPLOY.md). Sin ellas, el tracker no arranca:
   - `FIREBASE_PROJECT_ID`
   - `GCS_BUCKET`
   - `CORS_ORIGINS`
@@ -73,7 +75,7 @@ Rick terminó lo que dependía de él; solo esperan respuesta externa: **PayPal*
   - `PAYMENTS_PROVIDER`, `PAYPAL_ENV`, `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET`, `PAYPAL_WEBHOOK_ID`
 
   Los secretos van en Secret Manager. Ver `DEPLOY.md`.
-- [ ] Reglas `firestore.rules` y `storage.rules`: cierran el acceso directo (deny-all). Antes de desplegarlas, revisar las que hay hoy en la consola de Firebase.
+- [x] Reglas `firestore.rules` (deny-all) desplegadas el 01-nov-2026 junto con `firestore.indexes.json`. `storage.rules` no aplica: Firebase Storage no está activado como producto (el bucket `farmazed-docs` es GCS puro que solo usa el tracker).
 - [ ] Migraciones en producción. Corren en modo de prueba por defecto, y solo escriben con `--prod --project=<id> --confirm`:
   - `tracker/scripts/migrate_roles.js`
   - `tracker/scripts/backfill_invitaciones.js`

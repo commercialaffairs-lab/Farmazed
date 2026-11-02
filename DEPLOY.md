@@ -41,10 +41,37 @@ farmazed.com     → farmazed-web (us-central1)
 www.farmazed.com → farmazed-web (us-central1)
 ```
 
-### Cómo redesplegar (desde Google Cloud Shell)
+### Cómo redesplegar (desde Google Cloud Shell o desde la PC de Rick)
 
-> **IMPORTANTE:** La auth local (`gcloud auth login`) no funciona en esta máquina.
-> Usar siempre **Cloud Shell** en console.cloud.google.com
+> **Actualizado 01-nov-2026:** desde la PC de Rick sí funciona: `gcloud` autenticado como
+> `admin@pbtradingsolutions.com` ve el proyecto `farmazed` y despliega (así se hizo el deploy de las
+> tareas 54–59: tracker `farmazed-tracker-00006-dod` y la web). Cloud Shell sigue siendo válido. Lo que ya
+> quedó configurado ese día:
+> - **Secret Manager** habilitado, con `paypal-client-id`, `paypal-client-secret`, `paypal-webhook-id`
+>   (todavía el marcador `sin-webhook`: falta registrar el webhook en PayPal y subir una versión nueva),
+>   `smtp-pass`, `demo-password-cliente`, `demo-password-regente`; la cuenta de servicio
+>   `farmazed-api-sa@farmazed.iam.gserviceaccount.com` tiene `secretAccessor` en cada uno.
+> - **Variables del tracker**: `NODE_ENV=production`, `FIREBASE_PROJECT_ID=farmazed`, `GCS_BUCKET=farmazed-docs`,
+>   `PAYMENTS_PROVIDER=paypal`, `PAYPAL_ENV=sandbox`, `PORTAL_URL=https://farmazed.com`, `SMTP_HOST/PORT/USER/FROM`,
+>   `MCP_KEY` (la de siempre, 65 caracteres), `REDIRECT_URL`; `ADMIN_KEY` eliminada. Secretos montados como
+>   `PAYPAL_*`, `SMTP_PASS`, `DEMO_PASSWORD_*`.
+> - **IAM**: `farmazed-api-sa` tiene `roles/iam.serviceAccountTokenCreator` sobre sí misma. Sin eso las URL
+>   firmadas de Storage fallan con `iam.serviceAccounts.signBlob denied` (así falló el primer reinicio de la demo).
+> - **Firestore**: reglas deny-all e índices desplegados con `npx firebase-tools deploy --only firestore:rules,firestore:indexes`
+>   (ADC de gcloud). **Storage** no está activado como producto de Firebase (el bucket es GCS puro que solo usa el
+>   tracker), así que `storage.rules` no se despliega: `firebase deploy --only storage` falla y no hace falta.
+> - **Roles**: solo `admin@pbtradingsolutions.com` recibió `admin` (`bootstrap_admin.js`), por decisión de Rick; las
+>   otras dos cuentas antiguas quedaron sin rol a propósito. Cuentas demo sembradas desde el propio tracker
+>   (`POST /api/demo/reiniciar` con el cliente demo): `seed_demo.js` desde una PC sin credenciales de firma falla al
+>   subir el PDF.
+> - Para desplegar el tracker: `gcloud run deploy farmazed-tracker --source tracker --region us-central1 --no-traffic --tag candidata`
+>   (las variables y secretos ya están en el servicio), `curl .../health` en la URL de la etiqueta, y
+>   `gcloud run services update-traffic farmazed-tracker --to-latest`.
+> - **Web — ojo**: `gcloud run deploy farmazed-web --source .` compila bien pero la revisión falla con
+>   "Container import failed" (dos veces el 01-nov; imagen idéntica en forma a la que servía). Lo que sí
+>   funciona es la ruta de siempre: `gcloud builds submit --tag gcr.io/farmazed/farmazed-web:<etiqueta> .`
+>   (29 s) y luego `gcloud run deploy farmazed-web --image gcr.io/farmazed/farmazed-web:<etiqueta> --region us-central1
+>   --allow-unauthenticated --port 80 --memory 256Mi`. Así se desplegó `farmazed-web-00019-nkx`.
 
 ```bash
 # 1. Clonar o actualizar el repo
