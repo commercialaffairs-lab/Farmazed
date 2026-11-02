@@ -21,7 +21,11 @@ function responderError(res, e) {
     console.error('[proveedor de pagos]', e.message);
     return res.status(502).json({ error: 'El proveedor de pagos respondió con un error — intenta de nuevo o contacta a Farmazed.' });
   }
-  return res.status(500).json({ error: e.message });
+  // Revisión de seguridad (02-nov-2026): un error inesperado (p. ej. un índice de Firestore que
+  // falta, con su URL de consola) se registra completo en el servidor y al cliente le llega un
+  // mensaje genérico.
+  console.error('[500]', e.message);
+  return res.status(500).json({ error: 'Error interno del servidor. Si se repite, contacta a Farmazed.' });
 }
 
 module.exports = { HttpError, responderError };

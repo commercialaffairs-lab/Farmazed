@@ -887,3 +887,17 @@ contraseña, cerrar sesión en todos los dispositivos), Idioma, Ayuda y, solo ad
 pagos, facturación, correo, demo, versión); visible para todo el personal. Graphify eliminado del repo
 y de producción. Además: modal "Correo enviado" en "¿Olvidó su contraseña?" (pedido de Rick el mismo
 día) y la cuenta `admin@pbtradingsolutions.com` marcada como verificada en producción.
+
+## H.20 — 02-nov-2026: menú lateral inconsistente en producción, QR en Leads y revisión antes de desplegar (Rick)
+
+Rick, con capturas de producción: "nota como las opciones del sidebar no se mantienen constantes. la de
+configuracion desaparece y solo aparece cuando empresas esta seleccionada. y la seccion de QR scans
+incluyela en Leads para monitorear quienes consultan via QR. despues mejoramos esta parte. pero necesito
+que revises que estos errores basicos no ocurran ahora despues de subido a produccion, revisa y prueba
+toda la continuidad y consistencias de las funciones porfavor antes de actualizar en produccion.
+incluyendo ciberseguridad." Hecho (handover TAREA 62): una sola barra lateral generada por código para
+las nueve páginas del admin (Empresas por permiso, igual en todas), "Consultas por QR" dentro de Leads,
+caché del navegador corregida en nginx (la causa de ver menús viejos tras un deploy) con cabeceras de
+seguridad, revisión de seguridad con sus correcciones, suite completa en verde y verificación en Chrome
+como admin y como regente antes de desplegar. Lo que queda de la revisión está en PENDIENTES
+("Seguridad — pendientes de la revisión del 02-nov-2026").

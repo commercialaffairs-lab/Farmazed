@@ -337,10 +337,86 @@ function esc(v) {
 }
 
 /**
+ * Menú lateral compartido del back-office (Rick, 02-nov-2026): cada página llevaba su copia a mano y se
+ * desfasaron (Configuración solo se veía en Empresas, casos.html tenía un "QR Scans" muerto y sin Precios…).
+ * Ahora la página solo pone `<nav id="fz-sidebar" data-activo="clave">` y initBackoffice lo rellena aquí.
+ * Rótulos = claves del diccionario (se traducen con marcarTraducible y se retraducen al cambiar de idioma).
+ */
+const MENU_GESTION = [
+  { clave: 'casos',         href: '/admin/casos.html',         icono: 'bi-folder2-open',      rotulo: 'Expedientes' },
+  { clave: 'bandeja',       href: '/admin/bandeja.html',       icono: 'bi-inbox',             rotulo: 'Mi Bandeja' },
+  { clave: 'leads',         href: '/admin/leads.html',         icono: 'bi-person-lines-fill', rotulo: 'Leads' },
+  { clave: 'cotizaciones',  href: '/admin/cotizaciones.html',  icono: 'bi-receipt',           rotulo: 'Cotizaciones' },
+  { clave: 'formularios',   href: '/admin/formularios.html',   icono: 'bi-file-earmark-text', rotulo: 'Formularios' },
+  // Empresas la ve quien tenga el permiso orgs.list (admin y el staff que lo tenga), en TODAS las páginas por igual.
+  { clave: 'empresas',      href: '/admin/empresas.html',      icono: 'bi-building',          rotulo: 'Empresas', requiere: 'orgs.list' },
+  { clave: 'precios',       href: '/admin/precios.html',       icono: 'bi-cash-coin',         rotulo: 'Precios',  soloAdmin: true },
+  { clave: 'finanzas',      href: '/admin/finanzas.html',      icono: 'bi-graph-up-arrow',    rotulo: 'Finanzas', soloAdmin: true },
+];
+const MENU_SISTEMA = [
+  { clave: 'configuracion', href: '/admin/configuracion.html', icono: 'bi-gear',              rotulo: 'Configuración' },
+  { clave: 'logout',        href: '#', id: 'sidebar-logout',   icono: 'bi-box-arrow-left',    rotulo: 'Cerrar Sesión' },
+];
+// Bloque de marca: el mismo de siempre, con #sidebar-rol para que initBackoffice ponga el rol (t('Admin Panel')).
+const SIDEBAR_MARCA = '<div class="px-4 mb-4"><div style="font-family:Georgia,serif;color:#fff;font-size:1.2rem;font-weight:700">Farmazed</div><div id="sidebar-rol" style="color:rgba(255,255,255,.4);font-size:.72rem">Admin Panel</div></div>';
+
+function enlaceSidebar({ clave, href, icono, rotulo, id }, activo) {
+  const a = document.createElement('a');
+  a.href = href;
+  if (id) a.id = id;
+  if (clave === activo) a.className = 'active';
+  const i = document.createElement('i');
+  i.className = `bi ${icono} me-2`;
+  a.append(i, marcarTraducible(document.createElement('span'), rotulo));
+  return a;
+}
+
+function etiquetaSidebar(texto) {
+  const div = document.createElement('div');
+  div.className = 'section-label';
+  return marcarTraducible(div, texto);
+}
+
+/**
+ * Pinta el menú lateral dentro de #fz-sidebar (si la página lo tiene). `activo` es la clave de la página
+ * (por defecto, data-activo del <nav>); los enlaces solo-admin se pintan únicamente si `admin` es true.
+ * Devuelve el <nav>, o null si la página no tiene menú (expediente.html solo lleva un enlace de vuelta).
+ */
+function montarSidebar(activo, { admin = false, permisos = [] } = {}) {
+  const nav = document.getElementById('fz-sidebar');
+  if (!nav) return null;
+  const clave = activo ?? nav.dataset.activo ?? '';
+  const visible = (e) => admin || (!e.soloAdmin && (!e.requiere || permisos.includes(e.requiere)));
+  nav.replaceChildren();
+  nav.insertAdjacentHTML('beforeend', SIDEBAR_MARCA);
+  nav.append(etiquetaSidebar('Gestión'), ...MENU_GESTION.filter(visible).map(e => enlaceSidebar(e, clave)));
+  nav.append(etiquetaSidebar('Sistema'), ...MENU_SISTEMA.map(e => enlaceSidebar(e, clave)));
+  return nav;
+}
+
+/**
+ * Muestra en el menú ya pintado una entrada de Gestión que no esté (p.ej. "Empresas" para el staff con
+ * permiso orgs.list, TAREA 35 en bandeja.html): la inserta en su posición, sin repetir el markup en la página.
+ */
+function mostrarEnlaceSidebar(clave) {
+  const nav = document.getElementById('fz-sidebar');
+  const indice = MENU_GESTION.findIndex(e => e.clave === clave);
+  if (!nav || indice < 0) return null;
+  const entrada = MENU_GESTION[indice];
+  const existente = nav.querySelector(`a[href="${entrada.href}"]`);
+  if (existente) return existente;
+  const siguiente = MENU_GESTION.slice(indice + 1).map(e => nav.querySelector(`a[href="${e.href}"]`)).find(Boolean)
+    || nav.querySelectorAll('.section-label')[1];
+  const enlace = enlaceSidebar(entrada, nav.dataset.activo ?? '');
+  siguiente ? siguiente.insertAdjacentElement('beforebegin', enlace) : nav.append(enlace);
+  return enlace;
+}
+
+/**
  * Arranque común de las páginas del back-office (admin/staff): login verificado, acceso de
- * back-office (si no, al portal del cliente), nombre y "Cerrar sesión" en el menú, y los enlaces
- * solo-admin (Empresas, Precios, Finanzas) visibles para el admin; Configuración la ve todo el
- * personal (perfil, contraseña, idioma, ayuda). Devuelve `{ user, admin }`,
+ * back-office (si no, al portal del cliente), menú lateral (montarSidebar: los enlaces solo-admin
+ * —Empresas, Precios, Finanzas— solo para el admin; Configuración la ve todo el personal), nombre
+ * y "Cerrar sesión". Devuelve `{ user, admin }`,
  * o `null` si ya se redirigió (login, verificar correo o portal del cliente): la página debe parar.
  */
 // Rótulos en español (clave del diccionario); se traducen al pintarlos: t('Analista'), t('Abogado'),
@@ -353,24 +429,29 @@ async function initBackoffice() {
   if (!(await hasBackofficeAccess())) { window.location.href = '/client-dashboard.html'; return null; }
   const nombre = document.getElementById('user-name') || document.getElementById('admin-name');
   if (nombre) nombre.textContent = user.displayName || user.email;
-  document.getElementById('sidebar-logout')?.addEventListener('click', logout);
   const admin = await isAdmin();
+  // Los permisos reales de la cuenta deciden las entradas condicionadas (Empresas = orgs.list) en todas las
+  // páginas por igual; si la consulta falla, el menú se pinta sin ellas en vez de no pintarse.
+  let permisos = [];
+  if (!admin) {
+    try {
+      const r = await fetch(`${API_BASE}/api/me/permissions`, { headers: { Authorization: `Bearer ${await getToken()}` } });
+      if (r.ok) permisos = (await r.json()).permissions || [];
+    } catch (e) { /* sin permisos conocidos: menú básico */ }
+  }
+  // Orden: pintar el menú → colgar "Cerrar sesión" → rótulo del rol (los tres viven dentro de #fz-sidebar).
+  montarSidebar(undefined, { admin, permisos });
+  document.getElementById('sidebar-logout')?.addEventListener('click', logout);
   await montarBotonDemo(nombre?.parentElement || document.querySelector('.topbar'));
   montarEnlaceAyuda(nombre);
   montarSelectorIdioma(nombre);
   await montarRecorridoBackoffice();
   const rotulo = document.getElementById('sidebar-rol');
   if (rotulo) marcarTraducible(rotulo, admin ? 'Admin Panel' : (ROTULO_STAFF[await getRole()] || 'Personal'));
-  if (admin) {
-    for (const id of ['nav-empresas', 'nav-precios', 'nav-finanzas']) {
-      const enlace = document.getElementById(id);
-      if (enlace) enlace.style.display = '';
-    }
-  }
   return { user, admin };
 }
 
 export {
-  initBackoffice, esc, auth, register, login, logout, getToken, requireLogin, requireVerifiedLogin, isAdmin, API_BASE,
+  initBackoffice, montarSidebar, mostrarEnlaceSidebar, esc, auth, register, login, logout, getToken, requireLogin, requireVerifiedLogin, isAdmin, API_BASE,
   getRole, getOrgId, isStaff, hasBackofficeAccess, esDemo, montarBotonDemo, cambiarContrasena,
 };

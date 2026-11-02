@@ -202,7 +202,16 @@ Estimación: 4–5 sesiones (datos+reinicio · recorrido cliente · recorrido pe
 - Rick (después): el manual ya no enlaza el PDF de ejemplo en ningún idioma ("⬇ Descargar el PDF de ejemplo" quitado de `generar_manual.js`; la prueba exige que ningún manual lo enlace). El botón "Descargar PDF de ejemplo" del panel flotante sigue ahí: decidir si también se quita.
 - Queda: 4) e2e del recorrido completo (cliente y regente).
 
-### Admin — módulo "Finanzas" (contenedor, 01-nov-2026)
+### Seguridad — pendientes de la revisión del 02-nov-2026 (sin corregir todavía)
+
+- **Receptor fiscal sin revisión**: la factura automática (PayPal, Rapid PayPro) toma RUC, razón social y correo de lo que el cliente escribió como "solicitante" en el expediente. Propuesta: pedir confirmación del admin la primera vez que se factura a una empresa (o bloquear esos datos una vez hay pago). Decisión de Rick.
+- **Cloud Scheduler para el barrido de facturas**: no usar un token de admin guardado; crear un endpoint que verifique un token OIDC de una cuenta de servicio (`google-auth-library` `verifyIdToken`, audiencia = la URL) o usar invocador IAM de Cloud Run.
+- **CSP en nginx**: inventariar orígenes (gstatic, googleapis, jsdelivr, cdnjs, fonts, api.farmazed.com, identitytoolkit) y añadir `Content-Security-Policy`. Hoy ya van HSTS, nosniff, X-Frame-Options, Referrer-Policy y Permissions-Policy.
+- `/api/me/org` hace `listUsers(1000)` en cada petición (preexistente): guardar los miembros en Firestore o consultar por claim.
+- Claves web de Firebase (`portal/js/config.js`): confirmar en la consola de Google Cloud que están restringidas por referente HTTP.
+- `.tools/adc-farmazed-pruebas.json` (local, ignorado por git) contiene un refresh token de OAuth: rotarlo si la carpeta se comparte.
+
+## Admin — módulo "Finanzas" (contenedor, 01-nov-2026)
 
 - Rick va a traer código propio de un módulo financiero. Mientras tanto: entrada **Finanzas** en la barra lateral de todas las páginas del admin (después de Precios; solo-admin, la muestra `initBackoffice` como Empresas/Precios/Configuración) y página `admin/finanzas.html` con guardia de administrador (el staff vuelve a su bandeja), i18n en ES/EN/FR/PT (8 claves en `backoffice.json`, página incluida en `PAGINAS` del test) y una tarjeta "En preparación" con el contenedor `#finanzas-modulo` donde va el módulo.
 - Hecho después (misma fecha): el módulo ya tiene contenido, ver "Facturación electrónica" abajo.

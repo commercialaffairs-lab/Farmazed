@@ -97,7 +97,7 @@ const qrLimitador = crearLimitador({ ventanaMs: 10 * 60 * 1000, max: 60 });
 app.get('/qr', async (req, res) => {
   try {
     if (!qrLimitador.estaLimitado(req.ip)) {
-      const ua = req.headers['user-agent'] || '';
+      const ua = String(req.headers['user-agent'] || '').slice(0, 200); // dato personal: acotado
       await db.collection('qr_scans').add({ timestamp: admin.firestore.Timestamp.now(), ip: req.ip, device: detectDevice(ua), ua });
     }
   } catch (e) { console.error('QR log error:', e.message); }
@@ -110,7 +110,7 @@ app.get('/api/scans', requireAuth, requireAdmin, async (req, res) => {
     const snap  = await db.collection('qr_scans').orderBy('timestamp', 'desc').limit(1000).get();
     const scans = snap.docs.map(d => {
       const data = d.data();
-      return { id: d.id, timestamp: serializeTimestamps(data.timestamp), ip: data.ip, device: data.device };
+      return { id: d.id, timestamp: serializeTimestamps(data.timestamp), ip: data.ip, device: data.device, ua: String(data.ua || '').slice(0, 200) };
     });
     res.json({ total: scans.length, scans });
   } catch (e) { console.error('Firestore read error:', e.message); res.status(500).json({ error: e.message }); }

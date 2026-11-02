@@ -80,6 +80,12 @@ function resolverProveedorFacturacion(env) {
   if (pedido === 'mock' && prod) throw new ConfigError(['FACTURACION_PROVIDER=mock no se permite en producción (emitiría facturas sin validez fiscal).']);
   const tieneCredenciales = !!(env.EBI_TOKEN_USUARIO && env.EBI_TOKEN_PASSWORD);
   if (pedido === 'ebi_pac' && !tieneCredenciales) throw new ConfigError(['FACTURACION_PROVIDER=ebi_pac requiere EBI_TOKEN_USUARIO y EBI_TOKEN_PASSWORD.']);
+  // Revisión de seguridad (02-nov-2026): las credenciales del PAC solo viajan por https, y en
+  // producción la URL se nombra explícitamente (el valor por defecto es el entorno DEMO del PAC).
+  if (tieneCredenciales) {
+    if (env.EBI_BASE_URL && !/^https:\/\/[^\s/]+/.test(env.EBI_BASE_URL)) throw new ConfigError([`EBI_BASE_URL debe ser una URL https (es "${env.EBI_BASE_URL}").`]);
+    if (prod && !env.EBI_BASE_URL) throw new ConfigError(['EBI_BASE_URL es obligatoria en producción con credenciales de EBI-PAC (sin ella se usaría el entorno demo del PAC).']);
+  }
   if (pedido === 'mock') return 'mock';
   if (pedido === 'ebi_pac' || tieneCredenciales) return 'ebi_pac';
   if (enEmulador && !prod) return 'mock';

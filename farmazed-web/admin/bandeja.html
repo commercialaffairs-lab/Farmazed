@@ -24,25 +24,8 @@
 </head>
 <body class="d-flex">
 
-<!-- Sidebar -->
-<div class="sidebar py-3 d-flex flex-column">
-  <div class="px-4 mb-4">
-    <div style="font-family:Georgia,serif;color:#fff;font-size:1.2rem;font-weight:700">Farmazed</div>
-    <div id="sidebar-rol" style="color:rgba(255,255,255,.4);font-size:.72rem">Admin Panel</div>
-  </div>
-  <div class="section-label" data-i18n>Gestión</div>
-  <a href="/admin/casos.html"><i class="bi bi-folder2-open me-2"></i><span data-i18n>Expedientes</span></a>
-  <a href="/admin/bandeja.html" class="active"><i class="bi bi-inbox me-2"></i><span data-i18n>Mi Bandeja</span></a>
-  <a href="/admin/leads.html"><i class="bi bi-person-lines-fill me-2"></i><span data-i18n>Leads</span></a>
-  <a href="/admin/cotizaciones.html"><i class="bi bi-receipt me-2"></i><span data-i18n>Cotizaciones</span></a>
-  <a href="/admin/formularios.html"><i class="bi bi-file-earmark-text me-2"></i><span data-i18n>Formularios</span></a>
-  <a href="/admin/empresas.html" id="nav-empresas" style="display:none"><i class="bi bi-building me-2"></i><span data-i18n>Empresas</span></a>
-  <a href="/admin/precios.html" id="nav-precios" style="display:none"><i class="bi bi-cash-coin me-2"></i><span data-i18n>Precios</span></a>
-  <a href="/admin/finanzas.html" id="nav-finanzas" style="display:none"><i class="bi bi-graph-up-arrow me-2"></i><span data-i18n>Finanzas</span></a>
-  <div class="section-label" data-i18n>Sistema</div>
-  <a href="/admin/configuracion.html"><i class="bi bi-gear me-2"></i><span data-i18n>Configuración</span></a>
-  <a href="#" id="sidebar-logout"><i class="bi bi-box-arrow-left me-2"></i><span data-i18n>Cerrar Sesión</span></a>
-</div>
+<!-- Sidebar: lo pinta montarSidebar (portal/js/auth.js) desde initBackoffice; el mismo menú en todas las páginas -->
+<nav class="sidebar py-3 d-flex flex-column" id="fz-sidebar" data-activo="bandeja" aria-label="Menú"></nav>
 
 <!-- Main -->
 <div class="main">
@@ -141,10 +124,8 @@
     // TAREA 35: "Empresas" ahora también es para el staff (necesita llegar
     // a "Cargar diagnóstico") — se muestra según el permiso real
     // (orgs.list), no hardcodeado a role==='admin'. "Precios" sigue siendo
-    // solo admin.
-    if (myPerms.permissions.includes('orgs.list')) {
-      document.getElementById('nav-empresas').style.display = '';
-    }
+    // solo admin. El menú lo pinta montarSidebar (auth.js); aquí solo se añade la entrada.
+    // "Empresas" en el menú la decide montarSidebar (auth.js) con el permiso orgs.list, igual en todas las páginas.
     renderRolIntro();
 
     statusMeta = await getFullMeta();

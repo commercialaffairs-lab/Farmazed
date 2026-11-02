@@ -27,25 +27,8 @@
 </head>
 <body class="d-flex">
 
-<!-- Sidebar -->
-<div class="sidebar py-3 d-flex flex-column">
-  <div class="px-4 mb-4">
-    <div style="font-family:Georgia,serif;color:#fff;font-size:1.2rem;font-weight:700">Farmazed</div>
-    <div id="sidebar-rol" style="color:rgba(255,255,255,.4);font-size:.72rem">Admin Panel</div>
-  </div>
-  <div class="section-label" data-i18n>Gestión</div>
-  <a href="/admin/casos.html"><i class="bi bi-folder2-open me-2"></i><span data-i18n>Expedientes</span></a>
-  <a href="/admin/bandeja.html"><i class="bi bi-inbox me-2"></i><span data-i18n>Mi Bandeja</span></a>
-  <a href="/admin/leads.html" class="active"><i class="bi bi-person-lines-fill me-2"></i><span data-i18n>Leads</span></a>
-  <a href="/admin/cotizaciones.html"><i class="bi bi-receipt me-2"></i><span data-i18n>Cotizaciones</span></a>
-  <a href="/admin/formularios.html"><i class="bi bi-file-earmark-text me-2"></i><span data-i18n>Formularios</span></a>
-  <a href="/admin/empresas.html" id="nav-empresas" style="display:none"><i class="bi bi-building me-2"></i><span data-i18n>Empresas</span></a>
-  <a href="/admin/precios.html" id="nav-precios" style="display:none"><i class="bi bi-cash-coin me-2"></i><span data-i18n>Precios</span></a>
-  <a href="/admin/finanzas.html" id="nav-finanzas" style="display:none"><i class="bi bi-graph-up-arrow me-2"></i><span data-i18n>Finanzas</span></a>
-  <div class="section-label" data-i18n>Sistema</div>
-  <a href="/admin/configuracion.html"><i class="bi bi-gear me-2"></i><span data-i18n>Configuración</span></a>
-  <a href="#" id="sidebar-logout"><i class="bi bi-box-arrow-left me-2"></i><span data-i18n>Cerrar Sesión</span></a>
-</div>
+<!-- Sidebar: lo pinta montarSidebar (portal/js/auth.js) desde initBackoffice; el mismo menú en todas las páginas -->
+<nav class="sidebar py-3 d-flex flex-column" id="fz-sidebar" data-activo="leads" aria-label="Menú"></nav>
 
 <!-- Main -->
 <div class="main">
@@ -89,6 +72,29 @@
         </div>
       </div>
     </div>
+
+    <!-- Consultas por QR (Rick, 02-nov-2026): antes era un enlace muerto "QR Scans" del menú; vive aquí porque
+         son contactos potenciales. Solo admin (GET /api/scans): para el resto del personal la tarjeta queda oculta. -->
+    <div class="card border-0 shadow-sm mt-4 d-none" id="qr-card">
+      <div class="card-body pb-2">
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+          <h6 class="fw-bold mb-0"><i class="bi bi-qr-code me-2"></i><span data-i18n>Consultas por QR</span></h6>
+          <div class="small text-muted" id="qr-resumen"></div>
+        </div>
+        <p class="small text-muted mb-0 mt-1" data-i18n>El código QR impreso en el material de Farmazed lleva a /qr: cada escaneo queda registrado aquí (se muestran los 100 más recientes).</p>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-sm table-hover mb-0 align-middle">
+          <thead class="table-light">
+            <tr>
+              <th class="small ps-3" data-i18n>Fecha y hora</th><th class="small" data-i18n>Dispositivo</th>
+              <th class="small">IP</th><th class="small" data-i18n>Navegador</th>
+            </tr>
+          </thead>
+          <tbody id="qr-tbody"></tbody>
+        </table>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -122,6 +128,8 @@
     perms = p.permissions || p;
     await cargar();
     ['f-buscar', 'f-tipo', 'f-intencion', 'f-fuente', 'f-plan'].forEach(id => document.getElementById(id).addEventListener('input', renderTabla));
+    // Después de los leads: un fallo aquí no toca la lista de arriba.
+    if (sesion.admin) await cargarScans();
   }
 
   async function cargar() {
@@ -137,6 +145,7 @@
     renderTabla();
     if (seleccionado) seleccionado = leads.find(l => l.id === seleccionado.id) || null;
     renderDetalle();
+    if (scans) renderScans();
   }
 
   // Cambio de idioma en vivo: se repinta todo lo generado por JS (la primera opción de cada filtro es
@@ -284,6 +293,55 @@
           : t('Invitación creada. No hay envío de correo configurado: copia el enlace desde Empresas → Invitaciones.'));
       } catch (err) { await avisar(t('Error: {error}', { error: err.message })); }
     });
+  }
+
+  // ── Consultas por QR (solo admin; api.getScans → { total, scans: [{ id, timestamp, ip, device, ua? }] }) ──
+  const QR_MAX = 100, DIA_MS = 24 * 60 * 60 * 1000;
+  const DISPOSITIVO = { mobile: 'Móvil', tablet: 'Tableta', desktop: 'Escritorio' };
+  // Orden importa: Edge y Opera también dicen "Chrome/", y Chrome también dice "Safari/".
+  const NAVEGADORES = [['Edg/', 'Edge'], ['OPR/', 'Opera'], ['Firefox/', 'Firefox'], ['Chrome/', 'Chrome'], ['Safari/', 'Safari']];
+  let scans = null;
+
+  const navegador = (ua) => {
+    if (!ua) return '—';
+    const conocido = NAVEGADORES.find(([marca]) => ua.includes(marca));
+    return conocido ? conocido[1] : t('Otro');
+  };
+  // La IP es dato personal: solo los dos primeros octetos (190.12.x.x). IPv6: los dos primeros grupos.
+  const ipEnmascarada = (ip) => {
+    const v4 = String(ip || '').replace(/^::ffff:/i, '').match(/^(\d{1,3})\.(\d{1,3})\.\d{1,3}\.\d{1,3}$/);
+    if (v4) return `${v4[1]}.${v4[2]}.x.x`;
+    if (ip && ip.includes(':')) return `${ip.split(':').slice(0, 2).join(':')}:…`;
+    return '—';
+  };
+  const fechaHora = (iso) => (I18N.fechaHora ? I18N.fechaHora(iso, { dateStyle: 'short', timeStyle: 'short' }) : new Date(iso).toLocaleString()) || '—';
+
+  async function cargarScans() {
+    const card = document.getElementById('qr-card');
+    try {
+      const r = await api.getScans();
+      scans = { total: r.total ?? (r.scans || []).length, lista: (r.scans || []).slice(0, QR_MAX) };
+      card.classList.remove('d-none');
+      renderScans();
+    } catch (err) {
+      card.classList.remove('d-none');
+      document.getElementById('qr-tbody').innerHTML = `<tr><td colspan="4" class="text-danger small py-3">${esc(t('No se pudieron cargar las consultas por QR: {error}', { error: err.message }))}</td></tr>`;
+    }
+  }
+
+  function renderScans() {
+    const ahora = Date.now();
+    const desde = (ms) => scans.lista.filter(s => ahora - new Date(s.timestamp).getTime() <= ms).length;
+    document.getElementById('qr-resumen').textContent =
+      `${t('Total')}: ${scans.total} · ${t('Últimos 7 días')}: ${desde(7 * DIA_MS)} · ${t('Últimas 24 h')}: ${desde(DIA_MS)}`;
+    document.getElementById('qr-tbody').innerHTML = scans.lista.length ? scans.lista.map(s => `
+      <tr>
+        <td class="small ps-3 text-nowrap">${esc(fechaHora(s.timestamp))}</td>
+        <td class="small">${esc(t(DISPOSITIVO[s.device] || s.device || '—'))}</td>
+        <td class="small font-monospace">${esc(ipEnmascarada(s.ip))}</td>
+        <td class="small">${esc(navegador(s.ua))}</td>
+      </tr>`).join('')
+      : `<tr><td colspan="4" class="text-center text-muted small py-3">${t('Sin consultas por QR todavía.')}</td></tr>`;
   }
 
   init();

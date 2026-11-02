@@ -27,6 +27,10 @@ const F = require('../services/facturacion/facturas');
 
 const router = Router();
 const soloAdmin = [requireAuth, requirePermission('facturas.manage')];
+
+// Los ids de factura son deterministas (fac_pp_<orderId>, fac_rpp_<quote>_<case>, fac_man_<case>_<pago>):
+// cualquier otra forma se rechaza antes de tocar Firestore (revisión de seguridad, 02-nov-2026).
+router.param('id', (req, res, next, id) => (/^[A-Za-z0-9_-]{1,200}$/.test(id) ? next() : res.status(400).json({ error: 'Id de factura inválido.' })));
 const usuario = (req) => ({ uid: req.user.uid, email: req.user.email, demo: req.user.demo === true });
 
 /**

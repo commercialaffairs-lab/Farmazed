@@ -170,20 +170,31 @@ router.post('/reenviar-verificacion', requireAuth, async (req, res) => {
 // Misma respuesta exista o no la cuenta (no sirve para averiguar qué correos tiene Farmazed).
 // Sin SMTP responde `correoEnviado:false` y el navegador manda el de Firebase (texto plano).
 const limitadorRestablecer = crearLimitador({ ventanaMs: 10 * 60 * 1000, max: 5 });
+// Revisión de seguridad (02-nov-2026): además del límite por IP, un enfriamiento por correo (una
+// solicitud cada 5 min por instancia) para que nadie bombardee un buzón ajeno; y la respuesta es
+// SIEMPRE la misma ({ ok: true }), exista o no la cuenta y se envíe o no el correo, para que el
+// endpoint no sirva para averiguar qué correos tiene Farmazed.
+const ENFRIAMIENTO_CORREO_MS = 5 * 60 * 1000;
+const ultimoRestablecer = new Map(); // correo (minúsculas) → timestamp
 router.post('/restablecer', async (req, res) => {
   if (limitadorRestablecer.estaLimitado(req.ip)) {
     return res.status(429).json({ error: 'Demasiadas solicitudes desde esta dirección. Intenta de nuevo más tarde.' });
   }
   const correo = typeof req.body?.correo === 'string' ? req.body.correo.trim() : '';
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo) || correo.length > 254) return res.status(400).json({ error: 'Correo inválido.' });
-  let correoEnviado = false;
+  const clave = correo.toLowerCase();
+  const ahora = Date.now();
+  if (ahora - (ultimoRestablecer.get(clave) || 0) < ENFRIAMIENTO_CORREO_MS) return res.json({ ok: true });
+  ultimoRestablecer.set(clave, ahora);
+  if (ultimoRestablecer.size > 5000) for (const [k, t] of ultimoRestablecer) if (ahora - t > ENFRIAMIENTO_CORREO_MS) ultimoRestablecer.delete(k);
+  res.json({ ok: true });
+  // El envío sigue tras responder: el tiempo de respuesta tampoco delata si la cuenta existe.
   try {
     const user = await admin.auth().getUserByEmail(correo);
-    correoEnviado = await enviarRestablecimiento({ correo: user.email, nombre: user.displayName });
+    await enviarRestablecimiento({ correo: user.email, nombre: user.displayName });
   } catch (e) {
     if (e.code !== 'auth/user-not-found') console.error('[register] restablecer', { error: e.message });
   }
-  res.json({ correoEnviado });
 });
 
 module.exports = router;

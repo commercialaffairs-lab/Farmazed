@@ -14,6 +14,7 @@ const { effectiveRole, permissionsForRole, requirePermission, CLIENT_ROLES } = r
 const { serializeTimestamps } = require('../utils/serialize');
 const { recorridoCliente } = require('../services/recorrido_cliente');
 const { normalizarIdioma } = require('../services/demo_recorrido_textos');
+const { esCuentaDemo } = require('../services/demo'); // cuentas demo compartidas: sin cambios de perfil ni cierre de sesiones
 
 const router = Router();
 const db     = () => admin.firestore();
@@ -30,9 +31,14 @@ router.get('/perfil', requireAuth, async (req, res) => {
   catch (e) { res.status(500).json({ error: 'No se pudo leer el perfil.' }); }
 });
 
-router.put('/perfil', requireAuth, async (req, res) => {
+// Las cuentas de demostración son compartidas: nadie les cambia el nombre ni les cierra las
+// sesiones a los demás visitantes (revisión de seguridad, 02-nov-2026).
+const sinDemo = (req, res, next) => (esCuentaDemo(req.user) ? res.status(403).json({ error: 'Esta acción no está disponible en la cuenta de demostración.' }) : next());
+
+router.put('/perfil', requireAuth, sinDemo, async (req, res) => {
   const nombre = typeof req.body?.nombre === 'string' ? req.body.nombre.trim().replace(/\s+/g, ' ') : '';
   if (nombre.length < 2 || nombre.length > 80) return res.status(400).json({ error: 'El nombre debe tener entre 2 y 80 caracteres.' });
+  if (/[<>]/.test(nombre)) return res.status(400).json({ error: 'El nombre no puede contener < ni >.' });
   try {
     await admin.auth().updateUser(req.user.uid, { displayName: nombre });
     res.json(perfilDe(await admin.auth().getUser(req.user.uid), req.user));
@@ -41,7 +47,7 @@ router.put('/perfil', requireAuth, async (req, res) => {
 
 // Revoca los tokens de la cuenta: todas las sesiones (incluida esta) dejan de valer en cuanto
 // expira el token actual; el front cierra sesión de inmediato. requireVerifiedLogin usa checkRevoked.
-router.post('/cerrar-sesiones', requireAuth, async (req, res) => {
+router.post('/cerrar-sesiones', requireAuth, sinDemo, async (req, res) => {
   try {
     await admin.auth().revokeRefreshTokens(req.user.uid);
     res.json({ revocadas: true });
