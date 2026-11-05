@@ -28,16 +28,34 @@ fz_find_free_port() {
   echo "$port"
 }
 
+# Quién escucha en un puerto, p. ej. users:(("java",pid=969387,fd=95)). Vacío si no se ve el proceso.
+fz_quien_ocupa() {
+  ss -ltnpH "sport = :$1" 2>/dev/null | grep -o 'users:(.*)' | head -1
+}
+
+fz_puerto_ocupado() { ss -ltn 2>/dev/null | grep -q ":$1 "; }
+
 fz_cleanup() {
   echo "→ Deteniendo servicios de prueba..."
   for pid in "${FZ_PIDS[@]:-}"; do kill "$pid" >/dev/null 2>&1 || true; done
   if [ -n "$FZ_EMU_PGID" ]; then
     kill -TERM -- "-$FZ_EMU_PGID" >/dev/null 2>&1 || true
-    # Esperar a que los emuladores suelten sus puertos: la corrida siguiente los necesita ya.
-    for _ in $(seq 1 30); do
-      ss -ltn 2>/dev/null | grep -qE ":($AUTH_PORT|$FIRESTORE_PORT|$STORAGE_PORT) " || break
+    # Esperar POR CONDICIÓN a que los emuladores suelten sus puertos: la corrida siguiente (o la parte
+    # 2/2 de verificar_local.sh) los necesita ya. El Java de los emuladores puede tardar minutos en
+    # cerrar con la máquina cargada; FZ_CLEANUP_TOPE (s) es solo el tope, no una pausa fija.
+    local tope="${FZ_CLEANUP_TOPE:-240}" libres=0 p
+    for _ in $(seq 1 "$tope"); do
+      if ! fz_puerto_ocupado "$AUTH_PORT" && ! fz_puerto_ocupado "$FIRESTORE_PORT" && ! fz_puerto_ocupado "$STORAGE_PORT"; then libres=1; break; fi
       sleep 1
     done
+    if [ "$libres" -ne 1 ]; then
+      for p in $AUTH_PORT $FIRESTORE_PORT $STORAGE_PORT; do
+        fz_puerto_ocupado "$p" && echo "❌ fz_cleanup: tras ${tope}s el puerto de prueba $p sigue ocupado por: $(fz_quien_ocupa "$p" | grep . || echo '(proceso no visible: de otro usuario)')"
+      done
+      echo "   Los emuladores no soltaron los puertos. Mata ese PID (solo si es de una corrida de prueba) y reintenta."
+      rm -f "$FZ_ROOT"/firestore-debug.log "$FZ_ROOT"/ui-debug.log "$FZ_ROOT"/firebase-debug.log
+      exit 1
+    fi
   fi
   rm -f "$FZ_ROOT"/firestore-debug.log "$FZ_ROOT"/ui-debug.log "$FZ_ROOT"/firebase-debug.log
 }
@@ -51,7 +69,7 @@ fz_env() {
 fz_start_emulators() {
   for p in $AUTH_PORT $FIRESTORE_PORT $STORAGE_PORT; do
     if ss -ltn 2>/dev/null | grep -q ":$p "; then
-      echo "❌ El puerto de prueba $p ya está ocupado (¿otra corrida de pruebas viva?). No se mata nada; libéralo y reintenta."
+      echo "❌ El puerto de prueba $p ya está ocupado por: $(fz_quien_ocupa "$p" | grep . || echo '(proceso no visible: de otro usuario)') (¿otra corrida de pruebas viva?). No se mata nada; libéralo y reintenta."
       return 1
     fi
   done
