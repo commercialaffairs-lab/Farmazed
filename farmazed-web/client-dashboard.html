@@ -2757,8 +2757,12 @@ document.getElementById('chat-input').addEventListener('keydown', e => {
 // del body. Lo único que este script clásico necesita es mostrar/ocultar su
 // contenedor desde el botón "Iniciar solicitud" del banner de arriba.
 function toggleWizard() {
+  // Solo abre (nombre heredado): con ?caseId= el asistente ya se abre solo, y un botón que
+  // alterna lo cerraría en la cara de quien retoma un borrador. Se cierra al terminar (recarga)
+  // o al cambiar de módulo.
   const w = document.getElementById('wizard-form');
-  w.style.display = w.style.display === 'none' ? 'block' : 'none';
+  w.style.display = 'block';
+  w.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 // ── Modo demo: "Rellenar con datos de ejemplo" (recorrido, paso "Crea tu primer producto") ──

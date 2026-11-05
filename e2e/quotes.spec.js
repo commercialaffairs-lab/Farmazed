@@ -7,7 +7,7 @@
 // Corre con: ./e2e/run.sh quotes.spec.js (o ./e2e/run.sh para todos)
 
 const { test, expect } = require('@playwright/test');
-const { enviarLogin, guardarEstado } = require('./_esperas');
+const { enviarLogin, guardarEstado, esperarDashboardCliente } = require('./_esperas');
 const path = require('path');
 const fs   = require('fs');
 
@@ -127,6 +127,8 @@ test.describe('R5/R12 — cotización agrupa 3 casos de una empresa', () => {
 
     // ═══ 4. El cliente titular la ve con el desglose y la acepta ═══
     await login(page, 'titular-alfa@farmazed.test', 'Farmazed123!');
+    // Deuda: espera a la carga del dashboard por el N+1 de /payments (client-dashboard.html:1556); quitar cuando se arregle.
+    await esperarDashboardCliente(page);
     await page.locator('a.nav-link', { hasText: 'Cotización' }).click();
     // El sidebar se expande al pasar el mouse por el nav-link (overlay, no
     // empuja el contenido) — alejar el mouse antes de seguir, si no, el

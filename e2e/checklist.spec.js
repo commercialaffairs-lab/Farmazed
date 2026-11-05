@@ -66,6 +66,9 @@ const CLIENTE_REQUIRED_IDS = [
 ];
 
 test.describe('D10/D11 — responsable del documento (TAREA 9/10)', () => {
+  // El 2.º test continúa con el caso que deja el 1.º (partido en dos para caber en el límite de
+  // tiempo por test con la máquina cargada; ningún assert ni timeout cambió).
+  test.describe.configure({ mode: 'serial' });
   let caseId;
 
   test.beforeEach(async ({ page }) => {
@@ -76,7 +79,7 @@ test.describe('D10/D11 — responsable del documento (TAREA 9/10)', () => {
     }, apiPort);
   });
 
-  test('recorrido 1->2->3->4 en línea recta: checklist corresponde al subtipo, Farmazed no bloquea, admin ve tarea interna', async ({ page }) => {
+  test('recorrido 1->2->3->4 en línea recta: checklist corresponde al subtipo y bloquea por docs del cliente', async ({ page }) => {
     // ── 1. Cliente inicia un caso nuevo de medicamentos ─────────────────
     await login(page, 'cliente@farmazed.test', 'Farmazed123!');
     await page.locator('a.nav-link', { hasText: 'Solicitar Registro' }).click();
@@ -133,6 +136,13 @@ test.describe('D10/D11 — responsable del documento (TAREA 9/10)', () => {
     }
     await expect(page.locator('#btn-next')).toBeDisabled(); // aún faltan los otros 13
 
+  });
+
+  test('retomar el borrador: Farmazed no bloquea y el admin ve la tarea interna', async ({ page }) => {
+    expect(caseId).toBeTruthy(); // lo dejó el test anterior (serial)
+    await login(page, 'cliente@farmazed.test', 'Farmazed123!');
+    const farmazedSection = page.locator('div.doc-group', { hasText: 'Documentos que aporta Farmazed' });
+
     // ── 4. Completar el resto de los docs del cliente directo en Firestore
     // (más rápido que 13 uploads reales por UI — el mecanismo de upload ya
     // se probó con los 2 de arriba; lo que falta probar aquí es que el
@@ -157,12 +167,16 @@ test.describe('D10/D11 — responsable del documento (TAREA 9/10)', () => {
 
     // ── 5. Refrescar el checklist (sin recargar toda la pagina) y verificar
     // que el boton se habilita — los 3 docs de Farmazed siguen sin subir.
-    await page.reload();
+    await page.goto(`/client-dashboard.html?caseId=${caseId}`);
     // wizard.js init() retoma state.caseId/tramiteType/tipoMedicamento desde
     // ?caseId= en la URL (seteado por history.replaceState en el paso 1
     // original) — no crea un caso nuevo, solo actualiza el existente.
     await page.locator('a.nav-link', { hasText: 'Solicitar Registro' }).click();
+    // Con ?caseId= el asistente ya se abrió solo (retomar borrador): "Iniciar solicitud" NO debe
+    // cerrarlo (bug 4d9515b: antes alternaba abrir/cerrar).
+    await expect(page.locator('#wizard-form')).toBeVisible({ timeout: 10000 });
     await page.click('button:has-text("Iniciar solicitud")');
+    await expect(page.locator('#wizard-form')).toBeVisible();
     await page.locator('.tramite-card[data-id="medicamentos"]').click();
     await page.click('#btn-next');
     await expect(page.locator('#step-2')).toBeVisible({ timeout: 10000 });

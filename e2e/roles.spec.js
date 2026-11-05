@@ -8,7 +8,7 @@
 // + 1 usuario por rol) — independiente del seed legacy de seed_emulador.js.
 
 const { test, expect } = require('@playwright/test');
-const { enviarLogin, completarCaptacionSiHaceFalta } = require('./_esperas');
+const { enviarLogin, completarCaptacionSiHaceFalta, iniciarSesionTrasAlta, esperarDashboardCliente } = require('./_esperas');
 const path = require('path');
 const fs   = require('fs');
 
@@ -56,6 +56,8 @@ test.describe('TAREA 15 — cada rol ve lo suyo, no lo ajeno', () => {
 
   test('cliente_titular: Mi Empresa (miembros + invitar) y solo sus casos', async ({ page }) => {
     await login(page, 'titular-alfa@farmazed.test');
+    // Deuda: espera a la carga del dashboard por el N+1 de /payments (client-dashboard.html:1556); quitar cuando se arregle.
+    await esperarDashboardCliente(page);
 
     await page.locator('a.nav-link', { hasText: 'Mis Productos' }).click();
     await expect(page.locator('.fz-product-card', { hasText: 'Producto Org Alfa (fase 7)' })).toBeVisible({ timeout: 10000 });
@@ -74,6 +76,8 @@ test.describe('TAREA 15 — cada rol ve lo suyo, no lo ajeno', () => {
 
   test('cliente_miembro: ve la misma empresa, sin formulario de invitar', async ({ page }) => {
     await login(page, 'miembro-alfa@farmazed.test');
+    // Deuda: espera a la carga del dashboard por el N+1 de /payments (client-dashboard.html:1556); quitar cuando se arregle.
+    await esperarDashboardCliente(page);
 
     await page.locator('a.nav-link', { hasText: 'Mi Empresa' }).click();
     await expect(page.getByText('Laboratorios Alfa')).toBeVisible({ timeout: 10000 });
@@ -198,7 +202,7 @@ test.describe('TAREA 15 — cada rol ve lo suyo, no lo ajeno', () => {
     await shot(page, '13-aceptar-invitacion-formulario');
 
     await page.click('#btn-submit');
-    await page.waitForURL(/client-dashboard\.html/, { timeout: 15000 });
+    await iniciarSesionTrasAlta(page, email, PASSWORD, /client-dashboard\.html/);
     await completarCaptacionSiHaceFalta(page); // la empresa nueva (invitación) nace sin captación
     await expect(page.locator('a.nav-link', { hasText: 'Mi Empresa' })).toBeVisible({ timeout: 10000 });
     await page.locator('a.nav-link', { hasText: 'Mi Empresa' }).click();

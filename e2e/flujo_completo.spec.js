@@ -16,7 +16,7 @@
 // encontraron/arreglaron, y qué queda fuera (depende de prod o de Zelky).
 
 const { test, expect } = require('@playwright/test');
-const { enviarLogin, completarCaptacionSiHaceFalta } = require('./_esperas');
+const { enviarLogin, completarCaptacionSiHaceFalta, iniciarSesionTrasAlta } = require('./_esperas');
 const path = require('path');
 const fs   = require('fs');
 
@@ -121,7 +121,7 @@ test.describe('D16 — flujo completo E2E (medicamentos, Síntesis Química, Reg
     await page.fill('#password', clientPass);
     await page.fill('#password-confirm', clientPass);
     await page.click('#btn-submit');
-    await page.waitForURL(/client-dashboard\.html/, { timeout: 15000 });
+    await iniciarSesionTrasAlta(page, clientEmail, clientPass, /client-dashboard\.html/);
     await completarCaptacionSiHaceFalta(page); // la empresa nueva (invitación) nace sin captación
     await expect(page.locator('a.nav-link', { hasText: 'Solicitar Registro' })).toBeVisible({ timeout: 15000 });
     await shot(page, '00-cliente-registrado');

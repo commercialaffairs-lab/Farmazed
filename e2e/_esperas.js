@@ -2,6 +2,8 @@
 // Cada una espera el hecho real, no "un rato": una respuesta de la API, un diálogo, el fin de
 // las animaciones CSS o la red en reposo.
 
+const { expect } = require('@playwright/test');
+
 const CASO_URL = /\/api\/cases\/[^/]+$/;
 const esPeticion = (metodo) => (r) => r.request().method() === metodo && CASO_URL.test(new URL(r.url()).pathname);
 
@@ -49,17 +51,19 @@ async function enviarLogin(page, destino, timeout = 15000) {
 // Cuenta recién creada (invitación / registro): su empresa no tiene captación y el portal muestra un
 // overlay bloqueante. Se completa por la API si aparece.
 async function completarCaptacionSiHaceFalta(page) {
-  // Race real: el overlay se decide de forma asíncrona (await api.getMyOrg()
-  // dentro del módulo), después de que la página ya terminó de cargar —
-  // un solo chequeo inmediato casi siempre lo agarra todavía oculto. Se
-  // espera explícito a que aparezca O a que pase suficiente tiempo sin que
-  // aparezca (cuenta ya con captación, caso legítimo).
-  let visible = false;
+  // El overlay lo decide el portal de forma asíncrona (api.getMyOrg() dentro del módulo), después de
+  // que la página carga. En vez de esperar un tiempo fijo a ver si aparece (con la máquina cargada
+  // aparecía tarde y la spec seguía con el overlay encima), se pregunta el dato que lo decide: si la
+  // empresa no tiene captación, el overlay VA a aparecer y se espera a que lo haga.
+  await page.waitForLoadState('load'); // el evaluate de abajo no debe pillar la navegación del login
+  const sinCaptacion = await page.evaluate(async () => {
+    const api = (await import('/portal/js/api.js')).default;
+    return !(await api.getMyOrg()).captacion;
+  });
+  if (!sinCaptacion) return;
   try {
-    await page.locator('#captacion-overlay:not(.d-none)').waitFor({ state: 'visible', timeout: 4000 });
-    visible = true;
-  } catch (e) { /* no apareció en 4s -> esta empresa ya tiene captación */ }
-  if (!visible) return;
+    await page.locator('#captacion-overlay:not(.d-none)').waitFor({ state: 'visible', timeout: 15000 });
+  } catch (e) { return; /* sin overlay (p. ej. no es titular): nada que completar */ }
   await page.evaluate(async () => {
     const api = (await import('/portal/js/api.js')).default;
     await api.saveCaptacion({
@@ -75,4 +79,24 @@ async function completarCaptacionSiHaceFalta(page) {
   await page.waitForLoadState('networkidle');
 }
 
-module.exports = { enviarLogin, guardarEstado, esperarAnimaciones, esperarQueNadaSeEjecute, completarCaptacionSiHaceFalta };
+// Decisión de Rick (31-oct-2026, d588d5e): tras crear la contraseña, aceptar-invitacion.html NO entra
+// directo; cierra la sesión y manda a login.html?cuenta=creada con un aviso. Esta espera comprueba ese
+// redirect + aviso y luego inicia sesión con la contraseña recién elegida.
+async function iniciarSesionTrasAlta(page, email, password, destino, timeout = 15000) {
+  await page.waitForURL(/login\.html\?cuenta=creada/, { timeout });
+  await expect(page.locator('#login-msg')).toContainText('Cuenta creada', { timeout });
+  await page.fill('#usuario', email);
+  await page.fill('#password', password);
+  await enviarLogin(page, destino, timeout);
+}
+
+// Portal del cliente (client-dashboard.html) pintado: renderAll() llena #bienvenida-text al FINAL de
+// la carga, que encadena ~3 peticiones por caso (documentos, pagos, formularios; el N+1 de /payments
+// está en client-dashboard.html:1556). Esperar 'networkidle' no sirve: se dispara en el hueco antes
+// de que el JS del portal empiece a llamar a la API. Sin timeout propio: lo acota el del test.
+// Deuda: quitar de los specs cuando se arregle ese N+1.
+async function esperarDashboardCliente(page) {
+  await page.waitForFunction(() => !!document.getElementById('bienvenida-text')?.textContent.trim(), null, { timeout: 0 });
+}
+
+module.exports = { esperarDashboardCliente, iniciarSesionTrasAlta, enviarLogin, guardarEstado, esperarAnimaciones, esperarQueNadaSeEjecute, completarCaptacionSiHaceFalta };

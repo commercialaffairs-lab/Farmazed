@@ -9,7 +9,7 @@
 // Corre con: ./e2e/run.sh formularios.spec.js (o ./e2e/run.sh para todos)
 
 const { test, expect } = require('@playwright/test');
-const { enviarLogin } = require('./_esperas');
+const { enviarLogin, esperarDashboardCliente } = require('./_esperas');
 const path = require('path');
 const fs   = require('fs');
 
@@ -61,6 +61,8 @@ test.describe('R14 — biblioteca de formularios', () => {
 
   test('cliente ve solo los formularios que aplican a su caso (Abreviado + Suplementos) + los "por confirmar"', async ({ page }) => {
     await login(page, 'titular-alfa@farmazed.test', 'Farmazed123!');
+    // Deuda: espera a la carga del dashboard por el N+1 de /payments (client-dashboard.html:1556); quitar cuando se arregle.
+    await esperarDashboardCliente(page);
     await page.locator('a.nav-link', { hasText: 'Mis Productos' }).click();
     const card = page.locator('.fz-product-card', { hasText: 'Producto Formularios Test' });
     await expect(card).toBeVisible({ timeout: 10000 });

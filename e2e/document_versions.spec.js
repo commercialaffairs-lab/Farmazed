@@ -127,7 +127,7 @@ test.describe('TAREA 13 (ajuste) — versionado de documentos, no se pierde el a
     await expect(page.locator('#versionsModal')).toBeVisible({ timeout: 5000 });
     const modal = page.locator('#versionsModal');
     await expect(modal).toContainText('v1');
-    await expect(modal).toContainText('rejected');
+    await expect(modal).toContainText('Rechazado');
     await expect(modal).toContainText(motivo);
     await shot(page, '02-modal-version-anterior');
 

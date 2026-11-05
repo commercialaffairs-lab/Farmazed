@@ -9,6 +9,7 @@
 //     npx playwright test aceptar_invitacion.spec.js
 
 const { test, expect } = require('@playwright/test');
+const { iniciarSesionTrasAlta } = require('./_esperas');
 
 const AUTH_PORT = process.env.FZ_AUTH_PORT || '9099';
 const API_PORT  = process.env.FZ_API_PORT  || '8080';
@@ -41,7 +42,7 @@ test('invitado crea su cuenta y acepta la invitación -> entra como staff; el li
   await page.fill('#password', 'Farmazed123!');
   await page.fill('#password-confirm', 'Farmazed123!');
   await page.click('#btn-submit');
-  await page.waitForURL(/admin\/bandeja\.html/, { timeout: 15000 });
+  await iniciarSesionTrasAlta(page, correo, 'Farmazed123!', /admin\/bandeja\.html/);
 
   // El link ya se usó: abrirlo de nuevo muestra "ya fue usada"
   await page.goto(`/aceptar-invitacion.html?token=${inv.id}`);
@@ -80,5 +81,5 @@ test('invitado con cuenta verificada previa -> "ya tengo una cuenta": inicia ses
   await page.fill('#login-email', correo);
   await page.fill('#login-password', password);
   await page.click('#btn-login');
-  await page.waitForURL(/admin\/bandeja\.html/, { timeout: 15000 });
+  await iniciarSesionTrasAlta(page, correo, password, /admin\/bandeja\.html/);
 });
