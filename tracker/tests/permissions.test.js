@@ -796,3 +796,31 @@ describe('Cotización — línea extra de "Prioridad innovadores"', () => {
     assert.equal(extra.ajustado, true);
   });
 });
+
+// ─── Personal demo (farmaceutico.demo / legal.demo / regente.demo; Rick, 08-nov-2026) ───────────
+// Varias cuentas de un mismo rol comparten los casos de ejemplo, pero asignados.<rol> guarda un solo uid:
+// el personal con claim demo:true accede por caso.demo === true (nunca a un caso real).
+describe('canAccessCase — personal demo', () => {
+  const { canAccessCase, can } = require('../middleware/permissions');
+  const casoDemo = { demo: true, orgId: 'demo-org', asignados: { analista: null, abogado: 'demo-legal', regente: 'demo-regente' } };
+  const casoReal = { orgId: 'org-alfa', asignados: { analista: null, abogado: null, regente: 'otro-uid' } };
+
+  test('el Responsable Farmacéutico demo (no asignado por uid) y el Legal demo acceden a los casos de ejemplo', () => {
+    assert.equal(canAccessCase({ uid: 'demo-farmaceutico', role: 'regente', demo: true }, casoDemo), true);
+    assert.equal(canAccessCase({ uid: 'demo-legal', role: 'abogado', demo: true }, casoDemo), true);
+  });
+  test('el personal demo nunca accede a un caso real, aunque figure como asignado', () => {
+    assert.equal(canAccessCase({ uid: 'demo-legal', role: 'abogado', demo: true }, casoReal), false);
+    assert.equal(canAccessCase({ uid: 'demo-legal', role: 'abogado', demo: true }, { ...casoReal, asignados: { abogado: 'demo-legal' } }), false);
+  });
+  test('el personal real sigue entrando solo por asignación', () => {
+    assert.equal(canAccessCase({ uid: 'otro-uid', role: 'regente' }, casoReal), true);
+    assert.equal(canAccessCase({ uid: 'otro-uid', role: 'regente' }, casoDemo), false);
+  });
+  test('roles: el Legal confirma la parte legal; el Farmacéutico, la técnica (identificadores internos abogado/regente)', () => {
+    assert.equal(can('abogado', 'cases.confirm_8_legal'), true);
+    assert.equal(can('abogado', 'cases.confirm_8_tecnica'), false);
+    assert.equal(can('regente', 'cases.confirm_8_tecnica'), true);
+    assert.equal(can('regente', 'cases.confirm_8_legal'), false);
+  });
+});

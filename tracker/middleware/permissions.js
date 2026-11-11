@@ -89,7 +89,7 @@ const PERMISSIONS = {
   'cases.confirm_8_tecnica': { label: 'Fase 8 — confirmar cotejo técnico/matrices', roles: ['regente', 'admin'] },
   'cases.confirm_10':      { label: 'Confirmar Fase 10 — Recepción y verificación de originales', roles: ['analista', 'admin'] },
   'cases.override':        { label: 'Forzar una transición fuera del mapa (override)', roles: ['admin'] },
-  'cases.assign':          { label: 'Asignar analista/abogado/regente a un caso', roles: ['admin'] },
+  'cases.assign':          { label: 'Asignar analista, Responsable Legal y Responsable Farmacéutico a un caso', roles: ['admin'] },
   'cases.delete':          { label: 'Eliminar (soft delete) un caso',            roles: ['admin'] },
   'documents.upload':      { label: 'Subir un documento (cliente)',              roles: ['cliente_titular', 'cliente_miembro', 'admin'] },
   'documents.request':     { label: 'Solicitar un documento al cliente',         roles: ['analista', 'abogado', 'regente', 'admin'] },
@@ -214,6 +214,8 @@ function canAccessCase(user, caseData) {
     return caseData.clientId === user.uid;
   }
   if (STAFF_ROLES.includes(role)) {
+    // Personal demo (varias cuentas por rol comparten los mismos casos de ejemplo; asignados.<rol> guarda un solo uid).
+    if (user.demo === true) return caseData.demo === true;
     return caseData.asignados?.[role] === user.uid;
   }
   return false;

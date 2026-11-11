@@ -41,7 +41,7 @@ ${generateMarkdownTable()}
 - **Confirmación de fase por rol** (\`canTransitionCase\`, en \`middleware/permissions.js\`,
   §H.8/TAREA 21): el ANALISTA es el único que mueve el status del caso en cualquier fase
   (incluidas fase_08 y fase_10, las dos únicas manuales) — el admin no tiene esta
-  restricción. Abogado/regente no mueven status directamente; solo registran su propia
+  restricción. Responsable Legal/Responsable Farmacéutico no mueven status directamente; solo registran su propia
   confirmación de fase_08 (\`cases.confirm_8_legal\`/\`cases.confirm_8_tecnica\`, endpoint
   \`POST /api/cases/:id/confirmaciones/fase8\`) — fase_08 exige AMBAS antes de que el
   analista pueda avanzarla a fase_09.

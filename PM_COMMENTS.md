@@ -901,3 +901,29 @@ caché del navegador corregida en nginx (la causa de ver menús viejos tras un d
 seguridad, revisión de seguridad con sus correcciones, suite completa en verde y verificación en Chrome
 como admin y como regente antes de desplegar. Lo que queda de la revisión está en PENDIENTES
 ("Seguridad — pendientes de la revisión del 02-nov-2026").
+
+## H.21 — 08-nov-2026: nombres de los roles y cuentas demo nuevas (Rick)
+
+Rick: "remplaza todo lo que diga regente de farmazed [por] RESPONSABLE FARMACEUTICO. y el abogado pasara
+a llamarse, RESPONSABLE LEGAL. de este ultimo hay que crearle una cuenta demo de practica que contemple su
+workflow como hicimos con el cliente y el regente". Cuentas: `farmaceutico.demo@farmazed.com` y
+`legal.demo@farmazed.com`, siguiendo el mismo esquema que `cliente.demo` y `regente.demo`.
+
+Decisiones de Rick (08-nov):
+- **Alcance: solo el rol de Farmazed.** El regente del laboratorio del cliente (formulario), "Regente
+  independiente" y "Abogado tramitante" (Leads) **no** cambian.
+- **`regente.demo` se mantiene**; `farmaceutico.demo` se crea aparte con el mismo rol. Quedan 4 cuentas.
+
+Decisiones del PM:
+- Los identificadores internos (`regente`, `abogado`, rutas `manual/regente/`) no cambian, para no
+  migrar los claims de producción. Solo cambia el texto visible.
+- Las claves van en `DEMO_PASSWORD_*`: `.env` local (ignorado por git) y, al desplegar, Secret Manager.
+  Nunca en el repo.
+- Se asigna como TAREA 63 (la 53 ya existía). El cierre del 08-nov (Farmazed en standby) queda reabierto para esta tarea por
+  pedido directo de Rick.
+
+**Cierre H.21 (11-nov-2026):** TAREA 63 entregada y auditada sin hallazgos de peso. Las e2e no se pudieron
+certificar en verde por la saturación de Patch (load 17–85, freno térmico, otros proyectos); 5 pruebas y el
+backend siguen rojos incluso aisladas, sin comparar contra HEAD. Rick ordenó directamente actualizar los .md,
+commit y push a main; el deploy a producción (y los 2 secretos nuevos) **no** se hizo: queda pendiente de
+una corrida verde. Detalle en handover (11-nov).

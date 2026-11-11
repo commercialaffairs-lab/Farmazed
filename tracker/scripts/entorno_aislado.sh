@@ -76,7 +76,7 @@ fz_start_emulators() {
   echo "→ Levantando emuladores aislados (Auth:$AUTH_PORT Firestore:$FIRESTORE_PORT Storage:$STORAGE_PORT)..."
   setsid npx --yes firebase-tools --config firebase.test-ports.json emulators:start --project demo-farmazed > "$FZ_LOGS/emuladores.log" 2>&1 &
   FZ_EMU_PGID=$!
-  for _ in $(seq 1 240); do grep -q "All emulators ready" "$FZ_LOGS/emuladores.log" 2>/dev/null && break; sleep 1; done
+  for _ in $(seq 1 "${FZ_EMU_ARRANQUE:-240}"); do grep -q "All emulators ready" "$FZ_LOGS/emuladores.log" 2>/dev/null && break; sleep 1; done
   if ! grep -q "All emulators ready" "$FZ_LOGS/emuladores.log" 2>/dev/null; then
     echo "❌ Los emuladores no arrancaron. Log:"; cat "$FZ_LOGS/emuladores.log"; return 1
   fi

@@ -54,7 +54,9 @@ códigos de expediente (`FZ-DEMO-2026-0002`), correos, nombres de empresas y pro
 | trámite | procedure | procédure | processo |
 | expediente | file | dossier | processo |
 | caso | case | dossier | caso |
-| regente | regent | régent | regente |
+| regente (del laboratorio del cliente) | regent | régent | regente |
+| Responsable Farmacéutico (rol `regente` del personal de Farmazed) | Pharmacist in Charge | Responsable pharmaceutique | Responsável Farmacêutico |
+| Responsable Legal (rol `abogado` del personal) | Legal Officer | Responsable juridique | Responsável Jurídico |
 | cotización | quote | devis | orçamento |
 | honorarios | fees | honoraires | honorários |
 | tasa | fee | taxe | taxa |

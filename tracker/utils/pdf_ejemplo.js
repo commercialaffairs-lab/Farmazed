@@ -1,6 +1,6 @@
 /**
  * pdf_ejemplo.js — PDF de una página con texto fijo, para el modo demo (services/demo.js):
- * el documento que el seed deja subido en "Producto Ejemplo 3" (lo revisa el regente) y el
+ * el documento que el seed deja subido en "Producto Ejemplo 3" (lo revisa el Responsable Farmacéutico) y el
  * archivo que el cliente descarga desde el panel "Recorrido demo" para subirlo en su producto
  * (farmazed-web/demo/documento-ejemplo.pdf, generado con scripts/generar_pdf_ejemplo.js).
  *
@@ -55,14 +55,23 @@ function pdfDocumentoCliente() {
   ]);
 }
 
-/** El PDF que el seed deja subido en "Producto Ejemplo 3" para que el regente lo revise. */
+/** El PDF que el seed deja subido en "Producto Ejemplo 3" para que el Responsable Farmacéutico lo revise. */
 function pdfFormulaEjemplo() {
   return pdfEjemplo('Fórmula cuali-cuantitativa', [
     'Producto Ejemplo 3 — Jarabe pediátrico, frasco de 120 mL.',
     'Principio activo: Paracetamol 160 mg / 5 mL.',
     'Excipientes: sorbitol, glicerina, sacarina sódica, esencia de fresa, agua purificada c.s.p.',
-    'Documento de ejemplo para la revisión técnica del regente en la demo.',
+    'Documento de ejemplo para la revisión técnica del Responsable Farmacéutico en la demo.',
   ]);
 }
 
-module.exports = { pdfEjemplo, pdfDocumentoCliente, pdfFormulaEjemplo };
+/** El PDF del poder que el seed deja subido en "Producto Ejemplo 3" para que el Responsable Legal lo revise. */
+function pdfPoderEjemplo() {
+  return pdfEjemplo('Poder original', [
+    'Poder notarial del titular/fabricante al representante local, para el trámite de',
+    'registro sanitario del Producto Ejemplo 3 — Jarabe pediátrico.',
+    'Documento de ejemplo para la revisión legal del Responsable Legal en la demo.',
+  ]);
+}
+
+module.exports = { pdfEjemplo, pdfDocumentoCliente, pdfFormulaEjemplo, pdfPoderEjemplo };

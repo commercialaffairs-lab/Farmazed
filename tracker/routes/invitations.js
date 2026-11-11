@@ -35,7 +35,7 @@ const db     = () => admin.firestore();
 const EMPLEADO_ROLES = ['analista', 'abogado', 'regente', 'admin'];
 const ROL_TEXTO = {
   cliente_titular: 'titular de empresa', cliente_miembro: 'miembro de empresa',
-  analista: 'analista', abogado: 'abogado', regente: 'regente farmacéutico', admin: 'administrador',
+  analista: 'analista', abogado: 'responsable legal', regente: 'responsable farmacéutico', admin: 'administrador',
 };
 
 // Decisión de Rick (31-oct-2026): la invitación llega por correo. Sin SMTP (o si falla) devuelve

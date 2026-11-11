@@ -10,6 +10,8 @@ const { admin, db, api, idTokenFor, crearTitular, crearCaso } = require('./_fixt
 // Claves solo de prueba (emulador): en producción salen de Secret Manager, nunca del repo.
 process.env.DEMO_PASSWORD_CLIENTE ||= 'Prueba-cliente-123!';
 process.env.DEMO_PASSWORD_REGENTE ||= 'Prueba-regente-123!';
+process.env.DEMO_PASSWORD_FARMACEUTICO ||= 'Prueba-farmaceutico-123!';
+process.env.DEMO_PASSWORD_LEGAL ||= 'Prueba-legal-123!';
 // El seed sube el PDF de ejemplo a Storage desde ESTE proceso (no desde el tracker): services/storage.js
 // lee la config (tracker/config.js), que exige el proyecto del emulador.
 process.env.FIREBASE_PROJECT_ID ||= 'demo-farmazed';
@@ -20,7 +22,7 @@ const cuenta = (uid) => CUENTAS.find(c => c.uid === uid);
 const tokenDemo = (uid) => idTokenFor(cuenta(uid).correo, cuenta(uid).password);
 
 describe('Modo demo — cuentas, datos de ejemplo y reinicio', () => {
-  let real, casoReal, tCliente, tRegente;
+  let real, casoReal, tCliente, tRegente, tFarmaceutico, tLegal;
 
   before(async () => {
     real = await crearTitular('demo-real');
@@ -28,6 +30,8 @@ describe('Modo demo — cuentas, datos de ejemplo y reinicio', () => {
     await sembrarDemo();
     tCliente = await tokenDemo('demo-cliente');
     tRegente = await tokenDemo('demo-regente');
+    tFarmaceutico = await tokenDemo('demo-farmaceutico');
+    tLegal = await tokenDemo('demo-legal');
   });
 
   test('las dos cuentas existen con claim demo:true, su rol y entran', async () => {
@@ -259,6 +263,60 @@ describe('Modo demo — cuentas, datos de ejemplo y reinicio', () => {
     assert.deepEqual([r.json.completado, r.json.hechos, r.json.total], [true, 3, 3]);
   });
 
+  test('farmaceutico.demo y legal.demo: existen con su rol, claim demo:true y entran', async () => {
+    assert.deepEqual(CUENTAS.map(c => c.correo), ['cliente.demo@farmazed.com', 'regente.demo@farmazed.com', 'farmaceutico.demo@farmazed.com', 'legal.demo@farmazed.com']);
+    const far = await admin.auth().getUser('demo-farmaceutico');
+    const leg = await admin.auth().getUser('demo-legal');
+    assert.deepEqual([far.displayName, far.customClaims.role, far.customClaims.demo, far.customClaims.orgId], ['Responsable Farmacéutico Ejemplo', 'regente', true, undefined]);
+    assert.deepEqual([leg.displayName, leg.customClaims.role, leg.customClaims.demo, leg.customClaims.orgId], ['Responsable Legal Ejemplo', 'abogado', true, undefined]);
+    for (const t of [tFarmaceutico, tLegal]) assert.equal((await api(t, 'GET', '/api/demo/estado')).json.demo, true);
+  });
+
+  test('farmaceutico.demo y legal.demo ven los mismos casos de ejemplo y ninguno ajeno', async () => {
+    for (const t of [tFarmaceutico, tLegal]) {
+      const casos = await api(t, 'GET', '/api/cases');
+      assert.equal(casos.status, 200);
+      assert.deepEqual(casos.json.cases.map(c => c.caseCode).sort(), ['FZ-DEMO-2026-0002', 'FZ-DEMO-2026-0003']);
+      assert.equal((await api(t, 'GET', `/api/cases/${casoReal}`)).status, 403);
+      assert.equal((await api(t, 'GET', '/api/cases/demo-caso-3')).status, 200);
+    }
+    const far = await api(tFarmaceutico, 'GET', '/api/demo/recorrido');
+    assert.equal(far.json.rol, 'regente');
+    assert.deepEqual(far.json.pasos.map(p => p.id), ['documento', 'cotejo', 'lead']);
+    const leg = await api(tLegal, 'GET', '/api/demo/recorrido');
+    assert.equal(leg.json.rol, 'legal');
+    assert.deepEqual(leg.json.pasos.map(p => p.id), ['documento', 'pedido', 'confirmacion']);
+    assert.deepEqual([leg.json.actual, leg.json.hechos, leg.json.total], ['documento', 0, 3]);
+    for (const idioma of ['en', 'fr', 'pt']) {
+      const trad = await api(tLegal, 'GET', `/api/demo/recorrido?idioma=${idioma}`);
+      assert.equal(trad.json.pasos.every(p => p.titulo && p.descripcion), true);
+      assert.notEqual(trad.json.pasos[0].titulo, leg.json.pasos[0].titulo, `${idioma}: el paso debe venir traducido`);
+    }
+    // El Responsable Legal tiene sembrado un poder (15.2) para revisar.
+    const docs = await api(tLegal, 'GET', '/api/cases/demo-caso-3/documents');
+    assert.equal(docs.json.documents.find(d => d.faddiDocId === 'poder')?.status, 'uploaded');
+  });
+
+  test('recorrido del Responsable Legal: revisar el poder, pedir un documento y confirmar la parte legal de la fase 8', async () => {
+    const revision = await api(tLegal, 'PATCH', '/api/cases/demo-caso-3/documents/demo-doc-3-poder', { status: 'approved', reviewNotes: '' });
+    assert.equal(revision.status, 200, revision.text);
+    let r = await api(tLegal, 'GET', '/api/demo/recorrido');
+    assert.deepEqual([r.json.pasos.find(p => p.id === 'documento').hecho, r.json.actual], [true, 'pedido']);
+
+    const pedido = await api(tLegal, 'POST', '/api/cases/demo-caso-2/documents/request', { faddiDocId: 'declaracion_jurada', message: 'Falta la declaración jurada firmada' });
+    assert.equal(pedido.status, 200, pedido.text);
+    r = await api(tLegal, 'GET', '/api/demo/recorrido');
+    assert.equal(r.json.actual, 'confirmacion');
+
+    // Solo la parte legal: la técnica sigue siendo del Responsable Farmacéutico.
+    assert.equal((await api(tFarmaceutico, 'POST', '/api/cases/demo-caso-3/confirmaciones/fase8', { tipo: 'legal' })).status, 403);
+    const conf = await api(tLegal, 'POST', '/api/cases/demo-caso-3/confirmaciones/fase8', { tipo: 'legal' });
+    assert.equal(conf.status, 200, conf.text);
+    assert.equal((await api(tLegal, 'POST', '/api/cases/demo-caso-3/confirmaciones/fase8', { tipo: 'tecnica' })).status, 403);
+    r = await api(tLegal, 'GET', '/api/demo/recorrido');
+    assert.deepEqual([r.json.completado, r.json.hechos, r.json.total], [true, 3, 3]);
+  });
+
   test('la cuenta demo no puede invitar miembros (mandaría correos reales)', async () => {
     const inv = await api(tCliente, 'POST', '/api/invitations/miembro', { email: 'alguien@ejemplo.test' });
     assert.equal(inv.status, 403);
@@ -267,13 +325,14 @@ describe('Modo demo — cuentas, datos de ejemplo y reinicio', () => {
 
   test('a las cuentas *.demo@ no se les manda ningún correo', async () => {
     assert.equal(esCorreoDemo('cliente.demo@farmazed.com'), true);
+    for (const c of CUENTAS) assert.equal(esCorreoDemo(c.correo), true, c.correo);
     assert.equal(esCorreoDemo('richy@gmail.com'), false);
     const previos = ['SMTP_HOST', 'SMTP_USER', 'SMTP_PASS', 'SMTP_FROM'].map(k => [k, process.env[k]]);
     Object.assign(process.env, { SMTP_HOST: 'smtp.invalid', SMTP_USER: 'u', SMTP_PASS: 'p', SMTP_FROM: 'Farmazed <no-reply@farmazed.test>' });
     try {
       const { enviarInvitacion, correoConfigurado } = require('../services/correo');
       assert.equal(correoConfigurado(), true);
-      assert.equal(await enviarInvitacion({ correo: 'regente.demo@farmazed.com', rol: 'regente', empresa: null, enlace: 'https://x.test' }), false);
+      for (const c of CUENTAS) assert.equal(await enviarInvitacion({ correo: c.correo, rol: 'rol', empresa: null, enlace: 'https://x.test' }), false, c.correo);
     } finally {
       for (const [k, v] of previos) { if (v === undefined) delete process.env[k]; else process.env[k] = v; }
     }

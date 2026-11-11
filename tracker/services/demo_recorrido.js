@@ -12,9 +12,9 @@
  * `recorridoDemo(user, idioma)` devuelve todo ya traducido; el front no trae tablas de textos.
  */
 const admin = require('../utils/firebase_admin.js');
-const { DEMO_ORG_ID, CASOS_SEMBRADOS, DOC_REGENTE_ID, MENSAJES_SEMBRADOS } = require('./demo');
+const { DEMO_ORG_ID, CASOS_SEMBRADOS, DOC_REGENTE_ID, DOC_LEGAL_ID, MENSAJES_SEMBRADOS } = require('./demo');
 const {
-  IDIOMAS, IDIOMA_POR_DEFECTO, PASOS_CLIENTE, PASOS_REGENTE, NOTAS, ETIQUETAS_PANEL, normalizarIdioma, pasosEnIdioma,
+  IDIOMAS, IDIOMA_POR_DEFECTO, PASOS_CLIENTE, PASOS_REGENTE, PASOS_LEGAL, NOTAS, ETIQUETAS_PANEL, normalizarIdioma, pasosEnIdioma,
 } = require('./demo_recorrido_textos');
 
 const db = () => admin.firestore();
@@ -69,6 +69,23 @@ async function estadoRegente() {
   return { hecho, notas: {} };
 }
 
+async function estadoLegal() {
+  const caso3 = db().collection('cases').doc('demo-caso-3');
+  const [caso, doc, pedidos] = await Promise.all([
+    caso3.get(),
+    caso3.collection('documents').doc(DOC_LEGAL_ID).get(),
+    db().collection('cases').doc('demo-caso-2').collection('documents').get(), // el seed no deja documentos en el Producto 2
+  ]);
+  const hecho = {
+    documento:    doc.exists && ['approved', 'rejected'].includes(doc.data().status),
+    pedido:       !pedidos.empty,
+    confirmacion: !!(caso.exists && caso.data().confirmacionesFase8?.legal),
+  };
+  return { hecho, notas: {} };
+}
+
+const ESTADO_POR_ROL = { cliente: estadoCliente, regente: estadoRegente, legal: estadoLegal };
+
 /**
  * Estado del recorrido para una cuenta demo (`user` = claims del token: role, demo) en el idioma
  * pedido ('es' | 'en' | 'fr' | 'pt'; cualquier otro valor cae al español).
@@ -76,8 +93,8 @@ async function estadoRegente() {
  */
 async function recorridoDemo(user, idiomaPedido = IDIOMA_POR_DEFECTO) {
   const idioma = normalizarIdioma(idiomaPedido);
-  const rol = user.role === 'regente' ? 'regente' : 'cliente';
-  const { hecho, notas, extra = {} } = rol === 'regente' ? await estadoRegente() : await estadoCliente();
+  const rol = user.role === 'regente' ? 'regente' : user.role === 'abogado' ? 'legal' : 'cliente';
+  const { hecho, notas, extra = {} } = await ESTADO_POR_ROL[rol]();
   const lista = pasosEnIdioma(rol, idioma).map(p => ({
     ...p,
     hecho: !!hecho[p.id],
@@ -90,4 +107,4 @@ async function recorridoDemo(user, idiomaPedido = IDIOMA_POR_DEFECTO) {
   };
 }
 
-module.exports = { recorridoDemo, PASOS_CLIENTE, PASOS_REGENTE };
+module.exports = { recorridoDemo, PASOS_CLIENTE, PASOS_REGENTE, PASOS_LEGAL };

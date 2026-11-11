@@ -8,8 +8,8 @@
  *   # producción (Cloud Shell, tras el deploy): exige --prod --project=<id> --confirm
  *   node scripts/seed_demo.js --prod --project=farmazed --confirm
  *
- * Variables: DEMO_PASSWORD_CLIENTE y DEMO_PASSWORD_REGENTE (obligatorias la primera vez; nunca en el
- * repo), DEMO_DOMINIO (opcional, por defecto farmazed.com).
+ * Variables: DEMO_PASSWORD_CLIENTE, DEMO_PASSWORD_REGENTE, DEMO_PASSWORD_FARMACEUTICO y DEMO_PASSWORD_LEGAL
+ * (obligatorias la primera vez; nunca en el repo), DEMO_DOMINIO (opcional, por defecto farmazed.com).
  */
 const argv = process.argv.slice(2);
 const prod = argv.includes('--prod');
@@ -20,7 +20,7 @@ if (!process.env.FIRESTORE_EMULATOR_HOST && !prod) {
   process.exit(1);
 }
 if (prod && (!proyecto || !argv.includes('--confirm'))) {
-  console.error('❌ Contra un proyecto real hacen falta --project=<id> y --confirm (reescribe la empresa demo y sus 2 cuentas).');
+  console.error('❌ Contra un proyecto real hacen falta --project=<id> y --confirm (reescribe la empresa demo y sus 4 cuentas).');
   process.exit(1);
 }
 

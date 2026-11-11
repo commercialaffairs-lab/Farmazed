@@ -8,6 +8,7 @@ const { serializeTimestamps } = require('../utils/serialize');
 const { applyTransition } = require('../services/transitions');
 const { getAcceptedQuoteLineForCase } = require('../services/quotes');
 const { effectiveRole, getCaseOrFail, canTransitionCase, requirePermission, can, PERMISSIONS, CLIENT_ROLES, STAFF_ROLES } = require('../middleware/permissions');
+const { DEMO_ORG_ID } = require('../services/demo');
 
 const router = Router();
 const db     = () => admin.firestore();
@@ -68,7 +69,10 @@ router.get('/', requireAuth, requirePermission('cases.list'), async (req, res) =
         ? query.where('orgId', '==', req.user.orgId)
         : query.where('clientId', '==', req.user.uid);
     } else if (STAFF_ROLES.includes(role)) {
-      query = query.where(`asignados.${role}`, '==', req.user.uid);
+      // El personal demo ve los casos de ejemplo de la empresa demo (ver canAccessCase).
+      query = req.user.demo === true
+        ? query.where('orgId', '==', DEMO_ORG_ID)
+        : query.where(`asignados.${role}`, '==', req.user.uid);
     }
 
     // Optional filters
@@ -77,7 +81,10 @@ router.get('/', requireAuth, requirePermission('cases.list'), async (req, res) =
     if (req.query.assignedTo)   query = query.where('assignedTo', '==', req.query.assignedTo);
 
     const snap  = await query.limit(200).get();
-    const cases = snap.docs.map(d => {
+    // Personal demo: solo los casos de ejemplo (demo:true), no los que crea el cliente demo durante su recorrido
+    // (el filtro va en memoria: en la consulta pediría otro índice compuesto).
+    const visibles = STAFF_ROLES.includes(role) && req.user.demo === true ? snap.docs.filter(d => d.data().demo === true) : snap.docs;
+    const cases = visibles.map(d => {
       const data = d.data();
       return { id: d.id, ...sinCamposInternos(data, role), productName: data.product?.nombreComercial || '(sin nombre de producto)' };
     });

@@ -171,7 +171,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script type="module">
-  import { initBackoffice, esc, logout, cambiarContrasena, auth } from '../portal/js/auth.js';
+  import { initBackoffice, esc, logout, cambiarContrasena, auth, urlManualPersonal } from '../portal/js/auth.js';
   import { avisar, confirmar } from '../portal/js/dialogos.js';
   import api from '../portal/js/api.js';
 
@@ -184,7 +184,7 @@
   const NOMBRE_MIN = 2;
   const NOMBRE_MAX = 80;
   const CONTRASENA_MIN = 10;
-  const ETIQUETA_ROL = { admin: 'Admin', analista: 'Analista', abogado: 'Abogado', regente: 'Regente' };
+  const ETIQUETA_ROL = { admin: 'Admin', analista: 'Analista', abogado: 'Responsable Legal', regente: 'Responsable Farmacéutico' };
   // Códigos de Firebase Auth al volver a autenticar / cambiar la contraseña (auth.js cambiarContrasena).
   const ERRORES_CONTRASENA = {
     'auth/wrong-password':             'La contraseña actual no es correcta.',
@@ -193,7 +193,7 @@
     'auth/weak-password':              'La nueva contraseña es demasiado débil: usa al menos 10 caracteres con letras y números.',
     'auth/too-many-requests':          'Demasiados intentos. Espera unos minutos y vuelve a intentarlo.',
   };
-  const manualUrl = () => `/manual/regente/${encodeURIComponent(I18N.idioma() || 'es')}.html`;
+  const manualUrl = () => urlManualPersonal(I18N.idioma());
   const etiquetaRol = (rol) => (ETIQUETA_ROL[rol] ? t(ETIQUETA_ROL[rol]) : rol || '—');
 
   // Lo último cargado, para repintarlo al cambiar de idioma sin volver a pedirlo.

@@ -541,7 +541,7 @@ async function documentosPorSimularDemo() {
     const docs = await api.listDocuments(state.caseId);
     porSubsanar = new Set((Array.isArray(docs) ? docs : []).filter(d => ESTADOS_POR_SUBSANAR.includes(d.status)).map(d => d.faddiDocId));
   } catch (e) {
-    toast(t('No se pudo comprobar qué documentos pidió o rechazó el regente; se simulan solo los que faltan.'), 'warning');
+    toast(t('No se pudo comprobar qué documentos pidió o rechazó el Responsable Farmacéutico; se simulan solo los que faltan.'), 'warning');
   }
   return delCliente.filter(d => !d.uploaded || porSubsanar.has(d.id)).map(d => d.id);
 }

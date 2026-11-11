@@ -41,7 +41,7 @@ main{padding:28px 16px 40px}
 .paso{background:var(--tarjeta);border:1px solid var(--borde);border-radius:14px;padding:22px 24px;margin:18px 0}
 .paso-cab{display:flex;align-items:center;gap:14px}
 .paso-num{flex:none;width:38px;height:38px;border-radius:50%;background:var(--azul);color:#fff;font:600 1.05rem var(--titulos);display:grid;place-items:center}
-.seccion-regente .paso-num{background:var(--verde)}
+.seccion-regente .paso-num,.seccion-legal .paso-num{background:var(--verde)}
 .paso h3{font-size:1.3rem;color:var(--navy)}
 .paso-desc{margin:12px 0 0;font-size:1.02rem}
 .paso-extra{margin:12px 0 0}
@@ -50,7 +50,7 @@ main{padding:28px 16px 40px}
 .paso-sig .fin{color:var(--verde);font-weight:600}
 .pantalla{margin:18px 0 0;border:1px solid var(--borde);border-radius:12px;overflow:hidden;background:#F4F6FB}
 .pantalla figcaption{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:center;background:var(--azul);color:#fff;padding:8px 14px;font-size:.78rem}
-.pantalla-regente figcaption{background:var(--verde)}
+.pantalla-regente figcaption,.pantalla-legal figcaption{background:var(--verde)}
 .pantalla-ruta{font-weight:600}
 .pantalla-nota{color:rgba(255,255,255,.75)}
 .pantalla-cuerpo{padding:16px;font-size:.86rem;display:grid;gap:14px}
@@ -128,11 +128,11 @@ main{padding:28px 16px 40px}
 .fases li{display:flex;align-items:center;gap:12px;background:var(--tarjeta);border:1px solid var(--borde);border-radius:10px;padding:10px 14px;flex-wrap:wrap}
 .fase-num{flex:none;width:30px;height:30px;border-radius:50%;background:var(--tinte);color:var(--azul);font:600 .9rem var(--titulos);display:grid;place-items:center}
 .fase-demo{border-color:var(--azul)}
-.fase-regente{border-color:var(--verde)}
-.fase-regente .fase-num{background:#e6f1e7;color:var(--verde)}
+.fase-regente,.fase-legal{border-color:var(--verde)}
+.fase-regente .fase-num,.fase-legal .fase-num{background:#e6f1e7;color:var(--verde)}
 .fase-nombre{flex:1 1 200px}
 .fase-tag{font-size:.72rem;font-weight:700;color:var(--azul);background:var(--tinte);padding:3px 9px;border-radius:999px}
-.fase-regente .fase-tag{color:var(--verde);background:#e6f1e7}
+.fase-regente .fase-tag,.fase-legal .fase-tag{color:var(--verde);background:#e6f1e7}
 .notas{margin:0;padding-left:22px}
 .notas li{margin:8px 0}
 .pie{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;padding-top:20px;padding-bottom:40px;border-top:1px solid var(--borde);color:var(--mudo);font-size:.88rem}
@@ -277,13 +277,13 @@ main{padding:28px 16px 40px}
 </article>
 <article class="paso" id="cliente-mensaje">
   <div class="paso-cab"><span class="paso-num">6</span><h3>Write to your Farmazed team</h3></div>
-  <p class="paso-desc">Under &quot;Messages&quot; pick a product and write: this is how you talk to your regent throughout the procedure. Under &quot;My Products&quot; you follow each file&#39;s progress through the phases.</p>
+  <p class="paso-desc">Under &quot;Messages&quot; pick a product and write: this is how you talk to your Pharmacist in Charge throughout the procedure. Under &quot;My Products&quot; you follow each file&#39;s progress through the phases.</p>
   <figure class="pantalla pantalla-cliente"><figcaption><span class="pantalla-ruta">Client portal › Messages</span><span class="pantalla-nota">What it looks like in the application</span></figcaption><div class="pantalla-cuerpo">
 <div class="m-card">
   <div class="m-card-cab"><h4>Messages</h4><span class="m-input m-input-sel">Producto Ejemplo 3 — Jarabe pediátrico ▾</span></div>
   <div class="m-hilo">
     <div class="m-msg mio"><small>Cliente Ejemplo</small>Hello, we have already paid the quote. What is the next step?</div>
-    <div class="m-msg"><small>Regente Ejemplo</small>Received, thank you. We have already reviewed the digital documentation; as soon as we confirm the technical check we move on to the originals.</div>
+    <div class="m-msg"><small>Responsable Farmacéutico Ejemplo</small>Received, thank you. We have already reviewed the digital documentation; as soon as we confirm the technical check we move on to the originals.</div>
   </div>
   <div class="m-fila"><span class="m-input m-crece m-input-vacio">Write a message…</span><span class="m-btn m-btn-primario m-btn-sm">Send</span></div>
 </div></div></figure>
@@ -314,12 +314,12 @@ main{padding:28px 16px 40px}
 
   <section class="seccion" id="notas">
     <h2>Good to know</h2>
-    <ul class="notas"><li>The wizard requires the mandatory documents for your procedure type before you can submit the request; until then the product is saved as a draft you can resume.</li><li>The quote groups your ongoing procedures with the breakdown of Farmazed fees and official fees (DNFD, MEF, IEA). If in doubt, write to your team under &quot;Messages&quot; before accepting it.</li><li>Messages are attached to each product: your regent sees them in the file and replies the same way.</li><li>The application and this guide exist in Spanish, English, French and Portuguese; pick the language in the top bar. Product and company names are not translated.</li></ul>
+    <ul class="notas"><li>The wizard requires the mandatory documents for your procedure type before you can submit the request; until then the product is saved as a draft you can resume.</li><li>The quote groups your ongoing procedures with the breakdown of Farmazed fees and official fees (DNFD, MEF, IEA). If in doubt, write to your team under &quot;Messages&quot; before accepting it.</li><li>Messages are attached to each product: your Pharmacist in Charge sees them in the file and replies the same way.</li><li>The application and this guide exist in Spanish, English, French and Portuguese; pick the language in the top bar. Product and company names are not translated.</li></ul>
   </section>
 </main>
 <footer class="pie ancho">
   <span><a href="/client-dashboard.html">Go to the portal</a></span>
-  <span>Guide generated on 2026-11-02</span>
+  <span>Guide generated on 2026-11-08</span>
 </footer>
 </body>
 </html>

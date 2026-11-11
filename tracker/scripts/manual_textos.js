@@ -1,12 +1,14 @@
 /**
- * manual_textos.js — Prosa de los dos manuales de usuario (Rick, 01-nov-2026: recorrido del cliente
- * separado del recorrido del regente).
+ * manual_textos.js — Prosa de los tres manuales de usuario (Rick, 01-nov-2026: recorrido del cliente
+ * separado del recorrido del regente; 08-nov: manual del Responsable Legal).
  *
  *   - `cliente`: manual del portal del cliente (farmazed-web/manual/cliente/{es,en,fr,pt}.html). Sirve a
  *     un cliente real (activa el recorrido en "Mi cuenta") y a quien prueba la cuenta de demostración
  *     (apartado "Cuenta de demostración").
- *   - `regente`: manual del recorrido del regente, que solo existe en la demo
+ *   - `regente`: manual del Responsable Farmacéutico (rol interno `regente`), que solo existe en la demo
  *     (farmazed-web/manual/regente/{es,en,fr,pt}.html).
+ *   - `legal`: manual del Responsable Legal (rol interno `abogado`), igual que el anterior
+ *     (farmazed-web/manual/legal/{es,en,fr,pt}.html).
  *
  * Lo consume scripts/generar_manual.js. Los títulos y descripciones de los pasos y los rótulos del
  * panel NO están aquí: son los de services/demo_recorrido_textos.js (la misma fuente que usa el
@@ -18,7 +20,7 @@ const IDIOMAS = ['es', 'en', 'fr', 'pt'];
 const NOMBRES = { es: 'Español', en: 'English', fr: 'Français', pt: 'Português' };
 
 // Fases (tracker/data/case_status.js) en las que interviene cada recorrido.
-const FASES_RECORRIDO = { cliente: [4, 5, 6], regente: [8] };
+const FASES_RECORRIDO = { cliente: [4, 5, 6], regente: [8], legal: [4, 8] };
 
 const es = {
   comunes: {
@@ -56,21 +58,21 @@ const es = {
       notas: { titulo: 'Bueno saber', items: [
         'El asistente exige los documentos obligatorios de tu tipo de trámite para enviar la solicitud; mientras no estén, el producto queda guardado como borrador y puedes retomarlo.',
         'La cotización agrupa tus trámites en curso con el desglose de honorarios Farmazed y tasas oficiales (DNFD, MEF, IEA). Si tienes dudas, escribe a tu equipo desde "Mensajes" antes de aceptarla.',
-        'Los mensajes quedan asociados a cada producto: tu regente los ve en el expediente y te responde por la misma vía.',
+        'Los mensajes quedan asociados a cada producto: tu Responsable Farmacéutico los ve en el expediente y te responde por la misma vía.',
         'La aplicación y este manual existen en español, inglés, francés y portugués; elige el idioma en la barra superior. Los nombres de productos y empresas no se traducen.',
       ] },
     },
   },
   regente: {
-    titulo: 'Manual del regente (cuenta de demostración)',
-    subtitulo: 'El back-office de Farmazed visto por un regente, paso a paso',
+    titulo: 'Manual del Responsable Farmacéutico (cuenta de demostración)',
+    subtitulo: 'El back-office de Farmazed visto por un Responsable Farmacéutico, paso a paso',
     intro: [
-      'La cuenta de demostración del regente te deja trabajar un expediente de ejemplo como lo hace el equipo de Farmazed: revisar documentos, confirmar el cotejo técnico y atender un lead del CRM, con datos de ejemplo y sin tocar nada real.',
+      'La cuenta de demostración del Responsable Farmacéutico te deja trabajar un expediente de ejemplo como lo hace el equipo de Farmazed: revisar documentos, confirmar el cotejo técnico y atender un lead del CRM, con datos de ejemplo y sin tocar nada real.',
       'Este manual sigue el panel "Recorrido demo" que verás dentro del back-office. Cada paso reproduce la pantalla real y te dice qué hacer y qué viene después.',
     ],
     secciones: {
       empezar: { titulo: 'Antes de empezar', parrafos: [
-        'Entra en la página de inicio de sesión con el correo del regente de demostración y la clave que te dieron; las claves no aparecen en este manual. El recorrido del regente solo existe en la cuenta de demostración.',
+        'Entra en la página de inicio de sesión con el correo del Responsable Farmacéutico de demostración y la clave que te dieron; las claves no aparecen en este manual. El recorrido del Responsable Farmacéutico solo existe en la cuenta de demostración.',
         'Arriba, en la barra, está el selector de idioma (ES · EN · FR · PT): todo el back-office y el enlace "Ayuda" (que abre este manual) cambian al idioma que elijas.',
       ] },
       panel: { titulo: 'El panel "Recorrido demo"', parrafos: [
@@ -81,8 +83,34 @@ const es = {
       fases: { titulo: 'Las 13 fases de un expediente', intro: 'Cada expediente avanza por estas fases; en "Mi Bandeja" ves en cuál va cada uno de los tuyos. La marcada es la que tocas en el recorrido.' },
       notas: { titulo: 'Bueno saber', items: [
         'Al rechazar un documento, el motivo que escribas lo ve el cliente en su portal: sé concreto sobre qué debe corregir.',
-        'La fase 8 exige dos confirmaciones: la técnica/matrices (tuya) y la legal (del abogado). Hasta que estén las dos, el expediente no avanza.',
+        'La fase 8 exige dos confirmaciones: la técnica/matrices (tuya) y la legal (del Responsable Legal). Hasta que estén las dos, el expediente no avanza.',
         'Los leads son solicitudes del formulario público del sitio; cambiar su estado o dejar notas es la forma de trabajarlos antes de que el admin invite a la empresa a crear su cuenta.',
+        'La aplicación y este manual existen en español, inglés, francés y portugués; elige el idioma en la barra superior.',
+      ] },
+    },
+  },
+  legal: {
+    titulo: 'Manual del Responsable Legal (cuenta de demostración)',
+    subtitulo: 'El back-office de Farmazed visto por un Responsable Legal, paso a paso',
+    intro: [
+      'La cuenta de demostración del Responsable Legal te deja trabajar los expedientes de ejemplo como lo hace el equipo de Farmazed: revisar un poder, pedir un documento al cliente y confirmar la revisión legal de la fase 8, con datos de ejemplo y sin tocar nada real.',
+      'Este manual sigue el panel "Recorrido demo" que verás dentro del back-office. Cada paso reproduce la pantalla real y te dice qué hacer y qué viene después.',
+    ],
+    secciones: {
+      empezar: { titulo: 'Antes de empezar', parrafos: [
+        'Entra en la página de inicio de sesión con el correo del Responsable Legal de demostración y la clave que te dieron; las claves no aparecen en este manual. El recorrido del Responsable Legal solo existe en la cuenta de demostración.',
+        'Arriba, en la barra, está el selector de idioma (ES · EN · FR · PT): todo el back-office y el enlace "Ayuda" (que abre este manual) cambian al idioma que elijas.',
+      ] },
+      panel: { titulo: 'El panel "Recorrido demo"', parrafos: [
+        'Abajo a la derecha verás una tarjeta con los tres pasos del recorrido. Marca lo que ya hiciste, resalta el paso en que vas y el botón "Ir al paso" te lleva a la pantalla correcta. El progreso se deduce de los datos: no hay nada que guardar.',
+        'El botón "Reiniciar cuenta demo", arriba en la barra, borra lo que hiciste (también lo del cliente demo) y deja todo como al principio. Tendrás que volver a iniciar sesión.',
+      ] },
+      pasos: { titulo: 'Los tres pasos', intro: 'Sobre el "Producto Ejemplo 3" (fase 8) y el "Producto Ejemplo 2" (fase 4).' },
+      fases: { titulo: 'Las 13 fases de un expediente', intro: 'Cada expediente avanza por estas fases; en "Mi Bandeja" ves en cuál va cada uno de los tuyos. La marcada es la que tocas en el recorrido.' },
+      notas: { titulo: 'Bueno saber', items: [
+        'Al rechazar un documento, el motivo que escribas lo ve el cliente en su portal: sé concreto sobre qué debe corregir.',
+        'La fase 8 exige dos confirmaciones: la legal (tuya) y la técnica/matrices (del Responsable Farmacéutico). Hasta que estén las dos, el expediente no avanza.',
+        'Al pedir un documento, el expediente pasa a documentos pendientes y el cliente lo ve como pendiente en su portal; cuando lo sube, vuelves a revisarlo desde "Mi Bandeja".',
         'La aplicación y este manual existen en español, inglés, francés y portugués; elige el idioma en la barra superior.',
       ] },
     },
@@ -125,21 +153,21 @@ const en = {
       notas: { titulo: 'Good to know', items: [
         'The wizard requires the mandatory documents for your procedure type before you can submit the request; until then the product is saved as a draft you can resume.',
         'The quote groups your ongoing procedures with the breakdown of Farmazed fees and official fees (DNFD, MEF, IEA). If in doubt, write to your team under "Messages" before accepting it.',
-        'Messages are attached to each product: your regent sees them in the file and replies the same way.',
+        'Messages are attached to each product: your Pharmacist in Charge sees them in the file and replies the same way.',
         'The application and this guide exist in Spanish, English, French and Portuguese; pick the language in the top bar. Product and company names are not translated.',
       ] },
     },
   },
   regente: {
-    titulo: 'Regent guide (demo account)',
-    subtitulo: 'The Farmazed back office as a regent sees it, step by step',
+    titulo: 'Pharmacist in Charge guide (demo account)',
+    subtitulo: 'The Farmazed back office as a Pharmacist in Charge sees it, step by step',
     intro: [
-      'The regent demo account lets you work a sample file the way the Farmazed team does: review documents, confirm the technical check and handle a CRM lead, with sample data and without touching anything real.',
+      'The Pharmacist in Charge demo account lets you work a sample file the way the Farmazed team does: review documents, confirm the technical check and handle a CRM lead, with sample data and without touching anything real.',
       'This guide follows the "Demo tour" panel you will see inside the back office. Each step reproduces the real screen and tells you what to do and what comes next.',
     ],
     secciones: {
       empezar: { titulo: 'Before you start', parrafos: [
-        'Sign in on the login page with the demo regent\'s e-mail and the password you were given; passwords are not printed in this guide. The regent tour only exists in the demo account.',
+        'Sign in on the login page with the demo Pharmacist in Charge\'s e-mail and the password you were given; passwords are not printed in this guide. The Pharmacist in Charge tour only exists in the demo account.',
         'The language switch (ES · EN · FR · PT) is in the top bar: the whole back office and the "Help" link (which opens this guide) change to the language you pick.',
       ] },
       panel: { titulo: 'The "Demo tour" panel', parrafos: [
@@ -150,8 +178,34 @@ const en = {
       fases: { titulo: 'The 13 phases of a file', intro: 'Every file moves through these phases; "My Inbox" shows where each of yours is. The highlighted one is the one you touch during the tour.' },
       notas: { titulo: 'Good to know', items: [
         'When you reject a document, the reason you write is shown to the client in their portal: be specific about what must be corrected.',
-        'Phase 8 requires two confirmations: technical/matrices (yours) and legal (the lawyer\'s). The file does not move on until both are in.',
+        'Phase 8 requires two confirmations: technical/matrices (yours) and legal (the Legal Officer\'s). The file does not move on until both are in.',
         'Leads are requests from the public website form; changing their status or leaving notes is how they are worked before the admin invites the company to create its account.',
+        'The application and this guide exist in Spanish, English, French and Portuguese; pick the language in the top bar.',
+      ] },
+    },
+  },
+  legal: {
+    titulo: 'Legal Officer guide (demo account)',
+    subtitulo: 'The Farmazed back office as a Legal Officer sees it, step by step',
+    intro: [
+      'The Legal Officer demo account lets you work the sample files the way the Farmazed team does: review a power of attorney, request a document from the client and confirm the phase 8 legal review, with sample data and without touching anything real.',
+      'This guide follows the "Demo tour" panel you will see inside the back office. Each step reproduces the real screen and tells you what to do and what comes next.',
+    ],
+    secciones: {
+      empezar: { titulo: 'Before you start', parrafos: [
+        'Sign in on the login page with the demo Legal Officer\'s e-mail and the password you were given; passwords are not printed in this guide. The Legal Officer tour only exists in the demo account.',
+        'The language switch (ES · EN · FR · PT) is in the top bar: the whole back office and the "Help" link (which opens this guide) change to the language you pick.',
+      ] },
+      panel: { titulo: 'The "Demo tour" panel', parrafos: [
+        'At the bottom right you will see a card with the three steps of the tour. It ticks off what you have done, highlights the step you are on, and the "Go to this step" button takes you to the right screen. Progress is derived from the data: there is nothing to save.',
+        'The "Reset demo account" button in the top bar wipes what you did (including the demo client\'s work) and puts everything back to the start. You will have to sign in again.',
+      ] },
+      pasos: { titulo: 'The three steps', intro: 'Around "Producto Ejemplo 3" (phase 8) and "Producto Ejemplo 2" (phase 4).' },
+      fases: { titulo: 'The 13 phases of a file', intro: 'Every file moves through these phases; "My Inbox" shows where each of yours is. The highlighted one is the one you touch during the tour.' },
+      notas: { titulo: 'Good to know', items: [
+        'When you reject a document, the reason you write is shown to the client in their portal: be specific about what must be corrected.',
+        'Phase 8 requires two confirmations: legal (yours) and technical/matrices (the Pharmacist in Charge\'s). The file does not move on until both are in.',
+        'When you request a document, the file moves to pending documents and the client sees it as pending in their portal; once they upload it you review it again from "My Inbox".',
         'The application and this guide exist in Spanish, English, French and Portuguese; pick the language in the top bar.',
       ] },
     },
@@ -194,21 +248,21 @@ const fr = {
       notas: { titulo: 'Bon à savoir', items: [
         'L\'assistant exige les documents obligatoires de votre type de procédure pour envoyer la demande ; tant qu\'ils manquent, le produit reste enregistré comme brouillon et vous pouvez le reprendre.',
         'Le devis regroupe vos procédures en cours avec le détail des honoraires Farmazed et des taxes officielles (DNFD, MEF, IEA). En cas de doute, écrivez à votre équipe dans « Messages » avant de l\'accepter.',
-        'Les messages sont rattachés à chaque produit : votre régent les voit dans le dossier et vous répond par la même voie.',
+        'Les messages sont rattachés à chaque produit : votre Responsable pharmaceutique les voit dans le dossier et vous répond par la même voie.',
         'L\'application et ce guide existent en espagnol, anglais, français et portugais ; choisissez la langue dans la barre du haut. Les noms de produits et d\'entreprises ne sont pas traduits.',
       ] },
     },
   },
   regente: {
-    titulo: 'Guide du régent (compte de démonstration)',
-    subtitulo: 'Le back-office Farmazed vu par un régent, pas à pas',
+    titulo: 'Guide du Responsable pharmaceutique (compte de démonstration)',
+    subtitulo: 'Le back-office Farmazed vu par un Responsable pharmaceutique, pas à pas',
     intro: [
-      'Le compte de démonstration du régent vous permet de traiter un dossier d\'exemple comme le fait l\'équipe Farmazed : examiner des documents, confirmer la vérification technique et traiter un lead du CRM, avec des données d\'exemple et sans rien toucher de réel.',
+      'Le compte de démonstration du Responsable pharmaceutique vous permet de traiter un dossier d\'exemple comme le fait l\'équipe Farmazed : examiner des documents, confirmer la vérification technique et traiter un lead du CRM, avec des données d\'exemple et sans rien toucher de réel.',
       'Ce guide suit le panneau « Parcours démo » que vous verrez dans le back-office. Chaque étape reproduit l\'écran réel, vous dit quoi faire et ce qui vient ensuite.',
     ],
     secciones: {
       empezar: { titulo: 'Avant de commencer', parrafos: [
-        'Connectez-vous sur la page de connexion avec le courriel du régent de démonstration et le mot de passe reçu ; les mots de passe ne figurent pas dans ce guide. Le parcours du régent n\'existe que dans le compte de démonstration.',
+        'Connectez-vous sur la page de connexion avec le courriel du Responsable pharmaceutique de démonstration et le mot de passe reçu ; les mots de passe ne figurent pas dans ce guide. Le parcours du Responsable pharmaceutique n\'existe que dans le compte de démonstration.',
         'Le sélecteur de langue (ES · EN · FR · PT) est dans la barre du haut : tout le back-office et le lien « Aide » (qui ouvre ce guide) passent dans la langue choisie.',
       ] },
       panel: { titulo: 'Le panneau « Parcours démo »', parrafos: [
@@ -219,8 +273,34 @@ const fr = {
       fases: { titulo: 'Les 13 phases d\'un dossier', intro: 'Chaque dossier avance à travers ces phases ; « Ma corbeille » indique où en est chacun des vôtres. La phase surlignée est celle que vous touchez pendant le parcours.' },
       notas: { titulo: 'Bon à savoir', items: [
         'Quand vous refusez un document, le motif que vous écrivez est visible par le client dans son portail : soyez précis sur ce qu\'il doit corriger.',
-        'La phase 8 exige deux confirmations : technique/matrices (la vôtre) et juridique (celle de l\'avocat). Tant que les deux ne sont pas là, le dossier n\'avance pas.',
+        'La phase 8 exige deux confirmations : technique/matrices (la vôtre) et juridique (celle du Responsable juridique). Tant que les deux ne sont pas là, le dossier n\'avance pas.',
         'Les leads sont des demandes du formulaire public du site ; changer leur statut ou laisser des notes est la façon de les travailler avant que l\'admin n\'invite l\'entreprise à créer son compte.',
+        'L\'application et ce guide existent en espagnol, anglais, français et portugais ; choisissez la langue dans la barre du haut.',
+      ] },
+    },
+  },
+  legal: {
+    titulo: 'Guide du Responsable juridique (compte de démonstration)',
+    subtitulo: 'Le back-office Farmazed vu par un Responsable juridique, pas à pas',
+    intro: [
+      'Le compte de démonstration du Responsable juridique vous permet de traiter les dossiers d\'exemple comme le fait l\'équipe Farmazed : examiner une procuration, demander un document au client et confirmer l\'examen juridique de la phase 8, avec des données d\'exemple et sans rien toucher de réel.',
+      'Ce guide suit le panneau « Parcours démo » que vous verrez dans le back-office. Chaque étape reproduit l\'écran réel, vous dit quoi faire et ce qui vient ensuite.',
+    ],
+    secciones: {
+      empezar: { titulo: 'Avant de commencer', parrafos: [
+        'Connectez-vous sur la page de connexion avec le courriel du Responsable juridique de démonstration et le mot de passe reçu ; les mots de passe ne figurent pas dans ce guide. Le parcours du Responsable juridique n\'existe que dans le compte de démonstration.',
+        'Le sélecteur de langue (ES · EN · FR · PT) est dans la barre du haut : tout le back-office et le lien « Aide » (qui ouvre ce guide) passent dans la langue choisie.',
+      ] },
+      panel: { titulo: 'Le panneau « Parcours démo »', parrafos: [
+        'En bas à droite, une carte liste les trois étapes du parcours. Elle coche ce que vous avez déjà fait, met en évidence l\'étape en cours, et le bouton « Aller à cette étape » vous amène au bon écran. La progression se déduit des données : rien à enregistrer.',
+        'Le bouton « Réinitialiser le compte démo », dans la barre du haut, efface ce que vous avez fait (y compris le travail du client démo) et remet tout à l\'état initial. Il faudra vous reconnecter.',
+      ] },
+      pasos: { titulo: 'Les trois étapes', intro: 'Autour du « Producto Ejemplo 3 » (phase 8) et du « Producto Ejemplo 2 » (phase 4).' },
+      fases: { titulo: 'Les 13 phases d\'un dossier', intro: 'Chaque dossier avance à travers ces phases ; « Ma corbeille » indique où en est chacun des vôtres. La phase surlignée est celle que vous touchez pendant le parcours.' },
+      notas: { titulo: 'Bon à savoir', items: [
+        'Quand vous refusez un document, le motif que vous écrivez est visible par le client dans son portail : soyez précis sur ce qu\'il doit corriger.',
+        'La phase 8 exige deux confirmations : juridique (la vôtre) et technique/matrices (celle du Responsable pharmaceutique). Tant que les deux ne sont pas là, le dossier n\'avance pas.',
+        'Lorsque vous demandez un document, le dossier passe en documents en attente et le client le voit en attente dans son portail ; une fois téléversé, vous l\'examinez de nouveau depuis « Ma corbeille ».',
         'L\'application et ce guide existent en espagnol, anglais, français et portugais ; choisissez la langue dans la barre du haut.',
       ] },
     },
@@ -263,21 +343,21 @@ const pt = {
       notas: { titulo: 'Bom saber', items: [
         'O assistente exige os documentos obrigatórios do seu tipo de processo para enviar o pedido; enquanto faltarem, o produto fica guardado como rascunho e pode retomá-lo.',
         'O orçamento agrupa os seus processos em curso com a discriminação dos honorários Farmazed e das taxas oficiais (DNFD, MEF, IEA). Em caso de dúvida, escreva à sua equipa em "Mensagens" antes de o aceitar.',
-        'As mensagens ficam associadas a cada produto: o seu regente vê-as no processo e responde pela mesma via.',
+        'As mensagens ficam associadas a cada produto: o seu Responsável Farmacêutico vê-as no processo e responde pela mesma via.',
         'A aplicação e este manual existem em espanhol, inglês, francês e português; escolha o idioma na barra superior. Os nomes de produtos e empresas não se traduzem.',
       ] },
     },
   },
   regente: {
-    titulo: 'Manual do regente (conta de demonstração)',
-    subtitulo: 'O back-office da Farmazed visto por um regente, passo a passo',
+    titulo: 'Manual do Responsável Farmacêutico (conta de demonstração)',
+    subtitulo: 'O back-office da Farmazed visto por um Responsável Farmacêutico, passo a passo',
     intro: [
-      'A conta de demonstração do regente permite-lhe trabalhar um processo de exemplo como o faz a equipa da Farmazed: rever documentos, confirmar a verificação técnica e atender um lead do CRM, com dados de exemplo e sem tocar em nada real.',
+      'A conta de demonstração do Responsável Farmacêutico permite-lhe trabalhar um processo de exemplo como o faz a equipa da Farmazed: rever documentos, confirmar a verificação técnica e atender um lead do CRM, com dados de exemplo e sem tocar em nada real.',
       'Este manual segue o painel "Percurso demo" que verá dentro do back-office. Cada passo reproduz o ecrã real e diz-lhe o que fazer e o que vem a seguir.',
     ],
     secciones: {
       empezar: { titulo: 'Antes de começar', parrafos: [
-        'Entre na página de início de sessão com o e-mail do regente de demonstração e a palavra-passe que recebeu; as palavras-passe não aparecem neste manual. O percurso do regente só existe na conta de demonstração.',
+        'Entre na página de início de sessão com o e-mail do Responsável Farmacêutico de demonstração e a palavra-passe que recebeu; as palavras-passe não aparecem neste manual. O percurso do Responsável Farmacêutico só existe na conta de demonstração.',
         'O seletor de idioma (ES · EN · FR · PT) está na barra superior: todo o back-office e a ligação "Ajuda" (que abre este manual) mudam para o idioma que escolher.',
       ] },
       panel: { titulo: 'O painel "Percurso demo"', parrafos: [
@@ -288,8 +368,34 @@ const pt = {
       fases: { titulo: 'As 13 fases de um processo', intro: 'Cada processo avança por estas fases; em "A minha caixa" vê em qual está cada um dos seus. A destacada é a que toca durante o percurso.' },
       notas: { titulo: 'Bom saber', items: [
         'Ao rejeitar um documento, o motivo que escrever é visto pelo cliente no seu portal: seja concreto sobre o que deve corrigir.',
-        'A fase 8 exige duas confirmações: a técnica/matrizes (sua) e a jurídica (do advogado). Até estarem as duas, o processo não avança.',
+        'A fase 8 exige duas confirmações: a técnica/matrizes (sua) e a jurídica (do Responsável Jurídico). Até estarem as duas, o processo não avança.',
         'Os leads são pedidos do formulário público do site; mudar o seu estado ou deixar notas é a forma de os trabalhar antes de o admin convidar a empresa a criar a sua conta.',
+        'A aplicação e este manual existem em espanhol, inglês, francês e português; escolha o idioma na barra superior.',
+      ] },
+    },
+  },
+  legal: {
+    titulo: 'Manual do Responsável Jurídico (conta de demonstração)',
+    subtitulo: 'O back-office da Farmazed visto por um Responsável Jurídico, passo a passo',
+    intro: [
+      'A conta de demonstração do Responsável Jurídico permite-lhe trabalhar os processos de exemplo como o faz a equipa da Farmazed: rever uma procuração, pedir um documento ao cliente e confirmar a revisão jurídica da fase 8, com dados de exemplo e sem tocar em nada real.',
+      'Este manual segue o painel "Percurso demo" que verá dentro do back-office. Cada passo reproduz o ecrã real e diz-lhe o que fazer e o que vem a seguir.',
+    ],
+    secciones: {
+      empezar: { titulo: 'Antes de começar', parrafos: [
+        'Entre na página de início de sessão com o e-mail do Responsável Jurídico de demonstração e a palavra-passe que recebeu; as palavras-passe não aparecem neste manual. O percurso do Responsável Jurídico só existe na conta de demonstração.',
+        'O seletor de idioma (ES · EN · FR · PT) está na barra superior: todo o back-office e a ligação "Ajuda" (que abre este manual) mudam para o idioma que escolher.',
+      ] },
+      panel: { titulo: 'O painel "Percurso demo"', parrafos: [
+        'Em baixo à direita verá um cartão com os três passos do percurso. Assinala o que já fez, destaca o passo em que está e o botão "Ir para o passo" leva-o ao ecrã certo. O progresso deduz-se dos dados: não há nada para guardar.',
+        'O botão "Reiniciar conta demo", na barra superior, apaga o que fez (também o trabalho do cliente demo) e repõe tudo como no início. Terá de iniciar sessão outra vez.',
+      ] },
+      pasos: { titulo: 'Os três passos', intro: 'Sobre o "Producto Ejemplo 3" (fase 8) e o "Producto Ejemplo 2" (fase 4).' },
+      fases: { titulo: 'As 13 fases de um processo', intro: 'Cada processo avança por estas fases; em "A minha caixa" vê em qual está cada um dos seus. A destacada é a que toca durante o percurso.' },
+      notas: { titulo: 'Bom saber', items: [
+        'Ao rejeitar um documento, o motivo que escrever é visto pelo cliente no seu portal: seja concreto sobre o que deve corrigir.',
+        'A fase 8 exige duas confirmações: a jurídica (sua) e a técnica/matrizes (do Responsável Farmacêutico). Até estarem as duas, o processo não avança.',
+        'Ao pedir um documento, o processo passa a documentos pendentes e o cliente vê-o como pendente no seu portal; quando o carregar, volta a revê-lo a partir de "A minha caixa".',
         'A aplicação e este manual existem em espanhol, inglês, francês e português; escolha o idioma na barra superior.',
       ] },
     },

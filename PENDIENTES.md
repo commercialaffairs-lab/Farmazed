@@ -211,6 +211,19 @@ Estimación: 4–5 sesiones (datos+reinicio · recorrido cliente · recorrido pe
 - Claves web de Firebase (`portal/js/config.js`): confirmar en la consola de Google Cloud que están restringidas por referente HTTP.
 - `.tools/adc-farmazed-pruebas.json` (local, ignorado por git) contiene un refresh token de OAuth: rotarlo si la carpeta se comparte.
 
+### TAREA 63 (roles Responsable Farmacéutico / Responsable Legal + cuentas demo) — en main, SIN desplegar (11-nov-2026)
+
+- Correr `./verificar_local.sh` completo con Patch libre (load < 12 sostenido). Rojas aisladas el 08-nov con load 14–24: `checklist:141`, `estados:60`, `flujo_completo:91`, `pago_paypal:88`, `payments:70` y el backend. Si persisten, compararlas sobre `846a272`.
+- Deploy: crear en Secret Manager `demo-password-farmaceutico` y `demo-password-legal`, dar acceso a `farmazed-api-sa`, montarlos y desplegar tracker y web (pasos en `DEPLOY.md`). Luego reiniciar la demo y probar las 4 cuentas en producción.
+- Patch: freno térmico (`idle_inject`) activo varios días y `mongosh` en bucle (healthcheck de `clackdown-mongo`) mantienen la carga alta; afecta a todas las corridas e2e.
+
+### Rendimiento y pruebas — pendientes al 08-nov-2026 (prioridad: decide Rick)
+
+Farmazed cerrado el 08-nov-2026 por orden de Rick vía Dandy: estas tareas y las de seguridad de arriba **no se asignan** hasta que Rick las priorice. Estado git al cierre: `main` = `origin/main` en `846a272`, árbol limpio.
+
+- **N+1 al cargar el portal del cliente**: `farmazed-web/client-dashboard.html:1556` pide pagos, documentos y formularios caso por caso (~3 peticiones por caso; la org Alfa del seed, con 28 casos, hace ~84 antes de pintar). Propuesta: carga perezosa al abrir cada producto, o un endpoint con los pagos de toda la org en una consulta. Al arreglarlo, quitar las esperas `esperarDashboardCliente` de los e2e `formularios`, `quotes` y `roles`. Detalle en `handover.md` (TAREA 51).
+- **Prueba inestable bajo carga**: con la máquina muy cargada (load ~11), `e2e/flujo_completo.spec.js:91` puede agotar sus 180 s y abortar `verificar_local.sh`. Es por falta de recursos, no por un error del código: aislada pasa en 2,7 min. Opciones: un timeout más largo para ese test o correr el flujo en serie. Detalle en `handover.md` (TAREA 52).
+
 ## Admin — módulo "Finanzas" (contenedor, 01-nov-2026)
 
 - Rick va a traer código propio de un módulo financiero. Mientras tanto: entrada **Finanzas** en la barra lateral de todas las páginas del admin (después de Precios; solo-admin, la muestra `initBackoffice` como Empresas/Precios/Configuración) y página `admin/finanzas.html` con guardia de administrador (el staff vuelve a su bandeja), i18n en ES/EN/FR/PT (8 claves en `backoffice.json`, página incluida en `PAGINAS` del test) y una tarjeta "En preparación" con el contenedor `#finanzas-modulo` donde va el módulo.

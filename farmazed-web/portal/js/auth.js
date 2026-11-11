@@ -239,8 +239,11 @@ async function montarBotonDemo(contenedor) {
  * también sirve de referencia del flujo. Se inserta antes del nombre del usuario (#user-name); en
  * las páginas sin ese elemento (expediente.html, topbar oscuro) se cuelga del bloque derecho del topbar.
  */
-// Manual del regente (solo la demo tiene recorrido de regente; Rick, 01-nov-2026): farmazed-web/manual/regente/.
-const manualUrl = (idioma) => `/manual/regente/${encodeURIComponent(idioma || 'es')}.html`;
+// Manual del personal: el del Responsable Farmacéutico (manual/regente/) para todos salvo el Responsable Legal
+// (rol `abogado`), que tiene el suyo (manual/legal/). Solo las cuentas demo tienen recorrido guiado.
+let carpetaManual = 'regente';
+const manualUrl = (idioma) => `/manual/${carpetaManual}/${encodeURIComponent(idioma || 'es')}.html`;
+export const urlManualPersonal = manualUrl;
 
 function montarEnlaceAyuda(nombre) {
   if (document.getElementById('tb-ayuda')) return null;
@@ -300,13 +303,16 @@ function montarSelectorIdioma(nombre) {
 }
 
 /**
- * Panel "Recorrido demo" del back-office (regente demo). A dónde lleva "Ir al paso" en cada paso
- * (services/demo_recorrido.js, PASOS_REGENTE). Import dinámico: recorrido.js importa este módulo.
+ * Panel "Recorrido demo" del back-office (personal demo: regente/farmacéutico y legal). A dónde lleva "Ir al paso" en cada paso
+ * (services/demo_recorrido.js, PASOS_REGENTE y PASOS_LEGAL). Import dinámico: recorrido.js importa este módulo.
  */
 const DESTINOS_RECORRIDO_STAFF = {
   documento: '/admin/expediente.html?id=demo-caso-3',
   cotejo:    '/admin/expediente.html?id=demo-caso-3',
   lead:      '/admin/leads.html',
+  // Recorrido del Responsable Legal (PASOS_LEGAL): documento y confirmacion usan el caso 3; el pedido, el caso 2.
+  pedido:       '/admin/expediente.html?id=demo-caso-2',
+  confirmacion: '/admin/expediente.html?id=demo-caso-3',
 };
 async function montarRecorridoBackoffice() {
   if (!(await esDemo())) return null;
@@ -419,9 +425,9 @@ function mostrarEnlaceSidebar(clave) {
  * y "Cerrar sesión". Devuelve `{ user, admin }`,
  * o `null` si ya se redirigió (login, verificar correo o portal del cliente): la página debe parar.
  */
-// Rótulos en español (clave del diccionario); se traducen al pintarlos: t('Analista'), t('Abogado'),
-// t('Regente'), t('Admin Panel'), t('Personal') — escritos aquí como literales para la prueba de cobertura.
-const ROTULO_STAFF = { analista: 'Analista', abogado: 'Abogado', regente: 'Regente' };
+// Rótulos en español (clave del diccionario); se traducen al pintarlos: t('Analista'), t('Responsable Legal'),
+// t('Responsable Farmacéutico'), t('Admin Panel'), t('Personal') — escritos aquí como literales para la prueba de cobertura.
+const ROTULO_STAFF = { analista: 'Analista', abogado: 'Responsable Legal', regente: 'Responsable Farmacéutico' };
 
 async function initBackoffice() {
   const user = await requireVerifiedLogin('/login.html');
@@ -443,6 +449,7 @@ async function initBackoffice() {
   montarSidebar(undefined, { admin, permisos });
   document.getElementById('sidebar-logout')?.addEventListener('click', logout);
   await montarBotonDemo(nombre?.parentElement || document.querySelector('.topbar'));
+  if ((await getRole()) === 'abogado') carpetaManual = 'legal';
   montarEnlaceAyuda(nombre);
   montarSelectorIdioma(nombre);
   await montarRecorridoBackoffice();

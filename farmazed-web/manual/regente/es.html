@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Manual del regente (cuenta de demostración) · Farmazed</title>
-<meta name="description" content="El back-office de Farmazed visto por un regente, paso a paso">
+<title>Manual del Responsable Farmacéutico (cuenta de demostración) · Farmazed</title>
+<meta name="description" content="El back-office de Farmazed visto por un Responsable Farmacéutico, paso a paso">
 <meta name="robots" content="noindex">
 <link rel="icon" href="/favicon_Farzed.png">
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;600&family=Open+Sans:wght@400;600;700&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
@@ -41,7 +41,7 @@ main{padding:28px 16px 40px}
 .paso{background:var(--tarjeta);border:1px solid var(--borde);border-radius:14px;padding:22px 24px;margin:18px 0}
 .paso-cab{display:flex;align-items:center;gap:14px}
 .paso-num{flex:none;width:38px;height:38px;border-radius:50%;background:var(--azul);color:#fff;font:600 1.05rem var(--titulos);display:grid;place-items:center}
-.seccion-regente .paso-num{background:var(--verde)}
+.seccion-regente .paso-num,.seccion-legal .paso-num{background:var(--verde)}
 .paso h3{font-size:1.3rem;color:var(--navy)}
 .paso-desc{margin:12px 0 0;font-size:1.02rem}
 .paso-extra{margin:12px 0 0}
@@ -50,7 +50,7 @@ main{padding:28px 16px 40px}
 .paso-sig .fin{color:var(--verde);font-weight:600}
 .pantalla{margin:18px 0 0;border:1px solid var(--borde);border-radius:12px;overflow:hidden;background:#F4F6FB}
 .pantalla figcaption{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:center;background:var(--azul);color:#fff;padding:8px 14px;font-size:.78rem}
-.pantalla-regente figcaption{background:var(--verde)}
+.pantalla-regente figcaption,.pantalla-legal figcaption{background:var(--verde)}
 .pantalla-ruta{font-weight:600}
 .pantalla-nota{color:rgba(255,255,255,.75)}
 .pantalla-cuerpo{padding:16px;font-size:.86rem;display:grid;gap:14px}
@@ -128,11 +128,11 @@ main{padding:28px 16px 40px}
 .fases li{display:flex;align-items:center;gap:12px;background:var(--tarjeta);border:1px solid var(--borde);border-radius:10px;padding:10px 14px;flex-wrap:wrap}
 .fase-num{flex:none;width:30px;height:30px;border-radius:50%;background:var(--tinte);color:var(--azul);font:600 .9rem var(--titulos);display:grid;place-items:center}
 .fase-demo{border-color:var(--azul)}
-.fase-regente{border-color:var(--verde)}
-.fase-regente .fase-num{background:#e6f1e7;color:var(--verde)}
+.fase-regente,.fase-legal{border-color:var(--verde)}
+.fase-regente .fase-num,.fase-legal .fase-num{background:#e6f1e7;color:var(--verde)}
 .fase-nombre{flex:1 1 200px}
 .fase-tag{font-size:.72rem;font-weight:700;color:var(--azul);background:var(--tinte);padding:3px 9px;border-radius:999px}
-.fase-regente .fase-tag{color:var(--verde);background:#e6f1e7}
+.fase-regente .fase-tag,.fase-legal .fase-tag{color:var(--verde);background:#e6f1e7}
 .notas{margin:0;padding-left:22px}
 .notas li{margin:8px 0}
 .pie{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;padding-top:20px;padding-bottom:40px;border-top:1px solid var(--borde);color:var(--mudo);font-size:.88rem}
@@ -156,8 +156,8 @@ main{padding:28px 16px 40px}
   <div class="ancho">
     <nav class="idiomas" aria-label="Idioma"><a href="./es.html" aria-current="page" lang="es">Español</a><a href="./en.html"  lang="en">English</a><a href="./fr.html"  lang="fr">Français</a><a href="./pt.html"  lang="pt">Português</a></nav>
     <p class="marca">Farmazed</p>
-    <h1>Manual del regente (cuenta de demostración)</h1>
-    <p class="subtitulo">El back-office de Farmazed visto por un regente, paso a paso</p>
+    <h1>Manual del Responsable Farmacéutico (cuenta de demostración)</h1>
+    <p class="subtitulo">El back-office de Farmazed visto por un Responsable Farmacéutico, paso a paso</p>
     <div class="cabecera-acciones">
       <a class="enlace-boton claro" href="/login.html">Iniciar sesión</a>
       <button type="button" class="enlace-boton claro" onclick="window.print()">Imprimir o guardar como PDF</button>
@@ -166,13 +166,13 @@ main{padding:28px 16px 40px}
 </header>
 <main class="ancho">
   <section class="intro">
-    <p>La cuenta de demostración del regente te deja trabajar un expediente de ejemplo como lo hace el equipo de Farmazed: revisar documentos, confirmar el cotejo técnico y atender un lead del CRM, con datos de ejemplo y sin tocar nada real.</p><p>Este manual sigue el panel &quot;Recorrido demo&quot; que verás dentro del back-office. Cada paso reproduce la pantalla real y te dice qué hacer y qué viene después.</p>
+    <p>La cuenta de demostración del Responsable Farmacéutico te deja trabajar un expediente de ejemplo como lo hace el equipo de Farmazed: revisar documentos, confirmar el cotejo técnico y atender un lead del CRM, con datos de ejemplo y sin tocar nada real.</p><p>Este manual sigue el panel &quot;Recorrido demo&quot; que verás dentro del back-office. Cada paso reproduce la pantalla real y te dice qué hacer y qué viene después.</p>
     <nav class="indice" aria-label="Contenido"><h2>Contenido</h2><ol><li><a href="#empezar">Antes de empezar</a></li><li><a href="#panel">El panel &quot;Recorrido demo&quot;</a></li><li><a href="#pasos">Los tres pasos</a></li><li><a href="#fases">Las 13 fases de un expediente</a></li><li><a href="#notas">Bueno saber</a></li></ol></nav>
   </section>
 
   <section class="seccion" id="empezar">
     <h2>Antes de empezar</h2>
-    <p>Entra en la página de inicio de sesión con el correo del regente de demostración y la clave que te dieron; las claves no aparecen en este manual. El recorrido del regente solo existe en la cuenta de demostración.</p><p>Arriba, en la barra, está el selector de idioma (ES · EN · FR · PT): todo el back-office y el enlace &quot;Ayuda&quot; (que abre este manual) cambian al idioma que elijas.</p>
+    <p>Entra en la página de inicio de sesión con el correo del Responsable Farmacéutico de demostración y la clave que te dieron; las claves no aparecen en este manual. El recorrido del Responsable Farmacéutico solo existe en la cuenta de demostración.</p><p>Arriba, en la barra, está el selector de idioma (ES · EN · FR · PT): todo el back-office y el enlace &quot;Ayuda&quot; (que abre este manual) cambian al idioma que elijas.</p>
   </section>
 
   <section class="seccion" id="panel">
@@ -180,7 +180,7 @@ main{padding:28px 16px 40px}
     <p>Abajo a la derecha verás una tarjeta con los tres pasos del recorrido. Marca lo que ya hiciste, resalta el paso en que vas y el botón &quot;Ir al paso&quot; te lleva a la pantalla correcta. El progreso se deduce de los datos: no hay nada que guardar.</p><p>El botón &quot;Reiniciar cuenta demo&quot;, arriba en la barra, borra lo que hiciste (también lo del cliente demo) y deja todo como al principio. Tendrás que volver a iniciar sesión.</p>
     <div class="dos">
       <figure class="pantalla pantalla-regente"><figcaption><span class="pantalla-ruta">Back-office</span><span class="pantalla-nota">Así se ve en la aplicación</span></figcaption><div class="pantalla-cuerpo">
-<div class="m-topbar m-topbar-bo"><b class="m-topbar-txt">Mi Bandeja</b><span class="m-idiomas"><span class="m-idioma activo" lang="es">ES</span><span class="m-idioma " lang="en">EN</span><span class="m-idioma " lang="fr">FR</span><span class="m-idioma " lang="pt">PT</span></span><span class="m-link">Ayuda</span><span class="m-topbar-txt">Regente Ejemplo</span></div>
+<div class="m-topbar m-topbar-bo"><b class="m-topbar-txt">Mi Bandeja</b><span class="m-idiomas"><span class="m-idioma activo" lang="es">ES</span><span class="m-idioma " lang="en">EN</span><span class="m-idioma " lang="fr">FR</span><span class="m-idioma " lang="pt">PT</span></span><span class="m-link">Ayuda</span><span class="m-topbar-txt">Responsable Farmacéutico Ejemplo</span></div>
 <div class="m-panel" lang="es">
   <div class="m-panel-cab"><strong>Recorrido demo</strong><span class="m-badge azul">1 de 3</span></div>
   <div class="m-barra"><span style="width:17%"></span></div>
@@ -211,7 +211,7 @@ main{padding:28px 16px 40px}
 </article>
 <article class="paso" id="regente-cotejo">
   <div class="paso-cab"><span class="paso-num">2</span><h3>Confirma el cotejo técnico (fase 8)</h3></div>
-  <p class="paso-desc">El &quot;Producto Ejemplo 3&quot; está en la fase 8, revisión de documentación digital. En la tarjeta &quot;Fase 8 — Confirmaciones&quot; registra tu confirmación técnica/matrices; la legal la pone el abogado.</p>
+  <p class="paso-desc">El &quot;Producto Ejemplo 3&quot; está en la fase 8, revisión de documentación digital. En la tarjeta &quot;Fase 8 — Confirmaciones&quot; registra tu confirmación técnica/matrices; la legal la pone el Responsable Legal.</p>
   <figure class="pantalla pantalla-regente"><figcaption><span class="pantalla-ruta">Back-office › Expediente › Fase 8 — Confirmaciones</span><span class="pantalla-nota">Así se ve en la aplicación</span></figcaption><div class="pantalla-cuerpo">
 <div class="m-card">
   <h4>Fase 8 — Confirmaciones</h4>
@@ -244,12 +244,12 @@ main{padding:28px 16px 40px}
 
   <section class="seccion" id="notas">
     <h2>Bueno saber</h2>
-    <ul class="notas"><li>Al rechazar un documento, el motivo que escribas lo ve el cliente en su portal: sé concreto sobre qué debe corregir.</li><li>La fase 8 exige dos confirmaciones: la técnica/matrices (tuya) y la legal (del abogado). Hasta que estén las dos, el expediente no avanza.</li><li>Los leads son solicitudes del formulario público del sitio; cambiar su estado o dejar notas es la forma de trabajarlos antes de que el admin invite a la empresa a crear su cuenta.</li><li>La aplicación y este manual existen en español, inglés, francés y portugués; elige el idioma en la barra superior.</li></ul>
+    <ul class="notas"><li>Al rechazar un documento, el motivo que escribas lo ve el cliente en su portal: sé concreto sobre qué debe corregir.</li><li>La fase 8 exige dos confirmaciones: la técnica/matrices (tuya) y la legal (del Responsable Legal). Hasta que estén las dos, el expediente no avanza.</li><li>Los leads son solicitudes del formulario público del sitio; cambiar su estado o dejar notas es la forma de trabajarlos antes de que el admin invite a la empresa a crear su cuenta.</li><li>La aplicación y este manual existen en español, inglés, francés y portugués; elige el idioma en la barra superior.</li></ul>
   </section>
 </main>
 <footer class="pie ancho">
   <span><a href="/admin/bandeja.html">Ir al back-office</a></span>
-  <span>Manual generado el 2026-11-02</span>
+  <span>Manual generado el 2026-11-08</span>
 </footer>
 </body>
 </html>

@@ -1,12 +1,13 @@
 /**
- * demo.js — Modo demo (decisión de Rick, 01-nov-2026): dos cuentas de demostración con datos de
- * ejemplo para que un prospecto (cliente) o un empleado nuevo (regente) recorra la plataforma, y
+ * demo.js — Modo demo (decisión de Rick, 01-nov-2026; ampliado a 4 cuentas el 08-nov): cuentas de demostración con datos de
+ * ejemplo para que un prospecto (cliente) o un empleado nuevo (Responsable Farmacéutico o Legal) recorra la plataforma, y
  * un reinicio que lo deja todo como al principio. Lo usan scripts/seed_demo.js (CLI),
  * routes/demo.js (POST /api/demo/reiniciar) y tests/demo.test.js.
  *
- * Cuentas (producción, públicas por diseño; Rick 01-nov): cliente.demo@farmazed.com y
- * regente.demo@farmazed.com. El regente solo ve los casos que tiene asignados (los de ejemplo), por
- * eso puede convivir con clientes reales en el mismo despliegue; no hay admin demo.
+ * Cuentas (producción, públicas por diseño; Rick 01-nov y 08-nov): cliente.demo, regente.demo y
+ * farmaceutico.demo (las dos con rol `regente` = Responsable Farmacéutico) y legal.demo (rol `abogado` =
+ * Responsable Legal), todas @farmazed.com. El personal demo solo ve los casos demo:true (los de ejemplo),
+ * por eso puede convivir con clientes reales en el mismo despliegue; no hay admin demo.
  *
  * Aislamiento: todo lo demo lleva `demo:true` (claims, empresa `demo-org`, casos, cotizaciones,
  * lead) y el reinicio borra SOLO eso. Una cuenta demo nunca paga con dinero real
@@ -15,12 +16,12 @@
  *
  * Estado inicial del recorrido: empresa sin captación (paso 1 del cliente), sin "Producto Ejemplo 1"
  * (lo crea el cliente), "Producto Ejemplo 2" con cotización enviada (aceptar y pagar) y "Producto
- * Ejemplo 3" pagado y en fase 8 (el regente confirma el cotejo técnico), con mensajes.
+ * Ejemplo 3" pagado y en fase 8 (el Responsable Farmacéutico confirma el cotejo técnico y el Legal la parte legal), con mensajes.
  */
 const admin = require('../utils/firebase_admin.js');
 const { createConceptPayment } = require('./payments_ledger');
 const { uploadFile, deleteFile } = require('./storage');
-const { pdfFormulaEjemplo } = require('../utils/pdf_ejemplo');
+const { pdfFormulaEjemplo, pdfPoderEjemplo } = require('../utils/pdf_ejemplo');
 const { applyTransition } = require('./transitions');
 
 const DEMO_ORG_ID  = 'demo-org';
@@ -28,13 +29,14 @@ const DEMO_ORG_ID  = 'demo-org';
 // el seed de lo que la persona creó durante la demo (su "Producto Ejemplo 1", sus mensajes).
 const CASOS_SEMBRADOS    = ['demo-caso-2', 'demo-caso-3'];
 const MENSAJES_SEMBRADOS = ['demo-msg-1', 'demo-msg-2'];
-const DOC_REGENTE_ID     = 'demo-doc-3-formula'; // fórmula cuali-cuantitativa subida en el Producto 3, la revisa el regente
+const DOC_REGENTE_ID     = 'demo-doc-3-formula'; // fórmula cuali-cuantitativa subida en el Producto 3, la revisa el Responsable Farmacéutico
+const DOC_LEGAL_ID       = 'demo-doc-3-poder';   // poder original (15.2) subido en el Producto 3, lo revisa el Responsable Legal
 // Actor de los avances automáticos de la demo (statusHistory.by / byEmail).
 const ACTOR_DEMO = { uid: 'demo-automatico', email: 'Farmazed (avance automático de la demo)' };
 const DEMO_DOMINIO = process.env.DEMO_DOMINIO || 'farmazed.com';
 const CORREO_DEMO_RE = /^[a-z0-9-]+\.demo@/i;
 
-// Las claves NO viven en el repo (es público): DEMO_PASSWORD_CLIENTE / DEMO_PASSWORD_REGENTE
+// Las claves NO viven en el repo (es público): DEMO_PASSWORD_CLIENTE / _REGENTE / _FARMACEUTICO / _LEGAL
 // (Secret Manager en Cloud Run, tracker/.env en local). Obligatorias para crear la cuenta la
 // primera vez; si faltan en un reinicio, la cuenta conserva la clave que ya tenía.
 const CUENTAS = [
@@ -42,6 +44,10 @@ const CUENTAS = [
     get password() { return process.env.DEMO_PASSWORD_CLIENTE || null; } },
   { uid: 'demo-regente', correo: `regente.demo@${DEMO_DOMINIO}`, nombre: 'Regente Ejemplo', role: 'regente',
     get password() { return process.env.DEMO_PASSWORD_REGENTE || null; } },
+  { uid: 'demo-farmaceutico', correo: `farmaceutico.demo@${DEMO_DOMINIO}`, nombre: 'Responsable Farmacéutico Ejemplo', role: 'regente',
+    get password() { return process.env.DEMO_PASSWORD_FARMACEUTICO || null; } },
+  { uid: 'demo-legal', correo: `legal.demo@${DEMO_DOMINIO}`, nombre: 'Responsable Legal Ejemplo', role: 'abogado',
+    get password() { return process.env.DEMO_PASSWORD_LEGAL || null; } },
 ];
 
 const esCorreoDemo = (correo) => CORREO_DEMO_RE.test(String(correo || ''));
@@ -57,7 +63,7 @@ async function upsertCuenta(c) {
   try { await auth().updateUser(c.uid, datos); }
   catch (e) {
     if (e.code !== 'auth/user-not-found') throw e;
-    if (!c.password) throw new Error(`Falta la variable con la clave de ${c.correo} (DEMO_PASSWORD_CLIENTE / DEMO_PASSWORD_REGENTE) para crear la cuenta.`);
+    if (!c.password) throw new Error(`Falta la variable con la clave de ${c.correo} (DEMO_PASSWORD_CLIENTE / _REGENTE / _FARMACEUTICO / _LEGAL) para crear la cuenta.`);
     await auth().createUser({ uid: c.uid, ...datos });
   }
   await auth().setCustomUserClaims(c.uid, { role: c.role, ...(c.orgId ? { orgId: c.orgId } : {}), demo: true, origen: 'demo' });
@@ -70,7 +76,7 @@ function casoBase(overrides) {
     createdAt: now, updatedAt: now, demo: true,
     tramiteType: 'medicamentos', tipoSolicitud: 'Nuevo Registro', tipoRegistro: 'Regular', tipoMedicamento: ['Síntesis Química'],
     orgId: DEMO_ORG_ID, clientId: 'demo-cliente', clientEmail: `cliente.demo@${DEMO_DOMINIO}`, clientName: 'Cliente Ejemplo',
-    asignados: { analista: null, abogado: null, regente: 'demo-regente' },
+    asignados: { analista: null, abogado: 'demo-legal', regente: 'demo-regente' }, // el resto del personal demo ve los casos por demo:true (middleware/permissions.js canAccessCase)
     assignedTo: null, priority: 'normal', notes: '', faddi: {}, vencimiento: null, entities: {}, monografia: {},
     ...overrides,
   };
@@ -151,7 +157,7 @@ async function sembrarDemo() {
     createdAt: now, updatedAt: now, enviadaEn: now,
   });
 
-  // Producto 3: cotizado y pagado (proveedor de prueba), en fase 8: el regente confirma el cotejo técnico.
+  // Producto 3: cotizado y pagado (proveedor de prueba), en fase 8: confirman el cotejo técnico (Farmacéutico) y la parte legal (Legal).
   await db().collection('cases').doc('demo-caso-3').set(casoBase({
     status: 'fase_08', caseCode: 'FZ-DEMO-2026-0003',
     product: { nombreComercial: 'Producto Ejemplo 3 — Jarabe pediátrico', formaFarmaceutica: 'Jarabe', fabricante: 'Laboratorios Ejemplo S.A.' },
@@ -177,8 +183,9 @@ async function sembrarDemo() {
   await batch.commit();
   const mensajes = db().collection('cases').doc('demo-caso-3').collection('messages');
   await mensajes.doc('demo-msg-1').set({ senderRole: 'client', senderId: 'demo-cliente', senderName: 'Cliente Ejemplo', text: 'Hola, ya realizamos el pago de la cotización. ¿Cuál es el siguiente paso?', createdAt: now });
-  await mensajes.doc('demo-msg-2').set({ senderRole: 'admin', senderId: 'demo-regente', senderName: 'Regente Ejemplo', text: 'Recibido, gracias. Ya revisamos la documentación digital; en cuanto confirmemos el cotejo técnico pasamos a los originales.', createdAt: now });
+  await mensajes.doc('demo-msg-2').set({ senderRole: 'admin', senderId: 'demo-regente', senderName: 'Responsable Farmacéutico Ejemplo', text: 'Recibido, gracias. Ya revisamos la documentación digital; en cuanto confirmemos el cotejo técnico pasamos a los originales.', createdAt: now });
   await sembrarDocumentoRegente(now);
+  await sembrarDocumentoLegal(now);
 
   // Lead de ejemplo para el CRM del personal.
   await db().collection('contactLeads').doc('demo-lead-1').set({
@@ -193,7 +200,7 @@ async function sembrarDemo() {
 }
 
 /**
- * Documento ya subido en el Producto 3 (fórmula cuali-cuantitativa, 15.5) para que el regente
+ * Documento ya subido en el Producto 3 (fórmula cuali-cuantitativa, 15.5) para que el Responsable Farmacéutico
  * tenga algo que aprobar o rechazar en su recorrido. Mismos campos que escribe
  * routes/documents.js al subir un archivo real, con el PDF en Storage.
  */
@@ -203,6 +210,19 @@ async function sembrarDocumentoRegente(now) {
   const { gcsPath, storagePath } = await uploadFile('demo-caso-3', `${DOC_REGENTE_ID}-v1`, nombre, buffer, 'application/pdf');
   await db().collection('cases').doc('demo-caso-3').collection('documents').doc(DOC_REGENTE_ID).set({
     faddiDocId: 'formula', faddiCode: '15.5', faddiDocName: 'Fórmula Cuali-Cuantitativa', faddiStep: 15,
+    fileName: nombre, fileSize: buffer.length, mimeType: 'application/pdf', storagePath, gcsPath, pageCount: 1,
+    status: 'uploaded', reviewNotes: '', reviewedBy: null, reviewedAt: null,
+    uploadedAt: now, uploadedBy: 'demo-cliente', version: 1,
+  });
+}
+
+/** Poder original (15.2) ya subido en el Producto 3 para que el Responsable Legal tenga algo que revisar. */
+async function sembrarDocumentoLegal(now) {
+  const buffer = await pdfPoderEjemplo();
+  const nombre = 'poder-original-ejemplo.pdf';
+  const { gcsPath, storagePath } = await uploadFile('demo-caso-3', `${DOC_LEGAL_ID}-v1`, nombre, buffer, 'application/pdf');
+  await db().collection('cases').doc('demo-caso-3').collection('documents').doc(DOC_LEGAL_ID).set({
+    faddiDocId: 'poder', faddiCode: '15.2', faddiDocName: 'Poder Original', faddiStep: 15,
     fileName: nombre, fileSize: buffer.length, mimeType: 'application/pdf', storagePath, gcsPath, pageCount: 1,
     status: 'uploaded', reviewNotes: '', reviewedBy: null, reviewedAt: null,
     uploadedAt: now, uploadedBy: 'demo-cliente', version: 1,
@@ -235,6 +255,6 @@ async function avanzarTrasPagoDemo(caseIds) {
 }
 
 module.exports = {
-  DEMO_ORG_ID, CUENTAS, CASOS_SEMBRADOS, MENSAJES_SEMBRADOS, DOC_REGENTE_ID,
+  DEMO_ORG_ID, CUENTAS, CASOS_SEMBRADOS, MENSAJES_SEMBRADOS, DOC_REGENTE_ID, DOC_LEGAL_ID,
   esCorreoDemo, esCuentaDemo, visibleParaDemo, sembrarDemo, borrarDatosDemo, avanzarTrasPagoDemo,
 };

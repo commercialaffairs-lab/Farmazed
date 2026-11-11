@@ -49,7 +49,7 @@ www.farmazed.com → farmazed-web (us-central1)
 > quedó configurado ese día:
 > - **Secret Manager** habilitado, con `paypal-client-id`, `paypal-client-secret`, `paypal-webhook-id`
 >   (todavía el marcador `sin-webhook`: falta registrar el webhook en PayPal y subir una versión nueva),
->   `smtp-pass`, `demo-password-cliente`, `demo-password-regente`; la cuenta de servicio
+>   `smtp-pass`, `demo-password-cliente`, `demo-password-regente`, `demo-password-farmaceutico`, `demo-password-legal`; la cuenta de servicio
 >   `farmazed-api-sa@farmazed.iam.gserviceaccount.com` tiene `secretAccessor` en cada uno.
 > - **Variables del tracker**: `NODE_ENV=production`, `FIREBASE_PROJECT_ID=farmazed`, `GCS_BUCKET=farmazed-docs`,
 >   `PAYMENTS_PROVIDER=paypal`, `PAYPAL_ENV=sandbox`, `PORTAL_URL=https://farmazed.com`, `SMTP_HOST/PORT/USER/FROM`,
@@ -240,9 +240,13 @@ ejecuta sin el visto bueno de Rick; cada paso de escritura trae antes su dry-run
    empresa. El enlace caduca a los 7 días y es de un solo uso. Después, el admin la asigna a los casos
    que debe ver (`asignados.regente`); sin asignación su lista queda vacía.
 9. **Clientes de la revisión** (`seed_roles.js` en modo lista, abajo): dry-run, revisar, `--confirm`.
-9b. **Cuentas de demostración** (`DEMO.md`): con `DEMO_PASSWORD_CLIENTE` y `DEMO_PASSWORD_REGENTE` en el entorno (Secret Manager; también las necesita el servicio para el botón de reinicio), `cd tracker && node scripts/seed_demo.js --prod --project=farmazed --confirm`.
-    Crea `cliente.demo@farmazed.com` y `regente.demo@farmazed.com` con la empresa "Laboratorios Ejemplo S.A." y sus
+9b. **Cuentas de demostración** (`DEMO.md`): con `DEMO_PASSWORD_CLIENTE`, `DEMO_PASSWORD_REGENTE`, `DEMO_PASSWORD_FARMACEUTICO` y `DEMO_PASSWORD_LEGAL` en el entorno (Secret Manager; también las necesita el servicio para el botón de reinicio), `cd tracker && node scripts/seed_demo.js --prod --project=farmazed --confirm`.
+    Crea `cliente.demo@farmazed.com`, `regente.demo@farmazed.com`, `farmaceutico.demo@farmazed.com` y `legal.demo@farmazed.com` con la empresa "Laboratorios Ejemplo S.A." y sus
     datos de ejemplo (todo `demo:true`). Volver a correrlo equivale al botón [Reiniciar cuenta demo].
+    **Paso del deploy de la TAREA 63 (pendiente, Secret Manager no se tocó desde el repo)**: crear los secretos
+    `demo-password-farmaceutico` y `demo-password-legal` (las claves las fija Rick), darle acceso a la cuenta de servicio de Cloud Run,
+    montarlos como `DEMO_PASSWORD_FARMACEUTICO` / `DEMO_PASSWORD_LEGAL` en el servicio y volver a correr el seed. Sin ellos el seed falla
+    al crear las dos cuentas nuevas.
 10. **Humo en producción**: login de un cliente sembrado, verificación de correo del registro abierto,
    descarga de un documento (URL firmada) y un pago sandbox.
 

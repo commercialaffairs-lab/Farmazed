@@ -7,7 +7,7 @@
  *     ninguna tabla de textos;
  *   - el manual de usuario (scripts/generar_manual.js → farmazed-web/manual/{es,en,fr,pt}.html).
  *
- * El español es la referencia (PASOS_CLIENTE / PASOS_REGENTE); los demás idiomas traducen por id de
+ * El español es la referencia (PASOS_CLIENTE / PASOS_REGENTE / PASOS_LEGAL); los demás idiomas traducen por id de
  * paso. La interfaz también existe en los 4 idiomas (farmazed-web/i18n/, portal/js/i18n.js), así que
  * los rótulos de pantalla que se citan entre comillas ("Solicitar Registro" → "Request Registration",
  * [Reiniciar cuenta demo] → [Reset demo account]…) van en cada idioma con la MISMA traducción que el
@@ -32,16 +32,25 @@ const PASOS_CLIENTE = [
   { id: 'pago',       titulo: 'Paga con el proveedor de prueba',
     descripcion: 'Pulsa "Pagar con PayPal". En la demo el cobro lo hace un proveedor de prueba: no se mueve dinero. Al pagar, el expediente avanza solo a la fase 6 (en la vida real lo hace el equipo de Farmazed).' },
   { id: 'mensaje',    titulo: 'Escribe a tu equipo Farmazed',
-    descripcion: 'En "Mensajes" elige un producto y envía un mensaje. Así te comunicas con tu regente durante todo el trámite. Luego mira en "Mis Productos" el avance de fases de cada expediente.' },
+    descripcion: 'En "Mensajes" elige un producto y envía un mensaje. Así te comunicas con tu Responsable Farmacéutico durante todo el trámite. Luego mira en "Mis Productos" el avance de fases de cada expediente.' },
 ];
 
 const PASOS_REGENTE = [
   { id: 'documento', titulo: 'Revisa el documento de Producto Ejemplo 3',
     descripcion: 'El cliente subió la fórmula cuali-cuantitativa. Abre el expediente desde "Mi Bandeja", busca el documento 15.5 y apruébalo (✓) o recházalo (✗) con un motivo que el cliente verá en su portal.' },
   { id: 'cotejo',    titulo: 'Confirma el cotejo técnico (fase 8)',
-    descripcion: 'El "Producto Ejemplo 3" está en la fase 8, revisión de documentación digital. En la tarjeta "Fase 8 — Confirmaciones" registra tu confirmación técnica/matrices; la legal la pone el abogado.' },
+    descripcion: 'El "Producto Ejemplo 3" está en la fase 8, revisión de documentación digital. En la tarjeta "Fase 8 — Confirmaciones" registra tu confirmación técnica/matrices; la legal la pone el Responsable Legal.' },
   { id: 'lead',      titulo: 'Atiende el lead "Farmacia Ejemplo"',
     descripcion: 'En "Leads" está la solicitud de "Farmacia Ejemplo" (estado Nuevo). Ábrela, cambia el estado a Contactado o deja una nota: así se trabaja el CRM antes de que el admin invite al cliente a crear su cuenta.' },
+];
+
+const PASOS_LEGAL = [
+  { id: 'documento',    titulo: 'Revisa el poder del Producto Ejemplo 3',
+    descripcion: 'El cliente subió el poder original. Abre el expediente desde "Mi Bandeja", busca el documento 15.2 y apruébalo (✓) o recházalo (✗) con un motivo que el cliente verá en su portal.' },
+  { id: 'pedido',       titulo: 'Pide un documento al cliente',
+    descripcion: 'Abre el "Producto Ejemplo 2" y pulsa "Solicitar" junto a un documento del listado (por ejemplo una declaración jurada): el cliente lo verá como pendiente en su portal y el expediente pasa a documentos pendientes.' },
+  { id: 'confirmacion', titulo: 'Confirma la revisión legal (fase 8)',
+    descripcion: 'El "Producto Ejemplo 3" está en la fase 8, revisión de documentación digital. En la tarjeta "Fase 8 — Confirmaciones" registra tu confirmación legal (poderes/declaraciones); la técnica/matrices la pone el Responsable Farmacéutico.' },
 ];
 
 // Recorrido del cliente para cuentas REALES (Rick, 01-nov-2026: "clients will be from the demo
@@ -60,7 +69,7 @@ const PASOS_CLIENTE_REAL = [
   { id: 'pago',       titulo: 'Paga los costos del trámite',
     descripcion: 'Pulsa "Pagar con PayPal" o usa el enlace de pago que te envíe Farmazed. Con el pago confirmado, tu expediente pasa a la fase de apertura y el equipo empieza a trabajar.' },
   { id: 'mensaje',    titulo: 'Escribe a tu equipo Farmazed',
-    descripcion: 'En "Mensajes" elige un producto y escribe: así te comunicas con tu regente durante todo el trámite. En "Mis Productos" sigues el avance de fases de cada expediente.' },
+    descripcion: 'En "Mensajes" elige un producto y escribe: así te comunicas con tu Responsable Farmacéutico durante todo el trámite. En "Mis Productos" sigues el avance de fases de cada expediente.' },
 ];
 
 // Traducciones por id de paso (el español está arriba).
@@ -72,7 +81,7 @@ const TRADUCCIONES = {
       documento:  { titulo: 'Upload your documentation', descripcion: 'In step 4 of the wizard upload each document into its slot (PDF, JPG, PNG or DOCX). Once the mandatory ones are in you can submit the request; until then it is saved as a draft.' },
       cotizacion: { titulo: 'Review and accept your quote', descripcion: 'When Farmazed sends you the quote, open it under "Quote", review the breakdown (fees, DNFD fee, MEF and IEA) and accept it to continue.' },
       pago:       { titulo: 'Pay the procedure costs', descripcion: 'Click "Pay with PayPal" or use the payment link Farmazed sends you. Once the payment is confirmed, your file moves to the opening phase and the team starts working.' },
-      mensaje:    { titulo: 'Write to your Farmazed team', descripcion: 'Under "Messages" pick a product and write: this is how you talk to your regent throughout the procedure. Under "My Products" you follow each file\'s progress through the phases.' },
+      mensaje:    { titulo: 'Write to your Farmazed team', descripcion: 'Under "Messages" pick a product and write: this is how you talk to your Pharmacist in Charge throughout the procedure. Under "My Products" you follow each file\'s progress through the phases.' },
     },
     cliente: {
       captacion:  { titulo: "Confirm your company's details", descripcion: 'The first time you sign in, the portal asks you for the preliminary information intake. It comes pre-filled with what "Laboratorios Ejemplo" said when requesting the account: review it, answer the three questions and save.' },
@@ -80,12 +89,17 @@ const TRADUCCIONES = {
       documento:  { titulo: 'Upload a sample document', descripcion: 'In step 4 click "Upload" in any slot: in the demo the file browser does not open, a notice simulates the upload with a sample PDF. "Fill in with sample data" simulates every document at once so you can move on to step 5.' },
       cotizacion: { titulo: 'Accept the quote for Producto Ejemplo 2', descripcion: 'Farmazed has already sent you the quote for "Producto Ejemplo 2". Open it under "Quote", review the breakdown (fees, DNFD fee, MEF and IEA) and accept it.' },
       pago:       { titulo: 'Pay with the test provider', descripcion: 'Click "Pay with PayPal". In the demo the charge is handled by a test provider: no money moves. Once paid, the file moves on its own to phase 6 (in real life the Farmazed team does this).' },
-      mensaje:    { titulo: 'Write to your Farmazed team', descripcion: 'Under "Messages" pick a product and send a message. This is how you talk to your regent throughout the procedure. Then open "My Products" to see each file\'s progress through the phases.' },
+      mensaje:    { titulo: 'Write to your Farmazed team', descripcion: 'Under "Messages" pick a product and send a message. This is how you talk to your Pharmacist in Charge throughout the procedure. Then open "My Products" to see each file\'s progress through the phases.' },
     },
     regente: {
       documento: { titulo: 'Review the document for Producto Ejemplo 3', descripcion: 'The client uploaded the qualitative-quantitative formula. Open the file from "My Inbox", find document 15.5 and approve it (✓) or reject it (✗) with a reason the client will see in their portal.' },
-      cotejo:    { titulo: 'Confirm the technical check (phase 8)', descripcion: '"Producto Ejemplo 3" is in phase 8, review of digital documentation. In the "Phase 8 — Confirmations" card record your technical/matrices confirmation; the legal one is entered by the lawyer.' },
+      cotejo:    { titulo: 'Confirm the technical check (phase 8)', descripcion: '"Producto Ejemplo 3" is in phase 8, review of digital documentation. In the "Phase 8 — Confirmations" card record your technical/matrices confirmation; the legal one is entered by the Legal Officer.' },
       lead:      { titulo: 'Handle the "Farmacia Ejemplo" lead', descripcion: 'Under "Leads" you will find the request from "Farmacia Ejemplo" (status New). Open it, change the status to Contacted or leave a note: this is how the CRM is worked before the admin invites the client to create their account.' },
+    },
+    legal: {
+      documento:    { titulo: 'Review the power of attorney for Producto Ejemplo 3', descripcion: 'The client uploaded the original power of attorney. Open the file from "My Inbox", find document 15.2 and approve it (✓) or reject it (✗) with a reason the client will see in their portal.' },
+      pedido:       { titulo: 'Request a document from the client', descripcion: 'Open "Producto Ejemplo 2" and click "Request" next to a document in the list (for example a sworn statement): the client will see it as pending in their portal and the file moves to pending documents.' },
+      confirmacion: { titulo: 'Confirm the legal review (phase 8)', descripcion: '"Producto Ejemplo 3" is in phase 8, review of digital documentation. In the "Phase 8 — Confirmations" card record your legal confirmation (powers of attorney/statements); the technical/matrices one is entered by the Pharmacist in Charge.' },
     },
   },
   fr: {
@@ -95,7 +109,7 @@ const TRADUCCIONES = {
       documento:  { titulo: 'Téléversez votre documentation', descripcion: 'À l\'étape 4 de l\'assistant, déposez chaque document dans sa case (PDF, JPG, PNG ou DOCX). Une fois les documents obligatoires réunis, vous pourrez envoyer la demande ; en attendant, elle reste enregistrée comme brouillon.' },
       cotizacion: { titulo: 'Vérifiez et acceptez votre devis', descripcion: 'Quand Farmazed vous envoie le devis, ouvrez-le dans « Devis », vérifiez le détail (honoraires, taxe DNFD, MEF et IEA) et acceptez-le pour continuer.' },
       pago:       { titulo: 'Payez les frais de la procédure', descripcion: 'Cliquez sur « Payer avec PayPal » ou utilisez le lien de paiement envoyé par Farmazed. Une fois le paiement confirmé, votre dossier passe à la phase d\'ouverture et l\'équipe se met au travail.' },
-      mensaje:    { titulo: 'Écrivez à votre équipe Farmazed', descripcion: 'Dans « Messages », choisissez un produit et écrivez : c\'est ainsi que vous communiquez avec votre régent tout au long de la procédure. Dans « Mes produits », vous suivez l\'avancement de chaque dossier à travers les phases.' },
+      mensaje:    { titulo: 'Écrivez à votre équipe Farmazed', descripcion: 'Dans « Messages », choisissez un produit et écrivez : c\'est ainsi que vous communiquez avec votre Responsable pharmaceutique tout au long de la procédure. Dans « Mes produits », vous suivez l\'avancement de chaque dossier à travers les phases.' },
     },
     cliente: {
       captacion:  { titulo: 'Confirmez les données de votre entreprise', descripcion: 'À la première connexion, le portail vous demande la collecte d\'informations préliminaires. Elle est préremplie avec ce que « Laboratorios Ejemplo » a déclaré en demandant le compte : relisez-la, répondez aux trois questions et enregistrez.' },
@@ -103,12 +117,17 @@ const TRADUCCIONES = {
       documento:  { titulo: 'Téléversez un document d\'exemple', descripcion: 'À l\'étape 4, cliquez sur « Téléverser » dans n\'importe quelle case : dans la démo, l\'explorateur de fichiers ne s\'ouvre pas, un message simule le téléversement avec un PDF d\'exemple. « Remplir avec des données d\'exemple » simule tous les documents d\'un coup pour passer à l\'étape 5.' },
       cotizacion: { titulo: 'Acceptez le devis du Producto Ejemplo 2', descripcion: 'Farmazed vous a déjà envoyé le devis du « Producto Ejemplo 2 ». Ouvrez-le dans « Devis », vérifiez le détail (honoraires, taxe DNFD, MEF et IEA) et acceptez-le.' },
       pago:       { titulo: 'Payez avec le prestataire de test', descripcion: 'Cliquez sur « Payer avec PayPal ». Dans la démo, l\'encaissement est fait par un prestataire de test : aucun argent ne circule. Une fois payé, le dossier passe tout seul à la phase 6 (en réalité, c\'est l\'équipe Farmazed qui le fait).' },
-      mensaje:    { titulo: 'Écrivez à votre équipe Farmazed', descripcion: 'Dans « Messages », choisissez un produit et envoyez un message. C\'est ainsi que vous communiquez avec votre régent tout au long de la procédure. Regardez ensuite dans « Mes produits » l\'avancement de chaque dossier à travers les phases.' },
+      mensaje:    { titulo: 'Écrivez à votre équipe Farmazed', descripcion: 'Dans « Messages », choisissez un produit et envoyez un message. C\'est ainsi que vous communiquez avec votre Responsable pharmaceutique tout au long de la procédure. Regardez ensuite dans « Mes produits » l\'avancement de chaque dossier à travers les phases.' },
     },
     regente: {
       documento: { titulo: 'Examinez le document du Producto Ejemplo 3', descripcion: 'Le client a téléversé la formule quali-quantitative. Ouvrez le dossier depuis « Ma corbeille », trouvez le document 15.5 et approuvez-le (✓) ou refusez-le (✗) avec un motif que le client verra dans son portail.' },
-      cotejo:    { titulo: 'Confirmez la vérification technique (phase 8)', descripcion: 'Le « Producto Ejemplo 3 » est en phase 8, examen de la documentation numérique. Dans la carte « Phase 8 — Confirmations », enregistrez votre confirmation technique/matrices ; la confirmation juridique est saisie par l\'avocat.' },
+      cotejo:    { titulo: 'Confirmez la vérification technique (phase 8)', descripcion: 'Le « Producto Ejemplo 3 » est en phase 8, examen de la documentation numérique. Dans la carte « Phase 8 — Confirmations », enregistrez votre confirmation technique/matrices ; la confirmation juridique est saisie par le Responsable juridique.' },
       lead:      { titulo: 'Traitez le lead « Farmacia Ejemplo »', descripcion: 'Dans « Leads » se trouve la demande de « Farmacia Ejemplo » (statut Nouveau). Ouvrez-la, passez le statut à Contacté ou laissez une note : c\'est ainsi que l\'on travaille le CRM avant que l\'admin n\'invite le client à créer son compte.' },
+    },
+    legal: {
+      documento:    { titulo: 'Examinez la procuration du Producto Ejemplo 3', descripcion: 'Le client a téléversé la procuration originale. Ouvrez le dossier depuis « Ma corbeille », trouvez le document 15.2 et approuvez-le (✓) ou refusez-le (✗) avec un motif que le client verra dans son portail.' },
+      pedido:       { titulo: 'Demandez un document au client', descripcion: 'Ouvrez le « Producto Ejemplo 2 » et cliquez sur « Demander » à côté d\'un document de la liste (par exemple une déclaration sur l\'honneur) : le client le verra en attente dans son portail et le dossier passe en documents en attente.' },
+      confirmacion: { titulo: 'Confirmez l\'examen juridique (phase 8)', descripcion: 'Le « Producto Ejemplo 3 » est en phase 8, examen de la documentation numérique. Dans la carte « Phase 8 — Confirmations », enregistrez votre confirmation juridique (procurations/déclarations) ; la confirmation technique/matrices est saisie par le Responsable pharmaceutique.' },
     },
   },
   pt: {
@@ -118,7 +137,7 @@ const TRADUCCIONES = {
       documento:  { titulo: 'Carregue a sua documentação', descripcion: 'No passo 4 do assistente carregue cada documento na sua casa (PDF, JPG, PNG ou DOCX). Quando os obrigatórios estiverem carregados poderá enviar o pedido; até lá fica guardado como rascunho.' },
       cotizacion: { titulo: 'Reveja e aceite o seu orçamento', descripcion: 'Quando a Farmazed lhe enviar o orçamento, abra-o em "Orçamento", reveja a discriminação (honorários, taxa DNFD, MEF e IEA) e aceite-o para continuar.' },
       pago:       { titulo: 'Pague os custos do processo', descripcion: 'Carregue em "Pagar com PayPal" ou use a ligação de pagamento que a Farmazed lhe enviar. Com o pagamento confirmado, o seu processo passa à fase de abertura e a equipa começa a trabalhar.' },
-      mensaje:    { titulo: 'Escreva à sua equipa Farmazed', descripcion: 'Em "Mensagens" escolha um produto e escreva: é assim que comunica com o seu regente durante todo o processo. Em "Os meus produtos" acompanha o avanço de fases de cada processo.' },
+      mensaje:    { titulo: 'Escreva à sua equipa Farmazed', descripcion: 'Em "Mensagens" escolha um produto e escreva: é assim que comunica com o seu Responsável Farmacêutico durante todo o processo. Em "Os meus produtos" acompanha o avanço de fases de cada processo.' },
     },
     cliente: {
       captacion:  { titulo: 'Confirme os dados da sua empresa', descripcion: 'Ao entrar pela primeira vez, o portal pede-lhe a recolha de informação preliminar. Vem pré-preenchida com o que a "Laboratorios Ejemplo" declarou ao pedir a conta: reveja-a, responda às três perguntas e guarde.' },
@@ -126,12 +145,17 @@ const TRADUCCIONES = {
       documento:  { titulo: 'Carregue um documento de exemplo', descripcion: 'No passo 4 carregue em "Carregar" em qualquer casa: na demo o explorador de ficheiros não abre, um aviso simula o carregamento com um PDF de exemplo. "Preencher com dados de exemplo" simula todos os documentos de uma vez para seguir ao passo 5.' },
       cotizacion: { titulo: 'Aceite o orçamento do Producto Ejemplo 2', descripcion: 'A Farmazed já lhe enviou o orçamento do "Producto Ejemplo 2". Abra-o em "Orçamento", reveja a discriminação (honorários, taxa DNFD, MEF e IEA) e aceite-o.' },
       pago:       { titulo: 'Pague com o fornecedor de teste', descripcion: 'Carregue em "Pagar com PayPal". Na demo a cobrança é feita por um fornecedor de teste: não se movimenta dinheiro. Ao pagar, o processo avança sozinho para a fase 6 (na vida real fá-lo a equipa da Farmazed).' },
-      mensaje:    { titulo: 'Escreva à sua equipa Farmazed', descripcion: 'Em "Mensagens" escolha um produto e envie uma mensagem. É assim que comunica com o seu regente durante todo o processo. Depois veja em "Os meus produtos" o avanço de fases de cada processo.' },
+      mensaje:    { titulo: 'Escreva à sua equipa Farmazed', descripcion: 'Em "Mensagens" escolha um produto e envie uma mensagem. É assim que comunica com o seu Responsável Farmacêutico durante todo o processo. Depois veja em "Os meus produtos" o avanço de fases de cada processo.' },
     },
     regente: {
       documento: { titulo: 'Reveja o documento do Producto Ejemplo 3', descripcion: 'O cliente carregou a fórmula quali-quantitativa. Abra o processo a partir de "A minha caixa", procure o documento 15.5 e aprove-o (✓) ou rejeite-o (✗) com um motivo que o cliente verá no seu portal.' },
-      cotejo:    { titulo: 'Confirme a verificação técnica (fase 8)', descripcion: 'O "Producto Ejemplo 3" está na fase 8, revisão da documentação digital. No cartão "Fase 8 — Confirmações" registe a sua confirmação técnica/matrizes; a jurídica é introduzida pelo advogado.' },
+      cotejo:    { titulo: 'Confirme a verificação técnica (fase 8)', descripcion: 'O "Producto Ejemplo 3" está na fase 8, revisão da documentação digital. No cartão "Fase 8 — Confirmações" registe a sua confirmação técnica/matrizes; a jurídica é introduzida pelo Responsável Jurídico.' },
       lead:      { titulo: 'Atenda o lead "Farmacia Ejemplo"', descripcion: 'Em "Leads" está o pedido da "Farmacia Ejemplo" (estado Novo). Abra-o, mude o estado para Contactado ou deixe uma nota: é assim que se trabalha o CRM antes de o admin convidar o cliente a criar a sua conta.' },
+    },
+    legal: {
+      documento:    { titulo: 'Reveja a procuração do Producto Ejemplo 3', descripcion: 'O cliente carregou a procuração original. Abra o processo a partir de "A minha caixa", procure o documento 15.2 e aprove-o (✓) ou rejeite-o (✗) com um motivo que o cliente verá no seu portal.' },
+      pedido:       { titulo: 'Peça um documento ao cliente', descripcion: 'Abra o "Producto Ejemplo 2" e clique em "Pedir" junto a um documento da lista (por exemplo uma declaração): o cliente verá o pedido como pendente no seu portal e o processo passa a documentos pendentes.' },
+      confirmacion: { titulo: 'Confirme a revisão jurídica (fase 8)', descripcion: 'O "Producto Ejemplo 3" está na fase 8, revisão da documentação digital. No cartão "Fase 8 — Confirmações" registe a sua confirmação jurídica (procurações/declarações); a técnica/matrizes é introduzida pelo Responsável Farmacêutico.' },
     },
   },
 };
@@ -203,11 +227,11 @@ function normalizarIdioma(valor) {
   return IDIOMAS.includes(base) ? base : IDIOMA_POR_DEFECTO;
 }
 
-const LISTAS = { cliente: PASOS_CLIENTE, clienteReal: PASOS_CLIENTE_REAL, regente: PASOS_REGENTE };
+const LISTAS = { cliente: PASOS_CLIENTE, clienteReal: PASOS_CLIENTE_REAL, regente: PASOS_REGENTE, legal: PASOS_LEGAL };
 
 /**
  * Pasos de una variante en el idioma pedido (nuevos objetos; el español es la lista de referencia).
- * `variante`: 'cliente' (cuenta demo), 'clienteReal' (cliente de verdad, desde "Mi cuenta') o 'regente'.
+ * `variante`: 'cliente' (cuenta demo), 'clienteReal' (cliente de verdad, desde "Mi cuenta'), 'regente' o 'legal'.
  */
 function pasosEnIdioma(variante, idioma) {
   const base = LISTAS[variante] || PASOS_CLIENTE;
@@ -217,6 +241,6 @@ function pasosEnIdioma(variante, idioma) {
 
 module.exports = {
   IDIOMAS, IDIOMA_POR_DEFECTO, NOMBRES_IDIOMA,
-  PASOS_CLIENTE, PASOS_CLIENTE_REAL, PASOS_REGENTE, TRADUCCIONES, NOTAS, ETIQUETAS_PANEL,
+  PASOS_CLIENTE, PASOS_CLIENTE_REAL, PASOS_REGENTE, PASOS_LEGAL, TRADUCCIONES, NOTAS, ETIQUETAS_PANEL,
   normalizarIdioma, pasosEnIdioma,
 };

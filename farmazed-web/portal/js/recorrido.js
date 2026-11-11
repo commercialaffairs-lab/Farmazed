@@ -2,9 +2,9 @@
  * recorrido.js — Panel del recorrido guiado (tarjeta flotante abajo a la derecha).
  *
  * Dos recorridos, separados (Rick, 01-nov-2026):
- *   - **Demo** (claim `demo:true`): cliente demo y regente demo. Pregunta al tracker
+ *   - **Demo** (claim `demo:true`): cliente demo, regente/farmacéutico demo y legal demo. Pregunta al tracker
  *     (GET /api/demo/recorrido, services/demo_recorrido.js) y aparece siempre; se minimiza, no se cierra.
- *     El recorrido del regente SOLO existe aquí.
+ *     Los recorridos del personal (Responsable Farmacéutico y Legal) SOLO existen aquí.
  *   - **Cliente real** (cliente_titular / cliente_miembro): se activa en "Mi cuenta" (preferencia
  *     `recorridoGuiado` guardada en el tracker, GET/PUT /api/me/preferencias) y pregunta a
  *     GET /api/me/recorrido (services/recorrido_cliente.js). Tiene una ✕ para ocultarlo (vuelve a
@@ -20,7 +20,7 @@
  * vuelve a pedir el recorrido. Aquí no hay tablas de textos: los pasos Y los rótulos
  * (`estado.etiquetas`) llegan ya traducidos del tracker (services/demo_recorrido_textos.js, la misma
  * fuente que el manual). El enlace "Ayuda" del topbar (#tb-ayuda) se sincroniza con el idioma y el
- * manual del rol (manual/cliente/ o manual/regente/).
+ * manual del rol (manual/cliente/, manual/regente/ o manual/legal/).
  *
  * Se refresca solo: al volver a la pestaña y cada pocos segundos mientras está desplegado, y
  * cualquier página puede forzarlo con `window.__fzRecorrido.actualizar()` después de una acción.
@@ -180,7 +180,7 @@ function htmlPildora(estado) {
 function sincronizarAyuda(estado) {
   const ayuda = document.getElementById('tb-ayuda');
   if (!ayuda || !estado?.idioma) return;
-  ayuda.href = `/manual/${estado.rol === 'regente' ? 'regente' : 'cliente'}/${encodeURIComponent(estado.idioma)}.html`;
+  ayuda.href = `/manual/${estado.rol === 'regente' || estado.rol === 'legal' ? estado.rol : 'cliente'}/${encodeURIComponent(estado.idioma)}.html`;
 }
 
 const avisarCambio = (activo) => document.dispatchEvent(new CustomEvent('fz:recorrido', { detail: { activo } }));

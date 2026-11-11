@@ -1,7 +1,7 @@
 # Modo demo — cuentas de demostración y reinicio
 
 Decisión de Rick (01-nov-2026): dos cuentas públicas para que un prospecto (cliente) o un empleado
-nuevo (regente) recorran la plataforma con datos de ejemplo, y un botón **[Reiniciar cuenta demo]**
+nuevo (Responsable Farmacéutico o Responsable Legal) recorran la plataforma con datos de ejemplo, y un botón **[Reiniciar cuenta demo]**
 que lo deja todo como al principio. Conviven con los datos reales de producción: todo lo demo lleva
 `demo:true` y cuelga de la empresa `demo-org`; el reinicio borra solo eso.
 
@@ -10,11 +10,15 @@ que lo deja todo como al principio. Conviven con los datos reales de producción
 | Cuenta | Rol | Clave | Qué ve |
 |---|---|---|---|
 | `cliente.demo@farmazed.com` | cliente_titular de "Laboratorios Ejemplo S.A." | `DEMO_PASSWORD_CLIENTE` | Solo su empresa de ejemplo |
-| `regente.demo@farmazed.com` | regente | `DEMO_PASSWORD_REGENTE` | Solo los casos de ejemplo que tiene asignados |
+| `regente.demo@farmazed.com` | regente (Responsable Farmacéutico) | `DEMO_PASSWORD_REGENTE` | Solo los casos de ejemplo (`demo:true`) |
+| `farmaceutico.demo@farmazed.com` | regente (Responsable Farmacéutico) | `DEMO_PASSWORD_FARMACEUTICO` | Los mismos casos y el mismo recorrido que `regente.demo` |
+| `legal.demo@farmazed.com` | abogado (Responsable Legal) | `DEMO_PASSWORD_LEGAL` | Los casos de ejemplo; recorrido propio (poder, pedido de documento, confirmación legal de la fase 8) |
+
+Rol visible (Rick, 08-nov-2026): `regente` se muestra como **Responsable Farmacéutico** y `abogado` como **Responsable Legal**; los identificadores internos (claims, `ROLES`, `manual/regente/`) no cambian. El personal demo ve los casos `demo:true` de `demo-org` (no por `asignados.<rol>`, que guarda un solo uid), así las dos cuentas de Responsable Farmacéutico comparten casos.
 
 No hay admin demo: un admin vería todas las empresas reales. Las acciones de admin del recorrido
 (enviar cotización, confirmar pagos, avanzar fases) las hace el admin real de Farmazed si hace falta.
-Las claves las fija Rick y **no van en el repo** (es público): `DEMO_PASSWORD_CLIENTE` / `DEMO_PASSWORD_REGENTE` en Secret Manager (Cloud Run) o `tracker/.env` (local). Son obligatorias la primera vez que se siembra; en un reinicio, si faltan, cada cuenta conserva su clave. Rick las comunica a los prospectos por fuera (p. ej. en la página de demo o el manual).
+Las claves las fija Rick y **no van en el repo** (es público): `DEMO_PASSWORD_CLIENTE` / `DEMO_PASSWORD_REGENTE` / `DEMO_PASSWORD_FARMACEUTICO` / `DEMO_PASSWORD_LEGAL` en Secret Manager (Cloud Run) o `tracker/.env` (local). Son obligatorias la primera vez que se siembra; en un reinicio, si faltan, cada cuenta conserva su clave. Rick las comunica a los prospectos por fuera (p. ej. en la página de demo o el manual).
 
 ## Estado inicial (lo que deja el seed y cada reinicio)
 
@@ -24,14 +28,15 @@ Las claves las fija Rick y **no van en el repo** (es público): `DEMO_PASSWORD_C
   (el cliente la acepta y paga con el proveedor de prueba).
 - **Producto Ejemplo 3 — Jarabe pediátrico**: fase 8, cotización aceptada y **pagada** (4 conceptos),
   con dos mensajes y **un documento subido** (15.5 Fórmula cuali-cuantitativa, PDF de ejemplo en Storage)
-  para que el regente lo apruebe o rechace y confirme el cotejo técnico.
+  para que el Responsable Farmacéutico lo apruebe o rechace y confirme el cotejo técnico, y **un poder (15.2)**
+  para que el Responsable Legal lo revise y confirme la parte legal.
 - "Producto Ejemplo 1" **no existe**: lo crea el cliente en "Solicitar Registro".
 - Lead "Farmacia Ejemplo" en el CRM del personal (Leads), estado Nuevo.
 
 ## Recorrido guiado (panel "Recorrido demo")
 
 Tarjeta flotante (`farmazed-web/portal/js/recorrido.js`) que aparece siempre en las cuentas demo, en el
-portal del cliente y en todas las páginas del back-office del regente (y, para clientes reales, cuando
+portal del cliente y en todas las páginas del back-office del personal demo (y, para clientes reales, cuando
 la activan en "Mi cuenta": ver "Dos recorridos" más abajo). Muestra los pasos, cuál toca
 ahora y un botón "Ir al paso" que abre la pantalla donde se hace. El progreso **no se guarda**: el
 tracker lo deduce de los datos (`GET /api/demo/recorrido`, `services/demo_recorrido.js`), así el
@@ -57,11 +62,21 @@ todos los idiomas para que la persona los encuentre.
 | 5. Paga con el proveedor de prueba | `pagoPaypal.estado == 'capturada'`; **el caso avanza solo** fase_04 → fase_05 → fase_06 (`avanzarTrasPagoDemo`, por `applyTransition` con sus gates, actor `demo-automatico` en el historial) |
 | 6. Escribe a tu equipo Farmazed | hay un mensaje del cliente que no sembró el seed |
 
-| Regente (3 pasos) | Se marca hecho cuando… |
+| Responsable Farmacéutico (3 pasos; `regente.demo` y `farmaceutico.demo`) | Se marca hecho cuando… |
 |---|---|
 | 1. Revisa el documento de Producto Ejemplo 3 | `demo-doc-3-formula.status` es approved o rejected |
 | 2. Confirma el cotejo técnico (fase 8) | `demo-caso-3.confirmacionesFase8.tecnica` |
 | 3. Atiende el lead "Farmacia Ejemplo" | el lead cambió de estado o tiene notas |
+
+| Responsable Legal (3 pasos; `legal.demo`) | Se marca hecho cuando… |
+|---|---|
+| 1. Revisa el poder de Producto Ejemplo 3 | `demo-doc-3-poder.status` es approved o rejected |
+| 2. Pide un documento al cliente | el Producto Ejemplo 2 tiene algún documento (el seed no deja ninguno; "Solicitar" crea el pedido) |
+| 3. Confirma la revisión legal (fase 8) | `demo-caso-3.confirmacionesFase8.legal` |
+
+El pedido se hace sobre el Producto Ejemplo 2 (no el 3) porque pedir un documento mueve el caso a documentos
+pendientes y el 3 debe seguir en fase 8 para que ambos Responsables confirmen. Orden de los pasos: el brief
+pedía revisar, pedir y confirmar; así quedó.
 
 En modo demo el portal oculta lo que no entra en el recorrido (`body.fz-demo`): invitar miembros
 (además el tracker responde 403: mandaría un correo real) y la suscripción (sin planes por ahora).
@@ -132,7 +147,8 @@ the settings section". Un solo panel (`portal/js/recorrido.js`), dos fuentes:
 | | Cuenta demo | Cliente real |
 |---|---|---|
 | Cliente | `GET /api/demo/recorrido` (pasos `cliente`, datos de ejemplo, siempre visible) | `GET /api/me/recorrido` (pasos `clienteReal`, genéricos; progreso según los datos de SU empresa: captación, casos, documentos subidos, cotización aceptada/pagada, mensajes). Se enciende en **"Mi cuenta"** (menú del avatar) con el interruptor "Mostrar el recorrido guiado"; se apaga ahí o con la ✕ del panel. Preferencia `recorridoGuiado` en Firestore `userPrefs/{uid}` (`GET/PUT /api/me/preferencias`). |
-| Regente | `GET /api/demo/recorrido` (pasos `regente`) | no existe |
+| Responsable Farmacéutico | `GET /api/demo/recorrido` (pasos `regente`) | no existe |
+| Responsable Legal | `GET /api/demo/recorrido` (pasos `legal`) | no existe |
 
 Los textos de las tres variantes viven en `services/demo_recorrido_textos.js`; el cliente real no ve
 referencias a "Producto Ejemplo 2", al proveedor de prueba ni al botón de reinicio. "Mi cuenta"
@@ -140,10 +156,10 @@ también agrupa el selector de idioma y el enlace al manual.
 
 ## Manuales de usuario (ES/EN/FR/PT)
 
-Dos manuales generados: `farmazed-web/manual/cliente/{es,en,fr,pt}.html` (portal del cliente, con
+Tres manuales generados: `farmazed-web/manual/cliente/{es,en,fr,pt}.html` (portal del cliente, con
 los pasos de cliente real y un apartado "Si usas la cuenta de demostración"; lo enlazan "Ayuda" del
-portal y "Mi cuenta") y `farmazed-web/manual/regente/{es,en,fr,pt}.html` (recorrido del regente,
-solo demo; lo enlaza "Ayuda" del back-office). Imprimibles desde el navegador ("Guardar como PDF").
+portal y "Mi cuenta") `farmazed-web/manual/regente/{es,en,fr,pt}.html` (recorrido del Responsable Farmacéutico,
+solo demo; lo enlaza "Ayuda" del back-office) y `farmazed-web/manual/legal/{es,en,fr,pt}.html` (el del Responsable Legal; "Ayuda" lo abre para el rol `abogado`). Imprimibles desde el navegador ("Guardar como PDF").
 **No se edita a mano**: lo produce `tracker/scripts/generar_manual.js` (`npm run manual` en
 `tracker/`) con los textos de los pasos y del panel de `services/demo_recorrido_textos.js` (la misma
 fuente del panel, en los 4 idiomas) y `scripts/manual_textos.js` (prosa del manual, nombres de las 13
@@ -154,5 +170,5 @@ o del manual, corre el generador y commitea.
 
 ## Pendiente (fases siguientes del plan, `PENDIENTES.md`)
 
-E2e del recorrido completo (cliente y regente). El backend del recorrido ya tiene suite:
+E2e del recorrido completo (cliente, Responsable Farmacéutico y Responsable Legal). El backend del recorrido ya tiene suite:
 `tests/demo.test.js`; el manual, `tests/manual.test.js`.
