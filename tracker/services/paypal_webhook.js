@@ -13,6 +13,7 @@
  * transacción que su efecto (PayPal reintenta un evento hasta que recibe un 2xx).
  */
 const admin = require('../utils/firebase_admin.js');
+const { esDocDemo } = require('../utils/demo_scope');
 const { registrarPagoConfirmado } = require('./facturacion/facturas'); // factura electrónica tras conciliar la captura
 const { abrirRevision } = require('./revisiones_pago');
 const { cambiosDeCambioDePlan, cancelarAnterior, tipoDeSuscripcion, camposFinPlanEmpresarial } = require('./suscripciones');
@@ -135,6 +136,8 @@ async function eventoDeCaptura({ id, event_type: tipo, resource }) {
   const captureId = idDeCaptura(tipo, resource);
   const quoteRef = await buscarCotizacion(captureId, resource.supplementary_data?.related_ids?.order_id);
   const eventoRef = db().collection('paypal_eventos').doc(id);
+  // Un pago de la demo (checkout de sandbox) no concilia ni factura ni abre revisiones: el webhook lo ignora.
+  if (quoteRef && esDocDemo((await quoteRef.get()).data())) return 'ignorado_demo';
 
   return db().runTransaction(async (t) => {
     if ((await t.get(eventoRef)).exists) return 'duplicado';

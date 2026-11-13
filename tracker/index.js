@@ -9,6 +9,7 @@ const admin    = require('./utils/firebase_admin.js');
 const { requireAuth, requireAdmin } = require('./middleware/auth');
 const { requirePermission } = require('./middleware/permissions');
 const { crearLimitador } = require('./utils/rate_limit');
+const { esAdminDemo } = require('./utils/demo_scope');
 const { serializeTimestamps } = require('./utils/serialize');
 const { obtenerConfig, origenPermitido } = require('./config');
 
@@ -106,6 +107,8 @@ app.get('/qr', async (req, res) => {
 
 // Admin only: Firebase ID token (Authorization: Bearer) with the admin claim. No shared key in the URL.
 app.get('/api/scans', requireAuth, requireAdmin, async (req, res) => {
+  // Admin demo: los escaneos son datos reales (IP, dispositivo, user-agent de visitantes); la demo no tiene ninguno propio.
+  if (esAdminDemo(req.user)) return res.json({ total: 0, scans: [] });
   try {
     const snap  = await db.collection('qr_scans').orderBy('timestamp', 'desc').limit(1000).get();
     const scans = snap.docs.map(d => {

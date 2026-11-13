@@ -497,7 +497,10 @@
     "— supera el límite orientativo de IEA (no bloquea; contactar al IEA si hace falta consolidar/recortar).": "— exceeds the IEA guideline limit (non-blocking; contact the IEA if consolidating/trimming is needed).",
     "← Expedientes": "← Files",
     "✓ Copiado": "✓ Copied",
-    "📋 Copiado": "📋 Copied"
+    "📋 Copiado": "📋 Copied",
+    "Envío simulado: en la demo no sale ningún correo. cliente.demo ya ve esta cotización en su portal y puede pagarla.": "Simulated send: in the demo no e-mail goes out. cliente.demo already sees this quote in their portal and can pay it.",
+    "Enviar cotización": "Send quote",
+    "Tableta masticable": "Chewable tablet"
   },
   "fr": {
     "Consultas por QR": "Consultations par QR",
@@ -997,7 +1000,10 @@
     "— supera el límite orientativo de IEA (no bloquea; contactar al IEA si hace falta consolidar/recortar).": "— dépasse la limite indicative de l'IEA (non bloquant ; contacter l'IEA s'il faut consolider/réduire).",
     "← Expedientes": "← Dossiers",
     "✓ Copiado": "✓ Copié",
-    "📋 Copiado": "📋 Copié"
+    "📋 Copiado": "📋 Copié",
+    "Envío simulado: en la demo no sale ningún correo. cliente.demo ya ve esta cotización en su portal y puede pagarla.": "Envoi simulé : dans la démo aucun courriel n'est envoyé. cliente.demo voit déjà ce devis dans son portail et peut le payer.",
+    "Enviar cotización": "Envoyer le devis",
+    "Tableta masticable": "Comprimé à croquer"
   },
   "pt": {
     "Consultas por QR": "Consultas por QR",
@@ -1497,6 +1503,9 @@
     "— supera el límite orientativo de IEA (no bloquea; contactar al IEA si hace falta consolidar/recortar).": "— excede o limite orientativo do IEA (não bloqueia; contactar o IEA se for preciso consolidar/reduzir).",
     "← Expedientes": "← Processos",
     "✓ Copiado": "✓ Copiado",
-    "📋 Copiado": "📋 Copiado"
+    "📋 Copiado": "📋 Copiado",
+    "Envío simulado: en la demo no sale ningún correo. cliente.demo ya ve esta cotización en su portal y puede pagarla.": "Envio simulado: na demo não sai nenhum e-mail. cliente.demo já vê esta cotação no seu portal e pode pagá-la.",
+    "Enviar cotización": "Enviar cotação",
+    "Tableta masticable": "Comprimido mastigável"
   }
 }

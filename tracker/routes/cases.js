@@ -8,7 +8,8 @@ const { serializeTimestamps } = require('../utils/serialize');
 const { applyTransition } = require('../services/transitions');
 const { getAcceptedQuoteLineForCase } = require('../services/quotes');
 const { effectiveRole, getCaseOrFail, canTransitionCase, requirePermission, can, PERMISSIONS, CLIENT_ROLES, STAFF_ROLES } = require('../middleware/permissions');
-const { DEMO_ORG_ID } = require('../services/demo');
+const { DEMO_ORG_ID, esAdminDemo } = require('../utils/demo_scope');
+const { AVISO: AVISO_DEMO } = require('../middleware/demo_admin');
 
 const router = Router();
 const db     = () => admin.firestore();
@@ -54,6 +55,19 @@ function sinCamposInternos(data, role) {
   return publico;
 }
 
+// ¿Todos los uids de una asignación (asignados.{analista,abogado,regente} y assignedTo) son de cuentas demo?
+// Un valor que no sea texto (null = quitar la asignación) no cuenta; cualquier uid real → false.
+async function asignacionEsDemo({ asignados, assignedTo }) {
+  const uids = [...(asignados && typeof asignados === 'object' ? Object.values(asignados) : [asignados]), assignedTo].filter(v => v !== undefined && v !== null);
+  for (const uid of uids) {
+    if (typeof uid !== 'string') return false;
+    if (/^demo-/.test(uid)) continue;
+    const cuenta = await admin.auth().getUser(uid).catch(() => null);
+    if (cuenta?.customClaims?.demo !== true) return false;
+  }
+  return true;
+}
+
 router.get('/', requireAuth, requirePermission('cases.list'), async (req, res) => {
   try {
     let query = db().collection('cases').orderBy('createdAt', 'desc');
@@ -63,7 +77,8 @@ router.get('/', requireAuth, requirePermission('cases.list'), async (req, res) =
     // migrar); staff (analista/abogado/regente) solo los que tiene asignados.
     const role = effectiveRole(req.user);
     if (role === 'admin') {
-      // sin filtro
+      // sin filtro — salvo el admin demo (TAREA 64): solo la empresa demo
+      if (esAdminDemo(req.user)) query = query.where('orgId', '==', DEMO_ORG_ID);
     } else if (CLIENT_ROLES.includes(role)) {
       query = req.user.orgId
         ? query.where('orgId', '==', req.user.orgId)
@@ -106,7 +121,12 @@ router.post('/', requireAuth, requirePermission('cases.create'), async (req, res
     if (rechazo) return res.status(rechazo.status).json(rechazo.body);
 
     const now      = admin.firestore.Timestamp.now();
-    const caseCode = await generateCaseCode(tramiteType, tipoRegistro || 'Regular');
+    // Admin demo: no consume el contador GLOBAL de códigos de expediente (los códigos reales no deben tener huecos por la demo):
+    // código propio FZ-DEMO-<año>-<4 dígitos al azar>, y el caso nace en la empresa demo, marcado demo:true.
+    const adminDemo = esAdminDemo(req.user);
+    const caseCode = adminDemo
+      ? `FZ-DEMO-${new Date().getFullYear()}-A${String(Math.floor(Math.random() * 10000)).padStart(4, '0')}`
+      : await generateCaseCode(tramiteType, tipoRegistro || 'Regular');
     const caseData = {
       createdAt:      now,
       updatedAt:      now,
@@ -127,7 +147,8 @@ router.post('/', requireAuth, requirePermission('cases.create'), async (req, res
       // — así un cliente_miembro y el cliente_titular de la misma empresa
       // ven el mismo caso. null en cuentas sin migrar (compat, ver
       // canAccessCase() en middleware/permissions.js).
-      orgId:          req.user.orgId || null,
+      orgId:          adminDemo ? DEMO_ORG_ID : (req.user.orgId || null),
+      ...(adminDemo ? { demo: true } : {}),
       assignedTo:     null,
       asignados:      { analista: null, abogado: null, regente: null },
       priority:       'normal',
@@ -220,6 +241,11 @@ router.patch('/:id', requireAuth, async (req, res) => {
       if (req.body[key] !== undefined) update[key] = req.body[key];
     }
 
+    // Admin demo: solo puede asignar personal DEMO (uid demo-* o claim demo:true); cualquier otro uid (personal real) → 403.
+    if (esAdminDemo(req.user) && (update.asignados !== undefined || update.assignedTo !== undefined)) {
+      if (!(await asignacionEsDemo(update))) return res.status(403).json({ error: AVISO_DEMO, demoNoGuarda: true });
+    }
+
     // Clients may not set arbitrary status values — only submit their own draft.
     if (isClient && req.body.status !== undefined) {
       if (req.body.status !== 'submitted') {
@@ -281,6 +307,7 @@ router.patch('/:id', requireAuth, async (req, res) => {
 // ─── DELETE /api/cases/:id (soft delete, admin only) ─────────────────────────
 router.delete('/:id', requireAuth, requirePermission('cases.delete'), async (req, res) => {
   try {
+    if (!(await getCaseOrFail(req.params.id, req.user, res))) return; // 404/403 ya respondidos (el admin demo no borra casos reales)
     await db().collection('cases').doc(req.params.id).update({
       status:    'deleted',
       updatedAt: admin.firestore.Timestamp.now(),

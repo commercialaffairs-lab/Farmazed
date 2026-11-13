@@ -12,9 +12,9 @@
  * `recorridoDemo(user, idioma)` devuelve todo ya traducido; el front no trae tablas de textos.
  */
 const admin = require('../utils/firebase_admin.js');
-const { DEMO_ORG_ID, CASOS_SEMBRADOS, DOC_REGENTE_ID, DOC_LEGAL_ID, MENSAJES_SEMBRADOS } = require('./demo');
+const { DEMO_ORG_ID, CASOS_SEMBRADOS, DOC_REGENTE_ID, DOC_LEGAL_ID, MENSAJES_SEMBRADOS, COTIZACION_ADMIN_ID } = require('./demo');
 const {
-  IDIOMAS, IDIOMA_POR_DEFECTO, PASOS_CLIENTE, PASOS_REGENTE, PASOS_LEGAL, NOTAS, ETIQUETAS_PANEL, normalizarIdioma, pasosEnIdioma,
+  IDIOMAS, IDIOMA_POR_DEFECTO, PASOS_CLIENTE, PASOS_REGENTE, PASOS_LEGAL, PASOS_ADMIN, NOTAS, ETIQUETAS_PANEL, normalizarIdioma, pasosEnIdioma,
 } = require('./demo_recorrido_textos');
 
 const db = () => admin.firestore();
@@ -84,7 +84,22 @@ async function estadoLegal() {
   return { hecho, notas: {} };
 }
 
-const ESTADO_POR_ROL = { cliente: estadoCliente, regente: estadoRegente, legal: estadoLegal };
+async function estadoAdmin() {
+  const [cotizacion, lead] = await Promise.all([
+    db().collection('quotes').doc(COTIZACION_ADMIN_ID).get(),
+    db().collection('contactLeads').doc('demo-lead-1').get(),
+  ]);
+  const q = cotizacion.exists ? cotizacion.data() : {};
+  const l = lead.exists ? lead.data() : {};
+  const hecho = {
+    cotizacion: cotizacion.exists && q.estado !== 'borrador',                               // enviada (o ya respondida)
+    lead:       lead.exists && ((!!l.estado && l.estado !== 'nuevo') || !!l.notas),
+    pago:       q.pagoPaypal?.estado === 'capturada',                                        // lo paga cliente.demo
+  };
+  return { hecho, notas: {} };
+}
+
+const ESTADO_POR_ROL = { cliente: estadoCliente, regente: estadoRegente, legal: estadoLegal, admin: estadoAdmin };
 
 /**
  * Estado del recorrido para una cuenta demo (`user` = claims del token: role, demo) en el idioma
@@ -93,7 +108,7 @@ const ESTADO_POR_ROL = { cliente: estadoCliente, regente: estadoRegente, legal: 
  */
 async function recorridoDemo(user, idiomaPedido = IDIOMA_POR_DEFECTO) {
   const idioma = normalizarIdioma(idiomaPedido);
-  const rol = user.role === 'regente' ? 'regente' : user.role === 'abogado' ? 'legal' : 'cliente';
+  const rol = user.role === 'regente' ? 'regente' : user.role === 'abogado' ? 'legal' : user.role === 'admin' ? 'admin' : 'cliente';
   const { hecho, notas, extra = {} } = await ESTADO_POR_ROL[rol]();
   const lista = pasosEnIdioma(rol, idioma).map(p => ({
     ...p,
@@ -107,4 +122,4 @@ async function recorridoDemo(user, idiomaPedido = IDIOMA_POR_DEFECTO) {
   };
 }
 
-module.exports = { recorridoDemo, PASOS_CLIENTE, PASOS_REGENTE, PASOS_LEGAL };
+module.exports = { recorridoDemo, PASOS_CLIENTE, PASOS_REGENTE, PASOS_LEGAL, PASOS_ADMIN };

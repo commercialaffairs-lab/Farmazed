@@ -24,6 +24,8 @@ const { serializeTimestamps } = require('../utils/serialize');
 const { HttpError, responderError } = require('../utils/http_error');
 const { textoError, trimOrNull } = require('../utils/validar_texto');
 const F = require('../services/facturacion/facturas');
+const admin = require('../utils/firebase_admin.js');
+const { DEMO_ORG_ID, esAdminDemo, esDocDemo } = require('../utils/demo_scope');
 
 const router = Router();
 const soloAdmin = [requireAuth, requirePermission('facturas.manage')];
@@ -39,7 +41,10 @@ const usuario = (req) => ({ uid: req.user.uid, email: req.user.email, demo: req.
  */
 async function cargarVisible(req) {
   const { data } = await F.cargar(req.params.id);
-  if (effectiveRole(req.user) === 'admin') return { id: req.params.id, ...data };
+  if (effectiveRole(req.user) === 'admin') {
+    if (esAdminDemo(req.user) && !esDocDemo(data)) throw new HttpError(403, { error: 'Forbidden' }); // admin demo: solo facturas de la empresa demo
+    return { id: req.params.id, ...data };
+  }
   if (!req.user.orgId || data.orgId !== req.user.orgId) throw new HttpError(403, { error: 'Esta factura no es de tu empresa.' });
   const vista = F.vistaCliente({ id: req.params.id, ...data });
   if (!vista) throw new HttpError(404, { error: 'Factura no encontrada' }); // todavía no emitida: para el cliente no existe
@@ -51,7 +56,12 @@ router.get('/', ...soloAdmin, async (req, res) => {
     const { estado, origen, limite } = req.query;
     if (estado && !F.ESTADOS.includes(estado)) return res.status(400).json({ error: `estado inválido (${F.ESTADOS.join(', ')})` });
     if (origen && !F.ORIGENES.includes(origen)) return res.status(400).json({ error: `origen inválido (${F.ORIGENES.join(', ')})` });
-    res.json(serializeTimestamps({ facturas: await F.listar({ estado: estado || null, origen: origen || null, limite }) }));
+    // Admin demo: solo las facturas de la empresa demo. Se acota por orgId en la consulta; estado y origen se filtran
+    // en memoria (orgId+estado u orgId+origen pedirían índices compuestos que no existen).
+    const facturas = esAdminDemo(req.user)
+      ? (await F.listar({ orgId: DEMO_ORG_ID, limite })).filter(f => (!estado || f.estado === estado) && (!origen || f.origen === origen))
+      : await F.listar({ estado: estado || null, origen: origen || null, limite });
+    res.json(serializeTimestamps({ facturas }));
   } catch (e) { responderError(res, e); }
 });
 
@@ -64,7 +74,14 @@ router.put('/config', ...soloAdmin, async (req, res) => {
 });
 
 router.get('/sin-factura', ...soloAdmin, async (req, res) => {
-  try { res.json(serializeTimestamps({ pagos: await F.pagosSinFactura(req.query.limite) })); } catch (e) { responderError(res, e); }
+  try {
+    let pagos = await F.pagosSinFactura(req.query.limite);
+    if (esAdminDemo(req.user)) { // admin demo: solo pagos de casos de la empresa demo
+      const demo = new Set((await admin.firestore().collection('cases').where('orgId', '==', DEMO_ORG_ID).get()).docs.map(d => d.id));
+      pagos = pagos.filter(p => demo.has(p.caseId));
+    }
+    res.json(serializeTimestamps({ pagos }));
+  } catch (e) { responderError(res, e); }
 });
 
 router.post('/desde-pagos', ...soloAdmin, async (req, res) => {
@@ -125,7 +142,7 @@ router.post('/:id/anular',     ...soloAdmin, accion(async (req) => {
 }));
 
 router.get('/:id/estado-pac', ...soloAdmin, async (req, res) => {
-  try { res.json(serializeTimestamps(await F.estadoEnPac(req.params.id))); } catch (e) { responderError(res, e); }
+  try { await cargarVisible(req); res.json(serializeTimestamps(await F.estadoEnPac(req.params.id))); } catch (e) { responderError(res, e); }
 });
 
 module.exports = router;

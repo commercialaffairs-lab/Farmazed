@@ -7,7 +7,7 @@
  *     ninguna tabla de textos;
  *   - el manual de usuario (scripts/generar_manual.js → farmazed-web/manual/{es,en,fr,pt}.html).
  *
- * El español es la referencia (PASOS_CLIENTE / PASOS_REGENTE / PASOS_LEGAL); los demás idiomas traducen por id de
+ * El español es la referencia (PASOS_CLIENTE / PASOS_REGENTE / PASOS_LEGAL / PASOS_ADMIN); los demás idiomas traducen por id de
  * paso. La interfaz también existe en los 4 idiomas (farmazed-web/i18n/, portal/js/i18n.js), así que
  * los rótulos de pantalla que se citan entre comillas ("Solicitar Registro" → "Request Registration",
  * [Reiniciar cuenta demo] → [Reset demo account]…) van en cada idioma con la MISMA traducción que el
@@ -29,8 +29,8 @@ const PASOS_CLIENTE = [
     descripcion: 'En el paso 4 pulsa "Subir" en cualquier casilla: en la demo no se abre el explorador de archivos, un aviso simula la carga con un PDF de ejemplo. Con "Rellenar con datos de ejemplo" quedan simulados todos los documentos de una vez y puedes seguir al paso 5.' },
   { id: 'cotizacion', titulo: 'Acepta la cotización de Producto Ejemplo 2',
     descripcion: 'Farmazed ya te envió la cotización del "Producto Ejemplo 2". Ábrela en "Cotización", revisa el desglose (honorarios, tasa DNFD, MEF e IEA) y acéptala.' },
-  { id: 'pago',       titulo: 'Paga con el proveedor de prueba',
-    descripcion: 'Pulsa "Pagar con PayPal". En la demo el cobro lo hace un proveedor de prueba: no se mueve dinero. Al pagar, el expediente avanza solo a la fase 6 (en la vida real lo hace el equipo de Farmazed).' },
+  { id: 'pago',       titulo: 'Paga con PayPal sandbox',
+    descripcion: 'Pulsa "Pagar con PayPal": te lleva a PayPal sandbox (el entorno de pruebas). Entra con la cuenta de comprador de prueba que te dio Farmazed y aprueba el pago: no se mueve dinero real. Al volver, el expediente avanza solo a la fase 6 (en la vida real lo hace el equipo de Farmazed).' },
   { id: 'mensaje',    titulo: 'Escribe a tu equipo Farmazed',
     descripcion: 'En "Mensajes" elige un producto y envía un mensaje. Así te comunicas con tu Responsable Farmacéutico durante todo el trámite. Luego mira en "Mis Productos" el avance de fases de cada expediente.' },
 ];
@@ -51,6 +51,15 @@ const PASOS_LEGAL = [
     descripcion: 'Abre el "Producto Ejemplo 2" y pulsa "Solicitar" junto a un documento del listado (por ejemplo una declaración jurada): el cliente lo verá como pendiente en su portal y el expediente pasa a documentos pendientes.' },
   { id: 'confirmacion', titulo: 'Confirma la revisión legal (fase 8)',
     descripcion: 'El "Producto Ejemplo 3" está en la fase 8, revisión de documentación digital. En la tarjeta "Fase 8 — Confirmaciones" registra tu confirmación legal (poderes/declaraciones); la técnica/matrices la pone el Responsable Farmacéutico.' },
+];
+
+const PASOS_ADMIN = [
+  { id: 'cotizacion',    titulo: 'Ajusta y envía la cotización del Producto Ejemplo 4',
+    descripcion: 'En "Cotizaciones" abre la cotización en borrador del "Producto Ejemplo 4", revisa o ajusta los honorarios (con un motivo si te apartas del tarifario) y pulsa "Enviar cotización". El envío es simulado: no sale ningún correo, pero cliente.demo ya la ve en su portal.' },
+  { id: 'lead',          titulo: 'Atiende el lead "Farmacia Ejemplo"',
+    descripcion: 'En "Leads" está la solicitud de "Farmacia Ejemplo" (estado Nuevo). Ábrela, cambia el estado a Contactado o deja una nota: así se trabaja el CRM antes de invitar al cliente a crear su cuenta (en la demo la invitación no se envía).' },
+  { id: 'pago',          titulo: 'Mira el pago de la cotización',
+    descripcion: 'Entra en otra pestaña como cliente.demo, acepta la cotización del "Producto Ejemplo 4" y págala en PayPal sandbox. Al volver aquí verás el pago en el expediente y en "Finanzas", y el expediente avanzado a la fase 6.' },
 ];
 
 // Recorrido del cliente para cuentas REALES (Rick, 01-nov-2026: "clients will be from the demo
@@ -88,7 +97,7 @@ const TRADUCCIONES = {
       producto:   { titulo: 'Create your first product', descripcion: 'Under "Request Registration" start a request. The "Fill in with sample data" button fills in the procedure type, the product and the companies for you; move on with "Next" to step 4 (Documents).' },
       documento:  { titulo: 'Upload a sample document', descripcion: 'In step 4 click "Upload" in any slot: in the demo the file browser does not open, a notice simulates the upload with a sample PDF. "Fill in with sample data" simulates every document at once so you can move on to step 5.' },
       cotizacion: { titulo: 'Accept the quote for Producto Ejemplo 2', descripcion: 'Farmazed has already sent you the quote for "Producto Ejemplo 2". Open it under "Quote", review the breakdown (fees, DNFD fee, MEF and IEA) and accept it.' },
-      pago:       { titulo: 'Pay with the test provider', descripcion: 'Click "Pay with PayPal". In the demo the charge is handled by a test provider: no money moves. Once paid, the file moves on its own to phase 6 (in real life the Farmazed team does this).' },
+      pago:       { titulo: 'Pay with PayPal sandbox', descripcion: 'Click "Pay with PayPal": it takes you to PayPal sandbox (the test environment). Sign in with the test buyer account Farmazed gave you and approve the payment: no real money moves. When you come back, the file moves on its own to phase 6 (in real life the Farmazed team does this).' },
       mensaje:    { titulo: 'Write to your Farmazed team', descripcion: 'Under "Messages" pick a product and send a message. This is how you talk to your Pharmacist in Charge throughout the procedure. Then open "My Products" to see each file\'s progress through the phases.' },
     },
     regente: {
@@ -100,6 +109,11 @@ const TRADUCCIONES = {
       documento:    { titulo: 'Review the power of attorney for Producto Ejemplo 3', descripcion: 'The client uploaded the original power of attorney. Open the file from "My Inbox", find document 15.2 and approve it (✓) or reject it (✗) with a reason the client will see in their portal.' },
       pedido:       { titulo: 'Request a document from the client', descripcion: 'Open "Producto Ejemplo 2" and click "Request" next to a document in the list (for example a sworn statement): the client will see it as pending in their portal and the file moves to pending documents.' },
       confirmacion: { titulo: 'Confirm the legal review (phase 8)', descripcion: '"Producto Ejemplo 3" is in phase 8, review of digital documentation. In the "Phase 8 — Confirmations" card record your legal confirmation (powers of attorney/statements); the technical/matrices one is entered by the Pharmacist in Charge.' },
+    },
+    admin: {
+      cotizacion: { titulo: 'Adjust and send the quote for Producto Ejemplo 4', descripcion: 'Under "Quotes" open the draft quote for "Producto Ejemplo 4", review or adjust the fees (with a reason if you depart from the price list) and click "Send quote". Sending is simulated: no e-mail goes out, but cliente.demo already sees it in their portal.' },
+      lead: { titulo: 'Handle the "Farmacia Ejemplo" lead', descripcion: 'Under "Leads" you will find the request from "Farmacia Ejemplo" (status New). Open it, change the status to Contacted or leave a note: this is how the CRM is worked before inviting the client to create an account (in the demo the invitation is not sent).' },
+      pago: { titulo: 'Check the quote payment', descripcion: 'In another tab sign in as cliente.demo, accept the quote for "Producto Ejemplo 4" and pay it on PayPal sandbox. Back here you will see the payment in the file and in "Finance", and the file moved on to phase 6.' },
     },
   },
   fr: {
@@ -116,7 +130,7 @@ const TRADUCCIONES = {
       producto:   { titulo: 'Créez votre premier produit', descripcion: 'Dans « Demander l\'enregistrement », lancez une demande. Le bouton « Remplir avec des données d\'exemple » remplit pour vous le type de procédure, le produit et les entreprises ; avancez avec « Suivant » jusqu\'à l\'étape 4 (Documents).' },
       documento:  { titulo: 'Téléversez un document d\'exemple', descripcion: 'À l\'étape 4, cliquez sur « Téléverser » dans n\'importe quelle case : dans la démo, l\'explorateur de fichiers ne s\'ouvre pas, un message simule le téléversement avec un PDF d\'exemple. « Remplir avec des données d\'exemple » simule tous les documents d\'un coup pour passer à l\'étape 5.' },
       cotizacion: { titulo: 'Acceptez le devis du Producto Ejemplo 2', descripcion: 'Farmazed vous a déjà envoyé le devis du « Producto Ejemplo 2 ». Ouvrez-le dans « Devis », vérifiez le détail (honoraires, taxe DNFD, MEF et IEA) et acceptez-le.' },
-      pago:       { titulo: 'Payez avec le prestataire de test', descripcion: 'Cliquez sur « Payer avec PayPal ». Dans la démo, l\'encaissement est fait par un prestataire de test : aucun argent ne circule. Une fois payé, le dossier passe tout seul à la phase 6 (en réalité, c\'est l\'équipe Farmazed qui le fait).' },
+      pago:       { titulo: 'Payez avec PayPal sandbox', descripcion: 'Cliquez sur « Payer avec PayPal » : vous arrivez sur PayPal sandbox (l\'environnement de test). Connectez-vous avec le compte acheteur de test que Farmazed vous a remis et approuvez le paiement : aucun argent réel ne circule. À votre retour, le dossier passe tout seul à la phase 6 (en réalité, c\'est l\'équipe Farmazed qui le fait).' },
       mensaje:    { titulo: 'Écrivez à votre équipe Farmazed', descripcion: 'Dans « Messages », choisissez un produit et envoyez un message. C\'est ainsi que vous communiquez avec votre Responsable pharmaceutique tout au long de la procédure. Regardez ensuite dans « Mes produits » l\'avancement de chaque dossier à travers les phases.' },
     },
     regente: {
@@ -128,6 +142,11 @@ const TRADUCCIONES = {
       documento:    { titulo: 'Examinez la procuration du Producto Ejemplo 3', descripcion: 'Le client a téléversé la procuration originale. Ouvrez le dossier depuis « Ma corbeille », trouvez le document 15.2 et approuvez-le (✓) ou refusez-le (✗) avec un motif que le client verra dans son portail.' },
       pedido:       { titulo: 'Demandez un document au client', descripcion: 'Ouvrez le « Producto Ejemplo 2 » et cliquez sur « Demander » à côté d\'un document de la liste (par exemple une déclaration sur l\'honneur) : le client le verra en attente dans son portail et le dossier passe en documents en attente.' },
       confirmacion: { titulo: 'Confirmez l\'examen juridique (phase 8)', descripcion: 'Le « Producto Ejemplo 3 » est en phase 8, examen de la documentation numérique. Dans la carte « Phase 8 — Confirmations », enregistrez votre confirmation juridique (procurations/déclarations) ; la confirmation technique/matrices est saisie par le Responsable pharmaceutique.' },
+    },
+    admin: {
+      cotizacion: { titulo: 'Ajustez et envoyez le devis du Producto Ejemplo 4', descripcion: 'Dans « Devis » ouvrez le devis brouillon du « Producto Ejemplo 4 », vérifiez ou ajustez les honoraires (avec un motif si vous vous écartez du tarif) et cliquez sur « Envoyer le devis ». L\'envoi est simulé : aucun courriel ne part, mais cliente.demo le voit déjà dans son portail.' },
+      lead: { titulo: 'Traitez le lead « Farmacia Ejemplo »', descripcion: 'Dans « Leads » se trouve la demande de « Farmacia Ejemplo » (statut Nouveau). Ouvrez-la, passez le statut à Contacté ou laissez une note : c\'est ainsi que se travaille le CRM avant d\'inviter le client à créer son compte (dans la démo l\'invitation n\'est pas envoyée).' },
+      pago: { titulo: 'Consultez le paiement du devis', descripcion: 'Dans un autre onglet, connectez-vous comme cliente.demo, acceptez le devis du « Producto Ejemplo 4 » et payez-le sur PayPal sandbox. De retour ici, vous verrez le paiement dans le dossier et dans « Finances », et le dossier passé à la phase 6.' },
     },
   },
   pt: {
@@ -144,7 +163,7 @@ const TRADUCCIONES = {
       producto:   { titulo: 'Crie o seu primeiro produto', descripcion: 'Em "Pedir registo" inicie um pedido. O botão "Preencher com dados de exemplo" preenche por si o tipo de processo, o produto e as empresas; avance com "Seguinte" até ao passo 4 (Documentos).' },
       documento:  { titulo: 'Carregue um documento de exemplo', descripcion: 'No passo 4 carregue em "Carregar" em qualquer casa: na demo o explorador de ficheiros não abre, um aviso simula o carregamento com um PDF de exemplo. "Preencher com dados de exemplo" simula todos os documentos de uma vez para seguir ao passo 5.' },
       cotizacion: { titulo: 'Aceite o orçamento do Producto Ejemplo 2', descripcion: 'A Farmazed já lhe enviou o orçamento do "Producto Ejemplo 2". Abra-o em "Orçamento", reveja a discriminação (honorários, taxa DNFD, MEF e IEA) e aceite-o.' },
-      pago:       { titulo: 'Pague com o fornecedor de teste', descripcion: 'Carregue em "Pagar com PayPal". Na demo a cobrança é feita por um fornecedor de teste: não se movimenta dinheiro. Ao pagar, o processo avança sozinho para a fase 6 (na vida real fá-lo a equipa da Farmazed).' },
+      pago:       { titulo: 'Pague com o PayPal sandbox', descripcion: 'Carregue em "Pagar com PayPal": segue para o PayPal sandbox (o ambiente de testes). Entre com a conta de comprador de teste que a Farmazed lhe deu e aprove o pagamento: não se movimenta dinheiro real. Ao voltar, o processo avança sozinho para a fase 6 (na vida real fá-lo a equipa da Farmazed).' },
       mensaje:    { titulo: 'Escreva à sua equipa Farmazed', descripcion: 'Em "Mensagens" escolha um produto e envie uma mensagem. É assim que comunica com o seu Responsável Farmacêutico durante todo o processo. Depois veja em "Os meus produtos" o avanço de fases de cada processo.' },
     },
     regente: {
@@ -156,6 +175,11 @@ const TRADUCCIONES = {
       documento:    { titulo: 'Reveja a procuração do Producto Ejemplo 3', descripcion: 'O cliente carregou a procuração original. Abra o processo a partir de "A minha caixa", procure o documento 15.2 e aprove-o (✓) ou rejeite-o (✗) com um motivo que o cliente verá no seu portal.' },
       pedido:       { titulo: 'Peça um documento ao cliente', descripcion: 'Abra o "Producto Ejemplo 2" e clique em "Pedir" junto a um documento da lista (por exemplo uma declaração): o cliente verá o pedido como pendente no seu portal e o processo passa a documentos pendentes.' },
       confirmacion: { titulo: 'Confirme a revisão jurídica (fase 8)', descripcion: 'O "Producto Ejemplo 3" está na fase 8, revisão da documentação digital. No cartão "Fase 8 — Confirmações" registe a sua confirmação jurídica (procurações/declarações); a técnica/matrizes é introduzida pelo Responsável Farmacêutico.' },
+    },
+    admin: {
+      cotizacion: { titulo: 'Ajuste e envie a cotação do Producto Ejemplo 4', descripcion: 'Em "Cotações" abra a cotação em rascunho do "Producto Ejemplo 4", reveja ou ajuste os honorários (com um motivo se se afastar da tabela) e carregue em "Enviar cotação". O envio é simulado: não sai nenhum e-mail, mas cliente.demo já a vê no seu portal.' },
+      lead: { titulo: 'Atenda o lead "Farmacia Ejemplo"', descripcion: 'Em "Leads" está o pedido da "Farmacia Ejemplo" (estado Novo). Abra-o, mude o estado para Contactado ou deixe uma nota: é assim que se trabalha o CRM antes de convidar o cliente a criar a conta (na demo o convite não é enviado).' },
+      pago: { titulo: 'Veja o pagamento da cotação', descripcion: 'Noutro separador entre como cliente.demo, aceite a cotação do "Producto Ejemplo 4" e pague-a no PayPal sandbox. Ao voltar aqui verá o pagamento no processo e em "Finanças", e o processo avançado para a fase 6.' },
     },
   },
 };
@@ -227,7 +251,7 @@ function normalizarIdioma(valor) {
   return IDIOMAS.includes(base) ? base : IDIOMA_POR_DEFECTO;
 }
 
-const LISTAS = { cliente: PASOS_CLIENTE, clienteReal: PASOS_CLIENTE_REAL, regente: PASOS_REGENTE, legal: PASOS_LEGAL };
+const LISTAS = { cliente: PASOS_CLIENTE, clienteReal: PASOS_CLIENTE_REAL, regente: PASOS_REGENTE, legal: PASOS_LEGAL, admin: PASOS_ADMIN };
 
 /**
  * Pasos de una variante en el idioma pedido (nuevos objetos; el español es la lista de referencia).
@@ -241,6 +265,6 @@ function pasosEnIdioma(variante, idioma) {
 
 module.exports = {
   IDIOMAS, IDIOMA_POR_DEFECTO, NOMBRES_IDIOMA,
-  PASOS_CLIENTE, PASOS_CLIENTE_REAL, PASOS_REGENTE, PASOS_LEGAL, TRADUCCIONES, NOTAS, ETIQUETAS_PANEL,
+  PASOS_CLIENTE, PASOS_CLIENTE_REAL, PASOS_REGENTE, PASOS_LEGAL, PASOS_ADMIN, TRADUCCIONES, NOTAS, ETIQUETAS_PANEL,
   normalizarIdioma, pasosEnIdioma,
 };

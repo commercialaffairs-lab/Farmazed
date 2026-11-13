@@ -36,6 +36,7 @@
  */
 
 const admin = require('../utils/firebase_admin.js');
+const { esAdminDemo, esDocDemo } = require('../utils/demo_scope');
 
 const ROLES = ['cliente_titular', 'cliente_miembro', 'analista', 'abogado', 'regente', 'admin'];
 const CLIENT_ROLES = ['cliente_titular', 'cliente_miembro'];
@@ -206,7 +207,8 @@ function requirePermission(permissionName) {
  */
 function canAccessCase(user, caseData) {
   const role = effectiveRole(user);
-  if (role === 'admin') return true;
+  // Admin demo (TAREA 64): solo los casos de la empresa demo; el admin real sigue viendo todo.
+  if (role === 'admin') return !esAdminDemo(user) || esDocDemo(caseData);
   if (CLIENT_ROLES.includes(role)) {
     // Cuenta migrada (tiene orgId): el caso debe ser de su empresa.
     if (user.orgId) return caseData.orgId === user.orgId;

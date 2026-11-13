@@ -211,9 +211,15 @@ Estimación: 4–5 sesiones (datos+reinicio · recorrido cliente · recorrido pe
 - Claves web de Firebase (`portal/js/config.js`): confirmar en la consola de Google Cloud que están restringidas por referente HTTP.
 - `.tools/adc-farmazed-pruebas.json` (local, ignorado por git) contiene un refresh token de OAuth: rotarlo si la carpeta se comparte.
 
+### TAREA 64 (admin.demo + pago demo con PayPal sandbox) — en main, SIN desplegar (13-nov-2026)
+
+- Rick: crear en developer.paypal.com una app Sandbox (`PAYPAL_SANDBOX_CLIENT_ID/SECRET` en `tracker/.env`) y un comprador Personal; probar en local el pago de cliente.demo en sandbox.paypal.com (nadie lo ha probado contra la sandbox real).
+- Deploy: secretos `demo-password-admin`, `paypal-sandbox-client-id`, `paypal-sandbox-client-secret` (además de los de la TAREA 63); pasos en `DEPLOY.md`.
+- Conocido: cliente.demo consume el contador real de códigos de caso (`meta/counters`); admin.demo ya no.
+
 ### TAREA 63 (roles Responsable Farmacéutico / Responsable Legal + cuentas demo) — en main, SIN desplegar (11-nov-2026)
 
-- Correr `./verificar_local.sh` completo con Patch libre (load < 12 sostenido). Rojas aisladas el 08-nov con load 14–24: `checklist:141`, `estados:60`, `flujo_completo:91`, `pago_paypal:88`, `payments:70` y el backend. Si persisten, compararlas sobre `846a272`.
+- ~~Corrida verde~~ HECHA el 13-nov (load 3,4, 30/30 + 30 suites, junto con la TAREA 64). Antes: rojas aisladas el 08-nov con load 14–24: `checklist:141`, `estados:60`, `flujo_completo:91`, `pago_paypal:88`, `payments:70` y el backend. Si persisten, compararlas sobre `846a272`.
 - Deploy: crear en Secret Manager `demo-password-farmaceutico` y `demo-password-legal`, dar acceso a `farmazed-api-sa`, montarlos y desplegar tracker y web (pasos en `DEPLOY.md`). Luego reiniciar la demo y probar las 4 cuentas en producción.
 - Patch: freno térmico (`idle_inject`) activo varios días y `mongosh` en bucle (healthcheck de `clackdown-mongo`) mantienen la carga alta; afecta a todas las corridas e2e.
 

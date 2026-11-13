@@ -1,7 +1,7 @@
 # Modo demo — cuentas de demostración y reinicio
 
-Decisión de Rick (01-nov-2026): dos cuentas públicas para que un prospecto (cliente) o un empleado
-nuevo (Responsable Farmacéutico o Responsable Legal) recorran la plataforma con datos de ejemplo, y un botón **[Reiniciar cuenta demo]**
+Decisión de Rick (01-nov-2026; ampliada el 08 y el 13-nov): cinco cuentas públicas para que un prospecto (cliente) o un empleado
+nuevo (Responsable Farmacéutico, Responsable Legal o Administrador) recorran la plataforma con datos de ejemplo, y un botón **[Reiniciar cuenta demo]**
 que lo deja todo como al principio. Conviven con los datos reales de producción: todo lo demo lleva
 `demo:true` y cuelga de la empresa `demo-org`; el reinicio borra solo eso.
 
@@ -13,19 +13,20 @@ que lo deja todo como al principio. Conviven con los datos reales de producción
 | `regente.demo@farmazed.com` | regente (Responsable Farmacéutico) | `DEMO_PASSWORD_REGENTE` | Solo los casos de ejemplo (`demo:true`) |
 | `farmaceutico.demo@farmazed.com` | regente (Responsable Farmacéutico) | `DEMO_PASSWORD_FARMACEUTICO` | Los mismos casos y el mismo recorrido que `regente.demo` |
 | `legal.demo@farmazed.com` | abogado (Responsable Legal) | `DEMO_PASSWORD_LEGAL` | Los casos de ejemplo; recorrido propio (poder, pedido de documento, confirmación legal de la fase 8) |
+| `admin.demo@farmazed.com` | admin (+ `demo:true`) | `DEMO_PASSWORD_ADMIN` | Todas las pantallas del admin, **solo sobre lo de `demo-org`**; lo global se ve pero no se guarda (ver "Admin demo") |
 
 Rol visible (Rick, 08-nov-2026): `regente` se muestra como **Responsable Farmacéutico** y `abogado` como **Responsable Legal**; los identificadores internos (claims, `ROLES`, `manual/regente/`) no cambian. El personal demo ve los casos `demo:true` de `demo-org` (no por `asignados.<rol>`, que guarda un solo uid), así las dos cuentas de Responsable Farmacéutico comparten casos.
 
-No hay admin demo: un admin vería todas las empresas reales. Las acciones de admin del recorrido
-(enviar cotización, confirmar pagos, avanzar fases) las hace el admin real de Farmazed si hace falta.
-Las claves las fija Rick y **no van en el repo** (es público): `DEMO_PASSWORD_CLIENTE` / `DEMO_PASSWORD_REGENTE` / `DEMO_PASSWORD_FARMACEUTICO` / `DEMO_PASSWORD_LEGAL` en Secret Manager (Cloud Run) o `tracker/.env` (local). Son obligatorias la primera vez que se siembra; en un reinicio, si faltan, cada cuenta conserva su clave. Rick las comunica a los prospectos por fuera (p. ej. en la página de demo o el manual).
+Las claves las fija Rick y **no van en el repo** (es público): `DEMO_PASSWORD_CLIENTE` / `DEMO_PASSWORD_REGENTE` / `DEMO_PASSWORD_FARMACEUTICO` / `DEMO_PASSWORD_LEGAL` / `DEMO_PASSWORD_ADMIN` en Secret Manager (Cloud Run) o `tracker/.env` (local). Son obligatorias la primera vez que se siembra; en un reinicio, si faltan, cada cuenta conserva su clave. Rick las comunica a los prospectos por fuera (p. ej. en la página de demo o el manual).
 
 ## Estado inicial (lo que deja el seed y cada reinicio)
 
 - Empresa "Laboratorios Ejemplo S.A." (plan registro) **sin captación** y con la captación precargada
   (el cliente la confirma en su primer ingreso: paso 1 del recorrido).
 - **Producto Ejemplo 2 — Analgésico 500 mg**: fase 4, cotización **enviada** por B/. 4,130
-  (el cliente la acepta y paga con el proveedor de prueba).
+  (el cliente la acepta y paga en PayPal sandbox, o con el mock si el servidor no tiene credenciales sandbox).
+- **Producto Ejemplo 4 — Antiácido 400 mg**: fase 4 con la cotización en **borrador** (`demo-cotizacion-4`, B/. 4,130):
+  el admin demo la revisa y la "envía" (simulado, sin correo); `cliente.demo` la ve y puede pagarla.
 - **Producto Ejemplo 3 — Jarabe pediátrico**: fase 8, cotización aceptada y **pagada** (4 conceptos),
   con dos mensajes y **un documento subido** (15.5 Fórmula cuali-cuantitativa, PDF de ejemplo en Storage)
   para que el Responsable Farmacéutico lo apruebe o rechace y confirme el cotejo técnico, y **un poder (15.2)**
@@ -59,7 +60,7 @@ todos los idiomas para que la persona los encuentre.
 | 2. Crea tu primer producto | existe un caso de `demo-org` que no sembró el seed (botón **Rellenar con datos de ejemplo** en "Solicitar Registro", solo demo) |
 | 3. Sube un documento de ejemplo | ese caso tiene un documento subido. En la demo los botones **Subir** del paso 4 no abren el explorador de archivos: un modal explica la simulación y, al confirmar, el portal adjunta `farmazed-web/demo/documento-ejemplo.pdf` por la ruta real de subida; **Rellenar con datos de ejemplo** (banner del paso 4 o botón del portal) simula todos los documentos del cliente de una vez, incluidos los pedidos o rechazados |
 | 4. Acepta la cotización de Producto Ejemplo 2 | `demo-cotizacion-2.estado == 'aceptada'` |
-| 5. Paga con el proveedor de prueba | `pagoPaypal.estado == 'capturada'`; **el caso avanza solo** fase_04 → fase_05 → fase_06 (`avanzarTrasPagoDemo`, por `applyTransition` con sus gates, actor `demo-automatico` en el historial) |
+| 5. Paga con PayPal sandbox | `pagoPaypal.estado == 'capturada'`; **el caso avanza solo** fase_04 → fase_05 → fase_06 (`avanzarTrasPagoDemo`, por `applyTransition` con sus gates, actor `demo-automatico` en el historial) |
 | 6. Escribe a tu equipo Farmazed | hay un mensaje del cliente que no sembró el seed |
 
 | Responsable Farmacéutico (3 pasos; `regente.demo` y `farmaceutico.demo`) | Se marca hecho cuando… |
@@ -78,6 +79,30 @@ El pedido se hace sobre el Producto Ejemplo 2 (no el 3) porque pedir un document
 pendientes y el 3 debe seguir en fase 8 para que ambos Responsables confirmen. Orden de los pasos: el brief
 pedía revisar, pedir y confirmar; así quedó.
 
+### Admin demo (`admin.demo`, TAREA 64)
+
+| Administrador (3 pasos; `admin.demo`) | Se marca hecho cuando… |
+|---|---|
+| 1. Ajusta y envía la cotización de Producto Ejemplo 4 | `demo-cotizacion-4.estado` ya no es `borrador` |
+| 2. Atiende el lead "Farmacia Ejemplo" | el lead cambió de estado o tiene notas |
+| 3. Mira el pago de la cotización | `demo-cotizacion-4.pagoPaypal.estado == 'capturada'` (lo paga `cliente.demo`) |
+
+En este sistema la cotización nace sola como borrador cuando un caso llega a la fase 4; por eso el seed deja el borrador del
+Producto 4 ya creado y el admin demo lo ajusta y lo envía. **Aislamiento (criterio duro)**: el rol admin se salta casi todos los
+filtros, el admin demo no. `utils/demo_scope.js` (`esAdminDemo`, `esDocDemo`), `middleware/demo_admin.js` y los filtros por ruta:
+
+- **Solo lo de `demo-org` (`demo:true` o `orgId == demo-org`)**: casos (lista y acceso por id, con documentos, mensajes, pagos,
+  formularios), cotizaciones (lista, detalle, ajustar líneas, enviar, enlace de Rapid PayPro), facturas (lista, detalle, PDF, estado PAC,
+  pagos sin factura), empresas (lista, miembros, leads por revisar, diagnóstico), leads, invitaciones, revisiones de pago y empleados
+  (solo las cuentas demo, nunca el personal real).
+- **Global: se ve, no se guarda** (responde 403 `"En la demo no se guarda…"`, sin tocar nada): precios, configuración de facturación,
+  emitir/enviar/reintentar/anular facturas y procesar pendientes, plan de suscripción, invitaciones (titular/empleado/miembro y la de un
+  lead), restablecer contraseñas, resolver revisiones de pago, alta de empresas, captación y condiciones del plan empresarial.
+- **Cotización**: `POST /api/quotes/:id/send` con una cuenta demo responde `simulado: true` y la pantalla avisa "Envío simulado"; esa
+  ruta nunca manda correo y a `*.demo@` tampoco lo mandaría `services/correo.js`.
+- **MCP** no es accesible: pide la llave `MCP_KEY`, no el token de usuario.
+- Pendiente conocido: el admin demo puede escribir un uid real en `asignados` de un caso demo (la lista de empleados solo le muestra cuentas demo).
+
 En modo demo el portal oculta lo que no entra en el recorrido (`body.fz-demo`): invitar miembros
 (además el tracker responde 403: mandaría un correo real) y la suscripción (sin planes por ahora).
 El asistente sigue exigiendo los 16 documentos obligatorios para enviar el expediente: en la demo el
@@ -85,8 +110,12 @@ El asistente sigue exigiendo los 16 documentos obligatorios para enviar el exped
 
 ## Garantías
 
-- **Pagos**: una cuenta demo siempre paga con el proveedor de prueba (`services/payments getProvider(user)`),
-  aunque el entorno esté en PayPal sandbox o live. Nunca mueve dinero.
+- **Pagos** (TAREA 64): una cuenta demo paga con el checkout **real de PayPal SANDBOX** (`services/payments getProvider(user)` →
+  `paypal.sandbox()`: URL `api-m.sandbox.paypal.com` fija; redirige a sandbox.paypal.com, el comprador de prueba aprueba, vuelve y se
+  captura). Credenciales **solo sandbox**: `PAYPAL_SANDBOX_CLIENT_ID` / `PAYPAL_SANDBOX_CLIENT_SECRET`; si no están valen
+  `PAYPAL_CLIENT_ID/SECRET` pero únicamente con `PAYPAL_ENV=sandbox` (los marcadores `<...>` de `.env.example` no cuentan). Sin
+  credenciales sandbox, el mock. **Nunca la API live**: con `PAYPAL_ENV=live` las `PAYPAL_*` se ignoran para la demo. Un pago demo
+  se marca `demo:true`, no emite factura electrónica real (PAC simulado) y el webhook de PayPal lo ignora. Nunca mueve dinero real.
 - **Correos**: a `*.demo@` no se envía ningún correo (`services/correo.js`).
 - **Reinicio** (`POST /api/demo/reiniciar`, solo cuentas `demo:true`, 1 vez por minuto): borra casos (con
   documentos —también sus archivos en Storage—, mensajes y pagos), cotizaciones, lead e invitaciones de

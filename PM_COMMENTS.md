@@ -927,3 +927,31 @@ certificar en verde por la saturación de Patch (load 17–85, freno térmico, o
 backend siguen rojos incluso aisladas, sin comparar contra HEAD. Rick ordenó directamente actualizar los .md,
 commit y push a main; el deploy a producción (y los 2 secretos nuevos) **no** se hizo: queda pendiente de
 una corrida verde. Detalle en handover (11-nov).
+
+## H.22 — 13-nov-2026: cuenta admin.demo y pago demo con PayPal sandbox (Rick)
+
+Rick: "vamos a crear la cuenta admin.demo@farmazed.com … el cual simula el demo de admin para todas sus
+funciones, incluyendo la simulacion del envio de cotizaciones. Adicional verifica si el demo de usuario viene
+con la simulacion del workflow de pago hecho con paypalsandbox integrado. sino, integralo y me informas para
+hacer test locales."
+
+Verificado por el PM (código en `2616762`): la demo del cliente **no** usa PayPal sandbox. `getProvider(user)`
+(`tracker/services/payments/index.js:22`) devuelve siempre el proveedor `mock` a cualquier cuenta `demo:true`:
+el botón "Pagar con PayPal" no abre PayPal, solo simula la captura. El `.env` local sí tiene credenciales de
+PayPal con `PAYPAL_ENV=sandbox`, así que se puede probar en local.
+
+Decisiones del PM (TAREA 64):
+- `admin.demo` = rol `admin` + claim `demo:true`. **Requisito de seguridad**: el admin demo ve y opera todo,
+  pero solo sobre datos `demo`. Nada global (precios, configuración del sistema, usuarios y roles reales,
+  invitaciones, facturación real, Finanzas, MCP) se escribe de verdad: se muestra y se simula.
+- El pago de las cuentas demo pasa por el checkout real de **PayPal sandbox** cuando hay credenciales sandbox,
+  y si no las hay sigue con el mock. Nunca con credenciales live, y un pago demo nunca emite una factura
+  electrónica real.
+- La clave va en `DEMO_PASSWORD_ADMIN` (`.env`), nunca en el repo.
+
+**Cierre H.22 (13-nov-2026):** TAREA 64 aceptada. La auditoría de seguridad encontró `set-role` sin bloquear,
+bloqueo saltable con mayúsculas y `qr_scans` reales visibles. Corregido con un guard que deniega por defecto
+(19 escrituras demo permitidas), con prueba por punto. `verificar_local.sh` verde (30/30 + 30 suites, load
+3,4), que certifica también la TAREA 63. Push a main por orden directa de Rick para probar en su PC.
+Sin probar todavía: el checkout real en sandbox.paypal.com (faltan la app Sandbox y el comprador de Rick).
+Sin deploy.

@@ -20,7 +20,7 @@
  * vuelve a pedir el recorrido. Aquí no hay tablas de textos: los pasos Y los rótulos
  * (`estado.etiquetas`) llegan ya traducidos del tracker (services/demo_recorrido_textos.js, la misma
  * fuente que el manual). El enlace "Ayuda" del topbar (#tb-ayuda) se sincroniza con el idioma y el
- * manual del rol (manual/cliente/, manual/regente/ o manual/legal/).
+ * manual del rol (manual/cliente/, manual/regente/, manual/legal/ o manual/admin/).
  *
  * Se refresca solo: al volver a la pestaña y cada pocos segundos mientras está desplegado, y
  * cualquier página puede forzarlo con `window.__fzRecorrido.actualizar()` después de una acción.
@@ -180,7 +180,7 @@ function htmlPildora(estado) {
 function sincronizarAyuda(estado) {
   const ayuda = document.getElementById('tb-ayuda');
   if (!ayuda || !estado?.idioma) return;
-  ayuda.href = `/manual/${estado.rol === 'regente' || estado.rol === 'legal' ? estado.rol : 'cliente'}/${encodeURIComponent(estado.idioma)}.html`;
+  ayuda.href = `/manual/${['regente', 'legal', 'admin'].includes(estado.rol) ? estado.rol : 'cliente'}/${encodeURIComponent(estado.idioma)}.html`;
 }
 
 const avisarCambio = (activo) => document.dispatchEvent(new CustomEvent('fz:recorrido', { detail: { activo } }));

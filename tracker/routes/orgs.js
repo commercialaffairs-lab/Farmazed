@@ -59,6 +59,7 @@ router.get('/:orgId/members', requireAuth, requirePermission('orgs.manage'), asy
   try {
     const orgSnap = await db().collection('orgs').doc(req.params.orgId).get();
     if (!orgSnap.exists) return res.status(404).json({ error: 'Empresa no encontrada' });
+    if (!visibleParaDemo(req.user, orgSnap.data())) return res.status(403).json({ error: 'Forbidden' });
 
     const usersResult = await admin.auth().listUsers(1000);
     const members = usersResult.users

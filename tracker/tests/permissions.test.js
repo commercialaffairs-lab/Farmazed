@@ -824,3 +824,150 @@ describe('canAccessCase — personal demo', () => {
     assert.equal(can('regente', 'cases.confirm_8_legal'), false);
   });
 });
+
+// ─── Admin demo (admin.demo; Rick, 13-nov-2026; TAREA 64) ──────────────────────────────────────
+// El rol admin se salta los filtros: con demo:true solo accede a lo de la empresa demo, y las
+// escrituras globales se bloquean con un aviso (middleware/demo_admin.js).
+describe('Admin demo — aislamiento de datos y escrituras globales', () => {
+  const { canAccessCase } = require('../middleware/permissions');
+  const { esAdminDemo, esDocDemo } = require('../utils/demo_scope');
+  const { bloquearEscrituraGlobal, ESCRITURAS_PERMITIDAS } = require('../middleware/demo_admin');
+  const ESCRITURAS_PERMITIDAS_DE_EJEMPLO = () => [
+    ['POST', '/api/cases'], ['PATCH', '/api/cases/c1'], ['DELETE', '/api/cases/c1'], ['POST', '/api/cases/c1/confirmaciones/fase8'],
+    ['POST', '/api/cases/c1/documents'], ['POST', '/api/cases/c1/documents/request'], ['PATCH', '/api/cases/c1/documents/d1'], ['DELETE', '/api/cases/c1/documents/d1'],
+    ['POST', '/api/cases/c1/messages'], ['POST', '/api/cases/c1/payments'], ['PATCH', '/api/quotes/q1/lineas/c1'], ['POST', '/api/quotes/q1/send'],
+    ['PUT', '/api/quotes/q1/lineas/c1/pago-externo'], ['POST', '/api/quotes/q1/lineas/c1/pago-externo/confirmar'], ['PATCH', '/api/contact-leads/l1'],
+    ['POST', '/api/orgs/o1/leads/revisar'], ['PUT', '/api/orgs/o1/diagnostico'], ['POST', '/api/demo/reiniciar'], ['PUT', '/api/me/preferencias'],
+  ];
+  const adminDemo = { uid: 'demo-admin', role: 'admin', demo: true };
+  const adminReal = { uid: 'admin-real', role: 'admin' };
+  const casoDemo = { demo: true, orgId: 'demo-org' };
+  const casoDeLaOrgDemo = { orgId: 'demo-org' }; // creado por cliente.demo: sin demo:true pero de demo-org
+  const casoReal = { orgId: 'org-alfa' };
+
+  test('esAdminDemo: solo role admin (o claim legacy admin:true) con demo:true', () => {
+    assert.equal(esAdminDemo(adminDemo), true);
+    assert.equal(esAdminDemo({ admin: true, demo: true }), true);
+    assert.equal(esAdminDemo(adminReal), false);
+    assert.equal(esAdminDemo({ role: 'regente', demo: true }), false);
+    assert.equal(esAdminDemo({ role: 'cliente_titular', demo: true }), false);
+    assert.equal(esAdminDemo(null), false);
+  });
+  test('esDocDemo: demo:true o empresa demo-org; nada más', () => {
+    assert.equal(esDocDemo(casoDemo), true);
+    assert.equal(esDocDemo(casoDeLaOrgDemo), true);
+    assert.equal(esDocDemo(casoReal), false);
+    assert.equal(esDocDemo({}), false);
+    assert.equal(esDocDemo(undefined), false);
+  });
+  test('canAccessCase: el admin demo accede a los casos de la empresa demo y a NINGUNO real; el admin real a todos', () => {
+    assert.equal(canAccessCase(adminDemo, casoDemo), true);
+    assert.equal(canAccessCase(adminDemo, casoDeLaOrgDemo), true);
+    assert.equal(canAccessCase(adminDemo, casoReal), false);
+    assert.equal(canAccessCase(adminReal, casoReal), true);
+    assert.equal(canAccessCase(adminReal, casoDemo), true);
+  });
+
+  const intento = (user, method, originalUrl) => {
+    const res = { codigo: null, cuerpo: null, status(c) { this.codigo = c; return this; }, json(b) { this.cuerpo = b; return this; } };
+    const respondio = bloquearEscrituraGlobal({ user, method, originalUrl }, res);
+    return { respondio, res };
+  };
+  test('DENEGAR POR DEFECTO: toda escritura del admin demo fuera de la lista permitida recibe 403 "en la demo no se guarda"', () => {
+    const globales = [
+      ['POST', '/api/admin/set-role'], ['PATCH', '/api/admin/pricing/med_regular'], ['PUT', '/api/facturas/config'], ['POST', '/api/facturas/procesar-pendientes'],
+      ['POST', '/api/facturas/fac_1/emitir'], ['POST', '/api/admin/revisiones-pago/r1/resolver'], ['POST', '/api/employees/restablecer-contrasena'],
+      ['PUT', '/api/subscription/plan'], ['POST', '/api/invitations/titular'], ['POST', '/api/invitations/empleado'], ['POST', '/api/contact-leads/l1/invitar'],
+      ['POST', '/api/orgs'], ['PATCH', '/api/orgs/mine/captacion'], ['PUT', '/api/empresarial/o1/condiciones'],
+      ['PUT', '/api/me/perfil'], ['POST', '/api/me/cerrar-sesiones'],
+      ['POST', '/api/una-ruta-que-todavia-no-existe'], ['DELETE', '/api/orgs/o1'], ['PATCH', '/api/quotes/q1'], ['POST', '/mcp'],
+    ];
+    for (const [m, u] of globales) {
+      const { respondio, res } = intento(adminDemo, m, `${u}?x=1`);
+      assert.equal(respondio, true, `${m} ${u}`);
+      assert.equal(res.codigo, 403);
+      assert.equal(res.cuerpo.demoNoGuarda, true);
+      assert.match(res.cuerpo.error, /en la demo no se guarda/i);
+    }
+  });
+  test('mayúsculas, barras repetidas, barra final y codificación no sirven para esquivar el bloqueo (Express enruta sin distinguir mayúsculas)', () => {
+    for (const [m, u] of [
+      ['PATCH', '/api/admin/PRICING/x'], ['POST', '/API/ADMIN/SET-ROLE'], ['POST', '/Api/Admin/Set-Role/'], ['POST', '/api/admin/set-role//'],
+      ['PUT', '/api/FACTURAS/Config'], ['POST', '//api//invitations//empleado'], ['POST', '/api/admin/set%2Drole'], ['POST', '/api/admin/set-role?x=/api/cases'],
+    ]) assert.equal(intento(adminDemo, m, u).respondio, true, `${m} ${u}`);
+    // y lo permitido sigue permitido con otra capitalización o barra final
+    assert.equal(intento(adminDemo, 'PATCH', '/API/CASES/abc/').respondio, false);
+    assert.equal(intento(adminDemo, 'POST', '/api/quotes/q1/SEND').respondio, false);
+  });
+  test('escrituras permitidas del admin demo (datos de la empresa demo) y lecturas: pasan; al admin real y a otras cuentas no se les toca', () => {
+    for (const [m, u] of ESCRITURAS_PERMITIDAS_DE_EJEMPLO()) assert.equal(intento(adminDemo, m, u).respondio, false, `${m} ${u}`);
+    assert.equal(ESCRITURAS_PERMITIDAS.length, ESCRITURAS_PERMITIDAS_DE_EJEMPLO().length, 'cada regla permitida tiene su caso');
+    for (const u of ['/api/admin/pricing', '/api/facturas/config', '/api/admin/estado', '/api/scans']) {
+      assert.equal(intento(adminDemo, 'GET', u).respondio, false, u);
+      assert.equal(intento(adminDemo, 'HEAD', u).respondio, false, u);
+    }
+    assert.equal(intento(adminReal, 'PUT', '/api/facturas/config').respondio, false);
+    assert.equal(intento(adminReal, 'POST', '/api/admin/set-role').respondio, false);
+    assert.equal(intento({ role: 'cliente_titular', demo: true }, 'PATCH', '/api/orgs/mine/captacion').respondio, false); // cliente.demo sí guarda su captación
+    assert.equal(intento({ role: 'regente', demo: true }, 'POST', '/api/orgs').respondio, false);
+  });
+});
+
+// El admin demo solo puede asignar personal DEMO a un caso (uid demo-* o claim demo:true); un uid real → 403.
+describe('Admin demo — asignación de personal (asignados / assignedTo)', () => {
+  const CASO = 'caso-asig-demo-t64';
+  let uidAnalistaReal, uidDemoPrefijo, uidDemoClaim;
+  const asignar = (cuerpo) => api('adminDemoT64', 'PATCH', `/api/cases/${CASO}`, cuerpo);
+  const asignadosEnBD = async () => (await admin.firestore().collection('cases').doc(CASO).get()).data();
+
+  before(async () => {
+    const mk = async (email, claims, uid) => {
+      const u = await admin.auth().createUser({ ...(uid ? { uid } : {}), email, password: PASSWORD, emailVerified: true });
+      await admin.auth().setCustomUserClaims(u.uid, claims);
+      return u.uid;
+    };
+    const sufijo = Date.now();
+    await mk(`admin-demo-t64-${sufijo}@farmazed.test`, { role: 'admin', demo: true, origen: 'demo' });
+    tokens.adminDemoT64 = await idTokenFor(`admin-demo-t64-${sufijo}@farmazed.test`);
+    uidDemoPrefijo = await mk(`demo-pref-${sufijo}@farmazed.test`, { role: 'regente', demo: true }, `demo-asig-${sufijo}`);
+    uidDemoClaim   = await mk(`demo-claim-${sufijo}@farmazed.test`, { role: 'abogado', demo: true });
+    uidAnalistaReal = (await admin.auth().getUserByEmail(EMAILS.analista)).uid;
+    const ahora = admin.firestore.Timestamp.now();
+    await admin.firestore().collection('cases').doc(CASO).set({
+      demo: true, orgId: 'demo-org', status: 'fase_01', clientId: 'demo-cliente', createdAt: ahora, updatedAt: ahora,
+      asignados: { analista: null, abogado: null, regente: null }, assignedTo: null, product: { nombreComercial: 'Caso asignación demo' },
+    });
+  });
+
+  test('un uid de personal REAL (analista, o mezclado con uno demo) → 403 "en la demo no se guarda" y no se guarda nada', async () => {
+    for (const cuerpo of [
+      { asignados: { analista: uidAnalistaReal } },
+      { asignados: { regente: uidDemoPrefijo, analista: uidAnalistaReal } },
+      { assignedTo: uidAnalistaReal },
+      { asignados: { abogado: 'uid-que-no-existe-t64' } },
+    ]) {
+      const r = await asignar(cuerpo);
+      assert.equal(r.status, 403, JSON.stringify(cuerpo));
+      assert.equal(r.body?.demoNoGuarda ?? r.json?.demoNoGuarda, true);
+    }
+    const d = await asignadosEnBD();
+    assert.deepEqual(d.asignados, { analista: null, abogado: null, regente: null });
+    assert.equal(d.assignedTo, null);
+  });
+
+  test('un uid demo-* o con claim demo:true sí se asigna; null quita la asignación', async () => {
+    assert.equal((await asignar({ asignados: { regente: uidDemoPrefijo } })).status, 200);
+    assert.equal((await asignar({ asignados: { regente: uidDemoPrefijo, abogado: uidDemoClaim }, assignedTo: uidDemoClaim })).status, 200);
+    let d = await asignadosEnBD();
+    assert.deepEqual([d.asignados.regente, d.asignados.abogado, d.assignedTo], [uidDemoPrefijo, uidDemoClaim, uidDemoClaim]);
+    assert.equal((await asignar({ asignados: { analista: null, abogado: null, regente: null }, assignedTo: null })).status, 200);
+    d = await asignadosEnBD();
+    assert.equal(d.asignados.regente, null);
+  });
+
+  test('el admin real sigue asignando a quien quiera', async () => {
+    const r = await api('admin', 'PATCH', `/api/cases/${CASO}`, { asignados: { analista: uidAnalistaReal } });
+    assert.equal(r.status, 200);
+    await asignar({ asignados: { analista: null, abogado: null, regente: null } });
+  });
+});

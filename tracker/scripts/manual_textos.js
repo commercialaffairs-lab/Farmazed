@@ -9,6 +9,8 @@
  *     (farmazed-web/manual/regente/{es,en,fr,pt}.html).
  *   - `legal`: manual del Responsable Legal (rol interno `abogado`), igual que el anterior
  *     (farmazed-web/manual/legal/{es,en,fr,pt}.html).
+ *   - `admin`: manual del Administrador demo (rol `admin`, cuenta admin.demo; TAREA 64), mismo formato
+ *     (farmazed-web/manual/admin/{es,en,fr,pt}.html).
  *
  * Lo consume scripts/generar_manual.js. Los títulos y descripciones de los pasos y los rótulos del
  * panel NO están aquí: son los de services/demo_recorrido_textos.js (la misma fuente que usa el
@@ -20,7 +22,7 @@ const IDIOMAS = ['es', 'en', 'fr', 'pt'];
 const NOMBRES = { es: 'Español', en: 'English', fr: 'Français', pt: 'Português' };
 
 // Fases (tracker/data/case_status.js) en las que interviene cada recorrido.
-const FASES_RECORRIDO = { cliente: [4, 5, 6], regente: [8], legal: [4, 8] };
+const FASES_RECORRIDO = { cliente: [4, 5, 6], regente: [8], legal: [4, 8], admin: [4] };
 
 const es = {
   comunes: {
@@ -51,7 +53,7 @@ const es = {
       pasos: { titulo: 'Los seis pasos', intro: 'En el orden del recorrido. Unos diez minutos la primera vez.' },
       demo: { titulo: 'Si usas la cuenta de demostración', parrafos: [
         'Farmazed entrega a los prospectos una cuenta de demostración ("Laboratorios Ejemplo S.A.") con datos de ejemplo. En ella el recorrido está siempre activo y los pasos hablan de esos datos: una cotización ya enviada para el "Producto Ejemplo 2", un botón "Rellenar con datos de ejemplo" en el asistente y una carga de documentos simulada (los botones "Subir" muestran un aviso en lugar de abrir el explorador de archivos).',
-        'Nada de lo que hagas en la demo toca datos reales ni envía correos, y el pago lo hace un proveedor de prueba aunque el botón diga "Pagar con PayPal". El botón "Reiniciar cuenta demo", arriba en la barra, borra lo que hiciste y deja todo como al principio; tendrás que volver a iniciar sesión.',
+        'Nada de lo que hagas en la demo toca datos reales ni envía correos, y el pago se hace en PayPal sandbox (el entorno de pruebas de PayPal, con una cuenta de comprador de prueba), no con dinero real. El botón "Reiniciar cuenta demo", arriba en la barra, borra lo que hiciste y deja todo como al principio; tendrás que volver a iniciar sesión.',
         'Invitar miembros y cambiar de plan están ocultos en la demo; el resto del portal funciona igual que en producción.',
       ] },
       fases: { titulo: 'Las 13 fases de un expediente', intro: 'Cada producto avanza por estas fases; en "Mis Productos" ves en cuál va el tuyo. Las marcadas son las que tocas en el recorrido.' },
@@ -115,6 +117,32 @@ const es = {
       ] },
     },
   },
+  admin: {
+    titulo: 'Manual del Administrador (cuenta de demostración)',
+    subtitulo: 'El back-office de Farmazed visto por un administrador, paso a paso',
+    intro: [
+      'La cuenta de demostración del Administrador te deja recorrer todas las pantallas del back-office (bandeja, expedientes, empresas, leads, precios, cotizaciones, finanzas y configuración) sobre los datos de ejemplo de la empresa demo, sin tocar nada real.',
+      'Este manual sigue el panel "Recorrido demo" que verás dentro del back-office. Cada paso reproduce la pantalla real y te dice qué hacer y qué viene después.',
+    ],
+    secciones: {
+      empezar: { titulo: 'Antes de empezar', parrafos: [
+        'Entra en la página de inicio de sesión con el correo del Administrador de demostración y la clave que te dieron; las claves no aparecen en este manual. El recorrido del Administrador solo existe en la cuenta de demostración.',
+        'Arriba, en la barra, está el selector de idioma (ES · EN · FR · PT): todo el back-office y el enlace "Ayuda" (que abre este manual) cambian al idioma que elijas.',
+      ] },
+      panel: { titulo: 'El panel "Recorrido demo"', parrafos: [
+        'Abajo a la derecha verás una tarjeta con los tres pasos del recorrido. Marca lo que ya hiciste, resalta el paso en que vas y el botón "Ir al paso" te lleva a la pantalla correcta. El progreso se deduce de los datos: no hay nada que guardar.',
+        'El botón "Reiniciar cuenta demo", arriba en la barra, borra lo que hiciste (también lo de las otras cuentas demo) y deja todo como al principio. Tendrás que volver a iniciar sesión.',
+      ] },
+      pasos: { titulo: 'Los tres pasos', intro: 'Sobre el "Producto Ejemplo 4" (fase 4, cotización en borrador) y el lead "Farmacia Ejemplo".' },
+      fases: { titulo: 'Las 13 fases de un expediente', intro: 'Cada expediente avanza por estas fases; en "Expedientes" ves en cuál va cada uno. La marcada es la que tocas en el recorrido.' },
+      notas: { titulo: 'Bueno saber', items: [
+        'Solo ves y modificas los datos de la empresa demo. Lo que es de toda la plataforma (precios, configuración, facturación, invitaciones, usuarios) lo puedes mirar, pero no se guarda: la aplicación te avisa "en la demo no se guarda".',
+        'El envío de la cotización es simulado: no sale ningún correo. cliente.demo la ve en su portal; puede aceptarla y pagarla en PayPal sandbox (el entorno de pruebas de PayPal), sin dinero real, y el expediente avanza solo a la fase 6.',
+        'Si te apartas del tarifario al ajustar los honorarios de una cotización, la aplicación te pide un motivo: queda en el historial de la cotización.',
+        'La aplicación y este manual existen en español, inglés, francés y portugués; elige el idioma en la barra superior.',
+      ] },
+    },
+  },
 };
 
 const en = {
@@ -146,7 +174,7 @@ const en = {
       pasos: { titulo: 'The six steps', intro: 'In tour order. About ten minutes the first time.' },
       demo: { titulo: 'If you are using the demo account', parrafos: [
         'Farmazed gives prospects a demo account ("Laboratorios Ejemplo S.A.") with sample data. There the tour is always on and the steps talk about that data: a quote already sent for "Producto Ejemplo 2", a "Fill in with sample data" button in the wizard and simulated document uploads (the "Upload" buttons show a notice instead of opening the file browser).',
-        'Nothing you do in the demo touches real data or sends e-mails, and payment is handled by a test provider even though the button says "Pay with PayPal". The "Reset demo account" button in the top bar wipes what you did and puts everything back to the start; you will have to sign in again.',
+        'Nothing you do in the demo touches real data or sends e-mails, and payment is made on PayPal sandbox (PayPal\'s test environment, with a test buyer account), never with real money. The "Reset demo account" button in the top bar wipes what you did and puts everything back to the start; you will have to sign in again.',
         'Inviting members and changing plans are hidden in the demo; the rest of the portal works exactly as in production.',
       ] },
       fases: { titulo: 'The 13 phases of a file', intro: 'Every product moves through these phases; "My Products" shows where yours is. The highlighted ones are the ones you touch during the tour.' },
@@ -210,6 +238,32 @@ const en = {
       ] },
     },
   },
+  admin: {
+    titulo: 'Administrator manual (demo account)',
+    subtitulo: 'The Farmazed back office seen by an administrator, step by step',
+    intro: [
+      'The Administrator demo account lets you go through every back-office screen (inbox, files, companies, leads, pricing, quotes, finance and settings) on the demo company\'s sample data, without touching anything real.',
+      'This manual follows the "Demo tour" panel you will see inside the back office. Each step reproduces the real screen and tells you what to do and what comes next.',
+    ],
+    secciones: {
+      empezar: { titulo: 'Before you start', parrafos: [
+        'Go to the sign-in page with the Administrator demo e-mail and the password you were given; passwords do not appear in this manual. The Administrator tour only exists in the demo account.',
+        'At the top, in the bar, is the language selector (ES · EN · FR · PT): the whole back office and the "Help" link (which opens this manual) switch to the language you pick.',
+      ] },
+      panel: { titulo: 'The "Demo tour" panel', parrafos: [
+        'At the bottom right you will see a card with the three steps of the tour. It ticks what you have done, highlights the step you are on and the "Go to step" button takes you to the right screen. Progress is worked out from the data: there is nothing to save.',
+        'The "Reset demo account" button, at the top in the bar, wipes what you did (including what the other demo accounts did) and puts everything back to the start. You will have to sign in again.',
+      ] },
+      pasos: { titulo: 'The three steps', intro: 'On "Producto Ejemplo 4" (phase 4, draft quote) and the "Farmacia Ejemplo" lead.' },
+      fases: { titulo: 'The 13 phases of a file', intro: 'Every file moves through these phases; under "Files" you see where each one stands. The highlighted one is the one you work on in the tour.' },
+      notas: { titulo: 'Good to know', items: [
+        'You only see and change the demo company\'s data. Anything that belongs to the whole platform (pricing, settings, invoicing, invitations, users) you can look at, but it is not saved: the application tells you "in the demo nothing is saved".',
+        'Sending the quote is simulated: no e-mail goes out. cliente.demo sees it in their portal; they can accept it and pay it on PayPal sandbox (PayPal\'s test environment), with no real money, and the file moves on to phase 6 by itself.',
+        'If you depart from the price list when adjusting a quote\'s fees, the application asks you for a reason: it is kept in the quote\'s history.',
+        'The application and this manual exist in Spanish, English, French and Portuguese; pick the language in the top bar.',
+      ] },
+    },
+  },
 };
 
 const fr = {
@@ -241,7 +295,7 @@ const fr = {
       pasos: { titulo: 'Les six étapes', intro: 'Dans l\'ordre du parcours. Une dizaine de minutes la première fois.' },
       demo: { titulo: 'Si vous utilisez le compte de démonstration', parrafos: [
         'Farmazed remet aux prospects un compte de démonstration (« Laboratorios Ejemplo S.A. ») avec des données d\'exemple. Le parcours y est toujours actif et les étapes parlent de ces données : un devis déjà envoyé pour le « Producto Ejemplo 2 », un bouton « Remplir avec des données d\'exemple » dans l\'assistant et un téléversement de documents simulé (les boutons « Téléverser » affichent un message au lieu d\'ouvrir l\'explorateur de fichiers).',
-        'Rien de ce que vous faites dans la démo ne touche des données réelles ni n\'envoie de courriel, et le paiement passe par un prestataire de test même si le bouton indique « Payer avec PayPal ». Le bouton « Réinitialiser le compte démo », dans la barre du haut, efface ce que vous avez fait et remet tout à l\'état initial ; il faudra vous reconnecter.',
+        'Rien de ce que vous faites dans la démo ne touche des données réelles ni n\'envoie de courriel, et le paiement se fait sur PayPal sandbox (l\'environnement de test de PayPal, avec un compte acheteur de test), jamais avec de l\'argent réel. Le bouton « Réinitialiser le compte démo », dans la barre du haut, efface ce que vous avez fait et remet tout à l\'état initial ; il faudra vous reconnecter.',
         'Inviter des membres et changer de forfait sont masqués dans la démo ; le reste du portail fonctionne comme en production.',
       ] },
       fases: { titulo: 'Les 13 phases d\'un dossier', intro: 'Chaque produit avance à travers ces phases ; « Mes produits » indique où en est le vôtre. Les phases surlignées sont celles que vous touchez pendant le parcours.' },
@@ -305,6 +359,32 @@ const fr = {
       ] },
     },
   },
+  admin: {
+    titulo: 'Manuel de l\'administrateur (compte de démonstration)',
+    subtitulo: 'Le back-office de Farmazed vu par un administrateur, pas à pas',
+    intro: [
+      'Le compte de démonstration de l\'administrateur vous permet de parcourir tous les écrans du back-office (boîte de réception, dossiers, entreprises, leads, tarifs, devis, finances et paramètres) sur les données d\'exemple de l\'entreprise démo, sans toucher à rien de réel.',
+      'Ce manuel suit le panneau « Parcours démo » que vous verrez dans le back-office. Chaque étape reproduit l\'écran réel et vous dit quoi faire et ce qui vient ensuite.',
+    ],
+    secciones: {
+      empezar: { titulo: 'Avant de commencer', parrafos: [
+        'Rendez-vous sur la page de connexion avec le courriel de l\'administrateur de démonstration et le mot de passe qui vous a été remis ; les mots de passe ne figurent pas dans ce manuel. Le parcours de l\'administrateur n\'existe que dans le compte de démonstration.',
+        'En haut, dans la barre, se trouve le sélecteur de langue (ES · EN · FR · PT) : tout le back-office et le lien « Aide » (qui ouvre ce manuel) passent dans la langue choisie.',
+      ] },
+      panel: { titulo: 'Le panneau « Parcours démo »', parrafos: [
+        'En bas à droite vous verrez une carte avec les trois étapes du parcours. Elle coche ce que vous avez fait, met en évidence l\'étape en cours et le bouton « Aller à l\'étape » vous mène au bon écran. La progression se déduit des données : il n\'y a rien à enregistrer.',
+        'Le bouton « Réinitialiser le compte démo », en haut dans la barre, efface ce que vous avez fait (y compris ce qu\'ont fait les autres comptes démo) et remet tout au départ. Vous devrez vous reconnecter.',
+      ] },
+      pasos: { titulo: 'Les trois étapes', intro: 'Sur le « Producto Ejemplo 4 » (phase 4, devis brouillon) et le lead « Farmacia Ejemplo ».' },
+      fases: { titulo: 'Les 13 phases d\'un dossier', intro: 'Chaque dossier avance par ces phases ; dans « Dossiers » vous voyez où en est chacun. La phase mise en évidence est celle que vous traitez dans le parcours.' },
+      notas: { titulo: 'Bon à savoir', items: [
+        'Vous ne voyez et ne modifiez que les données de l\'entreprise démo. Ce qui concerne toute la plateforme (tarifs, paramètres, facturation, invitations, utilisateurs) vous pouvez le consulter, mais rien n\'est enregistré : l\'application vous prévient « dans la démo, rien n\'est enregistré ».',
+        'L\'envoi du devis est simulé : aucun courriel ne part. cliente.demo le voit dans son portail ; il peut l\'accepter et le payer sur PayPal sandbox (l\'environnement de test de PayPal), sans argent réel, et le dossier passe tout seul à la phase 6.',
+        'Si vous vous écartez du tarif en ajustant les honoraires d\'un devis, l\'application vous demande un motif : il reste dans l\'historique du devis.',
+        'L\'application et ce manuel existent en espagnol, anglais, français et portugais ; choisissez la langue dans la barre supérieure.',
+      ] },
+    },
+  },
 };
 
 const pt = {
@@ -336,7 +416,7 @@ const pt = {
       pasos: { titulo: 'Os seis passos', intro: 'Pela ordem do percurso. Cerca de dez minutos da primeira vez.' },
       demo: { titulo: 'Se usa a conta de demonstração', parrafos: [
         'A Farmazed entrega aos potenciais clientes uma conta de demonstração ("Laboratorios Ejemplo S.A.") com dados de exemplo. Nela o percurso está sempre ativo e os passos falam desses dados: um orçamento já enviado para o "Producto Ejemplo 2", um botão "Preencher com dados de exemplo" no assistente e um carregamento de documentos simulado (os botões "Carregar" mostram um aviso em vez de abrir o explorador de ficheiros).',
-        'Nada do que fizer na demo toca em dados reais nem envia e-mails, e o pagamento é feito por um fornecedor de teste mesmo que o botão diga "Pagar com PayPal". O botão "Reiniciar conta demo", na barra superior, apaga o que fez e repõe tudo como no início; terá de iniciar sessão outra vez.',
+        'Nada do que fizer na demo toca em dados reais nem envia e-mails, e o pagamento é feito no PayPal sandbox (o ambiente de testes do PayPal, com uma conta de comprador de teste), nunca com dinheiro real. O botão "Reiniciar conta demo", na barra superior, apaga o que fez e repõe tudo como no início; terá de iniciar sessão outra vez.',
         'Convidar membros e mudar de plano estão ocultos na demo; o resto do portal funciona como em produção.',
       ] },
       fases: { titulo: 'As 13 fases de um processo', intro: 'Cada produto avança por estas fases; em "Os meus produtos" vê em qual está o seu. As destacadas são as que toca durante o percurso.' },
@@ -396,6 +476,32 @@ const pt = {
         'Ao rejeitar um documento, o motivo que escrever é visto pelo cliente no seu portal: seja concreto sobre o que deve corrigir.',
         'A fase 8 exige duas confirmações: a jurídica (sua) e a técnica/matrizes (do Responsável Farmacêutico). Até estarem as duas, o processo não avança.',
         'Ao pedir um documento, o processo passa a documentos pendentes e o cliente vê-o como pendente no seu portal; quando o carregar, volta a revê-lo a partir de "A minha caixa".',
+        'A aplicação e este manual existem em espanhol, inglês, francês e português; escolha o idioma na barra superior.',
+      ] },
+    },
+  },
+  admin: {
+    titulo: 'Manual do Administrador (conta de demonstração)',
+    subtitulo: 'O back-office da Farmazed visto por um administrador, passo a passo',
+    intro: [
+      'A conta de demonstração do Administrador permite-lhe percorrer todos os ecrãs do back-office (caixa de entrada, processos, empresas, leads, preços, cotações, finanças e definições) sobre os dados de exemplo da empresa demo, sem tocar em nada real.',
+      'Este manual segue o painel "Percurso demo" que verá dentro do back-office. Cada passo reproduz o ecrã real e diz-lhe o que fazer e o que vem a seguir.',
+    ],
+    secciones: {
+      empezar: { titulo: 'Antes de começar', parrafos: [
+        'Entre na página de início de sessão com o e-mail do Administrador de demonstração e a palavra-passe que lhe deram; as palavras-passe não aparecem neste manual. O percurso do Administrador só existe na conta de demonstração.',
+        'Em cima, na barra, está o seletor de idioma (ES · EN · FR · PT): todo o back-office e a ligação "Ajuda" (que abre este manual) mudam para o idioma que escolher.',
+      ] },
+      panel: { titulo: 'O painel "Percurso demo"', parrafos: [
+        'Em baixo à direita verá um cartão com os três passos do percurso. Marca o que já fez, destaca o passo em que está e o botão "Ir para o passo" leva-o ao ecrã certo. O progresso deduz-se dos dados: não há nada a guardar.',
+        'O botão "Reiniciar conta demo", em cima na barra, apaga o que fez (também o que fizeram as outras contas demo) e deixa tudo como no início. Terá de iniciar sessão de novo.',
+      ] },
+      pasos: { titulo: 'Os três passos', intro: 'Sobre o "Producto Ejemplo 4" (fase 4, cotação em rascunho) e o lead "Farmacia Ejemplo".' },
+      fases: { titulo: 'As 13 fases de um processo', intro: 'Cada processo avança por estas fases; em "Processos" vê em que fase vai cada um. A destacada é a que trabalha no percurso.' },
+      notas: { titulo: 'Bom saber', items: [
+        'Só vê e altera os dados da empresa demo. O que é de toda a plataforma (preços, definições, faturação, convites, utilizadores) pode consultar, mas não se guarda: a aplicação avisa "na demo não se guarda".',
+        'O envio da cotação é simulado: não sai nenhum e-mail. cliente.demo vê-a no seu portal; pode aceitá-la e pagá-la no PayPal sandbox (o ambiente de testes do PayPal), sem dinheiro real, e o processo avança sozinho para a fase 6.',
+        'Se se afastar da tabela ao ajustar os honorários de uma cotação, a aplicação pede um motivo: fica no histórico da cotação.',
         'A aplicação e este manual existem em espanhol, inglês, francês e português; escolha o idioma na barra superior.',
       ] },
     },

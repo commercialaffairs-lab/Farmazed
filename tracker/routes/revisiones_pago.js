@@ -14,6 +14,8 @@ const { serializeTimestamps } = require('../utils/serialize');
 const { textoError, trimOrNull } = require('../utils/validar_texto');
 const { COLECCION } = require('../services/revisiones_pago');
 
+const { esAdminDemo, esDocDemo } = require('../utils/demo_scope');
+
 const router = Router();
 const db     = () => admin.firestore();
 const MAX_ABIERTAS = 200;
@@ -24,6 +26,7 @@ router.get('/', requireAuth, requirePermission('payments.review'), async (req, r
     const snap = await db().collection(COLECCION).where('resuelta', '==', false).limit(MAX_ABIERTAS).get();
     const revisiones = snap.docs
       .map(d => ({ id: d.id, ...d.data() }))
+      .filter(r => !esAdminDemo(req.user) || esDocDemo(r)) // admin demo: solo las de la empresa demo
       .sort((a, b) => b.creadaEn.toMillis() - a.creadaEn.toMillis());
     res.json(serializeTimestamps({ revisiones }));
   } catch (e) {

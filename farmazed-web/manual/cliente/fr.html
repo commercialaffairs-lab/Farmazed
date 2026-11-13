@@ -41,7 +41,7 @@ main{padding:28px 16px 40px}
 .paso{background:var(--tarjeta);border:1px solid var(--borde);border-radius:14px;padding:22px 24px;margin:18px 0}
 .paso-cab{display:flex;align-items:center;gap:14px}
 .paso-num{flex:none;width:38px;height:38px;border-radius:50%;background:var(--azul);color:#fff;font:600 1.05rem var(--titulos);display:grid;place-items:center}
-.seccion-regente .paso-num,.seccion-legal .paso-num{background:var(--verde)}
+.seccion-regente .paso-num,.seccion-legal .paso-num,.seccion-admin .paso-num{background:var(--verde)}
 .paso h3{font-size:1.3rem;color:var(--navy)}
 .paso-desc{margin:12px 0 0;font-size:1.02rem}
 .paso-extra{margin:12px 0 0}
@@ -50,7 +50,7 @@ main{padding:28px 16px 40px}
 .paso-sig .fin{color:var(--verde);font-weight:600}
 .pantalla{margin:18px 0 0;border:1px solid var(--borde);border-radius:12px;overflow:hidden;background:#F4F6FB}
 .pantalla figcaption{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:center;background:var(--azul);color:#fff;padding:8px 14px;font-size:.78rem}
-.pantalla-regente figcaption,.pantalla-legal figcaption{background:var(--verde)}
+.pantalla-regente figcaption,.pantalla-legal figcaption,.pantalla-admin figcaption{background:var(--verde)}
 .pantalla-ruta{font-weight:600}
 .pantalla-nota{color:rgba(255,255,255,.75)}
 .pantalla-cuerpo{padding:16px;font-size:.86rem;display:grid;gap:14px}
@@ -128,11 +128,11 @@ main{padding:28px 16px 40px}
 .fases li{display:flex;align-items:center;gap:12px;background:var(--tarjeta);border:1px solid var(--borde);border-radius:10px;padding:10px 14px;flex-wrap:wrap}
 .fase-num{flex:none;width:30px;height:30px;border-radius:50%;background:var(--tinte);color:var(--azul);font:600 .9rem var(--titulos);display:grid;place-items:center}
 .fase-demo{border-color:var(--azul)}
-.fase-regente,.fase-legal{border-color:var(--verde)}
-.fase-regente .fase-num,.fase-legal .fase-num{background:#e6f1e7;color:var(--verde)}
+.fase-regente,.fase-legal,.fase-admin{border-color:var(--verde)}
+.fase-regente .fase-num,.fase-legal .fase-num,.fase-admin .fase-num{background:#e6f1e7;color:var(--verde)}
 .fase-nombre{flex:1 1 200px}
 .fase-tag{font-size:.72rem;font-weight:700;color:var(--azul);background:var(--tinte);padding:3px 9px;border-radius:999px}
-.fase-regente .fase-tag,.fase-legal .fase-tag{color:var(--verde);background:#e6f1e7}
+.fase-regente .fase-tag,.fase-legal .fase-tag,.fase-admin .fase-tag{color:var(--verde);background:#e6f1e7}
 .notas{margin:0;padding-left:22px}
 .notas li{margin:8px 0}
 .pie{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;padding-top:20px;padding-bottom:40px;border-top:1px solid var(--borde);color:var(--mudo);font-size:.88rem}
@@ -293,7 +293,7 @@ main{padding:28px 16px 40px}
   
 <section class="seccion" id="demo">
   <h2>Si vous utilisez le compte de démonstration</h2>
-  <p>Farmazed remet aux prospects un compte de démonstration (« Laboratorios Ejemplo S.A. ») avec des données d&#39;exemple. Le parcours y est toujours actif et les étapes parlent de ces données : un devis déjà envoyé pour le « Producto Ejemplo 2 », un bouton « Remplir avec des données d&#39;exemple » dans l&#39;assistant et un téléversement de documents simulé (les boutons « Téléverser » affichent un message au lieu d&#39;ouvrir l&#39;explorateur de fichiers).</p><p>Rien de ce que vous faites dans la démo ne touche des données réelles ni n&#39;envoie de courriel, et le paiement passe par un prestataire de test même si le bouton indique « Payer avec PayPal ». Le bouton « Réinitialiser le compte démo », dans la barre du haut, efface ce que vous avez fait et remet tout à l&#39;état initial ; il faudra vous reconnecter.</p><p>Inviter des membres et changer de forfait sont masqués dans la démo ; le reste du portail fonctionne comme en production.</p>
+  <p>Farmazed remet aux prospects un compte de démonstration (« Laboratorios Ejemplo S.A. ») avec des données d&#39;exemple. Le parcours y est toujours actif et les étapes parlent de ces données : un devis déjà envoyé pour le « Producto Ejemplo 2 », un bouton « Remplir avec des données d&#39;exemple » dans l&#39;assistant et un téléversement de documents simulé (les boutons « Téléverser » affichent un message au lieu d&#39;ouvrir l&#39;explorateur de fichiers).</p><p>Rien de ce que vous faites dans la démo ne touche des données réelles ni n&#39;envoie de courriel, et le paiement se fait sur PayPal sandbox (l&#39;environnement de test de PayPal, avec un compte acheteur de test), jamais avec de l&#39;argent réel. Le bouton « Réinitialiser le compte démo », dans la barre du haut, efface ce que vous avez fait et remet tout à l&#39;état initial ; il faudra vous reconnecter.</p><p>Inviter des membres et changer de forfait sont masqués dans la démo ; le reste du portail fonctionne comme en production.</p>
   <figure class="pantalla pantalla-cliente"><figcaption><span class="pantalla-ruta">Portail client</span><span class="pantalla-nota">Ce que vous verrez dans l&#39;application</span></figcaption><div class="pantalla-cuerpo">
 <div class="m-topbar"><span class="m-idiomas"><span class="m-idioma " lang="es">ES</span><span class="m-idioma " lang="en">EN</span><span class="m-idioma activo" lang="fr">FR</span><span class="m-idioma " lang="pt">PT</span></span><span class="m-btn m-btn-aviso m-btn-sm">Réinitialiser le compte démo</span><span class="m-topbar-txt"><b>Laboratorios Ejemplo S.A.</b> · Cliente Ejemplo</span><span class="m-link">Aide</span><span class="m-avatar">CE</span></div>
 <div class="m-card">
@@ -319,7 +319,7 @@ main{padding:28px 16px 40px}
 </main>
 <footer class="pie ancho">
   <span><a href="/client-dashboard.html">Aller au portail</a></span>
-  <span>Guide généré le 2026-11-08</span>
+  <span>Guide généré le 2026-11-13</span>
 </footer>
 </body>
 </html>

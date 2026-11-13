@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Manuel de l&#39;administrateur (compte de démonstration) · Farmazed</title>
+<meta name="description" content="Le back-office de Farmazed vu par un administrateur, pas à pas">
+<meta name="robots" content="noindex">
+<link rel="icon" href="/favicon_Farzed.png">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;600&family=Open+Sans:wght@400;600;700&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+
+:root{--azul:#1B4F8A;--navy:#0F3260;--verde:#3A7D44;--ambar:#BA7517;--rojo:#A32D2D;--tinte:#E8EFF8;--fondo:#F4F6FB;--tarjeta:#fff;--texto:#1e293b;--mudo:#64748b;--borde:rgba(15,50,96,.12);--fuente:'Open Sans',sans-serif;--titulos:'Oswald',sans-serif;--mono:'IBM Plex Mono',monospace;--radio:10px}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:16px}
+body{margin:0;background:var(--fondo);color:var(--texto);font-family:var(--fuente);font-size:16px;line-height:1.6}
+.ancho{max-width:860px;margin:0 auto;padding:0 16px}
+h1,h2,h3,h4,h5{font-family:var(--titulos);font-weight:600;line-height:1.2;margin:0}
+a{color:var(--azul)}
+.cabecera{background:var(--navy);color:#fff;padding:28px 0 36px}
+.cabecera .marca{font-family:var(--titulos);letter-spacing:.14em;text-transform:uppercase;font-size:.8rem;color:rgba(255,255,255,.7);margin:0 0 6px}
+.cabecera h1{font-size:clamp(1.9rem,4vw,2.6rem);font-weight:400}
+.cabecera .subtitulo{color:rgba(255,255,255,.78);margin:8px 0 0;font-size:1.05rem}
+.idiomas{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;margin-bottom:14px}
+.idiomas a{color:rgba(255,255,255,.75);text-decoration:none;font-size:.82rem;padding:4px 10px;border-radius:999px;border:1px solid rgba(255,255,255,.25)}
+.idiomas a[aria-current]{background:#fff;color:var(--navy);border-color:#fff;font-weight:600}
+.cabecera-acciones{display:flex;gap:10px;flex-wrap:wrap;margin-top:20px}
+.enlace-boton{display:inline-block;font:600 .9rem var(--fuente);text-decoration:none;color:#fff;background:var(--azul);border:1px solid var(--azul);padding:9px 16px;border-radius:var(--radio);cursor:pointer}
+.enlace-boton.claro{background:transparent;border-color:rgba(255,255,255,.45)}
+.enlace-boton.claro:hover{background:rgba(255,255,255,.1)}
+main{padding:28px 16px 40px}
+.intro p{font-size:1.08rem;margin:0 0 14px}
+.indice{background:var(--tarjeta);border:1px solid var(--borde);border-radius:var(--radio);padding:18px 22px;margin-top:22px}
+.indice h2{font-size:.85rem;letter-spacing:.1em;text-transform:uppercase;color:var(--mudo);margin-bottom:8px}
+.indice ol{margin:0;padding-left:20px;columns:2;column-gap:28px}
+.indice li{margin:4px 0;break-inside:avoid}
+.seccion{margin-top:44px;padding-top:28px;border-top:1px solid var(--borde)}
+.seccion h2{font-size:1.75rem;color:var(--navy);margin-bottom:10px}
+.seccion-intro{color:var(--mudo);margin:0 0 20px}
+.seccion > p{margin:0 0 12px}
+.paso{background:var(--tarjeta);border:1px solid var(--borde);border-radius:14px;padding:22px 24px;margin:18px 0}
+.paso-cab{display:flex;align-items:center;gap:14px}
+.paso-num{flex:none;width:38px;height:38px;border-radius:50%;background:var(--azul);color:#fff;font:600 1.05rem var(--titulos);display:grid;place-items:center}
+.seccion-regente .paso-num,.seccion-legal .paso-num,.seccion-admin .paso-num{background:var(--verde)}
+.paso h3{font-size:1.3rem;color:var(--navy)}
+.paso-desc{margin:12px 0 0;font-size:1.02rem}
+.paso-extra{margin:12px 0 0}
+.paso-sig{margin:16px 0 0;font-size:.92rem;color:var(--mudo)}
+.paso-sig a{font-weight:600;text-decoration:none}
+.paso-sig .fin{color:var(--verde);font-weight:600}
+.pantalla{margin:18px 0 0;border:1px solid var(--borde);border-radius:12px;overflow:hidden;background:#F4F6FB}
+.pantalla figcaption{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:center;background:var(--azul);color:#fff;padding:8px 14px;font-size:.78rem}
+.pantalla-regente figcaption,.pantalla-legal figcaption,.pantalla-admin figcaption{background:var(--verde)}
+.pantalla-ruta{font-weight:600}
+.pantalla-nota{color:rgba(255,255,255,.75)}
+.pantalla-cuerpo{padding:16px;font-size:.86rem;display:grid;gap:14px}
+.dos .pantalla-cuerpo{justify-items:end}
+.dos .m-topbar{justify-self:stretch}
+/* Réplicas de la interfaz */
+.m-card,.m-modal,.m-panel{background:#fff;border:1px solid var(--borde);border-radius:10px;padding:16px;box-shadow:0 1px 2px rgba(15,50,96,.06)}
+.m-modal{border-top:4px solid var(--azul)}
+.m-card h4,.m-modal h4,.m-panel strong{font:600 1rem var(--titulos);color:var(--navy)}
+.m-card h5{font:600 .9rem var(--titulos);color:var(--texto);margin:12px 0 8px}
+.m-modal p{color:var(--mudo);margin:6px 0 12px;font-size:.82rem}
+.m-card-cab{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.m-btn{display:inline-block;padding:6px 14px;border-radius:7px;border:1px solid var(--azul);background:#fff;color:var(--azul);font-weight:600;font-size:.84rem;line-height:1.3;white-space:nowrap}
+.m-btn-primario{background:var(--azul);color:#fff}
+.m-btn-contorno{background:#fff}
+.m-btn-aviso{background:#ffc107;border-color:#ffc107;color:#1e293b}
+.m-btn-ok{color:var(--verde);border-color:var(--verde)}
+.m-btn-no{color:var(--rojo);border-color:var(--rojo)}
+.m-btn-sm{padding:4px 10px;font-size:.78rem}
+.m-badge{display:inline-block;padding:3px 9px;border-radius:999px;font-size:.72rem;font-weight:700;border:1px solid transparent;white-space:nowrap}
+.m-badge.azul{background:var(--tinte);color:var(--azul)}
+.m-badge.verde{background:#e6f1e7;color:var(--verde)}
+.m-badge.ambar{background:#fbf1e1;color:var(--ambar)}
+.m-campo{margin:12px 0 0}
+.m-campo label{display:block;font-weight:600;font-size:.82rem;margin-bottom:6px}
+.m-radio{display:inline-flex;align-items:center;gap:6px;margin-right:16px;font-size:.84rem}
+.m-radio i{width:14px;height:14px;border-radius:50%;border:1.5px solid #94a3b8;display:inline-block}
+.m-radio i.on{border-color:var(--azul);background:radial-gradient(var(--azul) 45%,#fff 50%)}
+.m-input{display:inline-block;min-width:160px;padding:6px 10px;border:1px solid #cbd5e1;border-radius:7px;background:#fff;font-size:.84rem}
+.m-input-sel{padding-right:8px}
+.m-input-vacio{color:#94a3b8}
+.m-input-area{display:block;min-height:54px}
+.m-acciones{display:flex;gap:8px;justify-content:flex-end;margin-top:14px;flex-wrap:wrap}
+.m-tabs{display:flex;gap:4px;flex-wrap:wrap;margin:12px 0 4px;border-bottom:1px solid var(--borde)}
+.m-tabs span{padding:6px 10px;font-size:.76rem;color:var(--mudo);border-bottom:2px solid transparent}
+.m-tabs span.on{color:var(--azul);border-bottom-color:var(--azul);font-weight:700}
+.m-opciones{display:flex;gap:8px;flex-wrap:wrap}
+.m-opciones span{padding:8px 14px;border:1px solid var(--borde);border-radius:8px;font-weight:600;font-size:.84rem}
+.m-opciones span.on{border-color:var(--azul);background:var(--tinte);color:var(--azul)}
+.m-fila{display:flex;align-items:center;gap:10px;padding:9px 0;border-top:1px solid var(--borde);flex-wrap:wrap}
+.m-fila:first-of-type{border-top:0}
+.m-fila small{color:var(--mudo)}
+.m-fila-mas{color:var(--mudo);justify-content:center}
+.m-crece{flex:1 1 180px}
+.m-cod{font-family:var(--mono);font-size:.78rem;color:var(--mudo);min-width:36px}
+.m-mono{font-family:var(--mono);font-weight:500}
+.m-desglose{margin-top:8px;border-top:1px dashed var(--borde);padding-top:8px;font-size:.84rem}
+.m-desglose div{display:flex;justify-content:space-between;padding:3px 0}
+.m-desglose .m-total{border-top:1px solid var(--borde);margin-top:6px;padding-top:8px;font-weight:700}
+.m-fase{margin-top:14px;padding-top:12px;border-top:1px solid var(--borde);display:flex;align-items:center;gap:8px;font-weight:600}
+.m-hilo{display:grid;gap:8px;margin:12px 0}
+.m-msg{max-width:85%;background:var(--fondo);border-radius:10px;padding:8px 12px;font-size:.84rem}
+.m-msg.mio{justify-self:end;background:var(--tinte)}
+.m-msg small{display:block;color:var(--mudo);font-size:.7rem;margin-bottom:2px}
+.m-topbar{display:flex;align-items:center;gap:12px;background:var(--azul);color:#fff;border-radius:8px;padding:8px 12px;flex-wrap:wrap}
+.m-topbar-bo{background:#fff;color:var(--texto);border:1px solid var(--borde)}
+.m-topbar-bo .m-link{color:var(--azul)}
+.m-topbar-bo .m-idioma{border-color:#cfd8e3;color:var(--mudo)}
+.m-topbar-bo .m-idioma.activo{background:var(--navy);border-color:var(--navy);color:#fff}
+.m-topbar-txt{font-size:.78rem;margin-left:auto}
+.m-topbar .m-link{text-decoration:underline;font-size:.82rem}
+.m-avatar{width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.2);display:grid;place-items:center;font:600 .72rem var(--titulos)}
+.m-panel{max-width:340px;width:100%}
+.m-panel-cab{display:flex;justify-content:space-between;align-items:center}
+.m-barra{height:4px;background:var(--tinte);border-radius:2px;margin:10px 0;overflow:hidden}
+.m-barra span{display:block;height:100%;background:var(--azul)}
+.m-idiomas{display:flex;justify-content:flex-end;gap:4px;margin:8px 0 2px}
+.m-idioma{font-size:.62rem;font-weight:700;letter-spacing:.04em;padding:2px 7px;border-radius:999px;border:1px solid #cfd8e3;color:var(--mudo)}
+.m-idioma.activo{background:var(--navy);border-color:var(--navy);color:#fff}
+.m-pasos{list-style:none;margin:0;padding:0;font-size:.82rem}
+.m-pasos li{padding:6px 0 6px 8px;color:var(--mudo)}
+.m-pasos li.actual{color:var(--texto);border-left:3px solid var(--azul);background:var(--fondo);border-radius:0 6px 6px 0;padding:8px 10px}
+.m-pasos li small{display:block;color:var(--mudo);margin:4px 0 8px;font-size:.76rem}
+.fases{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.fases li{display:flex;align-items:center;gap:12px;background:var(--tarjeta);border:1px solid var(--borde);border-radius:10px;padding:10px 14px;flex-wrap:wrap}
+.fase-num{flex:none;width:30px;height:30px;border-radius:50%;background:var(--tinte);color:var(--azul);font:600 .9rem var(--titulos);display:grid;place-items:center}
+.fase-demo{border-color:var(--azul)}
+.fase-regente,.fase-legal,.fase-admin{border-color:var(--verde)}
+.fase-regente .fase-num,.fase-legal .fase-num,.fase-admin .fase-num{background:#e6f1e7;color:var(--verde)}
+.fase-nombre{flex:1 1 200px}
+.fase-tag{font-size:.72rem;font-weight:700;color:var(--azul);background:var(--tinte);padding:3px 9px;border-radius:999px}
+.fase-regente .fase-tag,.fase-legal .fase-tag,.fase-admin .fase-tag{color:var(--verde);background:#e6f1e7}
+.notas{margin:0;padding-left:22px}
+.notas li{margin:8px 0}
+.pie{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;padding-top:20px;padding-bottom:40px;border-top:1px solid var(--borde);color:var(--mudo);font-size:.88rem}
+@media (max-width:640px){.indice ol{columns:1}.paso{padding:18px 16px}.pantalla-cuerpo{padding:12px}}
+@media print{
+  body{background:#fff;font-size:12pt}
+  .cabecera{background:none;color:#000;padding:0 0 12pt;border-bottom:2pt solid #000}
+  .cabecera .marca,.cabecera .subtitulo{color:#444}
+  .idiomas,.cabecera-acciones,.pie a{display:none}
+  .seccion{break-before:page;border-top:0;margin-top:0;padding-top:0}
+  .seccion#empezar{break-before:auto}
+  .paso,.pantalla,.fases li{break-inside:avoid;box-shadow:none}
+  .pantalla figcaption,.m-topbar,.paso-num,.m-btn-primario{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  a{color:inherit;text-decoration:none}
+}
+
+</style>
+</head>
+<body>
+<header class="cabecera">
+  <div class="ancho">
+    <nav class="idiomas" aria-label="Langue"><a href="./es.html"  lang="es">Español</a><a href="./en.html"  lang="en">English</a><a href="./fr.html" aria-current="page" lang="fr">Français</a><a href="./pt.html"  lang="pt">Português</a></nav>
+    <p class="marca">Farmazed</p>
+    <h1>Manuel de l&#39;administrateur (compte de démonstration)</h1>
+    <p class="subtitulo">Le back-office de Farmazed vu par un administrateur, pas à pas</p>
+    <div class="cabecera-acciones">
+      <a class="enlace-boton claro" href="/login.html">Se connecter</a>
+      <button type="button" class="enlace-boton claro" onclick="window.print()">Imprimer ou enregistrer en PDF</button>
+    </div>
+  </div>
+</header>
+<main class="ancho">
+  <section class="intro">
+    <p>Le compte de démonstration de l&#39;administrateur vous permet de parcourir tous les écrans du back-office (boîte de réception, dossiers, entreprises, leads, tarifs, devis, finances et paramètres) sur les données d&#39;exemple de l&#39;entreprise démo, sans toucher à rien de réel.</p><p>Ce manuel suit le panneau « Parcours démo » que vous verrez dans le back-office. Chaque étape reproduit l&#39;écran réel et vous dit quoi faire et ce qui vient ensuite.</p>
+    <nav class="indice" aria-label="Sommaire"><h2>Sommaire</h2><ol><li><a href="#empezar">Avant de commencer</a></li><li><a href="#panel">Le panneau « Parcours démo »</a></li><li><a href="#pasos">Les trois étapes</a></li><li><a href="#fases">Les 13 phases d&#39;un dossier</a></li><li><a href="#notas">Bon à savoir</a></li></ol></nav>
+  </section>
+
+  <section class="seccion" id="empezar">
+    <h2>Avant de commencer</h2>
+    <p>Rendez-vous sur la page de connexion avec le courriel de l&#39;administrateur de démonstration et le mot de passe qui vous a été remis ; les mots de passe ne figurent pas dans ce manuel. Le parcours de l&#39;administrateur n&#39;existe que dans le compte de démonstration.</p><p>En haut, dans la barre, se trouve le sélecteur de langue (ES · EN · FR · PT) : tout le back-office et le lien « Aide » (qui ouvre ce manuel) passent dans la langue choisie.</p>
+  </section>
+
+  <section class="seccion" id="panel">
+    <h2>Le panneau « Parcours démo »</h2>
+    <p>En bas à droite vous verrez une carte avec les trois étapes du parcours. Elle coche ce que vous avez fait, met en évidence l&#39;étape en cours et le bouton « Aller à l&#39;étape » vous mène au bon écran. La progression se déduit des données : il n&#39;y a rien à enregistrer.</p><p>Le bouton « Réinitialiser le compte démo », en haut dans la barre, efface ce que vous avez fait (y compris ce qu&#39;ont fait les autres comptes démo) et remet tout au départ. Vous devrez vous reconnecter.</p>
+    <div class="dos">
+      <figure class="pantalla pantalla-admin"><figcaption><span class="pantalla-ruta">Back-office</span><span class="pantalla-nota">Ce que vous verrez dans l&#39;application</span></figcaption><div class="pantalla-cuerpo">
+<div class="m-topbar m-topbar-bo"><b class="m-topbar-txt">Ma corbeille</b><span class="m-idiomas"><span class="m-idioma " lang="es">ES</span><span class="m-idioma " lang="en">EN</span><span class="m-idioma activo" lang="fr">FR</span><span class="m-idioma " lang="pt">PT</span></span><span class="m-link">Aide</span><span class="m-topbar-txt">Administrador Ejemplo</span></div>
+<div class="m-panel" lang="fr">
+  <div class="m-panel-cab"><strong>Parcours démo</strong><span class="m-badge azul">1 sur 3</span></div>
+  <div class="m-barra"><span style="width:17%"></span></div>
+  <ol class="m-pasos">
+    <li class="actual">○ Ajustez et envoyez le devis du Producto Ejemplo 4<small>Dans « Devis » ouvrez le devis brouillon du « Producto Ejemplo 4 », vérifiez ou ajustez les honoraires (avec un motif si vous vous écartez du tarif) et cliquez sur « Envoyer le devis ». L&#39;envoi est simulé : aucun courriel ne part, mais cliente.demo le voit déjà dans son portail.</small><span class="m-btn m-btn-primario m-btn-sm">Aller à cette étape</span></li>
+    <li class="">○ Traitez le lead « Farmacia Ejemplo »</li>
+    <li class="">○ Consultez le paiement du devis</li>
+  </ol>
+</div></div></figure>
+    </div>
+  </section>
+  
+<section class="seccion seccion-admin" id="pasos">
+  <h2>Les trois étapes</h2>
+  <p class="seccion-intro">Sur le « Producto Ejemplo 4 » (phase 4, devis brouillon) et le lead « Farmacia Ejemplo ».</p>
+  
+<article class="paso" id="admin-cotizacion">
+  <div class="paso-cab"><span class="paso-num">1</span><h3>Ajustez et envoyez le devis du Producto Ejemplo 4</h3></div>
+  <p class="paso-desc">Dans « Devis » ouvrez le devis brouillon du « Producto Ejemplo 4 », vérifiez ou ajustez les honoraires (avec un motif si vous vous écartez du tarif) et cliquez sur « Envoyer le devis ». L&#39;envoi est simulé : aucun courriel ne part, mais cliente.demo le voit déjà dans son portail.</p>
+  <figure class="pantalla pantalla-admin"><figcaption><span class="pantalla-ruta">Back-office › Devis</span><span class="pantalla-nota">Ce que vous verrez dans l&#39;application</span></figcaption><div class="pantalla-cuerpo">
+<div class="m-card">
+  <div class="m-card-cab"><h4>Devis FZ-DEMO-2026-0004</h4><span class="m-badge ambar">Brouillon</span></div>
+  <div class="m-fila"><span class="m-crece"><b>Producto Ejemplo 4 — Antiácido 400 mg</b><br><small>Comprimé à croquer · Laboratorios Ejemplo S.A.</small></span><span class="m-mono">B/. 4,130.00</span></div>
+  <div class="m-desglose"><div><span>Honoraires Farmazed</span><span class="m-mono">B/. 1,855.00</span></div><div><span>Taxe DNFD</span><span class="m-mono">B/. 750.00</span></div><div><span>MEF (produit étranger)</span><span class="m-mono">B/. 25.00</span></div><div><span>IEA</span><span class="m-mono">B/. 1,500.00</span></div>
+    <div class="m-total"><span>Total</span><span class="m-mono">B/. 4,130.00</span></div></div>
+  <div class="m-acciones"><span class="m-btn m-btn-primario m-btn-sm">Envoyer le devis</span></div>
+</div></div></figure>
+  <p class="paso-sig"><span>Étape suivante:</span> <a href="#admin-lead">2. Traitez le lead « Farmacia Ejemplo »</a></p>
+</article>
+<article class="paso" id="admin-lead">
+  <div class="paso-cab"><span class="paso-num">2</span><h3>Traitez le lead « Farmacia Ejemplo »</h3></div>
+  <p class="paso-desc">Dans « Leads » se trouve la demande de « Farmacia Ejemplo » (statut Nouveau). Ouvrez-la, passez le statut à Contacté ou laissez une note : c&#39;est ainsi que se travaille le CRM avant d&#39;inviter le client à créer son compte (dans la démo l&#39;invitation n&#39;est pas envoyée).</p>
+  <figure class="pantalla pantalla-admin"><figcaption><span class="pantalla-ruta">Back-office › Leads</span><span class="pantalla-nota">Ce que vous verrez dans l&#39;application</span></figcaption><div class="pantalla-cuerpo">
+<div class="m-card">
+  <div class="m-card-cab"><h4>Leads</h4></div>
+  <div class="m-fila"><span class="m-crece"><b>Farmacia Ejemplo</b><br><small>Panama · demande de compte</small></span><span class="m-badge azul">Nouveau</span></div>
+  <div class="m-campo"><label>Statut</label><span class="m-input m-input-sel">Contacté ▾</span></div>
+  <div class="m-campo"><label>Notes internes</label><span class="m-input m-input-area">Appel passé lundi ; intéressés par l&#39;enregistrement de 2 produits.</span></div>
+  <div class="m-acciones"><span class="m-btn m-btn-primario m-btn-sm">Enregistrer</span></div>
+</div></div></figure>
+  <p class="paso-sig"><span>Étape suivante:</span> <a href="#admin-pago">3. Consultez le paiement du devis</a></p>
+</article>
+<article class="paso" id="admin-pago">
+  <div class="paso-cab"><span class="paso-num">3</span><h3>Consultez le paiement du devis</h3></div>
+  <p class="paso-desc">Dans un autre onglet, connectez-vous comme cliente.demo, acceptez le devis du « Producto Ejemplo 4 » et payez-le sur PayPal sandbox. De retour ici, vous verrez le paiement dans le dossier et dans « Finances », et le dossier passé à la phase 6.</p>
+  <figure class="pantalla pantalla-admin"><figcaption><span class="pantalla-ruta">Back-office › Devis</span><span class="pantalla-nota">Ce que vous verrez dans l&#39;application</span></figcaption><div class="pantalla-cuerpo">
+<div class="m-card">
+  <div class="m-card-cab"><h4>Devis FZ-DEMO-2026-0004</h4><span class="m-badge verde">Pagada ✓</span></div>
+  <div class="m-fila"><span class="m-crece"><b>Producto Ejemplo 4 — Antiácido 400 mg</b><br><small>Comprimé à croquer · Laboratorios Ejemplo S.A.</small></span><span class="m-mono">B/. 4,130.00</span></div>
+  <div class="m-fase"><span class="m-badge azul">Phase 6</span> Ouverture du dossier interne (CRM)</div>
+</div></div></figure>
+  <p class="paso-sig"><span class="fin">✓ Parcours terminé : vous avez vu l&#39;essentiel.</span></p>
+</article>
+</section>
+  
+  
+<section class="seccion" id="fases">
+  <h2>Les 13 phases d&#39;un dossier</h2>
+  <p class="seccion-intro">Chaque dossier avance par ces phases ; dans « Dossiers » vous voyez où en est chacun. La phase mise en évidence est celle que vous traitez dans le parcours.</p>
+  <ol class="fases"><li class=""><span class="fase-num">1</span><span class="fase-nombre">Premier contact</span></li><li class=""><span class="fase-num">2</span><span class="fase-nombre">Collecte des informations préliminaires</span></li><li class=""><span class="fase-num">3</span><span class="fase-nombre">Type d&#39;enregistrement sanitaire et voie d&#39;enregistrement</span></li><li class="fase-demo fase-admin"><span class="fase-num">4</span><span class="fase-nombre">Préparation et envoi du devis</span><span class="fase-tag">dans le parcours</span></li><li class=""><span class="fase-num">5</span><span class="fase-nombre">Paiement des frais de la procédure</span></li><li class=""><span class="fase-num">6</span><span class="fase-nombre">Ouverture du dossier interne (CRM)</span></li><li class=""><span class="fase-num">7</span><span class="fase-nombre">Instructions au client : documentation requise</span></li><li class=""><span class="fase-num">8</span><span class="fase-nombre">Réception et examen de la documentation numérique (point de contrôle)</span></li><li class=""><span class="fase-num">9</span><span class="fase-nombre">Demande et envoi des documents originaux</span></li><li class=""><span class="fase-num">10</span><span class="fase-nombre">Réception et vérification des originaux (point de contrôle)</span></li><li class=""><span class="fase-num">11</span><span class="fase-nombre">Constitution des dossiers DNFD et IEA</span></li><li class=""><span class="fase-num">12</span><span class="fase-nombre">Dépôt auprès de la DNFD et de l&#39;IEA</span></li><li class=""><span class="fase-num">13</span><span class="fase-nombre">Suivi et gestion après dépôt</span></li></ol>
+</section>
+
+  <section class="seccion" id="notas">
+    <h2>Bon à savoir</h2>
+    <ul class="notas"><li>Vous ne voyez et ne modifiez que les données de l&#39;entreprise démo. Ce qui concerne toute la plateforme (tarifs, paramètres, facturation, invitations, utilisateurs) vous pouvez le consulter, mais rien n&#39;est enregistré : l&#39;application vous prévient « dans la démo, rien n&#39;est enregistré ».</li><li>L&#39;envoi du devis est simulé : aucun courriel ne part. cliente.demo le voit dans son portail ; il peut l&#39;accepter et le payer sur PayPal sandbox (l&#39;environnement de test de PayPal), sans argent réel, et le dossier passe tout seul à la phase 6.</li><li>Si vous vous écartez du tarif en ajustant les honoraires d&#39;un devis, l&#39;application vous demande un motif : il reste dans l&#39;historique du devis.</li><li>L&#39;application et ce manuel existent en espagnol, anglais, français et portugais ; choisissez la langue dans la barre supérieure.</li></ul>
+  </section>
+</main>
+<footer class="pie ancho">
+  <span><a href="/admin/bandeja.html">Aller au back-office</a></span>
+  <span>Guide généré le 2026-11-13</span>
+</footer>
+</body>
+</html>

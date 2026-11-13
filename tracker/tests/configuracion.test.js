@@ -62,7 +62,7 @@ describe('Estado de los servicios (/api/admin/estado, solo admin)', () => {
     assert.equal(r.json.pagos.proveedor, 'mock');
     assert.equal(r.json.facturacion.proveedor, 'mock');
     assert.equal(typeof r.json.correo.configurado, 'boolean');
-    assert.deepEqual(r.json.demo.cuentas.map(c => c.rol), ['cliente_titular', 'regente', 'regente', 'abogado']);
+    assert.deepEqual(r.json.demo.cuentas.map(c => c.rol), ['cliente_titular', 'regente', 'regente', 'abogado', 'admin']);
     assert.match(r.json.version, /^\d+\.\d+\.\d+$/);
     const texto = JSON.stringify(r.json).toLowerCase();
     for (const prohibido of ['secret', 'password', 'token', 'clave']) assert.ok(!texto.includes(prohibido), `no debe exponer ${prohibido}`);

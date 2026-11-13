@@ -18,17 +18,17 @@ const fs = require('fs');
 const path = require('path');
 const { generarManual, IDIOMAS, ROLES, DESTINO } = require('../scripts/generar_manual');
 const { TEXTOS } = require('../scripts/manual_textos');
-const { PASOS_CLIENTE, PASOS_CLIENTE_REAL, PASOS_REGENTE, PASOS_LEGAL, TRADUCCIONES, NOTAS, ETIQUETAS_PANEL, normalizarIdioma, pasosEnIdioma } = require('../services/demo_recorrido_textos');
+const { PASOS_CLIENTE, PASOS_CLIENTE_REAL, PASOS_REGENTE, PASOS_LEGAL, PASOS_ADMIN, TRADUCCIONES, NOTAS, ETIQUETAS_PANEL, normalizarIdioma, pasosEnIdioma } = require('../services/demo_recorrido_textos');
 
 const WEB = path.join(__dirname, '..', '..', 'farmazed-web');
 const esc = (s) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const leer = (rol, idioma) => fs.readFileSync(path.join(DESTINO, rol, `${idioma}.html`), 'utf8');
-const PASOS_DEL_MANUAL = { cliente: PASOS_CLIENTE_REAL, regente: PASOS_REGENTE, legal: PASOS_LEGAL };
-const SECCIONES = { cliente: ['empezar', 'panel', 'pasos', 'demo', 'fases', 'notas'], regente: ['empezar', 'panel', 'pasos', 'fases', 'notas'], legal: ['empezar', 'panel', 'pasos', 'fases', 'notas'] };
+const PASOS_DEL_MANUAL = { cliente: PASOS_CLIENTE_REAL, regente: PASOS_REGENTE, legal: PASOS_LEGAL, admin: PASOS_ADMIN };
+const SECCIONES = { cliente: ['empezar', 'panel', 'pasos', 'demo', 'fases', 'notas'], regente: ['empezar', 'panel', 'pasos', 'fases', 'notas'], legal: ['empezar', 'panel', 'pasos', 'fases', 'notas'], admin: ['empezar', 'panel', 'pasos', 'fases', 'notas'] };
 
-describe('manuales de usuario (cliente, regente y legal, ES/EN/FR/PT)', () => {
+describe('manuales de usuario (cliente, regente, legal y admin, ES/EN/FR/PT)', () => {
   test('los HTML del repo son exactamente lo que produce el generador', () => {
-    assert.deepEqual(ROLES, ['cliente', 'regente', 'legal']);
+    assert.deepEqual(ROLES, ['cliente', 'regente', 'legal', 'admin']);
     for (const rol of ROLES) for (const idioma of IDIOMAS) {
       const enDisco = leer(rol, idioma);
       const fecha = enDisco.match(/(\d{4}-\d{2}-\d{2})<\/span>/)?.[1];
@@ -59,6 +59,7 @@ describe('manuales de usuario (cliente, regente y legal, ES/EN/FR/PT)', () => {
       for (const p of PASOS_CLIENTE_REAL) assert.ok(trad.clienteReal[p.id]?.titulo && trad.clienteReal[p.id]?.descripcion, `${idioma}: falta clienteReal.${p.id}`);
       for (const p of PASOS_REGENTE) assert.ok(trad.regente[p.id]?.titulo && trad.regente[p.id]?.descripcion, `${idioma}: falta regente.${p.id}`);
       for (const p of PASOS_LEGAL) assert.ok(trad.legal[p.id]?.titulo && trad.legal[p.id]?.descripcion, `${idioma}: falta legal.${p.id}`);
+      for (const p of PASOS_ADMIN) assert.ok(trad.admin[p.id]?.titulo && trad.admin[p.id]?.descripcion, `${idioma}: falta admin.${p.id}`);
       assert.deepEqual(Object.keys(NOTAS[idioma]).sort(), Object.keys(NOTAS.es).sort(), `${idioma}: notas distintas del español`);
       assert.deepEqual(Object.keys(ETIQUETAS_PANEL[idioma]).sort(), Object.keys(ETIQUETAS_PANEL.es).sort(), `${idioma}: rótulos del panel distintos del español`);
       for (const [k, v] of Object.entries(ETIQUETAS_PANEL[idioma])) assert.ok(typeof v === 'string' && v.trim(), `${idioma}: rótulo ${k} vacío`);
@@ -110,7 +111,7 @@ describe('manuales de usuario (cliente, regente y legal, ES/EN/FR/PT)', () => {
     assert.ok(portal.includes('id="cuenta-manual"') && portal.includes('id="pref-recorrido"'), '"Mi cuenta" tiene el enlace al manual y el interruptor del recorrido');
     assert.ok(/\/manual\/cliente\/\$\{[^}]*\}\.html/.test(portal), 'el enlace sigue al idioma de la interfaz');
     const auth = fs.readFileSync(path.join(WEB, 'portal', 'js', 'auth.js'), 'utf8');
-    assert.ok(/\/manual\/\$\{carpetaManual\}\/\$\{[^}]*\}\.html/.test(auth) && auth.includes("carpetaManual = 'legal'"), 'el enlace del back-office apunta al manual del Responsable Farmacéutico (o al del Legal) en el idioma activo');
+    assert.ok(/\/manual\/\$\{carpetaManual\}\/\$\{[^}]*\}\.html/.test(auth) && auth.includes("carpetaManual = 'legal'") && auth.includes("carpetaManual = 'admin'"), 'el enlace del back-office apunta al manual del Responsable Farmacéutico (o al del Legal o al del Administrador) en el idioma activo');
     assert.ok(/montarEnlaceAyuda\(nombre\);/.test(auth), 'initBackoffice debe montar el enlace');
   });
 
@@ -120,7 +121,7 @@ describe('manuales de usuario (cliente, regente y legal, ES/EN/FR/PT)', () => {
     assert.ok(panel.includes('api.getPreferencias()') && panel.includes("recorridoGuiado: false") && panel.includes("recorridoGuiado: true"), 'la preferencia del cliente real vive en el tracker');
     assert.ok(panel.includes('export async function activarRecorrido') && panel.includes('export async function desactivarRecorrido'), '"Mi cuenta" enciende y apaga el recorrido');
     assert.ok(panel.includes('.onCambio(') && panel.includes("localStorage.setItem(CLAVE_IDIOMA"), 'sigue el idioma de la interfaz (i18n.js) y lo recuerda sin ella');
-    assert.ok(panel.includes("getElementById('tb-ayuda')") && panel.includes("/manual/${estado.rol === 'regente' || estado.rol === 'legal' ? estado.rol : 'cliente'}/"), '"Ayuda" sigue al rol y al idioma del panel');
+    assert.ok(panel.includes("getElementById('tb-ayuda')") && panel.includes("/manual/${['regente', 'legal', 'admin'].includes(estado.rol) ? estado.rol : 'cliente'}/"), '"Ayuda" sigue al rol y al idioma del panel');
     for (const rotulo of ['Ir al paso', 'Recorrido completo', 'Minimizar', 'Descargar PDF de ejemplo', 'Ocultar el recorrido']) {
       assert.ok(!panel.includes(`>${rotulo}`) && !panel.includes(`'${rotulo}'`), `recorrido.js no debe traer el rótulo "${rotulo}" en duro: viene del tracker`);
     }

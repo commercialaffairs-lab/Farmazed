@@ -61,7 +61,7 @@ async function hasConceptPayment(caseId, concepto, t = null) {
  * por `requirePermission` (quien llama ya decidió el permiso: aquí solo
  * hay que acertar la forma del documento).
  */
-async function createConceptPayment(caseId, { concepto, monto, origen, paypalOrderId, registradoPor, registradoPorEmail, paymentId: idFijo, batch }) {
+async function createConceptPayment(caseId, { concepto, monto, origen, paypalOrderId, registradoPor, registradoPorEmail, paymentId: idFijo, batch, demo = false }) {
   if (!CONCEPTOS_CLIENTE.includes(concepto)) {
     throw new Error(`createConceptPayment: concepto inválido "${concepto}"`);
   }
@@ -84,6 +84,7 @@ async function createConceptPayment(caseId, { concepto, monto, origen, paypalOrd
     origen: origen || 'paypal', paypalOrderId: paypalOrderId || null,
     registradoPor, registradoPorEmail,
     createdAt: now,
+    ...(demo ? { demo: true } : {}), // pago de una cuenta demo (sandbox o mock): no es un cobro real
   };
   const pagoRef = db().collection('cases').doc(caseId).collection('payments').doc(paymentId);
   if (batch) batch.set(pagoRef, paymentData);

@@ -1,17 +1,19 @@
 /**
- * demo.js — Modo demo (decisión de Rick, 01-nov-2026; ampliado a 4 cuentas el 08-nov): cuentas de demostración con datos de
+ * demo.js — Modo demo (decisión de Rick, 01-nov-2026; ampliado a 4 cuentas el 08-nov y a 5 con admin.demo el 13-nov): cuentas de demostración con datos de
  * ejemplo para que un prospecto (cliente) o un empleado nuevo (Responsable Farmacéutico o Legal) recorra la plataforma, y
  * un reinicio que lo deja todo como al principio. Lo usan scripts/seed_demo.js (CLI),
  * routes/demo.js (POST /api/demo/reiniciar) y tests/demo.test.js.
  *
  * Cuentas (producción, públicas por diseño; Rick 01-nov y 08-nov): cliente.demo, regente.demo y
  * farmaceutico.demo (las dos con rol `regente` = Responsable Farmacéutico) y legal.demo (rol `abogado` =
- * Responsable Legal), todas @farmazed.com. El personal demo solo ve los casos demo:true (los de ejemplo),
- * por eso puede convivir con clientes reales en el mismo despliegue; no hay admin demo.
+ * Responsable Legal) y admin.demo (rol `admin`), todas @farmazed.com. El personal demo solo ve los casos demo:true
+ * (los de ejemplo) y el admin demo solo lo de la empresa demo (demo:true o `demo-org`; ver utils/demo_scope.js y
+ * middleware/demo_admin.js): por eso conviven con clientes reales en el mismo despliegue. Lo global (precios,
+ * configuración, facturación, invitaciones, usuarios reales) el admin demo lo ve pero no lo guarda.
  *
  * Aislamiento: todo lo demo lleva `demo:true` (claims, empresa `demo-org`, casos, cotizaciones,
  * lead) y el reinicio borra SOLO eso. Una cuenta demo nunca paga con dinero real
- * (services/payments getProvider(user) devuelve el mock) ni recibe correos (services/correo.js
+ * (services/payments getProvider(user): PayPal SANDBOX o el mock, nunca la API live) ni recibe correos (services/correo.js
  * omite los correos `*.demo@`).
  *
  * Estado inicial del recorrido: empresa sin captación (paso 1 del cliente), sin "Producto Ejemplo 1"
@@ -24,10 +26,12 @@ const { uploadFile, deleteFile } = require('./storage');
 const { pdfFormulaEjemplo, pdfPoderEjemplo } = require('../utils/pdf_ejemplo');
 const { applyTransition } = require('./transitions');
 
-const DEMO_ORG_ID  = 'demo-org';
+const { DEMO_ORG_ID, esDocDemo } = require('../utils/demo_scope');
 // Ids fijos de lo sembrado: el recorrido (demo_recorrido.js) los usa para distinguir lo que trae
 // el seed de lo que la persona creó durante la demo (su "Producto Ejemplo 1", sus mensajes).
-const CASOS_SEMBRADOS    = ['demo-caso-2', 'demo-caso-3'];
+const CASOS_SEMBRADOS    = ['demo-caso-2', 'demo-caso-3', 'demo-caso-4'];
+const CASO_ADMIN_ID      = 'demo-caso-4';        // Producto 4: en fase 4 con la cotización en borrador, para que el admin demo la ajuste y la envíe
+const COTIZACION_ADMIN_ID = 'demo-cotizacion-4';
 const MENSAJES_SEMBRADOS = ['demo-msg-1', 'demo-msg-2'];
 const DOC_REGENTE_ID     = 'demo-doc-3-formula'; // fórmula cuali-cuantitativa subida en el Producto 3, la revisa el Responsable Farmacéutico
 const DOC_LEGAL_ID       = 'demo-doc-3-poder';   // poder original (15.2) subido en el Producto 3, lo revisa el Responsable Legal
@@ -36,7 +40,7 @@ const ACTOR_DEMO = { uid: 'demo-automatico', email: 'Farmazed (avance automátic
 const DEMO_DOMINIO = process.env.DEMO_DOMINIO || 'farmazed.com';
 const CORREO_DEMO_RE = /^[a-z0-9-]+\.demo@/i;
 
-// Las claves NO viven en el repo (es público): DEMO_PASSWORD_CLIENTE / _REGENTE / _FARMACEUTICO / _LEGAL
+// Las claves NO viven en el repo (es público): DEMO_PASSWORD_CLIENTE / _REGENTE / _FARMACEUTICO / _LEGAL / _ADMIN
 // (Secret Manager en Cloud Run, tracker/.env en local). Obligatorias para crear la cuenta la
 // primera vez; si faltan en un reinicio, la cuenta conserva la clave que ya tenía.
 const CUENTAS = [
@@ -48,12 +52,14 @@ const CUENTAS = [
     get password() { return process.env.DEMO_PASSWORD_FARMACEUTICO || null; } },
   { uid: 'demo-legal', correo: `legal.demo@${DEMO_DOMINIO}`, nombre: 'Responsable Legal Ejemplo', role: 'abogado',
     get password() { return process.env.DEMO_PASSWORD_LEGAL || null; } },
+  { uid: 'demo-admin', correo: `admin.demo@${DEMO_DOMINIO}`, nombre: 'Administrador Ejemplo', role: 'admin',
+    get password() { return process.env.DEMO_PASSWORD_ADMIN || null; } },
 ];
 
 const esCorreoDemo = (correo) => CORREO_DEMO_RE.test(String(correo || ''));
 const esCuentaDemo = (user) => user?.demo === true;
-/** Aislamiento del personal demo: solo ve/toca documentos marcados demo:true (una cuenta normal, todo). */
-const visibleParaDemo = (user, doc) => !esCuentaDemo(user) || doc?.demo === true;
+/** Aislamiento de las cuentas demo: solo ven/tocan documentos de la demo (demo:true o `demo-org`; una cuenta normal, todo). */
+const visibleParaDemo = (user, doc) => !esCuentaDemo(user) || esDocDemo(doc);
 
 const db   = () => admin.firestore();
 const auth = () => admin.auth();
@@ -63,7 +69,7 @@ async function upsertCuenta(c) {
   try { await auth().updateUser(c.uid, datos); }
   catch (e) {
     if (e.code !== 'auth/user-not-found') throw e;
-    if (!c.password) throw new Error(`Falta la variable con la clave de ${c.correo} (DEMO_PASSWORD_CLIENTE / _REGENTE / _FARMACEUTICO / _LEGAL) para crear la cuenta.`);
+    if (!c.password) throw new Error(`Falta la variable con la clave de ${c.correo} (DEMO_PASSWORD_CLIENTE / _REGENTE / _FARMACEUTICO / _LEGAL / _ADMIN) para crear la cuenta.`);
     await auth().createUser({ uid: c.uid, ...datos });
   }
   await auth().setCustomUserClaims(c.uid, { role: c.role, ...(c.orgId ? { orgId: c.orgId } : {}), demo: true, origen: 'demo' });
@@ -157,7 +163,20 @@ async function sembrarDemo() {
     createdAt: now, updatedAt: now, enviadaEn: now,
   });
 
-  // Producto 3: cotizado y pagado (proveedor de prueba), en fase 8: confirman el cotejo técnico (Farmacéutico) y la parte legal (Legal).
+  // Producto 4: en fase 4 con la cotización en BORRADOR (en la vida real la crea el sistema al llegar a fase 4):
+  // el admin demo la revisa y la "envía" (simulado: sin correo); cliente.demo la ve y puede pagarla.
+  await db().collection('cases').doc(CASO_ADMIN_ID).set(casoBase({
+    status: 'fase_04', caseCode: 'FZ-DEMO-2026-0004',
+    product: { nombreComercial: 'Producto Ejemplo 4 — Antiácido 400 mg', formaFarmaceutica: 'Tableta masticable', fabricante: 'Laboratorios Ejemplo S.A.' },
+  }));
+  await db().collection('quotes').doc(COTIZACION_ADMIN_ID).set({
+    orgId: DEMO_ORG_ID, demo: true, caseIds: [CASO_ADMIN_ID], estado: 'borrador',
+    lineas: [lineaCotizacion(CASO_ADMIN_ID, 'FZ-DEMO-2026-0004')], total: 4130,
+    historial: [{ tipo: 'linea_agregada', caseId: CASO_ADMIN_ID, por: 'seed_demo', at: now }],
+    createdAt: now, updatedAt: now,
+  });
+
+  // Producto 3: cotizado y pagado (pago simulado), en fase 8: confirman el cotejo técnico (Farmacéutico) y la parte legal (Legal).
   await db().collection('cases').doc('demo-caso-3').set(casoBase({
     status: 'fase_08', caseCode: 'FZ-DEMO-2026-0003',
     product: { nombreComercial: 'Producto Ejemplo 3 — Jarabe pediátrico', formaFarmaceutica: 'Jarabe', fabricante: 'Laboratorios Ejemplo S.A.' },
@@ -255,6 +274,6 @@ async function avanzarTrasPagoDemo(caseIds) {
 }
 
 module.exports = {
-  DEMO_ORG_ID, CUENTAS, CASOS_SEMBRADOS, MENSAJES_SEMBRADOS, DOC_REGENTE_ID, DOC_LEGAL_ID,
+  DEMO_ORG_ID, CUENTAS, CASOS_SEMBRADOS, MENSAJES_SEMBRADOS, DOC_REGENTE_ID, DOC_LEGAL_ID, CASO_ADMIN_ID, COTIZACION_ADMIN_ID,
   esCorreoDemo, esCuentaDemo, visibleParaDemo, sembrarDemo, borrarDatosDemo, avanzarTrasPagoDemo,
 };

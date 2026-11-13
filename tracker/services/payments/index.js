@@ -17,9 +17,10 @@
 const { resolverProveedorPagos, obtenerConfig } = require('../../config');
 
 function getProvider(user = null) {
-  // Modo demo (01-nov): una cuenta de demostración (claim demo:true) nunca cobra con dinero
-  // real, ni siquiera en producción — siempre el proveedor de prueba.
-  if (user?.demo === true) return require('./mock');
+  // Modo demo (01-nov; TAREA 64): una cuenta de demostración (claim demo:true) nunca cobra dinero real, ni en
+  // producción. Con credenciales de PayPal SANDBOX usa el checkout real de sandbox (el comprador de prueba aprueba
+  // en sandbox.paypal.com); sin ellas, el mock. Jamás la API live: ver paypal.js sandbox().
+  if (user?.demo === true) return require('./paypal').sandbox(process.env) || require('./mock');
   // TAREA 40: la decisión vive en tracker/config.js. El mock SOLO con emulador o
   // PAYMENTS_PROVIDER=mock (nunca en producción); sin él y sin credenciales de PayPal
   // completas esto LANZA (y el tracker ni siquiera arranca): ya no cae al mock "a medias".

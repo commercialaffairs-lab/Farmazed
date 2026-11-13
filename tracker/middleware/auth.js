@@ -1,5 +1,6 @@
 const admin = require('../utils/firebase_admin.js');
 const crypto = require('crypto');
+const { bloquearEscrituraGlobal } = require('./demo_admin');
 
 // TAREA 32 (ajuste del PM tras la entrega — la verificación de correo solo
 // en el front se salta llamando la API directo): refuerzo en el backend,
@@ -35,6 +36,7 @@ async function requireAuth(req, res, next) {
       return res.status(403).json({ error: 'Verifica tu correo antes de continuar.' });
     }
     req.user = decoded; // uid, email, role (custom claim)
+    if (bloquearEscrituraGlobal(req, res)) return; // admin demo: lo global se ve pero no se guarda (middleware/demo_admin.js)
     next();
   } catch (e) {
     return res.status(401).json({ error: 'Invalid or expired token' });

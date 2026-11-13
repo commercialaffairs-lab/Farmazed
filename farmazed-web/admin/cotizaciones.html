@@ -220,8 +220,10 @@
       btn.addEventListener('click', async () => {
         if (!(await confirmar('¿Enviar esta cotización al cliente?'))) return;
         try {
-          await api.sendQuote(btn.dataset.quote);
+          const r = await api.sendQuote(btn.dataset.quote);
           await load();
+          // Cuenta demo: el envío es simulado (no sale ningún correo); el aviso lo pide la TAREA 64.
+          if (r?.simulado) await avisar('Envío simulado: en la demo no sale ningún correo. cliente.demo ya ve esta cotización en su portal y puede pagarla.');
         } catch (e) { await avisar('Error: ' + e.message); }
       });
     });

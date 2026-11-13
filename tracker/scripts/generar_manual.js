@@ -22,12 +22,12 @@ const { ETIQUETAS_PANEL, pasosEnIdioma } = require('../services/demo_recorrido_t
 const { IDIOMAS, NOMBRES, FASES_RECORRIDO, TEXTOS } = require('./manual_textos');
 // Tres manuales (Rick, 01-nov y 08-nov-2026): el del cliente (portal; recorrido activable en "Mi cuenta", con
 // apartado para la cuenta demo), el del Responsable Farmacéutico (`regente`) y el del Responsable Legal
-// (`legal`, rol interno `abogado`); los dos últimos solo existen en la demo.
-const ROLES = ['cliente', 'regente', 'legal'];
+// (`legal`, rol interno `abogado`) y, desde el 13-nov, el del Administrador demo (`admin`); los tres últimos solo existen en la demo.
+const ROLES = ['cliente', 'regente', 'legal', 'admin'];
 // Variante de los pasos que reproduce cada manual (services/demo_recorrido_textos.js).
-const VARIANTE = { cliente: 'clienteReal', regente: 'regente', legal: 'legal' };
+const VARIANTE = { cliente: 'clienteReal', regente: 'regente', legal: 'legal', admin: 'admin' };
 // Nombre de la cuenta demo que se ve en el topbar y en los mensajes reproducidos.
-const NOMBRE_DEMO = { regente: 'Responsable Farmacéutico Ejemplo', legal: 'Responsable Legal Ejemplo' };
+const NOMBRE_DEMO = { regente: 'Responsable Farmacéutico Ejemplo', legal: 'Responsable Legal Ejemplo', admin: 'Administrador Ejemplo' };
 // Los rótulos de las pantallas reproducidas pasan por el MISMO diccionario que la aplicación
 // (farmazed-web/i18n/{en,fr,pt}.json, vía farmazed-web/portal/js/i18n.js): lo que se ve en el manual
 // es lo que se ve en pantalla en ese idioma. `generarManual(idioma)` activa el idioma con usarSync().
@@ -110,14 +110,26 @@ const mockDocumentos = () => `
 const CONCEPTOS = [['Honorarios Farmazed', 1855], ['Tasa DNFD', 750], ['MEF (producto extranjero)', 25], ['IEA', 1500]];
 // Estados: 'enviada' (Aceptar/Rechazar), 'aceptada' (Pagar con PayPal) y 'pagada' (compacta: lo que
 // se ve después del pago, con la fase a la que avanzó el expediente).
-const mockCotizacion = (estado) => `
+// `admin: true` reproduce la misma tarjeta con el Producto Ejemplo 4 (el de la cotización que envía el admin demo).
+const mockCotizacion = (estado, { admin = false } = {}) => `
 <div class="m-card">
-  <div class="m-card-cab"><h4>${tx('Cotización')} FZ-DEMO-2026-0002</h4>${estado === 'enviada' ? badge('Enviada', 'azul') : estado === 'aceptada' ? badge('Aceptada', 'verde') : `<span class="m-badge verde">${tx('Pagada')} ✓</span>`}</div>
-  <div class="m-fila"><span class="m-crece"><b>Producto Ejemplo 2 — Analgésico 500 mg</b><br><small>${tx('Tableta')} · Laboratorios Ejemplo S.A.</small></span><span class="m-mono">${esc(dinero(4130))}</span></div>
+  <div class="m-card-cab"><h4>${tx('Cotización')} ${admin ? 'FZ-DEMO-2026-0004' : 'FZ-DEMO-2026-0002'}</h4>${estado === 'enviada' ? badge('Enviada', 'azul') : estado === 'aceptada' ? badge('Aceptada', 'verde') : `<span class="m-badge verde">${tx('Pagada')} ✓</span>`}</div>
+  <div class="m-fila"><span class="m-crece"><b>${admin ? 'Producto Ejemplo 4 — Antiácido 400 mg' : 'Producto Ejemplo 2 — Analgésico 500 mg'}</b><br><small>${tx(admin ? 'Tableta masticable' : 'Tableta')} · Laboratorios Ejemplo S.A.</small></span><span class="m-mono">${esc(dinero(4130))}</span></div>
   ${estado === 'pagada' ? `<div class="m-fase"><span class="m-badge azul">${tx('Fase')} 6</span> ${tx('Apertura de expediente interno (CRM)')}</div>` : `
   <div class="m-desglose">${CONCEPTOS.map(([n, v]) => `<div><span>${tx(n)}</span><span class="m-mono">${esc(dinero(v))}</span></div>`).join('')}
     <div class="m-total"><span>${tx('Total')}</span><span class="m-mono">${esc(dinero(4130))}</span></div></div>
   <div class="m-acciones">${estado === 'enviada' ? btn('Aceptar', 'm-btn-primario m-btn-sm') + btn('Rechazar', 'm-btn-contorno m-btn-sm') : btn('Pagar con PayPal', 'm-btn-primario m-btn-sm')}</div>`}
+</div>`;
+
+// Cotización en borrador del Producto Ejemplo 4 (fase 4) tal como la ve el admin en "Cotizaciones": con el botón
+// "Enviar cotización" (envío simulado en la demo).
+const mockCotizacionAdmin = () => `
+<div class="m-card">
+  <div class="m-card-cab"><h4>${tx('Cotización')} FZ-DEMO-2026-0004</h4>${badge('Borrador', 'ambar')}</div>
+  <div class="m-fila"><span class="m-crece"><b>Producto Ejemplo 4 — Antiácido 400 mg</b><br><small>${tx('Tableta masticable')} · Laboratorios Ejemplo S.A.</small></span><span class="m-mono">${esc(dinero(4130))}</span></div>
+  <div class="m-desglose">${CONCEPTOS.map(([n, v]) => `<div><span>${tx(n)}</span><span class="m-mono">${esc(dinero(v))}</span></div>`).join('')}
+    <div class="m-total"><span>${tx('Total')}</span><span class="m-mono">${esc(dinero(4130))}</span></div></div>
+  <div class="m-acciones">${btn('Enviar cotización', 'm-btn-primario m-btn-sm')}</div>
 </div>`;
 
 // Los dos mensajes sembrados (services/demo.js) también están en el diccionario: la aplicación los
@@ -189,6 +201,11 @@ const pantallas = ({ demo = false } = {}) => ({
     pedido:       { ruta: ruta('Back-office', 'Expediente'), html: mockPedido() },
     confirmacion: { ruta: ruta('Back-office', 'Expediente', 'Fase 8 — Confirmaciones'), html: mockFase8('legal') },
   },
+  admin: {
+    cotizacion: { ruta: ruta('Back-office', 'Cotizaciones'), html: mockCotizacionAdmin() },
+    lead:       { ruta: ruta('Back-office', 'Leads'), html: mockLead() },
+    pago:       { ruta: ruta('Back-office', 'Cotizaciones'), html: mockCotizacion('pagada', { admin: true }) },
+  },
 });
 
 // ── Página ─────────────────────────────────────────────────────────────────────────────────────
@@ -258,7 +275,7 @@ function seccionFases(idioma, rol) {
 }
 
 /**
- * HTML completo del manual de `rol` ('cliente' | 'regente' | 'legal') en `idioma`. `fecha` fija el pie para que
+ * HTML completo del manual de `rol` ('cliente' | 'regente' | 'legal' | 'admin') en `idioma`. `fecha` fija el pie para que
  * tests/manual.test.js pueda regenerar y comparar byte a byte.
  */
 function generarManual(idioma, rol = 'cliente', fecha = new Date().toISOString().slice(0, 10)) {
@@ -272,7 +289,7 @@ function generarManual(idioma, rol = 'cliente', fecha = new Date().toISOString()
   if (rol === 'cliente') secciones.push(['demo', t.secciones.demo.titulo]);
   secciones.push(['fases', t.secciones.fases.titulo], ['notas', t.secciones.notas.titulo]);
   const indice = secciones.map(([id, tit]) => `<li><a href="#${id}">${esc(tit)}</a></li>`).join('');
-  // Réplica del panel en su contexto: topbar del portal (cliente real) o del back-office (regente o legal).
+  // Réplica del panel en su contexto: topbar del portal (cliente real) o del back-office (regente, legal o admin).
   const panelMock = rol === 'cliente'
     ? marco(etq, t_('Portal del cliente'), mockTopbar(idioma) + mockPanel(idioma, 'clienteReal'), 'cliente')
     : marco(etq, t_('Back-office'), mockTopbarBackoffice(idioma, rol) + mockPanel(idioma, VARIANTE[rol]), rol);
@@ -376,7 +393,7 @@ main{padding:28px 16px 40px}
 .paso{background:var(--tarjeta);border:1px solid var(--borde);border-radius:14px;padding:22px 24px;margin:18px 0}
 .paso-cab{display:flex;align-items:center;gap:14px}
 .paso-num{flex:none;width:38px;height:38px;border-radius:50%;background:var(--azul);color:#fff;font:600 1.05rem var(--titulos);display:grid;place-items:center}
-.seccion-regente .paso-num,.seccion-legal .paso-num{background:var(--verde)}
+.seccion-regente .paso-num,.seccion-legal .paso-num,.seccion-admin .paso-num{background:var(--verde)}
 .paso h3{font-size:1.3rem;color:var(--navy)}
 .paso-desc{margin:12px 0 0;font-size:1.02rem}
 .paso-extra{margin:12px 0 0}
@@ -385,7 +402,7 @@ main{padding:28px 16px 40px}
 .paso-sig .fin{color:var(--verde);font-weight:600}
 .pantalla{margin:18px 0 0;border:1px solid var(--borde);border-radius:12px;overflow:hidden;background:#F4F6FB}
 .pantalla figcaption{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:center;background:var(--azul);color:#fff;padding:8px 14px;font-size:.78rem}
-.pantalla-regente figcaption,.pantalla-legal figcaption{background:var(--verde)}
+.pantalla-regente figcaption,.pantalla-legal figcaption,.pantalla-admin figcaption{background:var(--verde)}
 .pantalla-ruta{font-weight:600}
 .pantalla-nota{color:rgba(255,255,255,.75)}
 .pantalla-cuerpo{padding:16px;font-size:.86rem;display:grid;gap:14px}
@@ -463,11 +480,11 @@ main{padding:28px 16px 40px}
 .fases li{display:flex;align-items:center;gap:12px;background:var(--tarjeta);border:1px solid var(--borde);border-radius:10px;padding:10px 14px;flex-wrap:wrap}
 .fase-num{flex:none;width:30px;height:30px;border-radius:50%;background:var(--tinte);color:var(--azul);font:600 .9rem var(--titulos);display:grid;place-items:center}
 .fase-demo{border-color:var(--azul)}
-.fase-regente,.fase-legal{border-color:var(--verde)}
-.fase-regente .fase-num,.fase-legal .fase-num{background:#e6f1e7;color:var(--verde)}
+.fase-regente,.fase-legal,.fase-admin{border-color:var(--verde)}
+.fase-regente .fase-num,.fase-legal .fase-num,.fase-admin .fase-num{background:#e6f1e7;color:var(--verde)}
 .fase-nombre{flex:1 1 200px}
 .fase-tag{font-size:.72rem;font-weight:700;color:var(--azul);background:var(--tinte);padding:3px 9px;border-radius:999px}
-.fase-regente .fase-tag,.fase-legal .fase-tag{color:var(--verde);background:#e6f1e7}
+.fase-regente .fase-tag,.fase-legal .fase-tag,.fase-admin .fase-tag{color:var(--verde);background:#e6f1e7}
 .notas{margin:0;padding-left:22px}
 .notas li{margin:8px 0}
 .pie{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;padding-top:20px;padding-bottom:40px;border-top:1px solid var(--borde);color:var(--mudo);font-size:.88rem}

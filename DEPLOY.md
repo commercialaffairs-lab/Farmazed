@@ -240,13 +240,19 @@ ejecuta sin el visto bueno de Rick; cada paso de escritura trae antes su dry-run
    empresa. El enlace caduca a los 7 días y es de un solo uso. Después, el admin la asigna a los casos
    que debe ver (`asignados.regente`); sin asignación su lista queda vacía.
 9. **Clientes de la revisión** (`seed_roles.js` en modo lista, abajo): dry-run, revisar, `--confirm`.
-9b. **Cuentas de demostración** (`DEMO.md`): con `DEMO_PASSWORD_CLIENTE`, `DEMO_PASSWORD_REGENTE`, `DEMO_PASSWORD_FARMACEUTICO` y `DEMO_PASSWORD_LEGAL` en el entorno (Secret Manager; también las necesita el servicio para el botón de reinicio), `cd tracker && node scripts/seed_demo.js --prod --project=farmazed --confirm`.
-    Crea `cliente.demo@farmazed.com`, `regente.demo@farmazed.com`, `farmaceutico.demo@farmazed.com` y `legal.demo@farmazed.com` con la empresa "Laboratorios Ejemplo S.A." y sus
+9b. **Cuentas de demostración** (`DEMO.md`): con `DEMO_PASSWORD_CLIENTE`, `DEMO_PASSWORD_REGENTE`, `DEMO_PASSWORD_FARMACEUTICO`, `DEMO_PASSWORD_LEGAL` y `DEMO_PASSWORD_ADMIN` en el entorno (Secret Manager; también las necesita el servicio para el botón de reinicio), `cd tracker && node scripts/seed_demo.js --prod --project=farmazed --confirm`.
+    Crea `cliente.demo@farmazed.com`, `regente.demo@farmazed.com`, `farmaceutico.demo@farmazed.com`, `legal.demo@farmazed.com` y `admin.demo@farmazed.com` con la empresa "Laboratorios Ejemplo S.A." y sus
     datos de ejemplo (todo `demo:true`). Volver a correrlo equivale al botón [Reiniciar cuenta demo].
     **Paso del deploy de la TAREA 63 (pendiente, Secret Manager no se tocó desde el repo)**: crear los secretos
     `demo-password-farmaceutico` y `demo-password-legal` (las claves las fija Rick), darle acceso a la cuenta de servicio de Cloud Run,
     montarlos como `DEMO_PASSWORD_FARMACEUTICO` / `DEMO_PASSWORD_LEGAL` en el servicio y volver a correr el seed. Sin ellos el seed falla
     al crear las dos cuentas nuevas.
+    **Paso del deploy de la TAREA 64 (pendiente; Secret Manager no se tocó desde el repo)**: (1) crear el secreto `demo-password-admin`
+    (la clave la fija Rick), darle acceso a la cuenta de servicio y montarlo como `DEMO_PASSWORD_ADMIN`; (2) para que las cuentas demo
+    paguen en PayPal sandbox crear los secretos `paypal-sandbox-client-id` y `paypal-sandbox-client-secret` (de una app **sandbox** en
+    developer.paypal.com, no las live) y montarlos como `PAYPAL_SANDBOX_CLIENT_ID` / `PAYPAL_SANDBOX_CLIENT_SECRET`; sin ellos las cuentas
+    demo siguen con el mock; (3) volver a correr el seed. Hace falta una cuenta de **comprador sandbox** (developer.paypal.com → Sandbox
+    accounts → Personal) para aprobar el pago; su correo/clave de prueba se entregan a quien haga la demo, no van al repo.
 10. **Humo en producción**: login de un cliente sembrado, verificación de correo del registro abierto,
    descarga de un documento (URL firmada) y un pago sandbox.
 

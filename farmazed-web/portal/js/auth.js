@@ -303,8 +303,8 @@ function montarSelectorIdioma(nombre) {
 }
 
 /**
- * Panel "Recorrido demo" del back-office (personal demo: regente/farmacéutico y legal). A dónde lleva "Ir al paso" en cada paso
- * (services/demo_recorrido.js, PASOS_REGENTE y PASOS_LEGAL). Import dinámico: recorrido.js importa este módulo.
+ * Panel "Recorrido demo" del back-office (personal demo: regente/farmacéutico, legal y admin). A dónde lleva "Ir al paso" en cada paso
+ * (services/demo_recorrido.js, PASOS_REGENTE, PASOS_LEGAL y PASOS_ADMIN). Import dinámico: recorrido.js importa este módulo.
  */
 const DESTINOS_RECORRIDO_STAFF = {
   documento: '/admin/expediente.html?id=demo-caso-3',
@@ -313,6 +313,9 @@ const DESTINOS_RECORRIDO_STAFF = {
   // Recorrido del Responsable Legal (PASOS_LEGAL): documento y confirmacion usan el caso 3; el pedido, el caso 2.
   pedido:       '/admin/expediente.html?id=demo-caso-2',
   confirmacion: '/admin/expediente.html?id=demo-caso-3',
+  // Recorrido del admin demo (PASOS_ADMIN): la cotización en borrador del Producto 4 y el pago en Finanzas; el lead es el mismo.
+  cotizacion:   '/admin/cotizaciones.html',
+  pago:         '/admin/finanzas.html',
 };
 async function montarRecorridoBackoffice() {
   if (!(await esDemo())) return null;
@@ -449,7 +452,9 @@ async function initBackoffice() {
   montarSidebar(undefined, { admin, permisos });
   document.getElementById('sidebar-logout')?.addEventListener('click', logout);
   await montarBotonDemo(nombre?.parentElement || document.querySelector('.topbar'));
-  if ((await getRole()) === 'abogado') carpetaManual = 'legal';
+  const rolActual = await getRole();
+  if (rolActual === 'abogado') carpetaManual = 'legal';
+  else if (rolActual === 'admin') carpetaManual = 'admin'; // manual/admin/ (admin.demo)
   montarEnlaceAyuda(nombre);
   montarSelectorIdioma(nombre);
   await montarRecorridoBackoffice();

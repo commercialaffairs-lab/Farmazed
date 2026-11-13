@@ -12,6 +12,7 @@ const { requireAuth } = require('../middleware/auth');
 const { requirePermission, STAFF_ROLES } = require('../middleware/permissions');
 const { enviarRestablecimiento } = require('../services/correo');
 
+const { esAdminDemo } = require('../utils/demo_scope');
 const router = Router();
 const EMPLOYEE_ROLES = [...STAFF_ROLES, 'admin'];
 
@@ -41,6 +42,7 @@ router.get('/', requireAuth, requirePermission('employees.list'), async (req, re
     const usersResult = await admin.auth().listUsers(1000);
     const employees = usersResult.users
       .filter(u => EMPLOYEE_ROLES.includes(u.customClaims?.role))
+      .filter(u => !esAdminDemo(req.user) || u.customClaims?.demo === true) // admin demo: solo el personal demo, nunca el real
       .map(u => ({ uid: u.uid, email: u.email, displayName: u.displayName || u.email, role: u.customClaims.role }));
 
     res.json({ total: employees.length, employees });
