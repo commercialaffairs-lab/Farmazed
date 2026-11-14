@@ -51,7 +51,8 @@ async function generateCaseCode(tramiteType, tipoRegistro) {
 // cases.edit_faddi): al cliente no se le devuelven.
 function sinCamposInternos(data, role) {
   if (!CLIENT_ROLES.includes(role)) return data;
-  const { notes, faddi, ...publico } = data;
+  // D5: la nota interna del plazo de subsanación (Abreviado) es solo del back-office.
+  const { notes, faddi, fechaLimiteSubsanacionNotaInterna, ...publico } = data;
   return publico;
 }
 

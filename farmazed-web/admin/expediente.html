@@ -721,9 +721,11 @@
   }
 
   // §H.8 (TAREA 21): al entrar a observado_dnfd se calcula y muestra la
-  // fecha límite de subsanación (Art. 22 D.E. 27/2024) — Regular 3 meses,
-  // Abreviado 8 días hábiles; otras vías quedan con una nota en vez de una
-  // fecha inventada (ver tracker/utils/plazo_subsanacion.js).
+  // fecha límite de subsanación — Regular 3 meses, Abreviado 8 días hábiles;
+  // otras vías quedan con una nota en vez de una fecha inventada (ver
+  // tracker/utils/plazo_subsanacion.js). D5 (14-nov-2026): sin cita normativa en el rótulo;
+  // en Abreviado el tracker manda además una nota interna que SOLO ve el
+  // back-office (al cliente no le llega el campo).
   // TAREA 41: si al entrar a fase_04 falló la línea del borrador de cotización (p. ej. falta
   // la fila del tarifario), el caso queda marcado y se ve aquí — antes solo quedaba en el log.
   function renderCotizacionError() {
@@ -748,9 +750,14 @@
     const dias  = Math.ceil((fecha - new Date()) / 86400000);
     const cls   = dias <= 15 ? 'alert-danger' : 'alert-warning';
     const restante = dias >= 0 ? t('{dias} días restantes', { dias }) : t('VENCIDO');
+    // D5: nota interna (solo back-office) — p. ej. en Abreviado, el origen operativo de los 8 días hábiles.
+    const notaInterna = caseData.fechaLimiteSubsanacionNotaInterna
+      ? `<div class="mt-1 text-muted"><i class="iconoir-info-circle"></i> ${esc(t(caseData.fechaLimiteSubsanacionNotaInterna))}</div>`
+      : '';
     box.innerHTML = `<div class="alert ${cls} py-2 px-3 mb-0 small">
-      <strong>${t('Observado por DNFD — plazo de subsanación (Art. 22 D.E. 27/2024):')}</strong>
+      <strong>${t('Observado por DNFD — plazo de subsanación:')}</strong>
       ${t('vence el {fecha} ({restante}).', { fecha: I18N.fecha(fecha, { day: '2-digit', month: 'long', year: 'numeric' }), restante })}
+      ${notaInterna}
     </div>`;
   }
 

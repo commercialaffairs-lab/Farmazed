@@ -1,5 +1,6 @@
 {
   "en": {
+    "Observado por DNFD — plazo de subsanación:": "Observed by DNFD — deadline to remedy:",
     "Consultas por QR": "QR scans",
     "El código QR impreso en el material de Farmazed lleva a /qr: cada escaneo queda registrado aquí (se muestran los 100 más recientes).": "The QR code printed on Farmazed material points to /qr: every scan is recorded here (the 100 most recent are shown).",
     "Fecha y hora": "Date and time",
@@ -273,7 +274,6 @@
     "N° Expediente FADDI": "FADDI File No.",
     "N° Solicitud FADDI": "FADDI Application No.",
     "Observaciones DNFD": "DNFD observations",
-    "Observado por DNFD — plazo de subsanación (Art. 22 D.E. 27/2024):": "Observed by DNFD — deadline to remedy (Art. 22 D.E. 27/2024):",
     "Observado por DNFD.": "Observed by DNFD.",
     "Otro": "Other",
     "Pago registrado.": "Payment recorded.",
@@ -503,6 +503,7 @@
     "Tableta masticable": "Chewable tablet"
   },
   "fr": {
+    "Observado por DNFD — plazo de subsanación:": "Observations de la DNFD — délai de régularisation :",
     "Consultas por QR": "Consultations par QR",
     "El código QR impreso en el material de Farmazed lleva a /qr: cada escaneo queda registrado aquí (se muestran los 100 más recientes).": "Le code QR imprimé sur le matériel Farmazed mène à /qr : chaque scan est enregistré ici (les 100 plus récents sont affichés).",
     "Fecha y hora": "Date et heure",
@@ -776,7 +777,6 @@
     "N° Expediente FADDI": "N° de dossier FADDI",
     "N° Solicitud FADDI": "N° de demande FADDI",
     "Observaciones DNFD": "Observations DNFD",
-    "Observado por DNFD — plazo de subsanación (Art. 22 D.E. 27/2024):": "Observations de la DNFD — délai de régularisation (Art. 22 D.E. 27/2024) :",
     "Observado por DNFD.": "Observations de la DNFD.",
     "Otro": "Autre",
     "Pago registrado.": "Paiement enregistré.",
@@ -1006,6 +1006,7 @@
     "Tableta masticable": "Comprimé à croquer"
   },
   "pt": {
+    "Observado por DNFD — plazo de subsanación:": "Observado pela DNFD — prazo de regularização:",
     "Consultas por QR": "Consultas por QR",
     "El código QR impreso en el material de Farmazed lleva a /qr: cada escaneo queda registrado aquí (se muestran los 100 más recientes).": "O código QR impresso no material da Farmazed leva a /qr: cada leitura fica registada aqui (mostram-se as 100 mais recentes).",
     "Fecha y hora": "Data e hora",
@@ -1279,7 +1280,6 @@
     "N° Expediente FADDI": "N.º de Processo FADDI",
     "N° Solicitud FADDI": "N.º de Pedido FADDI",
     "Observaciones DNFD": "Observações DNFD",
-    "Observado por DNFD — plazo de subsanación (Art. 22 D.E. 27/2024):": "Observado pela DNFD — prazo de regularização (Art. 22 D.E. 27/2024):",
     "Observado por DNFD.": "Observado pela DNFD.",
     "Otro": "Outro",
     "Pago registrado.": "Pagamento registado.",

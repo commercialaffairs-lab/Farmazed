@@ -1647,8 +1647,9 @@
             honorarios_saldo: pagados.has('honorarios_saldo'),
           };
         })(),
-        // §H.8 (TAREA 21): plazo de subsanación (Art. 22 D.E. 27/2024) —
-        // solo tiene sentido mientras el caso está observado por DNFD.
+        // §H.8 (TAREA 21): plazo de subsanación — solo tiene sentido mientras
+        // el caso está observado por DNFD. (D5: la nota interna del Abreviado no
+        // llega al cliente; el tracker la quita.)
         fechaLimiteSubsanacion:     c.status === 'observado_dnfd' ? tsToISODate(c.fechaLimiteSubsanacion) : null,
         fechaLimiteSubsanacionNota: c.status === 'observado_dnfd' ? (c.fechaLimiteSubsanacionNota || null) : null,
         formularios: { aplicables: formLists[i].aplicables || [], porConfirmar: formLists[i].porConfirmar || [] },
@@ -2544,8 +2545,8 @@ function expandedHTML(p) {
     honorarios: t('Honorarios'), tasa_dnfd: t('Tasa DNFD'), mef: t('MEF (producto extranjero)'),
     iea: t('IEA'), honorarios_saldo: t('Saldo de honorarios'),
   };
-  // §H.8 (TAREA 21): plazo de subsanación (Art. 22 D.E. 27/2024) — solo se
-  // muestra mientras el caso está observado por DNFD.
+  // §H.8 (TAREA 21): plazo de subsanación — solo se muestra mientras el caso
+  // está observado por DNFD.
   const plazoHtml = (p.fechaLimiteSubsanacion || p.fechaLimiteSubsanacionNota) ? `
     <div class="alert alert-warning py-2 px-3 mb-3" style="font-size:.78rem;">
       <strong>${t('DNFD solicitó correcciones.')}</strong>

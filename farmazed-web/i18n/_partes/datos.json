@@ -1,5 +1,6 @@
 {
   "en": {
+    "Plazo operativo de Farmazed (práctica de ventanilla). El texto del decreto indica 3 meses; instrumento de los 8 días hábiles pendiente de confirmar.": "Farmazed operational deadline (front-desk practice). The decree text states 3 months; the instrument behind the 8 business days is pending confirmation.",
     "Muestra Física (envase vacío)": "Physical Sample (empty container)",
     "Para Gas Medicinal la muestra es el envase vacío (cilindro, termo o envase criogénico) con su sistema de cierre; no se presenta el gas (matriz Gas Medicinal, fila GAS-21).": "For Medicinal Gas the sample is the empty container (cylinder, dewar or cryogenic vessel) with its closure system; the gas itself is not submitted (Medicinal Gas matrix, row GAS-21).",
     "Contrato entre el titular y el fabricante tercero (maquilador). faddiCode pendiente de confirmar en FADDI (colisión detectada con 15.11 de \"monografía\"). En Productos Naturales aplica igual, condicional (matriz Productos Naturales, fila NAT-11).": "Agreement between the holder and the third-party manufacturer (contract manufacturer). faddiCode pending confirmation in FADDI (clash detected with 15.11 of \"monograph\"). Applies likewise to Natural Products, conditionally (Natural Products matrix, row NAT-11).",
@@ -317,6 +318,7 @@
     "Cualquier documento adicional.": "Any additional document."
   },
   "fr": {
+    "Plazo operativo de Farmazed (práctica de ventanilla). El texto del decreto indica 3 meses; instrumento de los 8 días hábiles pendiente de confirmar.": "Délai opérationnel de Farmazed (pratique du guichet). Le texte du décret indique 3 mois ; l’instrument fixant les 8 jours ouvrables reste à confirmer.",
     "Muestra Física (envase vacío)": "Échantillon physique (récipient vide)",
     "Para Gas Medicinal la muestra es el envase vacío (cilindro, termo o envase criogénico) con su sistema de cierre; no se presenta el gas (matriz Gas Medicinal, fila GAS-21).": "Pour le gaz médicinal, l'échantillon est le récipient vide (bouteille, thermos ou récipient cryogénique) avec son système de fermeture ; le gaz lui-même n'est pas présenté (matrice Gaz médicinal, ligne GAS-21).",
     "Contrato entre el titular y el fabricante tercero (maquilador). faddiCode pendiente de confirmar en FADDI (colisión detectada con 15.11 de \"monografía\"). En Productos Naturales aplica igual, condicional (matriz Productos Naturales, fila NAT-11).": "Contrat entre le titulaire et le fabricant tiers (sous-traitant). faddiCode à confirmer dans FADDI (collision détectée avec le 15.11 de « monographie »). S'applique de même aux produits naturels, de façon conditionnelle (matrice Produits naturels, ligne NAT-11).",
@@ -634,6 +636,7 @@
     "Cualquier documento adicional.": "Tout document supplémentaire."
   },
   "pt": {
+    "Plazo operativo de Farmazed (práctica de ventanilla). El texto del decreto indica 3 meses; instrumento de los 8 días hábiles pendiente de confirmar.": "Prazo operacional da Farmazed (prática de balcão). O texto do decreto indica 3 meses; o instrumento dos 8 dias úteis está por confirmar.",
     "Muestra Física (envase vacío)": "Amostra Física (recipiente vazio)",
     "Para Gas Medicinal la muestra es el envase vacío (cilindro, termo o envase criogénico) con su sistema de cierre; no se presenta el gas (matriz Gas Medicinal, fila GAS-21).": "Para Gás Medicinal a amostra é o recipiente vazio (cilindro, termo ou recipiente criogénico) com o seu sistema de fecho; o gás não é apresentado (matriz Gás Medicinal, linha GAS-21).",
     "Contrato entre el titular y el fabricante tercero (maquilador). faddiCode pendiente de confirmar en FADDI (colisión detectada con 15.11 de \"monografía\"). En Productos Naturales aplica igual, condicional (matriz Productos Naturales, fila NAT-11).": "Contrato entre o titular e o fabricante terceiro (subcontratado). faddiCode por confirmar no FADDI (colisão detetada com 15.11 de \"monografia\"). Aplica-se igualmente aos Produtos Naturais, de forma condicional (matriz Produtos Naturais, linha NAT-11).",

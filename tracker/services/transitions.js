@@ -174,9 +174,11 @@ function computeSideEffects(caseData, to, isFase8Recycle) {
   }
 
   if (to === 'observado_dnfd') {
-    const { fecha, nota } = calcularFechaLimiteSubsanacion(caseData.tipoRegistro);
+    const { fecha, nota, notaInterna } = calcularFechaLimiteSubsanacion(caseData.tipoRegistro);
     extra.fechaLimiteSubsanacion = fecha ? admin.firestore.Timestamp.fromDate(fecha) : null;
     extra.fechaLimiteSubsanacionNota = nota;
+    // D5: solo back-office — routes/cases.js la quita de la respuesta al cliente.
+    extra.fechaLimiteSubsanacionNotaInterna = notaInterna || null;
   }
 
   return extra;
