@@ -5,7 +5,7 @@
  * confirmado en §H.8 — se deja SIN fecha, con una nota explícita, en vez de
  * adivinar un número.
  *
- * D5 (14-nov-2026, auditoría del PM contra las matrices de octubre): la cita
+ * D5 (14-nov-2026, auditoría del PM contra las matrices de octubre): la
  * cita normativa del artículo se retiró del rótulo y de los comentarios. El cálculo
  * no cambia. Para Abreviado se devuelve además `notaInterna` — solo la ve el
  * back-office (routes/cases.js la quita al cliente), porque el texto del
