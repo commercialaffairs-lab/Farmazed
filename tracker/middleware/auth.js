@@ -1,6 +1,21 @@
 const admin = require('../utils/firebase_admin.js');
 const crypto = require('crypto');
 const { bloquearEscrituraGlobal } = require('./demo_admin');
+const { esSimulacion, PERFILES_SIMULACION } = require('../utils/demo_scope');
+
+/**
+ * Cuenta de SIMULACIÓN (Rick, 14-nov-2026): una sola cuenta (claims demo:true + simulacion:true) que el
+ * personal usa cambiando de perfil desde el topbar. El front manda la pestaña elegida en la cabecera
+ * `X-Fz-Perfil`; aquí pasa a ser el rol efectivo del request (permisos, filtros y el guard del admin demo
+ * se evalúan con él). Solo para esa cuenta: cualquier otra ignora la cabecera. Sin cabecera o con un valor
+ * desconocido queda el rol del claim (cliente_titular). `perfilBase` conserva el claim original.
+ */
+function aplicarPerfilSimulacion(decoded, req) {
+  if (!esSimulacion(decoded)) return decoded;
+  const perfil = String(req.headers['x-fz-perfil'] || '').trim().toLowerCase();
+  const role = PERFILES_SIMULACION.includes(perfil) ? perfil : decoded.role;
+  return { ...decoded, role, perfilBase: decoded.role, perfil: role };
+}
 
 // TAREA 32 (ajuste del PM tras la entrega — la verificación de correo solo
 // en el front se salta llamando la API directo): refuerzo en el backend,
@@ -35,7 +50,7 @@ async function requireAuth(req, res, next) {
     if (decoded.origen === 'registro' && decoded.email_verified === false && !EXEMPT_PATHS.includes(req.path)) {
       return res.status(403).json({ error: 'Verifica tu correo antes de continuar.' });
     }
-    req.user = decoded; // uid, email, role (custom claim)
+    req.user = aplicarPerfilSimulacion(decoded, req); // uid, email, role (custom claim; en la simulación, el perfil elegido)
     if (bloquearEscrituraGlobal(req, res)) return; // admin demo: lo global se ve pero no se guarda (middleware/demo_admin.js)
     next();
   } catch (e) {

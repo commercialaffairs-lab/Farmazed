@@ -10,22 +10,28 @@
  * Los textos de los pasos (español y traducciones EN/FR/PT) y los rótulos del panel viven en
  * demo_recorrido_textos.js: una sola fuente para el panel y para el manual de usuario.
  * `recorridoDemo(user, idioma)` devuelve todo ya traducido; el front no trae tablas de textos.
+ *
+ * SIMULACIÓN (Rick, 14-nov-2026): la misma lógica sobre el ámbito `sim-org` (ids `sim-caso-3`…). El rol
+ * es el PERFIL elegido en el topbar (middleware/auth.js), así que el panel cambia con la pestaña; algunos
+ * pasos tienen un texto propio (demo_recorrido_textos.js SIM_PASOS) y, al completar el tramo, la respuesta
+ * trae `siguientePerfil` para seguir la secuencia Cliente → Admin → Farmacéutico → Legal → Cliente.
  */
 const admin = require('../utils/firebase_admin.js');
-const { DEMO_ORG_ID, CASOS_SEMBRADOS, DOC_REGENTE_ID, DOC_LEGAL_ID, MENSAJES_SEMBRADOS, COTIZACION_ADMIN_ID } = require('./demo');
+const { idsDe } = require('./demo');
+const { ambitoDe, esSimulacion, DEMO_ORG_ID } = require('../utils/demo_scope');
 const {
-  IDIOMAS, IDIOMA_POR_DEFECTO, PASOS_CLIENTE, PASOS_REGENTE, PASOS_LEGAL, PASOS_ADMIN, NOTAS, ETIQUETAS_PANEL, normalizarIdioma, pasosEnIdioma,
+  IDIOMAS, IDIOMA_POR_DEFECTO, PASOS_CLIENTE, PASOS_REGENTE, PASOS_LEGAL, PASOS_ADMIN, NOTAS, ETIQUETAS_PANEL, SIM_PERFILES,
+  normalizarIdioma, pasosEnIdioma, etiquetasSimulacion,
 } = require('./demo_recorrido_textos');
 
 const db = () => admin.firestore();
 
-const esSembrado = (id) => CASOS_SEMBRADOS.includes(id);
-
-async function estadoCliente() {
+async function estadoCliente(orgId, I) {
+  const esSembrado = (id) => I.casosSembrados.includes(id);
   const [org, casosSnap, cotizacion] = await Promise.all([
-    db().collection('orgs').doc(DEMO_ORG_ID).get(),
-    db().collection('cases').where('orgId', '==', DEMO_ORG_ID).get(),
-    db().collection('quotes').doc('demo-cotizacion-2').get(),
+    db().collection('orgs').doc(orgId).get(),
+    db().collection('cases').where('orgId', '==', orgId).get(),
+    db().collection('quotes').doc(I.cotizacion2).get(),
   ]);
   const casos = casosSnap.docs.filter(d => d.data().status !== 'deleted');
   const propios = casos.filter(d => !esSembrado(d.id));
@@ -35,7 +41,7 @@ async function estadoCliente() {
   ]);
   const q = cotizacion.exists ? cotizacion.data() : {};
   const subioDocumento = docsPropios.some(snap => snap.docs.some(d => d.data().status !== 'requested'));
-  const escribio = mensajes.some(snap => snap.docs.some(m => !MENSAJES_SEMBRADOS.includes(m.id) && m.data().senderRole === 'client'));
+  const escribio = mensajes.some(snap => snap.docs.some(m => !I.mensajesSembrados.includes(m.id) && m.data().senderRole === 'client'));
 
   const hecho = {
     captacion:  !!(org.exists && org.data().captacion),
@@ -53,12 +59,12 @@ async function estadoCliente() {
   return { hecho, notas, extra };
 }
 
-async function estadoRegente() {
-  const caso3 = db().collection('cases').doc('demo-caso-3');
+async function estadoRegente(orgId, I) {
+  const caso3 = db().collection('cases').doc(I.caso3);
   const [caso, doc, lead] = await Promise.all([
     caso3.get(),
-    caso3.collection('documents').doc(DOC_REGENTE_ID).get(),
-    db().collection('contactLeads').doc('demo-lead-1').get(),
+    caso3.collection('documents').doc(I.docRegente).get(),
+    db().collection('contactLeads').doc(I.lead).get(),
   ]);
   const l = lead.exists ? lead.data() : {};
   const hecho = {
@@ -69,12 +75,12 @@ async function estadoRegente() {
   return { hecho, notas: {} };
 }
 
-async function estadoLegal() {
-  const caso3 = db().collection('cases').doc('demo-caso-3');
+async function estadoLegal(orgId, I) {
+  const caso3 = db().collection('cases').doc(I.caso3);
   const [caso, doc, pedidos] = await Promise.all([
     caso3.get(),
-    caso3.collection('documents').doc(DOC_LEGAL_ID).get(),
-    db().collection('cases').doc('demo-caso-2').collection('documents').get(), // el seed no deja documentos en el Producto 2
+    caso3.collection('documents').doc(I.docLegal).get(),
+    db().collection('cases').doc(I.caso2).collection('documents').get(), // el seed no deja documentos en el Producto 2
   ]);
   const hecho = {
     documento:    doc.exists && ['approved', 'rejected'].includes(doc.data().status),
@@ -84,41 +90,53 @@ async function estadoLegal() {
   return { hecho, notas: {} };
 }
 
-async function estadoAdmin() {
+async function estadoAdmin(orgId, I) {
   const [cotizacion, lead] = await Promise.all([
-    db().collection('quotes').doc(COTIZACION_ADMIN_ID).get(),
-    db().collection('contactLeads').doc('demo-lead-1').get(),
+    db().collection('quotes').doc(I.cotizacion4).get(),
+    db().collection('contactLeads').doc(I.lead).get(),
   ]);
   const q = cotizacion.exists ? cotizacion.data() : {};
   const l = lead.exists ? lead.data() : {};
   const hecho = {
     cotizacion: cotizacion.exists && q.estado !== 'borrador',                               // enviada (o ya respondida)
     lead:       lead.exists && ((!!l.estado && l.estado !== 'nuevo') || !!l.notas),
-    pago:       q.pagoPaypal?.estado === 'capturada',                                        // lo paga cliente.demo
+    pago:       q.pagoPaypal?.estado === 'capturada',                                        // lo paga el cliente (demo: cliente.demo; simulación: la pestaña Cliente)
   };
   return { hecho, notas: {} };
 }
 
 const ESTADO_POR_ROL = { cliente: estadoCliente, regente: estadoRegente, legal: estadoLegal, admin: estadoAdmin };
 
+// Secuencia de la simulación: al terminar el tramo de un perfil, el panel propone el siguiente.
+const SIGUIENTE_PERFIL = { cliente: 'admin', admin: 'regente', regente: 'abogado', legal: 'cliente_titular' };
+
 /**
- * Estado del recorrido para una cuenta demo (`user` = claims del token: role, demo) en el idioma
- * pedido ('es' | 'en' | 'fr' | 'pt'; cualquier otro valor cae al español).
+ * Estado del recorrido para una cuenta demo (`user` = claims del token: role, demo, simulacion, orgId) en el
+ * idioma pedido ('es' | 'en' | 'fr' | 'pt'; cualquier otro valor cae al español).
  * `actual` es el primer paso no hecho (los pasos van en orden); `null` si ya está todo.
  */
 async function recorridoDemo(user, idiomaPedido = IDIOMA_POR_DEFECTO) {
   const idioma = normalizarIdioma(idiomaPedido);
   const rol = user.role === 'regente' ? 'regente' : user.role === 'abogado' ? 'legal' : user.role === 'admin' ? 'admin' : 'cliente';
-  const { hecho, notas, extra = {} } = await ESTADO_POR_ROL[rol]();
-  const lista = pasosEnIdioma(rol, idioma).map(p => ({
+  const simulacion = esSimulacion(user);
+  const orgId = ambitoDe(user) || DEMO_ORG_ID;
+  const I = idsDe(orgId);
+  const { hecho, notas, extra = {} } = await ESTADO_POR_ROL[rol](orgId, I);
+  const lista = pasosEnIdioma(rol, idioma, { simulacion }).map(p => ({
     ...p,
     hecho: !!hecho[p.id],
     ...(notas[p.id] ? { nota: NOTAS[idioma][notas[p.id]] } : {}),
   }));
   const actual = lista.find(p => !p.hecho)?.id || null;
+  const etiquetas = simulacion ? etiquetasSimulacion(idioma) : ETIQUETAS_PANEL[idioma];
+  const siguiente = SIGUIENTE_PERFIL[rol];
   return {
-    rol, idioma, idiomas: IDIOMAS, etiquetas: ETIQUETAS_PANEL[idioma],
-    pasos: lista, actual, completado: actual === null, hechos: lista.filter(p => p.hecho).length, total: lista.length, extra,
+    rol, idioma, idiomas: IDIOMAS, etiquetas,
+    pasos: lista, actual, completado: actual === null, hechos: lista.filter(p => p.hecho).length, total: lista.length,
+    // Ids del ámbito para que el front navegue al expediente correcto ("Ir al paso": demo-caso-3 / sim-caso-3).
+    extra: { ...extra, ids: { caso2: I.caso2, caso3: I.caso3, caso4: I.caso4 } },
+    simulacion,
+    ...(simulacion ? { perfil: user.role, siguientePerfil: { perfil: siguiente, rotulo: SIM_PERFILES[idioma][siguiente] } } : {}),
   };
 }
 

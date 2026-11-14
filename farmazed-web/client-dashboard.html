@@ -430,6 +430,7 @@
       </ul>
 
       <ul class="topbar-item list-unstyled d-inline-flex align-items-center mb-0 gap-3">
+        <li id="tb-simulacion" class="d-flex align-items-center"></li><!-- pestañas de perfil: solo en la cuenta de simulación -->
         <li id="tb-idioma" class="d-flex align-items-center"></li>
         <li id="tb-demo" class="d-flex align-items-center"></li>
         <!-- Manual de usuario (farmazed-web/manual/, generado por tracker/scripts/generar_manual.js; ES/EN/FR/PT) -->
@@ -1140,7 +1141,7 @@
 <!-- render function, since type="module" is deferred regardless of source -->
 <!-- position). Fills window.DATA with real data, then calls window.renderAll(). -->
 <script type="module">
-  import { esc, requireVerifiedLogin, logout, montarBotonDemo, esDemo } from './portal/js/auth.js';
+  import { esc, requireVerifiedLogin, logout, montarBotonDemo, esDemo, montarPestanasSimulacion } from './portal/js/auth.js';
   // Panel del recorrido: demo (siempre) o cliente real (si lo activó en "Mi cuenta").
   import { montarRecorrido, activarRecorrido, desactivarRecorrido } from './portal/js/recorrido.js';
   import { avisar, confirmar, preguntar } from './portal/js/dialogos.js';
@@ -1198,6 +1199,7 @@
 
   const user = await requireVerifiedLogin('login.html');
   montarBotonDemo(document.getElementById('tb-demo')); // solo aparece en la cuenta de demostración
+  montarPestanasSimulacion(document.getElementById('tb-simulacion')); // solo en la cuenta de simulación (cambio de perfil)
   if (!user) return; // en camino a verificar-correo.html
 
   // "Ir al paso" del recorrido (demo o cliente real; portal/js/recorrido.js): abre el módulo donde se

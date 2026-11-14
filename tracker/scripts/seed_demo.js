@@ -26,10 +26,17 @@ if (prod && (!proyecto || !argv.includes('--confirm'))) {
 
 const admin = require('../utils/firebase_admin.js');
 if (!admin.apps.length) admin.initializeApp({ projectId: proyecto || process.env.FIREBASE_PROJECT_ID || 'demo-farmazed' });
-const { sembrarDemo } = require('../services/demo');
+const { sembrarDemo, DEMO_ORG_ID, SIM_ORG_ID } = require('../services/demo');
 
-sembrarDemo().then(r => {
-  console.log(`✅ Demo sembrada (empresa ${r.orgId}). Cuentas:`);
-  for (const c of r.cuentas) console.log(`   ${c.correo.padEnd(30)} ${c.rol}`);
+// Ámbito a sembrar: --ambito=demo-org (por defecto) | --ambito=sim-org (cuenta simulacion@, DEMO_PASSWORD_SIMULACION) | --todo (ambos).
+const ambitoArg = argv.find(a => a.startsWith('--ambito='))?.slice('--ambito='.length);
+const ambitos = argv.includes('--todo') ? [DEMO_ORG_ID, SIM_ORG_ID] : [ambitoArg || DEMO_ORG_ID];
+
+(async () => {
+  for (const ambito of ambitos) {
+    const r = await sembrarDemo(ambito);
+    console.log(`✅ ${ambito === SIM_ORG_ID ? 'Simulación' : 'Demo'} sembrada (empresa ${r.orgId}). Cuentas:`);
+    for (const c of r.cuentas) console.log(`   ${c.correo.padEnd(30)} ${c.rol}`);
+  }
   process.exit(0);
-}).catch(err => { console.error('❌ seed_demo:', err); process.exit(1); });
+})().catch(err => { console.error('❌ seed_demo:', err); process.exit(1); });

@@ -253,6 +253,14 @@ ejecuta sin el visto bueno de Rick; cada paso de escritura trae antes su dry-run
     developer.paypal.com, no las live) y montarlos como `PAYPAL_SANDBOX_CLIENT_ID` / `PAYPAL_SANDBOX_CLIENT_SECRET`; sin ellos las cuentas
     demo siguen con el mock; (3) volver a correr el seed. Hace falta una cuenta de **comprador sandbox** (developer.paypal.com → Sandbox
     accounts → Personal) para aprobar el pago; su correo/clave de prueba se entregan a quien haga la demo, no van al repo.
+9c. **Cuenta de simulación** (`simulacion@farmazed.com`, `DEMO.md` → "Simulación", TAREA 66): (1) crear el secreto
+    `demo-password-simulacion` (la clave la fijó Rick por chat; nunca en el repo) y darle `secretAccessor` a `farmazed-api-sa`;
+    (2) montarlo como `DEMO_PASSWORD_SIMULACION` en el servicio del tracker (`--update-secrets=DEMO_PASSWORD_SIMULACION=demo-password-simulacion:latest`)
+    y desplegar la revisión; (3) sembrar `sim-org` la primera vez SIN entrar con la cuenta (todavía no existe): el admin real
+    llama `POST /api/demo/reiniciar` con cuerpo `{ "ambito": "sim-org" }` (crea la cuenta con la clave del secreto, la empresa
+    "Laboratorio Simulación S.A." y los datos de ejemplo). Alternativa desde una máquina con credenciales: `cd tracker && node
+    scripts/seed_demo.js --prod --project=farmazed --confirm --ambito=sim-org`. Después, [Reiniciar simulación] en el topbar de
+    la propia cuenta deja todo como al principio. Pagos: PayPal **sandbox** con los secretos del paso 9b(2); sin ellos, el mock.
 10. **Humo en producción**: login de un cliente sembrado, verificación de correo del registro abierto,
    descarga de un documento (URL firmada) y un pago sandbox.
 

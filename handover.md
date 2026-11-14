@@ -6697,3 +6697,64 @@ Objetivo: un ambiente aislado para entrenar y evaluar a todo el personal, que si
 
 **Decisiones que necesito de Rick antes de empezar:** (a) una cuenta compartida con "nombre del participante" vs. una cuenta por empleado (`nombre.sim@farmazed.com`) para evaluar sin ambigüedad; (b) aislamiento por ámbito (recomendado) vs. segunda base Firestore; (c) ¿existe en producción o solo en local/pruebas?; (d) la clave se fija por variable (no en chat ni repo) — confirmar que `DEMO_PASSWORD_SIMULACION` es el nombre; (e) si la pestaña "Admin" en simulación debe poder ejecutar las escrituras globales simuladas (hoy el admin demo las ve pero no guarda).
 **Estimación**: tracker (ámbito, perfil efectivo, seed, reinicio, eventos, pruebas) ≈ 3 días; front (topbar de perfiles, recorrido, tablero de evaluación, i18n) ≈ 3 días; manual y QA ≈ 1 día.
+
+## 2026-11-14 — TAREA 66: cuenta de SIMULACIÓN `simulacion@farmazed.com` (construida tras las decisiones de Rick)
+Decisiones de Rick (14-nov, chat): (1) **una cuenta genérica** para todo el personal, usada en sesión remota (sin registro por participante);
+(2) aislamiento por **ámbito** `sim-org` (como la demo); (3) **local y producción**; (4) clave fijada por Rick → variable
+`DEMO_PASSWORD_SIMULACION` (tracker/.env local; Secret Manager en prod; **nunca en el repo**); (5) el perfil Administrador
+**revisa, ajusta y envía cotizaciones** y guarda dentro de la simulación; (6) **pagos con PayPal sandbox** integrados.
+
+### Qué se construyó
+- **Ámbitos** (`utils/demo_scope.js`): `SIM_ORG_ID='sim-org'`, `ORGS_AISLADAS`, `PERFILES_SIMULACION`, `esCuentaDemo`, `esSimulacion`,
+  `ambitoDe(user)` (sim-org si la cuenta es de simulación; demo-org para las 5 cuentas demo) y `esDocDelAmbito(user, doc)` (por `orgId`;
+  los leads sin orgId por la marca `sim:true`). `esDocDemo` ahora cubre ambas empresas aisladas (webhook, facturación, correos).
+- **Cambio de perfil** (`middleware/auth.js aplicarPerfilSimulacion`): si el token trae `demo:true + simulacion:true`, la cabecera
+  `X-Fz-Perfil` (cliente_titular | admin | regente | abogado) pasa a ser `req.user.role` ANTES del guard del admin demo; otras
+  cuentas la ignoran; valor desconocido → el claim (cliente_titular). `perfilBase` conserva el claim.
+- **Filtros por ámbito** (antes `DEMO_ORG_ID`/`esDocDemo` fijos): `permissions.js canAccessCase` (admin demo → su ámbito; personal
+  demo → su ámbito, y en la simulación TODOS los casos de sim-org, también los creados como Cliente), `routes/cases.js` (lista por
+  `ambitoDe`; `POST /api/cases` de la simulación nace en sim-org con `demo:true`, `sim:true` y código `FZ-SIM-<año>-A####` sin consumir
+  `meta/counters`), `quotes.js` (acceso, lista, aviso de envío simulado propio), `facturas.js`, `revisiones_pago.js`, `invitations.js`,
+  `pago_externo.js`, `services/demo.js visibleParaDemo` (orgs, leads).
+- **Seed por ámbito** (`services/demo.js AMBITOS`, `idsDe`, `sembrarDemo(ambitoId)`, `borrarDatosDemo(ambitoId)`): mismos datos de
+  ejemplo que la demo con ids `sim-*`, empresa "Laboratorio Simulación S.A.", cliente/personal = la propia cuenta
+  (`demo-simulacion`), todo con `sim:true`. El borrado de leads separa por `sim`. `esCorreoDemo` incluye `simulacion@`.
+  `avanzarTrasPagoDemo` sigue SOLO para demo-org (en la simulación el personal mueve el expediente). `scripts/seed_demo.js
+  --ambito=sim-org | --todo`. `.env.example` documenta la variable.
+- **Rutas** (`routes/demo.js`): `/estado` devuelve `simulacion`, `perfil`, `perfiles`; `/reiniciar` reinicia el ámbito de quien llama y el
+  **admin real** puede reiniciar un ámbito concreto con `{ ambito }` (bootstrap en producción sin tener la cuenta).
+- **Recorrido** (`services/demo_recorrido.js`, `demo_recorrido_textos.js`): estado por ámbito (`idsDe`), rol = perfil elegido;
+  `SIM_PASOS` reescribe los pasos que hablaban de cliente.demo o del avance automático (cliente.pago, admin.cotizacion, admin.pago, en
+  4 idiomas); `ETIQUETAS_SIM` (título "Simulación", "[Reiniciar simulación]", "Seguir como {perfil} →"); la respuesta trae
+  `simulacion`, `perfil`, `siguientePerfil` (Cliente → Admin → Farmacéutico → Legal → Cliente) y `extra.ids` del ámbito.
+- **Front**: `portal/js/auth.js` — `PERFILES_SIM`, `esSimulacion`, `perfilSimulacion` (localStorage `fzPerfilSim`),
+  `cabecerasPerfil`, `cambiarPerfilSimulacion`, `montarPestanasSimulacion` (barra ámbar con 4 pestañas grandes; en el cliente va en
+  `#tb-simulacion`, en el back-office antes del nombre, montada por `initBackoffice`); `getRole`/`isAdmin` devuelven el perfil para esta
+  cuenta (login redirige por perfil; `hasBackofficeAccess` manda al portal si el perfil es Cliente); `montarBotonDemo` → "Reiniciar
+  simulación"; destinos del recorrido del back-office por `extra.ids`. `api.js` manda `X-Fz-Perfil` en cada petición (también
+  `fetchBlob` y la consulta de permisos). `recorrido.js`: botón "Seguir como <perfil> →" al completar el tramo.
+  `client-dashboard.html`: `<li id="tb-simulacion">`. i18n: 7 claves nuevas en `_partes/portal-js.json` (en/fr/pt).
+- **Pruebas**: `tests/simulacion.test.js` (8): claims y `/estado` por perfil; estado inicial de sim-org; continuidad A→Z (el caso creado
+  como Cliente lo abren Admin/Farmacéutico/Legal, código FZ-SIM, contador intacto); aislamiento en ambos sentidos y cabecera inocua en
+  cuentas reales; envío simulado de la cotización 4 y "lo global no se guarda" (403 `demoNoGuarda`); recorrido por perfil con
+  `siguientePerfil` y textos propios; correos/proveedor de pago; reinicio por ámbito (simulación, admin real) sin tocar el otro.
+  **Suite backend completa (contenedor farmazed-demo, 14-nov-2026): 31 suites, 532 pruebas, 0 fallos** (`✅ Backend completo en verde`).
+- **Docs**: `DEMO.md` (fila de la cuenta + sección "Simulación"), `DEPLOY.md` (paso 9c: secreto, variable, primer sembrado).
+
+### Decisiones mías que Rick debe conocer
+- **Lo global con el perfil Administrador se ve pero NO se guarda** (precios, configuración de facturación, planes, roles, invitaciones a
+  terceros, contraseñas, emitir/anular facturas). Rick pidió "poder verlas y guardar"; en producción esas acciones cambiarían la
+  plataforma real (los precios de los clientes reales, por ejemplo), así que mantuve el guard del admin demo. Todo lo de `sim-org` sí se
+  guarda: casos, documentos, mensajes, pagos, cotizaciones (ajustar, enviar, aceptar, pagar), leads, confirmaciones de fase 8. Si se
+  quiere "guardar" también lo global, la vía segura es una copia sombra por ámbito (`config/pricing_sim`…), no implementada.
+- El perfil por defecto al entrar es **Cliente** (claim `role: cliente_titular`); el panel propone el siguiente perfil al completar.
+- Tras pagar en la simulación **no hay avance automático** (sí en la demo): el personal en formación mueve el expediente.
+- "Empleados" (asignar personal) con el perfil Admin lista el personal demo (`demo:true`), no cuentas reales; la simulación no tiene
+  empleados propios (misma cuenta para todo).
+- La carga de documentos como Cliente sigue siendo la **simulada** del modo demo (aviso en vez del explorador de archivos).
+
+### Pendiente / siguiente
+- **Producción** (DEPLOY.md 9c): secreto `demo-password-simulacion` + variable en Cloud Run + deploy del tracker y del web + sembrar
+  `sim-org` con el admin real (`POST /api/demo/reiniciar {ambito:'sim-org'}`). Los secretos pendientes de las TAREAS 63/64
+  (farmaceutico, legal, admin, paypal-sandbox) siguen sin crearse: sin `PAYPAL_SANDBOX_*` la simulación paga con el mock.
+- e2e Playwright de la simulación (cambio de pestaña en el navegador) — no hay Chromium en el contenedor; verificación manual en local.

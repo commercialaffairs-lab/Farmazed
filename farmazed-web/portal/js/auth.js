@@ -169,6 +169,7 @@ async function requireVerifiedLogin(redirectToLogin = '/login.html', redirectToV
 async function isAdmin() {
   if (!_currentUser) return false;
   const result = await _currentUser.getIdTokenResult();
+  if (result.claims.demo === true && result.claims.simulacion === true) return perfilSimulacion() === 'admin'; // simulación: manda la pestaña
   return !!result.claims.admin || result.claims.role === 'admin';
 }
 
@@ -185,6 +186,8 @@ const STAFF_ROLES = ['analista', 'abogado', 'regente'];
 async function getRole() {
   if (!_currentUser) return null;
   const result = await _currentUser.getIdTokenResult();
+  // Simulación: el rol es el perfil elegido en el topbar (el tracker aplica el mismo criterio con X-Fz-Perfil).
+  if (result.claims.demo === true && result.claims.simulacion === true) return perfilSimulacion();
   if (result.claims.role) return result.claims.role;
   return result.claims.admin ? 'admin' : 'cliente_titular';
 }
@@ -201,6 +204,102 @@ async function esDemo() {
   return (await _currentUser.getIdTokenResult()).claims.demo === true;
 }
 
+// ── Simulación (Rick, 14-nov-2026) ─────────────────────────────────────────────────────────────────
+// Una sola cuenta (simulacion@farmazed.com, claims demo:true + simulacion:true) para entrenar al personal: el topbar
+// muestra una pestaña por perfil y al pulsarla cambia el layout. El perfil elegido se guarda en localStorage y viaja
+// al tracker en la cabecera X-Fz-Perfil (api.js): allí pasa a ser el rol efectivo (middleware/auth.js). Para el resto
+// de cuentas la cabecera no tiene efecto. Rótulos = claves del diccionario (se retraducen al cambiar de idioma).
+const PERFILES_SIM = [
+  { id: 'cliente_titular', rotulo: 'Cliente',                   destino: '/client-dashboard.html' },
+  { id: 'admin',           rotulo: 'Administrador',             destino: '/admin/bandeja.html' },
+  { id: 'regente',         rotulo: 'Responsable Farmacéutico',  destino: '/admin/bandeja.html' },
+  { id: 'abogado',         rotulo: 'Responsable Legal',         destino: '/admin/bandeja.html' },
+];
+const CLAVE_PERFIL_SIM = 'fzPerfilSim';
+const PERFIL_SIM_POR_DEFECTO = 'cliente_titular';
+
+/** ¿La cuenta de simulación? (claims demo:true + simulacion:true). */
+async function esSimulacion() {
+  if (!_currentUser) return false;
+  const { claims } = await _currentUser.getIdTokenResult();
+  return claims.demo === true && claims.simulacion === true;
+}
+
+/** Perfil elegido en el topbar (válido o el de por defecto, Cliente). */
+function perfilSimulacion() {
+  try {
+    const v = localStorage.getItem(CLAVE_PERFIL_SIM);
+    return PERFILES_SIM.some(p => p.id === v) ? v : PERFIL_SIM_POR_DEFECTO;
+  } catch (e) { return PERFIL_SIM_POR_DEFECTO; }
+}
+
+function fijarPerfilSimulacion(id) {
+  if (!PERFILES_SIM.some(p => p.id === id)) return false;
+  try { localStorage.setItem(CLAVE_PERFIL_SIM, id); } catch (e) { /* sin localStorage: el perfil no se recuerda */ }
+  return true;
+}
+
+/** Cabecera que api.js añade a cada petición: el perfil elegido (el tracker solo la honra en la cuenta de simulación). */
+function cabecerasPerfil() {
+  try {
+    const v = localStorage.getItem(CLAVE_PERFIL_SIM);
+    return v && PERFILES_SIM.some(p => p.id === v) ? { 'X-Fz-Perfil': v } : {};
+  } catch (e) { return {}; }
+}
+
+/** Cambia de perfil y lleva al layout de ese perfil (portal del cliente o back-office). */
+function cambiarPerfilSimulacion(id) {
+  const perfil = PERFILES_SIM.find(p => p.id === id);
+  if (!perfil || !fijarPerfilSimulacion(id)) return;
+  window.location.href = perfil.destino;
+}
+
+const CSS_SIM = `
+#fz-sim-perfiles{display:inline-flex;align-items:center;gap:.3rem;background:#111827;border:2px solid #f59e0b;border-radius:999px;padding:.25rem .45rem;margin:0 .75rem;flex-wrap:wrap}
+#fz-sim-perfiles .fz-sim-titulo{font-weight:800;letter-spacing:.1em;text-transform:uppercase;font-size:.68rem;color:#fbbf24;padding:0 .45rem}
+#fz-sim-perfiles .fz-sim-pestana{border:0;border-radius:999px;padding:.4rem .85rem;font-weight:800;font-size:.86rem;letter-spacing:.02em;background:transparent;color:#fff;cursor:pointer;line-height:1;white-space:nowrap}
+#fz-sim-perfiles .fz-sim-pestana:hover{background:rgba(255,255,255,.14)}
+#fz-sim-perfiles .fz-sim-pestana:focus-visible{outline:2px solid #fbbf24;outline-offset:2px}
+#fz-sim-perfiles .fz-sim-pestana.activa{background:#f59e0b;color:#111827}
+@media (max-width:991px){#fz-sim-perfiles .fz-sim-titulo{display:none}#fz-sim-perfiles .fz-sim-pestana{padding:.35rem .6rem;font-size:.78rem}}
+`;
+function instalarCssSim() {
+  if (document.getElementById('fz-sim-css')) return;
+  const style = document.createElement('style');
+  style.id = 'fz-sim-css';
+  style.textContent = CSS_SIM;
+  document.head.appendChild(style);
+}
+
+/**
+ * Pestañas de perfil del topbar (solo en la cuenta de simulación). Se insertan antes de `antesDe` si se pasa (el nombre
+ * del usuario en el back-office) o al principio del contenedor (el <li> del topbar del portal del cliente).
+ */
+async function montarPestanasSimulacion(contenedor, { antesDe = null } = {}) {
+  if ((!contenedor && !antesDe) || document.getElementById('fz-sim-perfiles') || !(await esSimulacion())) return null;
+  instalarCssSim();
+  const actual = perfilSimulacion();
+  const nav = document.createElement('nav');
+  nav.id = 'fz-sim-perfiles';
+  marcarTraducible(nav, 'Perfil de la simulación', 'aria-label');
+  const titulo = marcarTraducible(document.createElement('span'), 'Simulación');
+  titulo.className = 'fz-sim-titulo';
+  nav.append(titulo);
+  for (const p of PERFILES_SIM) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = `fz-sim-pestana${p.id === actual ? ' activa' : ''}`;
+    b.dataset.perfil = p.id;
+    b.setAttribute('aria-pressed', String(p.id === actual));
+    marcarTraducible(b, p.rotulo);
+    b.addEventListener('click', () => cambiarPerfilSimulacion(p.id));
+    nav.append(b);
+  }
+  if (antesDe) antesDe.insertAdjacentElement('beforebegin', nav);
+  else contenedor.prepend(nav);
+  return nav;
+}
+
 /**
  * Botón [Reiniciar cuenta demo] (Rick, 01-nov): solo para cuentas demo. Lo pinta dentro del
  * contenedor que se le pase; al confirmar llama a POST /api/demo/reiniciar y cierra la sesión
@@ -208,21 +307,27 @@ async function esDemo() {
  */
 async function montarBotonDemo(contenedor) {
   if (!contenedor || !(await esDemo())) return null;
+  const sim = await esSimulacion(); // simulación: mismo botón, rótulos propios (reinicia solo sim-org)
   const btn = document.createElement('button');
   btn.type = 'button';
   btn.id = 'btn-reiniciar-demo';
   btn.className = 'btn btn-sm btn-warning fw-semibold';
   // Texto en un <span data-i18n> y título con data-i18n-attr: la capa los retraduce al cambiar de idioma.
-  btn.appendChild(marcarTraducible(document.createElement('span'), 'Reiniciar cuenta demo'));
-  marcarTraducible(btn, 'Vuelve a dejar la cuenta de demostración como al principio del recorrido', 'title');
+  btn.appendChild(marcarTraducible(document.createElement('span'), sim ? 'Reiniciar simulación' : 'Reiniciar cuenta demo'));
+  marcarTraducible(btn, sim ? 'Vuelve a dejar la simulación como al principio del recorrido' : 'Vuelve a dejar la cuenta de demostración como al principio del recorrido', 'title');
   btn.addEventListener('click', async () => {
     const { confirmar, avisar } = await import('./dialogos.js');
-    if (!(await confirmar(t('Se borrarán los cambios que hiciste en la demo y todo volverá al estado inicial. ¿Reiniciar?')))) return;
+    const pregunta = sim
+      ? t('Se borrarán los cambios que hiciste en la simulación y todo volverá al estado inicial. ¿Reiniciar?')
+      : t('Se borrarán los cambios que hiciste en la demo y todo volverá al estado inicial. ¿Reiniciar?');
+    if (!(await confirmar(pregunta))) return;
     btn.disabled = true;
     try {
       const { default: api } = await import('./api.js');
       await api.reiniciarDemo();
-      await avisar(t('Demo reiniciada. Vuelve a iniciar sesión para empezar el recorrido desde el principio.'));
+      await avisar(sim
+        ? t('Simulación reiniciada. Vuelve a iniciar sesión para empezar desde el principio.')
+        : t('Demo reiniciada. Vuelve a iniciar sesión para empezar el recorrido desde el principio.'));
       await logout();
     } catch (err) {
       btn.disabled = false;
@@ -306,22 +411,26 @@ function montarSelectorIdioma(nombre) {
  * Panel "Recorrido demo" del back-office (personal demo: regente/farmacéutico, legal y admin). A dónde lleva "Ir al paso" en cada paso
  * (services/demo_recorrido.js, PASOS_REGENTE, PASOS_LEGAL y PASOS_ADMIN). Import dinámico: recorrido.js importa este módulo.
  */
+// Los ids de los expedientes llegan en la respuesta del recorrido (extra.ids: demo-caso-3 en la demo, sim-caso-3 en la
+// simulación), así el mismo panel sirve para los dos ámbitos.
 const DESTINOS_RECORRIDO_STAFF = {
-  documento: '/admin/expediente.html?id=demo-caso-3',
-  cotejo:    '/admin/expediente.html?id=demo-caso-3',
-  lead:      '/admin/leads.html',
+  documento: (ids) => `/admin/expediente.html?id=${encodeURIComponent(ids.caso3)}`,
+  cotejo:    (ids) => `/admin/expediente.html?id=${encodeURIComponent(ids.caso3)}`,
+  lead:      () => '/admin/leads.html',
   // Recorrido del Responsable Legal (PASOS_LEGAL): documento y confirmacion usan el caso 3; el pedido, el caso 2.
-  pedido:       '/admin/expediente.html?id=demo-caso-2',
-  confirmacion: '/admin/expediente.html?id=demo-caso-3',
+  pedido:       (ids) => `/admin/expediente.html?id=${encodeURIComponent(ids.caso2)}`,
+  confirmacion: (ids) => `/admin/expediente.html?id=${encodeURIComponent(ids.caso3)}`,
   // Recorrido del admin demo (PASOS_ADMIN): la cotización en borrador del Producto 4 y el pago en Finanzas; el lead es el mismo.
-  cotizacion:   '/admin/cotizaciones.html',
-  pago:         '/admin/finanzas.html',
+  cotizacion:   () => '/admin/cotizaciones.html',
+  pago:         () => '/admin/finanzas.html',
 };
+const IDS_DEMO_POR_DEFECTO = { caso2: 'demo-caso-2', caso3: 'demo-caso-3', caso4: 'demo-caso-4' };
 async function montarRecorridoBackoffice() {
   if (!(await esDemo())) return null;
   const { montarRecorrido } = await import('./recorrido.js');
   return montarRecorrido({ irA: (paso) => {
-    const destino = DESTINOS_RECORRIDO_STAFF[paso];
+    const ids = window.__fzRecorrido?.estado()?.extra?.ids || IDS_DEMO_POR_DEFECTO;
+    const destino = DESTINOS_RECORRIDO_STAFF[paso]?.(ids);
     if (!destino) return;
     if (window.location.pathname + window.location.search === destino) window.scrollTo({ top: 0, behavior: 'smooth' });
     else window.location.href = destino;
@@ -444,7 +553,7 @@ async function initBackoffice() {
   let permisos = [];
   if (!admin) {
     try {
-      const r = await fetch(`${API_BASE}/api/me/permissions`, { headers: { Authorization: `Bearer ${await getToken()}` } });
+      const r = await fetch(`${API_BASE}/api/me/permissions`, { headers: { Authorization: `Bearer ${await getToken()}`, ...cabecerasPerfil() } });
       if (r.ok) permisos = (await r.json()).permissions || [];
     } catch (e) { /* sin permisos conocidos: menú básico */ }
   }
@@ -452,6 +561,8 @@ async function initBackoffice() {
   montarSidebar(undefined, { admin, permisos });
   document.getElementById('sidebar-logout')?.addEventListener('click', logout);
   await montarBotonDemo(nombre?.parentElement || document.querySelector('.topbar'));
+  // Simulación: pestañas de perfil en el topbar, antes del nombre (o al principio del topbar oscuro de expediente.html).
+  await montarPestanasSimulacion(document.querySelector('.topbar'), { antesDe: document.getElementById('btn-reiniciar-demo') || nombre });
   const rolActual = await getRole();
   if (rolActual === 'abogado') carpetaManual = 'legal';
   else if (rolActual === 'admin') carpetaManual = 'admin'; // manual/admin/ (admin.demo)
@@ -466,4 +577,5 @@ async function initBackoffice() {
 export {
   initBackoffice, montarSidebar, mostrarEnlaceSidebar, esc, auth, register, login, logout, getToken, requireLogin, requireVerifiedLogin, isAdmin, API_BASE,
   getRole, getOrgId, isStaff, hasBackofficeAccess, esDemo, montarBotonDemo, cambiarContrasena,
+  esSimulacion, perfilSimulacion, fijarPerfilSimulacion, cambiarPerfilSimulacion, cabecerasPerfil, montarPestanasSimulacion,
 };

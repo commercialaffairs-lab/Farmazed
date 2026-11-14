@@ -150,6 +150,7 @@ function htmlTarjeta(estado) {
       ${conBotonReiniciar(t.completoTexto)}
     </div>
     <div class="fz-recorrido-acciones">
+      ${estado.siguientePerfil ? `<button type="button" class="fz-recorrido-boton principal" data-accion="perfil" data-perfil="${esc(estado.siguientePerfil.perfil)}">${esc(rotulo(t.siguientePerfil, { perfil: estado.siguientePerfil.rotulo }))}</button>` : ''}
       <button type="button" class="fz-recorrido-boton secundario" data-accion="actualizar">↻ ${esc(t.actualizar)}</button>
     </div>`;
   // El cliente real puede cerrar el panel (se reactiva en "Mi cuenta"); en la demo solo se minimiza.
@@ -313,6 +314,9 @@ async function montarInterno({ irA, forzar = false } = {}) {
       ocultar();
     } else if (accion === 'ir' && irA) {
       irA(boton.dataset.paso);
+    } else if (accion === 'perfil') {
+      // Simulación: "Seguir como <perfil>" → cambia la pestaña del topbar y va al layout de ese perfil.
+      import('./auth.js').then(({ cambiarPerfilSimulacion }) => cambiarPerfilSimulacion(boton.dataset.perfil));
     }
   });
 

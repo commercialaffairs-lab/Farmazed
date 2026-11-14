@@ -25,7 +25,7 @@ const { HttpError, responderError } = require('../utils/http_error');
 const { textoError, trimOrNull } = require('../utils/validar_texto');
 const F = require('../services/facturacion/facturas');
 const admin = require('../utils/firebase_admin.js');
-const { DEMO_ORG_ID, esAdminDemo, esDocDemo } = require('../utils/demo_scope');
+const { esAdminDemo, esDocDelAmbito, ambitoDe } = require('../utils/demo_scope');
 
 const router = Router();
 const soloAdmin = [requireAuth, requirePermission('facturas.manage')];
@@ -42,7 +42,7 @@ const usuario = (req) => ({ uid: req.user.uid, email: req.user.email, demo: req.
 async function cargarVisible(req) {
   const { data } = await F.cargar(req.params.id);
   if (effectiveRole(req.user) === 'admin') {
-    if (esAdminDemo(req.user) && !esDocDemo(data)) throw new HttpError(403, { error: 'Forbidden' }); // admin demo: solo facturas de la empresa demo
+    if (esAdminDemo(req.user) && !esDocDelAmbito(req.user, data)) throw new HttpError(403, { error: 'Forbidden' }); // admin demo: solo facturas de su ámbito
     return { id: req.params.id, ...data };
   }
   if (!req.user.orgId || data.orgId !== req.user.orgId) throw new HttpError(403, { error: 'Esta factura no es de tu empresa.' });
@@ -59,7 +59,7 @@ router.get('/', ...soloAdmin, async (req, res) => {
     // Admin demo: solo las facturas de la empresa demo. Se acota por orgId en la consulta; estado y origen se filtran
     // en memoria (orgId+estado u orgId+origen pedirían índices compuestos que no existen).
     const facturas = esAdminDemo(req.user)
-      ? (await F.listar({ orgId: DEMO_ORG_ID, limite })).filter(f => (!estado || f.estado === estado) && (!origen || f.origen === origen))
+      ? (await F.listar({ orgId: ambitoDe(req.user), limite })).filter(f => (!estado || f.estado === estado) && (!origen || f.origen === origen))
       : await F.listar({ estado: estado || null, origen: origen || null, limite });
     res.json(serializeTimestamps({ facturas }));
   } catch (e) { responderError(res, e); }
@@ -76,8 +76,8 @@ router.put('/config', ...soloAdmin, async (req, res) => {
 router.get('/sin-factura', ...soloAdmin, async (req, res) => {
   try {
     let pagos = await F.pagosSinFactura(req.query.limite);
-    if (esAdminDemo(req.user)) { // admin demo: solo pagos de casos de la empresa demo
-      const demo = new Set((await admin.firestore().collection('cases').where('orgId', '==', DEMO_ORG_ID).get()).docs.map(d => d.id));
+    if (esAdminDemo(req.user)) { // admin demo: solo pagos de casos de su ámbito (demo-org / sim-org)
+      const demo = new Set((await admin.firestore().collection('cases').where('orgId', '==', ambitoDe(req.user)).get()).docs.map(d => d.id));
       pagos = pagos.filter(p => demo.has(p.caseId));
     }
     res.json(serializeTimestamps({ pagos }));
