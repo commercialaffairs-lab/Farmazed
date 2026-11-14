@@ -115,16 +115,26 @@ function docResumenSeguridadSQ(esInnovador) {
 const DOC_CERT_ANALISIS   = { id: 'cert_analisis',   faddiCode: '15.7', name: 'Certificado de Análisis',      required: true, condition: null, faddiStep: 15, description: 'Certificado de análisis del lote que se enviará como muestra al IEA.' };
 const DOC_MUESTRA         = { id: 'muestra',         faddiCode: '15.15', name: 'Muestra Física',              required: true, condition: null, faddiStep: 15, description: 'Muestra del producto en su envase comercial para análisis IEA.' };
 const DOC_MUESTRA_RADIOFARMACO = { id: 'muestra',    faddiCode: '15.15', name: 'Muestra Física',              required: false, condition: 'Condicional para Radiofármacos según matriz maestra MINSA', faddiStep: 15, description: 'Muestra del producto en su envase comercial para análisis IEA — condicional para radiofármacos.' };
+// D2 (matrices de octubre, fila GAS-21): para Gas Medicinal la muestra es el envase VACÍO con su
+// sistema de cierre — no se presenta el gas. Sigue siendo obligatoria. Mismo id `muestra`.
+const DOC_MUESTRA_GAS = { id: 'muestra', faddiCode: '15.15', name: 'Muestra Física (envase vacío)', required: true, condition: null, faddiStep: 15, description: 'Para Gas Medicinal la muestra es el envase vacío (cilindro, termo o envase criogénico) con su sistema de cierre; no se presenta el gas (matriz Gas Medicinal, fila GAS-21).' };
 const DOC_METODO_ANALISIS = { id: 'metodo_analisis', faddiCode: '15.6', name: 'Método de Análisis',           required: true, condition: null, faddiStep: 15, description: 'Métodos analíticos validados para el control de calidad del producto.' };
 // Bug PM 2026-08-26 (Bug 8): documento ausente por completo.
 // ⚠️ faddiCode PENDIENTE DE VERIFICAR: el valor sugerido por el PM ('15.11')
 // choca con 'monografia', que ya usa ese código en este mismo checklist.
-const DOC_CONTRATO_FAB    = { id: 'contrato_fabricacion', faddiCode: 'PENDIENTE_VERIFICAR', name: 'Contrato de Fabricación (cuando aplica tercero)', required: false, condition: 'Cuando el producto es fabricado por un tercero (maquilador)', faddiStep: 15, description: 'Contrato entre el titular y el fabricante tercero (maquilador). faddiCode pendiente de confirmar en FADDI (colisión detectada con 15.11 de "monografía"). No aplica a Productos Naturales.' };
+const DOC_CONTRATO_FAB    = { id: 'contrato_fabricacion', faddiCode: 'PENDIENTE_VERIFICAR', name: 'Contrato de Fabricación (cuando aplica tercero)', required: false, condition: 'Cuando el producto es fabricado por un tercero (maquilador)', faddiStep: 15, description: 'Contrato entre el titular y el fabricante tercero (maquilador). faddiCode pendiente de confirmar en FADDI (colisión detectada con 15.11 de "monografía"). En Productos Naturales aplica igual, condicional (matriz Productos Naturales, fila NAT-11).' };
 
 // Variantes de "estabilidad" para los dos subtipos con regla condicional propia
 // (reemplazan el ítem de MED_BASE_SHARED cuando el subtipo aplica — ver getChecklist).
 const DOC_ESTABILIDAD_SUPLEMENTOS = { id: 'estabilidad', faddiCode: '15.12', name: 'Estudios de Estabilidad', required: false, condition: 'Requerido solo si la vida útil declarada del producto es mayor a 24 meses', faddiStep: 15, description: 'Estudio de estabilidad — obligatorio únicamente cuando la vida útil declarada supera los 24 meses.' };
 const DOC_ESTABILIDAD_NATURALES   = { id: 'estabilidad', faddiCode: '15.12', name: 'Estudios de Estabilidad', required: false, condition: 'Si vida útil ≤ 24 meses: informe de análisis + Declaración Jurada. Si > 24 meses: estudio de estabilidad completo.', faddiStep: 15, description: 'Estudio de estabilidad — el tipo de evidencia requerida depende de la vida útil declarada del producto.' };
+// D3 (matrices de octubre, fila RAD-19): Radiofármaco, condicional por vida útil — mismo
+// mecanismo que DOC_ESTABILIDAD_SUPLEMENTOS. Gas Medicinal no lleva estabilidad (D2, fila
+// GAS-19, D.E. 27/2024 Art. 58) — se quita en getChecklist, no tiene variante.
+const DOC_ESTABILIDAD_RADIOFARMACO = { id: 'estabilidad', faddiCode: '15.12', name: 'Estudios de Estabilidad', required: false, condition: 'Solo si la vida útil declarada es mayor a 24 meses', faddiStep: 15, description: 'Estudio de estabilidad del radiofármaco — exigible únicamente cuando la vida útil declarada supera los 24 meses (D.E. 27/2024, Art. 127 — matriz Radiofármacos, fila RAD-19).' };
+// D7 (matrices de octubre): en Huérfanos el inserto es obligatorio (D.E. 27/2024 Art. 109 núm. 8).
+// Variante propia con el mismo id `prospecto`; la base común sigue condicional.
+const DOC_PROSPECTO_HUERFANOS = { id: 'prospecto', faddiCode: '15.10', name: 'Prospecto o Inserto', required: true, condition: null, faddiStep: 15, description: 'Prospecto/inserto del producto — obligatorio para medicamentos huérfanos en la inscripción inicial (D.E. 27/2024, Art. 109 núm. 8 — matriz Huérfanos).' };
 
 // TAREA 25 (§H.9, decisiones 4 y 5): documentos que la auditoría
 // (organizacion/11_AUDITORIA_CHECKLIST_MATRICES.md) marcó FALTA para SQ y
@@ -135,7 +145,7 @@ const DOC_ESTABILIDAD_NATURALES   = { id: 'estabilidad', faddiCode: '15.12', nam
 // las dos matrices trae un código FADDI explícito para estos.
 const DOC_PROTECCION_DATOS = { id: 'proteccion_datos', faddiCode: 'PENDIENTE_VERIFICAR', name: 'Declaración Jurada de Protección de Datos de Prueba', required: false, condition: 'Solo si el titular solicita protección de datos de prueba', faddiStep: 15, description: 'Declaración jurada de que el producto es una nueva entidad química y que la información se entrega bajo reserva de confidencialidad (Dec. Ejecutivo 1389/2012, Art. 5 — matriz SQ ítems 05-06, matriz BIO ítem BIO-05-06). Solo aplica si se solicita protección de datos.' };
 const DOC_ESPECIF_PA_SQ = { id: 'especificaciones_pa', faddiCode: 'PENDIENTE_VERIFICAR', name: 'Especificaciones del Principio Activo y Materias Primas', required: true, condition: null, faddiStep: 15, description: 'Especificaciones farmacopeicas o no farmacopeicas del principio activo y excipientes críticos; si no son farmacopeicas, incluir metodología analítica validada (Res. 126/2021, núm. 7.6; D.E. 27/2024, Art. 78 — matriz SQ ítem 12). Distinto de las especificaciones del producto terminado.' };
-const DOC_DECLARACION_IDENTIDAD_ABREVIADO = { id: 'declaracion_identidad_abreviado', faddiCode: 'PENDIENTE_VERIFICAR', name: 'Declaración Jurada de Identidad de Fabricación y Formulación (Abreviado)', required: true, condition: null, faddiStep: 15, description: 'Declaración jurada del titular, fabricante o representante legal de que el producto es el mismo en fabricación y formulación que el certificado/CLV de la autoridad de referencia (D.E. 27/2024, Art. 24 núm. 2; D.E. 29/2023 — matriz BIO ítem BIO-07, sección Abreviado). Distinta del expediente aprobado por la ARR (ver `aprobacion_arr`).' };
+const DOC_DECLARACION_IDENTIDAD_ABREVIADO = { id: 'declaracion_identidad_abreviado', faddiCode: 'PENDIENTE_VERIFICAR', name: 'Declaración Jurada de Identidad de Fabricación y Formulación (Abreviado)', required: true, condition: null, faddiStep: 15, description: 'Declaración jurada del titular, fabricante o representante legal de que el producto es el mismo en fabricación y formulación que el aprobado por la autoridad de referencia. Plantilla: Formulario 6. Aplica a todo registro Abreviado, cualquier categoría de medicamento (D.E. 27/2024, Art. 24 núm. 2 — matrices de octubre, filas SQ-07A, HOM-07, SUP-07A, RAD-05, GAS-05, CON-05 y BIO-07). Distinta del expediente aprobado por la ARR (ver `aprobacion_arr`).' };
 const DOC_ESPECIF_FUENTES_PA = { id: 'especificaciones_fuentes_pa', faddiCode: 'PENDIENTE_VERIFICAR', name: 'Especificaciones de las Fuentes y Técnicas de Obtención del Principio Activo', required: true, condition: null, faddiStep: 15, description: 'Fuentes (líneas celulares, sistemas biológicos) y técnicas de obtención del principio activo; para biotecnológicos incluye además los procedimientos del banco de células maestro y de trabajo (D.E. 27/2024, Art. 102 núm. 1 — matriz BIO ítem BIO-25).' };
 const DOC_ESPECIF_EXCIPIENTES = { id: 'especificaciones_excipientes', faddiCode: 'PENDIENTE_VERIFICAR', name: 'Especificación de Calidad y Pureza de los Excipientes', required: true, condition: null, faddiStep: 15, description: 'Especificaciones de calidad y pureza, y métodos de control, de cada excipiente usado en la formulación (D.E. 27/2024, Art. 102 núm. 14 — matriz BIO ítem BIO-S/N-2).' };
 const DOC_AUSENCIA_PATOGENOS = { id: 'ausencia_agentes_patogenos', faddiCode: 'PENDIENTE_VERIFICAR', name: 'Procedimientos para Comprobar Ausencia de Agentes Potencialmente Patógenos', required: true, condition: null, faddiStep: 15, description: 'Documentación de los procedimientos usados para comprobar la ausencia de agentes patógenos (agentes adventicios): fuentes, especificaciones, pruebas y datos de seguridad viral (D.E. 27/2024, Art. 102 núm. 3 — matriz BIO ítem BIO-27).' };
@@ -181,7 +191,9 @@ const MED_VARIABLE_BY_SUBTYPE = {
     // muestra NO aplica a Huérfanos (Bug 3) — recibo_iea ya no depende del
     // subtipo (ver docReciboIea), se agrega igual para todos en getChecklist.
     DOC_CERT_ANALISIS, DOC_METODO_ANALISIS, DOC_CONTRATO_FAB,
-    { id: 'estudios_clinicos_hue', faddiCode: '15.22', name: 'Estudios clínicos (Huérfanos)',    required: false, condition: 'Según disponibilidad — Arts. 107-108 D.E. 27/2024', faddiStep: 15, description: 'Resumen clínico disponible. Declaración notarial de países con registro.' },
+    // D7 (matrices de octubre): obligatorio, sin condición — D.E. 27/2024 Art. 108 lo exige en la
+    // inscripción inicial (antes "según disponibilidad").
+    { id: 'estudios_clinicos_hue', faddiCode: '15.22', name: 'Resumen de estudios clínicos (Huérfanos)', required: true, condition: null, faddiStep: 15, description: 'Resumen de los estudios clínicos del medicamento huérfano — requerido en la inscripción inicial (D.E. 27/2024, Art. 108 — matriz Huérfanos).' },
     { id: 'declaracion_paises',    faddiCode: 'PENDIENTE_VERIFICAR', name: 'Declaración notarial de países con registro', required: true, condition: 'Obligatorio para huérfanos', faddiStep: 15, description: 'Declaración notarial indicando los países donde está registrado el producto. faddiCode pendiente de confirmar en FADDI (antes 15.14, colisión con "otros_docs"/"aprobacion_arr").' },
   ],
   // TAREA 28 (§H.11, Zelky ronda 2): "Vacuna = Biológicos" — no es una
@@ -207,7 +219,9 @@ const MED_VARIABLE_BY_SUBTYPE = {
   ],
   'Gas Medicinal': [
     // recibo_iea ya no depende del subtipo, se agrega igual para todos en getChecklist.
-    DOC_CERT_ANALISIS, DOC_MUESTRA, DOC_METODO_ANALISIS, DOC_CONTRATO_FAB,
+    // D2: la muestra es el envase vacío (DOC_MUESTRA_GAS, fila GAS-21); estabilidad se quita en
+    // getChecklist (fila GAS-19, D.E. 27/2024 Art. 58).
+    DOC_CERT_ANALISIS, DOC_MUESTRA_GAS, DOC_METODO_ANALISIS, DOC_CONTRATO_FAB,
   ],
   'Suplementos': [
     // cert_analisis, muestra y metodo_analisis NO aplican (Bug 1/2/3/6).
@@ -218,10 +232,10 @@ const MED_VARIABLE_BY_SUBTYPE = {
     DOC_CONTRATO_FAB,
   ],
   'Productos Naturales': [
-    // contrato_fabricacion NO aplica (Bug 8 — la matriz de Productos
-    // Naturales no lo lista). estabilidad se reemplaza en getChecklist.
-    // recibo_iea ya no depende del subtipo, se agrega igual para todos.
-    DOC_CERT_ANALISIS, DOC_MUESTRA, DOC_METODO_ANALISIS,
+    // D8 (matrices de octubre, fila NAT-11): contrato_fabricacion SÍ aplica, condicional
+    // (la matriz del 28-sep no lo listaba — Bug 8 de agosto). estabilidad se reemplaza en
+    // getChecklist. recibo_iea ya no depende del subtipo, se agrega igual para todos.
+    DOC_CERT_ANALISIS, DOC_MUESTRA, DOC_METODO_ANALISIS, DOC_CONTRATO_FAB,
   ],
 };
 
@@ -240,6 +254,9 @@ const COS_DOCS = [
   { id: 'cos_especif',       faddiCode: '11.5', name: 'Especificaciones del Producto Terminado',      required: true,  condition: null, faddiStep: 11, description: 'Especificaciones físico-químicas y microbiológicas del PT (RTCA 71.03.45:07).' },
   { id: 'cos_otros',         faddiCode: '11.6', name: 'Otros Documentos Aclaratorios',                required: false, condition: 'Cuando aplique', faddiStep: 11, description: 'Cualquier documento adicional que respalde la solicitud.' },
   { id: 'cos_muestra',       faddiCode: '11.7', name: 'Foto de la Muestra Física',                    required: true,  condition: null, faddiStep: 11, description: 'Fotografía del producto en su envase comercial.' },
+  // D6 (matrices de octubre, filas COS-09 y COS-10): documento ausente. faddiCode PENDIENTE_VERIFICAR
+  // (la matriz no trae un código FADDI explícito — mismo patrón de la TAREA 25).
+  { id: 'cos_etiquetas',     faddiCode: 'PENDIENTE_VERIFICAR', name: 'Etiquetas o empaques originales, o sus proyectos legibles', required: true, condition: null, faddiStep: 11, description: 'Etiquetas o empaques originales del producto, o sus proyectos (artes) legibles: una sola presentación; una etiqueta por variante solo si los artes difieren. Conforme al RTCA 71.03.36:21 de etiquetado (RTCA 71.03.35:21 núm. 6.6 — matriz Cosméticos, filas COS-09 y COS-10).' },
   { id: 'cos_refrendo',      faddiCode: '10.7', name: 'Refrendo del Colegio Nacional de Farmacéuticos', required: true, condition: null, faddiStep: 10, description: 'Comprobante del refrendo del farmacéutico responsable (D.E. 178/2001).' },
   { id: 'cos_clv',           faddiCode: 'EXTRA', name: 'Certificado de Libre Venta (CLV)',            required: true,  condition: null, faddiStep: 11, description: 'CLV del país de fabricación apostillado o legalizado. No está en la lista de adjuntos de FADDI pero es requisito del RTCA 71.03.35:21 — presentar en ventanilla.', physicalOnly: true },
 ];
@@ -353,10 +370,24 @@ function getChecklist(tramiteType, options = {}) {
       // Suplementos y Productos Naturales tienen su propia variante condicional
       // de "estabilidad" (depende de la vida útil declarada) — reemplaza la
       // entrada por defecto de MED_BASE_SHARED.
+      // D3 (fila RAD-19): Radiofármaco también condicional por vida útil. D2 (fila GAS-19,
+      // D.E. 27/2024 Art. 58): Gas Medicinal está exento — se quita, pero solo cuando el caso es
+      // únicamente Gas Medicinal (si va combinado con otra categoría que sí lo exige, se conserva
+      // para no dejar de pedirlo).
       if (tipoMedicamento.includes('Suplementos')) {
         docs = docs.map(d => d.id === 'estabilidad' ? DOC_ESTABILIDAD_SUPLEMENTOS : d);
       } else if (tipoMedicamento.includes('Productos Naturales')) {
         docs = docs.map(d => d.id === 'estabilidad' ? DOC_ESTABILIDAD_NATURALES : d);
+      } else if (tipoMedicamento.includes('Radiofármaco')) {
+        docs = docs.map(d => d.id === 'estabilidad' ? DOC_ESTABILIDAD_RADIOFARMACO : d);
+      } else if (tipoMedicamento.length > 0 && tipoMedicamento.every(t => t === 'Gas Medicinal')) {
+        docs = docs.filter(d => d.id !== 'estabilidad');
+      }
+
+      // D7 (D.E. 27/2024 Art. 109 núm. 8): en Huérfanos el inserto es obligatorio — variante
+      // propia, la base común sigue condicional.
+      if (tipoMedicamento.includes('Huérfanos')) {
+        docs = docs.map(d => d.id === 'prospecto' ? DOC_PROSPECTO_HUERFANOS : d);
       }
 
       // Add type-specific docs
@@ -379,12 +410,11 @@ function getChecklist(tramiteType, options = {}) {
           docs.push(DOC_CERT_ANALISIS);
         }
 
-        // TAREA 25 (§H.9, decisión 4 — matriz BIO ítem BIO-07, sección
-        // Abreviado): declaración jurada de identidad de fabricación y
-        // formulación, distinta del expediente ARR (aprobacion_arr) — solo
-        // Biológicos/Biotecnológicos, solo Abreviado. TAREA 28 (§H.11):
-        // Vacuna = Biológicos, entra en el mismo check.
-        if (tipoMedicamento.some(t => ['Biológicos', 'Biotecnológicos', 'Vacuna'].includes(t)) && !docs.find(d => d.id === 'declaracion_identidad_abreviado')) {
+        // D1 (matrices de octubre — filas SQ-07A, HOM-07, SUP-07A, RAD-05, GAS-05, CON-05 y
+        // BIO-07; D.E. 27/2024 Art. 24 núm. 2): la declaración jurada de identidad de fabricación y
+        // formulación (Formulario 6) va en TODO registro Abreviado, cualquier categoría. Antes
+        // (TAREA 25/28) solo entraba para Biológicos/Biotecnológicos/Vacuna.
+        if (!docs.find(d => d.id === 'declaracion_identidad_abreviado')) {
           docs.push(DOC_DECLARACION_IDENTIDAD_ABREVIADO);
         }
       }
