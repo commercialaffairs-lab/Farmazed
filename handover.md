@@ -6807,3 +6807,13 @@ Captura: `sessions/2026-11-14/simulacion-01-admin-bandeja.png`.
 - Docs: DEMO.md → Pagos, PAYPAL_SETUP.md (cuentas sandbox), DEPLOY.md 9c (secretos `paypal-sandbox-comprador-email/password`).
 
 **Credenciales:** Rick pasó por chat (14-nov, después) la contraseña de la cuenta compradora `sb-ncruf48829159@personal.example.com`; quedó en `tracker/.env` local (`PAYPAL_SANDBOX_COMPRADOR_EMAIL/_PASSWORD`, nunca en el repo ni en el chat de vuelta) y la demo Docker se reinició para leerla: el panel muestra correo y contraseña, cada una con "Copiar". En producción, mientras no existan los secretos sandbox de 9b(2) y los dos del comprador (9c), la simulación paga con el mock y el panel no aparece.
+
+## 2026-11-14 — Botón "Abrir en Cowork" del expediente: visible pero EN PAUSA (Rick)
+
+**Pedido textual:** "hagamos cambios en ese boton, esa funcion me gusta pero por ahora dejala visible pero con un color que se asocie con que esta deshabiitada temporalmente, y colocale un emblema mas sobrio y colorres que armonizen con el layout."
+
+**Por qué:** el botón arma un contexto FADDI para pegarlo en Claude Cowork (con Claude in Chrome rellenando sisregsan.minsa.gob.pa). Comprobado hoy: el formulario de FADDI responde 302 a `Default.aspx` sin sesión de MINSA, nadie probó el flujo completo, el plugin MCP apunta a `api.farmazed.com/mcp` (dominio inexistente; el tracker vive en Cloud Run) y la subida de archivos en FADDI exige el diálogo del sistema. Hasta validar eso, la función queda en pausa.
+
+**Cambios (`admin/expediente.html`):** icono `bi-robot` en vez de ⚡; estilo apagado sobre el topbar navy (texto blanco al 62 %, borde discontinuo blanco al 38 %, fondo casi transparente, `white-space:nowrap`, cursor `not-allowed`), pastilla "EN PAUSA" ámbar tenue (`#ffd166` sobre ámbar al 16 %); `aria-disabled` y `title` explicativo. Al pulsarlo muestra un aviso ("…deshabilitado temporalmente: se activará cuando se valide el acceso a FADDI.") y NO abre el modal; el modal y `buildCoworkContext()` siguen intactos: para reactivar, `COWORK_HABILITADO = true` y devolver el estilo. i18n: 3 claves nuevas en `_partes/backoffice.json` (en/fr/pt), `i18n.test.js` 6/6. Verificado en Chrome (perfil Administrador de la simulación): captura `sessions/2026-11-14/simulacion-04-boton-cowork-en-pausa.png`.
+
+**Pendiente para reactivarlo:** sesión real en FADDI con la cuenta de MINSA (la hace Rick o alguien autorizado), corregir la URL del plugin MCP en la configuración de Cowork y decidir cómo se adjuntan los archivos.

@@ -22,8 +22,15 @@
     .doc-item:last-child { border-bottom:none; }
     .doc-code { font-size:.7rem; color:var(--fz-blue); font-weight:700; min-width:45px; }
     .doc-name { font-size:.82rem; flex:1; }
-    .cowork-btn { background:linear-gradient(135deg,#6B47DC,#3A7D44); color:#fff; border:none; border-radius:8px; padding:.5rem 1.25rem; font-weight:600; }
-    .cowork-btn:hover { opacity:.9; }
+    /* Cowork (Rick, 14-nov-2026): visible pero EN PAUSA hasta validar el acceso a FADDI — tono apagado sobre el topbar navy,
+       borde discontinuo (= temporal) y pastilla ámbar tenue; sin degradado morado. Para reactivar: COWORK_HABILITADO = true. */
+    .cowork-btn { display:inline-flex; align-items:center; gap:.45rem; background:rgba(255,255,255,.04); color:rgba(255,255,255,.62);
+      border:1px dashed rgba(255,255,255,.38); border-radius:8px; padding:.4rem 1rem; font-weight:600; white-space:nowrap; }
+    .btn.cowork-btn, .btn.cowork-btn:hover { cursor:not-allowed; }
+    .cowork-btn:hover { color:rgba(255,255,255,.8); border-color:rgba(255,255,255,.55); background:rgba(255,255,255,.08); }
+    .cowork-btn .bi { font-size:1rem; line-height:1; }
+    .cowork-btn .cowork-pausa { font-size:.6rem; font-weight:700; letter-spacing:.06em; text-transform:uppercase; background:rgba(255,193,7,.16);
+      color:#ffd166; border:1px solid rgba(255,209,102,.35); border-radius:999px; padding:.1rem .45rem; }
     .status-select { font-size:.82rem; }
   </style>
 </head>
@@ -40,7 +47,7 @@
       <label class="form-check-label small text-white-50" for="override-check" data-i18n>Forzar (override)</label>
     </div>
     <button class="btn btn-sm btn-outline-light" id="btn-save-status" data-i18n>Guardar estado</button>
-    <button class="cowork-btn btn btn-sm" id="btn-cowork">⚡ <span data-i18n>Abrir en Cowork</span></button>
+    <button class="cowork-btn btn btn-sm" id="btn-cowork" aria-disabled="true" title="Deshabilitado temporalmente: se activará cuando se valide el acceso a FADDI (sesión de MINSA)." data-i18n-attr="title"><i class="bi bi-robot"></i> <span data-i18n>Abrir en Cowork</span> <span class="cowork-pausa" data-i18n>En pausa</span></button>
   </div>
 </div>
 <div class="topbar d-flex align-items-center gap-2 d-none" id="override-reason-row" style="padding-top:0">
@@ -985,7 +992,11 @@
     await avisar(t('Notas guardadas.'));
   });
 
-  document.getElementById('btn-cowork').addEventListener('click', () => {
+  // Cowork en pausa (Rick, 14-nov-2026): el botón sigue visible pero no abre el modal hasta validar el acceso a FADDI
+  // (sisregsan pide sesión de MINSA; nadie probó aún el flujo completo). El modal y buildCoworkContext() quedan intactos.
+  const COWORK_HABILITADO = false;
+  document.getElementById('btn-cowork').addEventListener('click', async () => {
+    if (!COWORK_HABILITADO) { await avisar(t('Abrir en Cowork está deshabilitado temporalmente: se activará cuando se valide el acceso a FADDI.')); return; }
     new bootstrap.Modal(document.getElementById('coworkModal')).show();
   });
 
