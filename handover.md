@@ -6777,3 +6777,19 @@ Captura: `sessions/2026-11-14/simulacion-01-admin-bandeja.png`.
   cuentas demo nuevas no existen en prod y la simulación paga con el **mock** hasta que haya credenciales sandbox.
 - e2e Playwright de la simulación (cambio de pestaña en el navegador) — no hay Chromium en el contenedor; verificación manual hecha.
 - Decidir si lo global del perfil Admin debe "guardarse" en una copia sombra por ámbito (hoy: se ve, no se guarda).
+
+## 2026-11-14 — Fix: "Rellenar con datos de ejemplo" daba 500 en la simulación (demo Docker)
+
+**Síntoma (Rick, 14-nov, perfil Cliente, paso 4 del asistente):** 27 × `POST /api/cases/wyGF…/documents` → 500 `Internal error`, uno por documento.
+
+**Causa:** no era la simulación ni `routes/documents.js`. El emulador de Storage (firebase-tools) guarda los blobs en `$(os.tmpdir())/firebase/storage/blobs` y **al apagarse borra esa carpeta**. Al correr `run_permission_tests.sh` dentro del contenedor `farmazed-demo` (07:22, misma máquina que la demo), `entorno_aislado.sh` levantó un segundo emulador de Storage con el mismo `/tmp`; al terminar la suite, le borró los blobs a la demo viva y toda subida pasó a `ENOENT` (visible solo en `/tmp/demo-local-emulators.log`; el tracker lo registra como `Internal error`, sin detalle).
+
+**Arreglo:**
+- `tracker/scripts/entorno_aislado.sh`: los emuladores de prueba arrancan con `TMPDIR="$FZ_LOGS/tmp"` (carpeta propia por corrida). Comprobado: corrida de la suite `simulacion` dentro del contenedor (8/8) y la carpeta `/tmp/firebase/storage/blobs` de la demo sigue existiendo y subiendo (201 + descarga 200).
+- Demo viva reparada en caliente con `mkdir -p /tmp/firebase/storage/blobs` (no hizo falta reiniciar). Memoria `demo-docker-operacion` actualizada con la causa y la reparación.
+
+**Efecto colateral:** en el expediente del asistente de Rick (`wyGFXtD8kcdhMwQZi4lq`, sim-org) quedó subido el 15.2 "Poder Original" de la verificación (v2, `poder-ejemplo.pdf`, 192 bytes). Al pulsar "Rellenar con datos de ejemplo" se reemplaza por el PDF de ejemplo; "Reiniciar simulación" también lo limpia.
+
+**Producción no afectada:** allí Storage es real (GCS), no hay emulador.
+
+**Sugerencia (no hecha):** el log `[500] … error: 'Internal error'` oculta `e.message`; convendría registrar el mensaje real del lado servidor para no tener que ir al log del emulador.

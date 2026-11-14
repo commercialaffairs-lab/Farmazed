@@ -74,7 +74,12 @@ fz_start_emulators() {
     fi
   done
   echo "→ Levantando emuladores aislados (Auth:$AUTH_PORT Firestore:$FIRESTORE_PORT Storage:$STORAGE_PORT)..."
-  setsid npx --yes firebase-tools --config firebase.test-ports.json emulators:start --project demo-farmazed > "$FZ_LOGS/emuladores.log" 2>&1 &
+  # TMPDIR propio: el emulador de Storage guarda sus blobs en `$(os.tmpdir())/firebase/storage/blobs`
+  # y al apagarse BORRA esa carpeta. Sin esto, una corrida de pruebas en la misma máquina/contenedor
+  # que la demo (tmux o Docker) le borraba los blobs a la demo viva: toda subida de documentos
+  # pasaba a 500 (ENOENT) hasta reiniciarla (visto el 14-nov-2026 con la cuenta de simulación).
+  mkdir -p "$FZ_LOGS/tmp"
+  TMPDIR="$FZ_LOGS/tmp" setsid npx --yes firebase-tools --config firebase.test-ports.json emulators:start --project demo-farmazed > "$FZ_LOGS/emuladores.log" 2>&1 &
   FZ_EMU_PGID=$!
   for _ in $(seq 1 "${FZ_EMU_ARRANQUE:-240}"); do grep -q "All emulators ready" "$FZ_LOGS/emuladores.log" 2>/dev/null && break; sleep 1; done
   if ! grep -q "All emulators ready" "$FZ_LOGS/emuladores.log" 2>/dev/null; then
