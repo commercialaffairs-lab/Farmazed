@@ -262,6 +262,10 @@ const CSS_SIM = `
 #fz-sim-perfiles .fz-sim-pestana:focus-visible{outline:2px solid #fbbf24;outline-offset:2px}
 #fz-sim-perfiles .fz-sim-pestana.activa{background:#f59e0b;color:#111827}
 @media (max-width:991px){#fz-sim-perfiles .fz-sim-titulo{display:none}#fz-sim-perfiles .fz-sim-pestana{padding:.35rem .6rem;font-size:.78rem}}
+/* En la simulación el topbar queda por encima de las capas modales del portal (p. ej. la captación inicial, z-index 2000):
+   el personal debe poder cambiar de perfil en cualquier momento. */
+body.fz-simulacion .topbar{z-index:2100}
+body.fz-simulacion #btn-reiniciar-demo{margin-right:.9rem}
 `;
 function instalarCssSim() {
   if (document.getElementById('fz-sim-css')) return;
@@ -278,6 +282,7 @@ function instalarCssSim() {
 async function montarPestanasSimulacion(contenedor, { antesDe = null } = {}) {
   if ((!contenedor && !antesDe) || document.getElementById('fz-sim-perfiles') || !(await esSimulacion())) return null;
   instalarCssSim();
+  document.body.classList.add('fz-simulacion');
   const actual = perfilSimulacion();
   const nav = document.createElement('nav');
   nav.id = 'fz-sim-perfiles';
