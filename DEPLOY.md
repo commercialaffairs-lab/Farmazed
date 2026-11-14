@@ -264,7 +264,7 @@ ejecuta sin el visto bueno de Rick; cada paso de escritura trae antes su dry-run
     la propia cuenta deja todo como al principio. Pagos: PayPal **sandbox** con los secretos del paso 9b(2); sin ellos, el mock.
     Panel de pago de prueba (14-nov-2026): además, secretos `paypal-sandbox-comprador-email` / `paypal-sandbox-comprador-password`
     (cuenta Personal de Sandbox Accounts) montados como `PAYPAL_SANDBOX_COMPRADOR_EMAIL` / `PAYPAL_SANDBOX_COMPRADOR_PASSWORD`:
-    sin ellos las cuentas demo pagan igual pero el portal no les muestra la cuenta compradora con botones "Copiar".
+    sin ellos las cuentas demo pagan igual pero el portal no les muestra la cuenta compradora con botones "Copiar". Creados y montados el 14-nov-2026 (producción corre con `PAYPAL_ENV=sandbox`, así que la simulación ya paga en sandbox real y ve el panel).
 10. **Humo en producción**: login de un cliente sembrado, verificación de correo del registro abierto,
    descarga de un documento (URL firmada) y un pago sandbox.
 

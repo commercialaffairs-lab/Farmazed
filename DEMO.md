@@ -235,9 +235,11 @@ Una sola cuenta **genérica** para entrenar y evaluar al personal en sesión rem
   guarda"): en producción esas acciones cambiarían la plataforma real. Lo que sí guarda: casos, documentos, mensajes,
   pagos, cotizaciones (ajustar, enviar, aceptar, pagar), leads y confirmaciones de la fase 8 de `sim-org`.
 - **Reinicio**: [Reiniciar simulación] (mismo botón del topbar, `POST /api/demo/reiniciar`) deja `sim-org` como al
-  principio sin tocar la demo; 1 vez por minuto. El admin **real** puede reiniciar un ámbito concreto con
+  principio sin tocar la demo; 1 vez por minuto. **Ojo**: revoca las sesiones abiertas de la cuenta (quien esté dentro vuelve al
+  login; `services/demo.js`). El admin **real** puede reiniciar un ámbito concreto con
   `POST /api/demo/reiniciar { "ambito": "sim-org" }` — así se siembra la primera vez en producción (DEPLOY.md).
 - **CLI**: `node scripts/seed_demo.js --ambito=sim-org` (o `--todo` para demo y simulación).
+- **QA manual (14-nov-2026)**: los cuatro perfiles recorridos de la A a la Z en Chrome con pagos reales en PayPal sandbox; correcciones y hallazgos en `handover.md` (entrada "QA de la simulación").
 - **Pruebas**: `tests/simulacion.test.js` (claims, cambio de perfil, continuidad A→Z, aislamiento en ambos sentidos,
   envío simulado de cotización, lo global no se guarda, recorrido por perfil, correos, proveedor de pago, reinicio por ámbito).
 

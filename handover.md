@@ -6839,3 +6839,11 @@ Captura: `sessions/2026-11-14/simulacion-01-admin-bandeja.png`.
 - Las cuentas con la cabecera de perfil: todo lo anterior se hizo cambiando de pestaña en el topbar; cada cambio recarga la página del perfil, como está diseñado.
 - Capturas: `sessions/2026-11-14/simulacion-05-admin-cotizaciones-boton-enviar.png`, `-06-admin-finanzas-pagos.png`, `-07-wizard-paso4-progreso-cliente.png`. (No se guardan capturas con la contraseña sandbox a la vista.)
 - Pruebas: `i18n.test.js` 6/6 tras cada cambio; `node --check wizard.js` OK. Sin cambios en el tracker.
+
+## 2026-11-14 — Producción al día (Rick: "actualicemos los .md, subamos a git y pasa todo a producción")
+
+- **Secretos nuevos** (Secret Manager, `farmazed`, con `secretAccessor` para `farmazed-api-sa`): `paypal-sandbox-comprador-email`, `paypal-sandbox-comprador-password` (valores de `tracker/.env`, canalizados sin imprimir). No hacen falta `paypal-sandbox-client-id/secret`: producción corre con `PAYPAL_ENV=sandbox` y la app general, así que las cuentas demo ya pagaban en sandbox.
+- **Tracker**: `farmazed-tracker-00014-zop` (`--source tracker --no-traffic --tag candidata` + `--update-secrets` de los dos secretos → `/health` OK → humo como `simulacion@farmazed.com`: `/api/demo/estado` devuelve `pagoDemo.proveedor=paypal-sandbox` con comprador y clave → `update-traffic --to-latest`, 100 %).
+- **Web**: `farmazed-web-00024-66j`, imagen `gcr.io/farmazed/farmazed-web:qa-20261114` (`gcloud builds submit` 29 s + `run deploy --image`). Humo en https://farmazed.com: `wizard.js` con `progresoCliente`, `cotizaciones.html` con el botón `btn-primary btn-enviar`, `expediente.html` con `COWORK_HABILITADO`.
+- Incluye todo lo de hoy: fix TMPDIR del entorno de pruebas (solo scripts), panel de pago de prueba con botones Copiar, "Abrir en Cowork" en pausa, y las cuatro correcciones del QA de la simulación. `sim-org` en producción no se resembró (el reinicio lo hace cualquiera desde el topbar).
+- Docs tocados en esta sesión: `DEMO.md` (panel de pago, aviso de revocación al reiniciar, QA manual), `DEPLOY.md` (9c: secretos del comprador), `PAYPAL_SETUP.md`, `PENDIENTES.md` (sección "Simulación (TAREA 66) — pendientes" y nota de la TAREA 64), `tracker/.env.example`, memoria del agente.
