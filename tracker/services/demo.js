@@ -207,7 +207,18 @@ async function sembrarDemo(ambitoId = DEMO_ORG_ID) {
   const marca = { demo: true, ...(amb.sim ? { sim: true } : {}) };
   await borrarDatosDemo(amb.orgId);
   const now = admin.firestore.Timestamp.now();
-  for (const c of amb.cuentas) await upsertCuenta(c);
+  // Una cuenta cuya clave no está configurada y que todavía no existe se OMITE (aviso en el log) en vez de tumbar todo el
+  // sembrado: en producción las claves de farmaceutico/legal/admin (TAREAS 63/64) se crean por separado y, hasta entonces,
+  // el botón [Reiniciar cuenta demo] debe seguir funcionando para las cuentas que sí existen.
+  const omitidas = [];
+  for (const c of amb.cuentas) {
+    try { await upsertCuenta(c); }
+    catch (e) {
+      if (!/Falta la variable con la clave/.test(e.message)) throw e;
+      console.warn('[demo] cuenta omitida en el sembrado:', c.correo, '— sin clave configurada');
+      omitidas.push(c.correo);
+    }
+  }
 
   await db().collection('orgs').doc(amb.orgId).set({
     nombre: amb.nombreEmpresa, ...marca, plan: 'registro', pais: 'Panamá',
@@ -283,7 +294,7 @@ async function sembrarDemo(ambitoId = DEMO_ORG_ID) {
     createdAt: now, actualizadoEn: now, actualizadoPor: null,
   });
 
-  return { cuentas: amb.cuentas.map(c => ({ correo: c.correo, rol: c.role })), orgId: amb.orgId };
+  return { cuentas: amb.cuentas.filter(c => !omitidas.includes(c.correo)).map(c => ({ correo: c.correo, rol: c.role })), omitidas, orgId: amb.orgId };
 }
 
 /**
