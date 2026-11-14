@@ -62,7 +62,8 @@ const TRAMITES = [
 const VIAS_REGISTRO = [
   { id: 'Regular',              label: 'Regular',              disponible: true,  flujoPropio: true,  paisesARR: false },
   { id: 'Abreviado',            label: 'Abreviado',            disponible: true,  flujoPropio: true,  paisesARR: true  },
-  { id: 'Reconocimiento Mutuo', label: 'Reconocimiento Mutuo', disponible: true,  flujoPropio: false, paisesARR: true  },
+  // D4 (14-nov-2026): el panel de países es del D.E. 29/2023 (Abreviado) y no aplica a esta vía.
+  { id: 'Reconocimiento Mutuo', label: 'Reconocimiento Mutuo', disponible: true,  flujoPropio: false, paisesARR: false },
   { id: 'Reconocimiento WLA',   label: 'Reconocimiento WLA',   disponible: true,  flujoPropio: false, paisesARR: false },
   // 5.ª vía — B01/Z17. La Fase 2 verificó el Drive completo: NO existe matriz,
   // ni borrador, ni notas de WHO-PQP. Queda declarada y apagada: el día que
