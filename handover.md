@@ -6753,8 +6753,27 @@ Decisiones de Rick (14-nov, chat): (1) **una cuenta genérica** para todo el per
   empleados propios (misma cuenta para todo).
 - La carga de documentos como Cliente sigue siendo la **simulada** del modo demo (aviso en vez del explorador de archivos).
 
+### Verificación en el navegador (local, Docker farmazed-demo, 14-nov-2026)
+Entrada como `simulacion@` → portal del cliente con la barra ámbar (Cliente activo) y el panel "Simulación" (6 pasos, 0 de 6);
+pestaña Administrador → `admin/bandeja.html` con sidebar completo (Precios, Finanzas), los 3 expedientes FZ-SIM y el recorrido del
+admin (3 pasos); pestaña Responsable Farmacéutico → sidebar de personal, rótulo del rol y recorrido del regente. Hallazgo corregido
+(`0ccc8cb`): la captación inicial del cliente (overlay z-index 2000) tapaba las pestañas; en la simulación el topbar sube a 2100.
+Captura: `sessions/2026-11-14/simulacion-01-admin-bandeja.png`.
+
+### Producción (14-nov-2026, autorizado por Rick: "Local y también en producción")
+1. Secret Manager: `demo-password-simulacion` (versión 1, valor tomado de `tracker/.env`, nunca impreso) + `secretAccessor` para
+   `farmazed-api-sa`. 2. Tracker: `farmazed-tracker-00012-zof` (`--source tracker`, candidata sin tráfico → health OK → 100 %
+   tráfico) con `DEMO_PASSWORD_SIMULACION` montada. 3. Web: imagen `gcr.io/farmazed/farmazed-web:sim-20261114` → revisión
+   `farmazed-web-00023-gjh`. 4. Cuenta `simulacion@farmazed.com` creada en el Auth de producción con sus claims (Admin SDK local con
+   ADC, script en scratchpad) y `sim-org` sembrada desde el propio tracker (`POST /api/demo/reiniciar` como la cuenta → 200,
+   `ambito: sim-org`). 5. Verificado en producción con la cabecera: los 4 perfiles ven FZ-SIM-2026-0002/0003/0004; recorrido admin
+   "Simulación", 3 pasos, siguiente "Responsable Farmacéutico". Este deploy lleva también todo lo de `13ab58c` (roles,
+   admin.demo, pago demo sandbox) y la TAREA 65 (checklist) que no estaban en producción.
+- Antes del deploy, `647ef0f`: el sembrado omite con aviso las cuentas sin clave (farmaceutico/legal/admin siguen sin secreto en
+  prod) en vez de fallar — así [Reiniciar cuenta demo] y el primer sembrado no se rompen.
+
 ### Pendiente / siguiente
-- **Producción** (DEPLOY.md 9c): secreto `demo-password-simulacion` + variable en Cloud Run + deploy del tracker y del web + sembrar
-  `sim-org` con el admin real (`POST /api/demo/reiniciar {ambito:'sim-org'}`). Los secretos pendientes de las TAREAS 63/64
-  (farmaceutico, legal, admin, paypal-sandbox) siguen sin crearse: sin `PAYPAL_SANDBOX_*` la simulación paga con el mock.
-- e2e Playwright de la simulación (cambio de pestaña en el navegador) — no hay Chromium en el contenedor; verificación manual en local.
+- Secretos de las TAREAS 63/64 (`demo-password-farmaceutico/legal/admin`, `paypal-sandbox-client-id/secret`): sin crear; las 3
+  cuentas demo nuevas no existen en prod y la simulación paga con el **mock** hasta que haya credenciales sandbox.
+- e2e Playwright de la simulación (cambio de pestaña en el navegador) — no hay Chromium en el contenedor; verificación manual hecha.
+- Decidir si lo global del perfil Admin debe "guardarse" en una copia sombra por ámbito (hoy: se ve, no se guarda).

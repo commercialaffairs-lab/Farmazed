@@ -49,7 +49,8 @@ www.farmazed.com → farmazed-web (us-central1)
 > quedó configurado ese día:
 > - **Secret Manager** habilitado, con `paypal-client-id`, `paypal-client-secret`, `paypal-webhook-id`
 >   (todavía el marcador `sin-webhook`: falta registrar el webhook en PayPal y subir una versión nueva),
->   `smtp-pass`, `demo-password-cliente`, `demo-password-regente`, `demo-password-farmaceutico`, `demo-password-legal`; la cuenta de servicio
+>   `smtp-pass`, `demo-password-cliente`, `demo-password-regente`, `demo-password-simulacion` (14-nov-2026; los de
+>   farmaceutico/legal/admin y paypal-sandbox de las TAREAS 63/64 siguen SIN crear); la cuenta de servicio
 >   `farmazed-api-sa@farmazed.iam.gserviceaccount.com` tiene `secretAccessor` en cada uno.
 > - **Variables del tracker**: `NODE_ENV=production`, `FIREBASE_PROJECT_ID=farmazed`, `GCS_BUCKET=farmazed-docs`,
 >   `PAYMENTS_PROVIDER=paypal`, `PAYPAL_ENV=sandbox`, `PORTAL_URL=https://farmazed.com`, `SMTP_HOST/PORT/USER/FROM`,
