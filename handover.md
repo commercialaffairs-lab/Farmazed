@@ -6793,3 +6793,17 @@ Captura: `sessions/2026-11-14/simulacion-01-admin-bandeja.png`.
 **Producción no afectada:** allí Storage es real (GCS), no hay emulador.
 
 **Sugerencia (no hecha):** el log `[500] … error: 'Internal error'` oculta `e.message`; convendría registrar el mensaje real del lado servidor para no tener que ir al log del emulador.
+
+## 2026-11-14 — Panel de pago de prueba: cuenta compradora PayPal sandbox con botones "Copiar" (Rick)
+
+**Pedido textual:** "ok para destrabar este bloqueo coloquemos las credenciales disponibles y un boton para copiarlas al clipboard y sea mas facil la etapa del pago." (Rick estaba en el login de sandbox.paypal.com al pagar la cotización FZ-SIM-2026-0002 como Cliente.)
+
+**Qué se hizo**
+- `services/payments/index.js` `infoPagoDemo(env)` → `{ proveedor: 'paypal-sandbox'|'mock', comprador: { correo, clave } | null }` a partir de `PAYPAL_SANDBOX_COMPRADOR_EMAIL/_PASSWORD` (nuevas en `.env.example`; solo cuentan si hay credenciales de app sandbox, porque el mock no abre PayPal). Clave vacía o `<…>` → `clave: null` (el panel avisa "Sin configurar").
+- `routes/demo.js` `GET /api/demo/estado` → campo `pagoDemo` **solo para cuentas demo/simulación**; las reales reciben `null` (prueba en `simulacion.test.js`).
+- `client-dashboard.html` (vista Cotización): si hay comprador y una cotización aceptada sin pagar, panel azul "Pago de prueba (PayPal sandbox): no es dinero real." con Correo y Contraseña, cada una con botón **Copiar** (`navigator.clipboard` con respaldo `execCommand`; el botón dice "Copiado" 1,5 s). "Pagar con PayPal" abre entonces PayPal en **otra pestaña** (abierta dentro del clic para que el navegador no la bloquee) y esta se queda con el panel; al volver (`visibilitychange`) recarga la cotización. Si el navegador bloquea la pestaña, cae al comportamiento de siempre (misma pestaña). `api.js getEstadoDemo()`.
+- i18n: 7 claves nuevas en `_partes/portal.json` (en/fr/pt), diccionarios regenerados (`npm run i18n`), `i18n.test.js` en verde.
+- Pruebas: `tests/pago_demo_info.test.js` (5, sin emuladores) + 3 aserciones en `simulacion.test.js`.
+- Docs: DEMO.md → Pagos, PAYPAL_SETUP.md (cuentas sandbox), DEPLOY.md 9c (secretos `paypal-sandbox-comprador-email/password`).
+
+**Lo que falta de Rick:** la **contraseña** de la cuenta compradora `sb-ncruf48829159@personal.example.com` no está en ningún archivo (se ve en developer.paypal.com → Sandbox Accounts → View/Edit). En `tracker/.env` local quedó `PAYPAL_SANDBOX_COMPRADOR_EMAIL` con ese correo y `PAYPAL_SANDBOX_COMPRADOR_PASSWORD=` vacía: el panel muestra el correo con "Copiar" y, en la fila de la contraseña, "Sin configurar". Al rellenarla hay que reiniciar la demo Docker (las `PAYPAL_*` de `tracker/.env` se leen al arrancar). En producción, mientras no existan los secretos sandbox de 9b(2), la simulación paga con el mock y el panel no aparece.

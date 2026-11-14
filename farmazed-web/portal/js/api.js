@@ -163,6 +163,8 @@ const api = {
   getOrgMembers: (orgId) => apiFetch(`/api/orgs/${orgId}/members`),
 
   getEmployees: () => apiFetch('/api/employees'),
+  // ¿Demo/simulación? + cómo paga (pagoDemo: proveedor y cuenta compradora sandbox para el panel de pago de prueba).
+  getEstadoDemo: () => apiFetch('/api/demo/estado'),
   reiniciarDemo: () => apiFetch('/api/demo/reiniciar', { method: 'POST' }),
   // Panel "Recorrido demo" (solo cuentas demo), en el idioma pedido (es|en|fr|pt; el tracker cae al español).
   getRecorridoDemo: (idioma) => apiFetch(`/api/demo/recorrido${idioma ? `?idioma=${encodeURIComponent(idioma)}` : ''}`),

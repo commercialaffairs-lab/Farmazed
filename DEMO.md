@@ -221,7 +221,12 @@ Una sola cuenta **genérica** para entrenar y evaluar al personal en sesión rem
   (`services/demo_recorrido.js`, textos propios en `demo_recorrido_textos.js SIM_PASOS`) marca los pasos del perfil
   activo y, al completarlos, ofrece "Seguir como <siguiente perfil> →".
 - **Pagos**: PayPal **sandbox** real cuando el servidor tiene `PAYPAL_SANDBOX_CLIENT_ID/SECRET` (o `PAYPAL_CLIENT_ID/SECRET`
-  con `PAYPAL_ENV=sandbox`); si no, el mock. Nunca la API live (misma regla que las cuentas demo). Facturas con el PAC
+  con `PAYPAL_ENV=sandbox`); si no, el mock. Nunca la API live (misma regla que las cuentas demo). **Panel de pago de
+  prueba** (Rick, 14-nov-2026): con sandbox, el checkout real pide iniciar sesión con una cuenta compradora de prueba; si el
+  tracker tiene `PAYPAL_SANDBOX_COMPRADOR_EMAIL/_PASSWORD` (.env.example; cuenta Personal de developer.paypal.com → Sandbox
+  Accounts), `GET /api/demo/estado` las devuelve en `pagoDemo.comprador` **solo a cuentas demo** y la vista Cotización las
+  muestra con botones "Copiar"; "Pagar con PayPal" abre entonces PayPal en otra pestaña para que esta siga a la vista y, al
+  volver, recarga la cotización. Sin esas variables el botón se comporta como siempre. Facturas con el PAC
   simulado y numeración `DEMO-`. Sin correos (`esCorreoDemo` incluye `simulacion@`).
 - **Aislamiento (mismo criterio duro del admin demo)**: `utils/demo_scope.js` `ambitoDe(user)` / `esDocDelAmbito(user, doc)`:
   la simulación nunca ve `demo-org` ni lo real, y las cuentas demo nunca ven `sim-org` (los leads sin orgId se separan por

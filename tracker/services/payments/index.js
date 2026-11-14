@@ -39,4 +39,20 @@ function urlsDeRetorno(motivo, params = {}) {
   };
 }
 
-module.exports = { getProvider, urlsDeRetorno };
+/**
+ * Cómo paga una cuenta demo/simulación y con qué cuenta COMPRADORA de prueba (Rick, 14-nov-2026: "coloquemos las
+ * credenciales disponibles y un botón para copiarlas"). `proveedor` es 'paypal-sandbox' si hay credenciales de app
+ * sandbox (el checkout real de sandbox.paypal.com pide usuario y clave) o 'mock' (paga solo, sin pantalla de PayPal).
+ * `comprador` sale de PAYPAL_SANDBOX_COMPRADOR_EMAIL / _PASSWORD (.env.example): una cuenta Personal de prueba de
+ * developer.paypal.com → Sandbox Accounts, dinero ficticio. Solo se expone a cuentas demo (routes/demo.js /estado).
+ */
+const hayValor = (v) => typeof v === 'string' && v.trim() !== '' && !v.trim().startsWith('<');
+function infoPagoDemo(env = process.env) {
+  const sandbox = !!require('./paypal').credencialesSandbox(env);
+  const comprador = sandbox && hayValor(env.PAYPAL_SANDBOX_COMPRADOR_EMAIL)
+    ? { correo: env.PAYPAL_SANDBOX_COMPRADOR_EMAIL.trim(), clave: hayValor(env.PAYPAL_SANDBOX_COMPRADOR_PASSWORD) ? env.PAYPAL_SANDBOX_COMPRADOR_PASSWORD : null }
+    : null;
+  return { proveedor: sandbox ? 'paypal-sandbox' : 'mock', comprador };
+}
+
+module.exports = { getProvider, urlsDeRetorno, infoPagoDemo };

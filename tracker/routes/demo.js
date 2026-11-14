@@ -13,6 +13,7 @@ const { esSimulacion, ambitoDe, ORGS_AISLADAS, PERFILES_SIMULACION } = require('
 const { effectiveRole } = require('../middleware/permissions');
 const { recorridoDemo } = require('../services/demo_recorrido');
 const { normalizarIdioma } = require('../services/demo_recorrido_textos');
+const { infoPagoDemo } = require('../services/payments');
 
 const router = Router();
 
@@ -29,6 +30,9 @@ router.get('/estado', requireAuth, (req, res) => {
     // Simulación (Rick, 14-nov-2026): el perfil efectivo de este request (cabecera X-Fz-Perfil) y los que puede adoptar.
     simulacion, perfil: simulacion ? req.user.role : null, perfiles: simulacion ? PERFILES_SIMULACION : [],
     cuentas: (simulacion ? [CUENTA_SIMULACION] : CUENTAS).map(c => ({ correo: c.correo, rol: c.role })),
+    // Pago de prueba (14-nov-2026): proveedor con el que paga esta cuenta demo y la cuenta compradora sandbox (si está
+    // configurada) para que el portal la muestre con botones de copiar al abrir el checkout de PayPal. Nunca a cuentas reales.
+    pagoDemo: esCuentaDemo(req.user) ? infoPagoDemo() : null,
   });
 });
 

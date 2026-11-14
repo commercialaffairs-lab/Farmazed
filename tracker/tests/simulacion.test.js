@@ -50,6 +50,9 @@ describe('Simulación — una cuenta, cuatro perfiles, ámbito sim-org aislado',
     assert.deepEqual([sinCabecera.json.demo, sinCabecera.json.simulacion, sinCabecera.json.perfil, sinCabecera.json.orgId], [true, true, 'cliente_titular', SIM_ORG_ID]);
     assert.deepEqual(sinCabecera.json.perfiles, ['cliente_titular', 'admin', 'regente', 'abogado']);
     assert.deepEqual(sinCabecera.json.cuentas.map(c => c.correo), ['simulacion@farmazed.com']);
+    // Panel de pago de prueba (14-nov-2026): cómo paga esta cuenta y la cuenta compradora sandbox (si está configurada).
+    assert.ok(['mock', 'paypal-sandbox'].includes(sinCabecera.json.pagoDemo?.proveedor), 'pagoDemo.proveedor');
+    assert.ok('comprador' in sinCabecera.json.pagoDemo, 'pagoDemo.comprador (null si no hay PAYPAL_SANDBOX_COMPRADOR_*)');
     const comoAdmin = await api(tSim, 'GET', '/api/demo/estado', undefined, perfil('admin'));
     assert.equal(comoAdmin.json.perfil, 'admin');
     const invalido = await api(tSim, 'GET', '/api/demo/estado', undefined, perfil('superusuario'));
@@ -57,6 +60,7 @@ describe('Simulación — una cuenta, cuatro perfiles, ámbito sim-org aislado',
     // La cuenta demo clásica no cambia: estado sin simulación.
     const demo = await api(tCliDemo, 'GET', '/api/demo/estado');
     assert.deepEqual([demo.json.simulacion, demo.json.perfil, demo.json.orgId], [false, null, DEMO_ORG_ID]);
+    assert.ok(demo.json.pagoDemo && 'comprador' in demo.json.pagoDemo, 'las cuentas demo clásicas también reciben pagoDemo');
   });
 
   test('estado inicial de sim-org: empresa propia, 3 expedientes FZ-SIM, cotización 4 en borrador, lead sim:true', async () => {
@@ -114,6 +118,7 @@ describe('Simulación — una cuenta, cuatro perfiles, ámbito sim-org aislado',
     // Una cuenta real con la cabecera no gana nada: sigue siendo cliente.
     assert.equal((await api(real.token, 'GET', '/api/admin/estado', undefined, perfil('admin'))).status, 403);
     assert.equal((await api(real.token, 'GET', '/api/me/permissions', undefined, perfil('admin'))).json.role, 'cliente_titular');
+    assert.equal((await api(real.token, 'GET', '/api/demo/estado')).json.pagoDemo, null, 'una cuenta real nunca recibe la cuenta compradora de prueba');
   });
 
   test('perfil Admin: ajusta y envía la cotización 4 (envío simulado); el Cliente la ve enviada; lo global se ve pero no se guarda', async () => {
