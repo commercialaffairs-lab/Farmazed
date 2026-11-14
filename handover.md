@@ -6817,3 +6817,25 @@ Captura: `sessions/2026-11-14/simulacion-01-admin-bandeja.png`.
 **Cambios (`admin/expediente.html`):** icono `bi-robot` en vez de ⚡; estilo apagado sobre el topbar navy (texto blanco al 62 %, borde discontinuo blanco al 38 %, fondo casi transparente, `white-space:nowrap`, cursor `not-allowed`), pastilla "EN PAUSA" ámbar tenue (`#ffd166` sobre ámbar al 16 %); `aria-disabled` y `title` explicativo. Al pulsarlo muestra un aviso ("…deshabilitado temporalmente: se activará cuando se valide el acceso a FADDI.") y NO abre el modal; el modal y `buildCoworkContext()` siguen intactos: para reactivar, `COWORK_HABILITADO = true` y devolver el estilo. i18n: 3 claves nuevas en `_partes/backoffice.json` (en/fr/pt), `i18n.test.js` 6/6. Verificado en Chrome (perfil Administrador de la simulación): captura `sessions/2026-11-14/simulacion-04-boton-cowork-en-pausa.png`.
 
 **Pendiente para reactivarlo:** sesión real en FADDI con la cuenta de MINSA (la hace Rick o alguien autorizado), corregir la URL del plugin MCP en la configuración de Cowork y decidir cómo se adjuntan los archivos.
+
+## 2026-11-14 — QA de la simulación de la A a la Z (Rick: "revisa todos los workflows y córrelos tú mismo")
+
+**Síntoma reportado:** como Administrador, el paso 1 del panel dice "pulsa Enviar cotización" pero en Cotizaciones el botón parecía texto suelto. Causa: `admin/cotizaciones.html` usaba la clase `btn-fz`, que esa página no define. → `btn btn-sm btn-primary`.
+
+**Recorrido ejecutado** (pestaña aislada de Chrome con la cuenta de simulación, tras "Reiniciar simulación"; demo Docker local):
+- Cliente 6/6: captación → producto con "Rellenar con datos de ejemplo" → 24 documentos simulados → acepta cotización 2 → paga en PayPal **sandbox real** (login con la cuenta compradora del panel, "Completar compra", vuelta y captura: "Pagado con PayPal (orden 9JF…)") → mensaje. Panel: "¡Tramo completo!" + "Seguir como Administrador →".
+- Administrador 3/3: envía la cotización 4 (botón ya visible) → lead "Farmacia Ejemplo" a Contactado con nota → (como Cliente: acepta y paga la cotización 4 en sandbox, orden 0JR…) → el pago aparece en Finanzas (dos facturas `fac_pp_*`) y en el expediente (tarjeta Pagos D12 con honorarios/DNFD/MEF/IEA). "Seguir como Responsable Farmacéutico →".
+- Responsable Farmacéutico 3/3: aprueba el 15.5 del Producto 3 (✓) → confirma Técnica/matrices en "Fase 8 — Confirmaciones" → el lead ya constaba atendido. "Seguir como Responsable Legal →".
+- Responsable Legal 3/3: aprueba el 15.2 → confirma Legal → "Solicitar" una declaración jurada en el Producto 2 (diálogo de instrucciones → "Solicitud enviada al cliente"); el caso pasa a `pending_docs` y el Cliente lo ve en "Mis Documentos" como pendiente. "Seguir como Cliente →".
+
+**Inconsistencias encontradas y corregidas (además del botón):**
+1. `admin/expediente.html` `requestDoc`: tras "Solicitar" el selector de estado seguía en la fase anterior hasta recargar (el servidor sí había movido el caso a documentos pendientes). Ahora relee el caso y repinta: "Documentos pendientes (actual)" al instante.
+2. `portal/js/wizard.js`: la barra del paso 4 contaba los documentos internos de Farmazed (recibos de tasas), así que el cliente se quedaba en "24 de 27 · 89 %" con todo lo suyo subido. Nuevo `progresoCliente()` (solo `responsable !== 'farmazed'`) en la barra y en el resumen del paso 5: "24 de 24 · 100 %".
+3. `wizard.js`: el estado de cada casilla salía como clave interna en inglés ("pending", "uploaded") → `ETIQUETA_ESTADO_DOC` + `t()`: Pendiente / Subido / Aprobado / Rechazado / Solicitado.
+4. Código FADDI `PENDIENTE_VERIFICAR` (convención de la TAREA 65) se mostraba en crudo al cliente ("PENDIENTE_VERIFICAR — Otros Documentos Aclaratorios") y al personal. El cliente ya no ve código en esos documentos; el back-office muestra "s/n" con tooltip "Código FADDI pendiente de verificar" (clave nueva en `_partes/backoffice.json`, en/fr/pt). El dato no cambia.
+
+**Observaciones sin cambio (para decidir):**
+- "Reiniciar simulación" revoca las sesiones de la cuenta (`services/demo.js revokeRefreshTokens`, herencia de la demo): en una sesión remota con varios empleados dentro de la misma cuenta, un reinicio saca a todos al login. Si molesta, se puede no revocar en `sim-org`.
+- Las cuentas con la cabecera de perfil: todo lo anterior se hizo cambiando de pestaña en el topbar; cada cambio recarga la página del perfil, como está diseñado.
+- Capturas: `sessions/2026-11-14/simulacion-05-admin-cotizaciones-boton-enviar.png`, `-06-admin-finanzas-pagos.png`, `-07-wizard-paso4-progreso-cliente.png`. (No se guardan capturas con la contraseña sandbox a la vista.)
+- Pruebas: `i18n.test.js` 6/6 tras cada cambio; `node --check wizard.js` OK. Sin cambios en el tracker.

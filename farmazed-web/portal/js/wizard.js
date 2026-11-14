@@ -325,15 +325,27 @@ function collectEntities() {
 // ── Step 4: Carga documental ──────────────────────────────────────────────────
 let currentChecklist = [];
 
+// Progreso SOLO sobre los documentos del cliente: los de Farmazed (tasas y recibos internos) no los sube él y
+// contarlos dejaba la barra clavada en "24 de 27" con todo lo suyo ya subido (QA de la simulación, 14-nov-2026).
+function progresoCliente(checklist) {
+  const propios  = (checklist || []).filter(d => d.responsable !== 'farmazed');
+  const uploaded = propios.filter(d => d.uploaded).length;
+  const total    = propios.length;
+  return { uploaded, total, percent: total ? Math.round((uploaded / total) * 100) : 0 };
+}
+
+// Estado de cada casilla en el idioma de la interfaz (antes salía la clave interna en inglés: "pending").
+const ETIQUETA_ESTADO_DOC = { pending: 'Pendiente', pending_upload: 'Pendiente', uploaded: 'Subido', approved: 'Aprobado', rejected: 'Rechazado', requested: 'Solicitado' };
+
 async function renderChecklist() {
   const container = $('#checklist-container');
   if (!container || !state.caseId) return;
   container.innerHTML = '<div class="text-center py-4"><div class="spinner-border text-primary"></div></div>';
 
   try {
-    const { checklist, progress } = await api.getChecklist(state.caseId);
+    const { checklist } = await api.getChecklist(state.caseId);
     currentChecklist = checklist;
-    renderProgressBar(progress);
+    renderProgressBar(progresoCliente(checklist));
 
     // D11 (organizacion/03_INSTRUCCIONES_DEV.md fila D11, depende de D10):
     // separar por responsable, no por obligatorio/opcional — esa distinción
@@ -442,9 +454,9 @@ function renderDocCard(doc) {
         <div class="doc-status-icon fs-5 mt-1">${isPhysicalOnly ? '📍' : (icons[status] || '⬜')}</div>
         <div class="flex-grow-1">
           <div class="d-flex align-items-center gap-2 flex-wrap">
-            <span class="fw-semibold small">${esc(doc.faddiCode)} — ${esc(t(doc.name))}</span>
+            <span class="fw-semibold small">${doc.faddiCode === 'PENDIENTE_VERIFICAR' ? '' : `${esc(doc.faddiCode)} — `}${esc(t(doc.name))}</span>
             ${doc.required ? `<span class="badge bg-danger-subtle text-danger border border-danger-subtle small">${esc(t('Obligatorio'))}</span>` : `<span class="badge bg-secondary-subtle text-secondary border small">${esc(t('Opcional'))}</span>`}
-            ${!isPhysicalOnly ? `<span class="badge bg-${badge[status] || 'secondary'} small">${esc(status)}</span>` : ''}
+            ${!isPhysicalOnly ? `<span class="badge bg-${badge[status] || 'secondary'} small">${esc(t(ETIQUETA_ESTADO_DOC[status] || 'Pendiente'))}</span>` : ''}
           </div>
           <div class="text-muted small mt-1">${esc(t(doc.description))}</div>
           ${up?.file ? `<div class="small text-success mt-1">📎 ${esc(up.file.name)}</div>` : ''}
@@ -660,7 +672,8 @@ async function renderConfirmation() {
 
   $('#confirm-product-name').textContent = cs.product?.nombreComercial || t('(sin nombre)');
   $('#confirm-tramite').textContent      = cs.tramiteType;
-  $('#confirm-progress').textContent     = t('{subidos}/{total} documentos', { subidos: cl.progress.uploaded, total: cl.progress.total });
+  const progreso = progresoCliente(cl.checklist);
+  $('#confirm-progress').textContent     = t('{subidos}/{total} documentos', { subidos: progreso.uploaded, total: progreso.total });
 
   const missingEl = $('#confirm-missing');
   if (missing.length) {

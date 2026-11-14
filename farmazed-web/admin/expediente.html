@@ -519,7 +519,9 @@
                 onclick="revisarDoc('${esc(doc.id)}','rejected')" title="${esc(t('Rechazar'))}">✗</button>` : '';
 
       return `<div class="doc-item" ${rowStyle}>
-        <span class="doc-code">${esc(item.faddiCode)}</span>
+        ${item.faddiCode === 'PENDIENTE_VERIFICAR'
+          ? `<span class="doc-code text-muted" title="${esc(t('Código FADDI pendiente de verificar'))}">s/n</span>`
+          : `<span class="doc-code">${esc(item.faddiCode)}</span>`}
         <span class="${getDocStatusColor(status)}">${getDocStatusIcon(status)}</span>
         <span class="doc-name">${esc(nombreDoc)}${!item.required ? ` <span class="text-muted" style="font-size:.7rem">${esc(t('(opcional)'))}</span>` : ''}${isFarmazedDoc ? ` <span class="badge bg-primary-subtle text-primary border border-primary-subtle" style="font-size:.65rem">${esc(t('Tarea interna Farmazed'))}</span>` : ''}${versionBadge}</span>
         ${doc ? `<a href="#" class="btn btn-xs btn-outline-primary btn-sm py-0 px-2 small"
@@ -892,7 +894,9 @@
     try {
       await api.requestDocument(caseId, faddiDocId, msg);
       await avisar(t('Solicitud enviada al cliente.'));
-      docsData = await api.listDocuments(caseId);
+      // El pedido mueve el expediente a "documentos pendientes" (services/document_requests.js): se relee el caso
+      // para que el selector de estado y la cabecera lo reflejen sin recargar (QA simulación, 14-nov-2026).
+      [caseData, docsData] = await Promise.all([api.getCase(caseId), api.listDocuments(caseId)]);
       render();
     } catch (e) {
       await avisar(t('Error: {error}', { error: e.message }));
