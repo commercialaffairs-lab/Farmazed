@@ -49,7 +49,8 @@ www.farmazed.com → farmazed-web (us-central1)
 > quedó configurado ese día:
 > - **Secret Manager** habilitado, con `paypal-client-id`, `paypal-client-secret`, `paypal-webhook-id`
 >   (todavía el marcador `sin-webhook`: falta registrar el webhook en PayPal y subir una versión nueva),
->   `smtp-pass`, `demo-password-cliente`, `demo-password-regente`, `demo-password-farmaceutico`, `demo-password-legal`; la cuenta de servicio
+>   `smtp-pass`, `demo-password-cliente`, `demo-password-regente`, `demo-password-simulacion` (14-nov-2026; los de
+>   farmaceutico/legal/admin y paypal-sandbox de las TAREAS 63/64 siguen SIN crear); la cuenta de servicio
 >   `farmazed-api-sa@farmazed.iam.gserviceaccount.com` tiene `secretAccessor` en cada uno.
 > - **Variables del tracker**: `NODE_ENV=production`, `FIREBASE_PROJECT_ID=farmazed`, `GCS_BUCKET=farmazed-docs`,
 >   `PAYMENTS_PROVIDER=paypal`, `PAYPAL_ENV=sandbox`, `PORTAL_URL=https://farmazed.com`, `SMTP_HOST/PORT/USER/FROM`,
@@ -253,6 +254,17 @@ ejecuta sin el visto bueno de Rick; cada paso de escritura trae antes su dry-run
     developer.paypal.com, no las live) y montarlos como `PAYPAL_SANDBOX_CLIENT_ID` / `PAYPAL_SANDBOX_CLIENT_SECRET`; sin ellos las cuentas
     demo siguen con el mock; (3) volver a correr el seed. Hace falta una cuenta de **comprador sandbox** (developer.paypal.com → Sandbox
     accounts → Personal) para aprobar el pago; su correo/clave de prueba se entregan a quien haga la demo, no van al repo.
+9c. **Cuenta de simulación** (`simulacion@farmazed.com`, `DEMO.md` → "Simulación", TAREA 66): (1) crear el secreto
+    `demo-password-simulacion` (la clave la fijó Rick por chat; nunca en el repo) y darle `secretAccessor` a `farmazed-api-sa`;
+    (2) montarlo como `DEMO_PASSWORD_SIMULACION` en el servicio del tracker (`--update-secrets=DEMO_PASSWORD_SIMULACION=demo-password-simulacion:latest`)
+    y desplegar la revisión; (3) sembrar `sim-org` la primera vez SIN entrar con la cuenta (todavía no existe): el admin real
+    llama `POST /api/demo/reiniciar` con cuerpo `{ "ambito": "sim-org" }` (crea la cuenta con la clave del secreto, la empresa
+    "Laboratorio Simulación S.A." y los datos de ejemplo). Alternativa desde una máquina con credenciales: `cd tracker && node
+    scripts/seed_demo.js --prod --project=farmazed --confirm --ambito=sim-org`. Después, [Reiniciar simulación] en el topbar de
+    la propia cuenta deja todo como al principio. Pagos: PayPal **sandbox** con los secretos del paso 9b(2); sin ellos, el mock.
+    Panel de pago de prueba (14-nov-2026): además, secretos `paypal-sandbox-comprador-email` / `paypal-sandbox-comprador-password`
+    (cuenta Personal de Sandbox Accounts) montados como `PAYPAL_SANDBOX_COMPRADOR_EMAIL` / `PAYPAL_SANDBOX_COMPRADOR_PASSWORD`:
+    sin ellos las cuentas demo pagan igual pero el portal no les muestra la cuenta compradora con botones "Copiar". Creados y montados el 14-nov-2026 (producción corre con `PAYPAL_ENV=sandbox`, así que la simulación ya paga en sandbox real y ve el panel).
 10. **Humo en producción**: login de un cliente sembrado, verificación de correo del registro abierto,
    descarga de un documento (URL firmada) y un pago sandbox.
 

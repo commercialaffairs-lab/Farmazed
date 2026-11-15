@@ -306,6 +306,9 @@
     /* ── Modo demo (portal/js/recorrido.js pone body.fz-demo): se ocultan las acciones que no
           entran en el recorrido — invitar miembros (mandaría correos reales) y la suscripción
           (sin planes por ahora, decisión de Rick 01-nov) — y se muestran las ayudas solo-demo. ── */
+    /* Panel de pago de prueba (PayPal sandbox): valor copiable + confirmación del botón */
+    .fz-sandbox-valor { background:#fff; border:1px solid #cfe2ff; border-radius:6px; padding:2px 8px; user-select:all; }
+    .btn-copiar-sandbox.fz-copiado { background:#198754; border-color:#198754; color:#fff; }
     .fz-demo-solo { display: none !important; }
     body.fz-demo .fz-demo-solo { display: inline-flex !important; }
     body.fz-demo #form-invitar-miembro, body.fz-demo #btn-suscribir, body.fz-demo #btn-cancelar-suscripcion { display: none !important; }
@@ -430,6 +433,7 @@
       </ul>
 
       <ul class="topbar-item list-unstyled d-inline-flex align-items-center mb-0 gap-3">
+        <li id="tb-simulacion" class="d-flex align-items-center"></li><!-- pestañas de perfil: solo en la cuenta de simulación -->
         <li id="tb-idioma" class="d-flex align-items-center"></li>
         <li id="tb-demo" class="d-flex align-items-center"></li>
         <!-- Manual de usuario (farmazed-web/manual/, generado por tracker/scripts/generar_manual.js; ES/EN/FR/PT) -->
@@ -857,7 +861,7 @@
                 <div class="col-md-6">
                   <label class="form-label small fw-semibold" data-i18n>Tipo de Procedimiento</label>
                   <select class="form-select" id="tipoRegistro"></select>
-                  <div class="form-text" data-i18n>Abreviado requiere aprobación ARR (FDA, EMA, INVIMA, etc.)</div>
+                  <div class="form-text" data-i18n>Abreviado: el producto debe estar registrado y comercializado en un país con autoridad de alto estándar (D.E. 29/2023, Art. 2)</div>
                 </div>
               </div>
               <div class="alert alert-info d-none mt-3" id="tipo-registro-contactenos" data-i18n>
@@ -867,9 +871,9 @@
                 <p class="fw-semibold mb-2" data-i18n>🌍 Verifica si el país de fabricación califica para procedimiento Abreviado (Decreto 29/2023):</p>
                 <div class="row g-2">
                   <div class="col-md-4">
-                    <strong class="small d-block mb-1" data-i18n>Miembros PIC/S</strong>
-                    <span class="text-muted small" data-i18n>Síntesis Química, Biológicos y la mayoría de subtipos</span>
-                    <div class="small mt-1" data-i18n>Alemania, Argentina, Australia, Austria, Bélgica, Canadá, Chipre, Corea del Sur, Croacia, Dinamarca, Eslovaquia, Eslovenia, España, Estados Unidos, Estonia, Finlandia, Francia, Grecia, Hungría, Indonesia, Irán, Irlanda, Islandia, Israel, Italia, Japón, Letonia, Liechtenstein, Lituania, Malasia, Malta, México, Noruega, Nueva Zelanda, Países Bajos, Polonia, Portugal, Reino Unido, República Checa, Rumania, Singapur, Sudáfrica, Suecia, Suiza, Tailandia, Turquía, Ucrania.</div>
+                    <strong class="small d-block mb-1" data-i18n>Autoridades de alto estándar reconocidas por la OMS</strong>
+                    <span class="text-muted small" data-i18n>Todas las categorías de medicamentos</span>
+                    <div class="small mt-1" data-i18n>Alemania, Australia, Austria, Bélgica, Canadá, Chipre, Dinamarca, España, Estados Unidos, Europa (EMA), Finlandia, Francia, Irlanda, Islandia, Italia, Japón, Liechtenstein, Noruega, Países Bajos, Portugal, Reino Unido, República de Corea, Singapur, Suecia, Suiza.</div>
                   </div>
                   <div class="col-md-4">
                     <strong class="small d-block mb-1" data-i18n>OMS Precalificados</strong>
@@ -1140,7 +1144,7 @@
 <!-- render function, since type="module" is deferred regardless of source -->
 <!-- position). Fills window.DATA with real data, then calls window.renderAll(). -->
 <script type="module">
-  import { esc, requireVerifiedLogin, logout, montarBotonDemo, esDemo } from './portal/js/auth.js';
+  import { esc, requireVerifiedLogin, logout, montarBotonDemo, esDemo, montarPestanasSimulacion } from './portal/js/auth.js';
   // Panel del recorrido: demo (siempre) o cliente real (si lo activó en "Mi cuenta").
   import { montarRecorrido, activarRecorrido, desactivarRecorrido } from './portal/js/recorrido.js';
   import { avisar, confirmar, preguntar } from './portal/js/dialogos.js';
@@ -1198,6 +1202,7 @@
 
   const user = await requireVerifiedLogin('login.html');
   montarBotonDemo(document.getElementById('tb-demo')); // solo aparece en la cuenta de demostración
+  montarPestanasSimulacion(document.getElementById('tb-simulacion')); // solo en la cuenta de simulación (cambio de perfil)
   if (!user) return; // en camino a verificar-correo.html
 
   // "Ir al paso" del recorrido (demo o cliente real; portal/js/recorrido.js): abre el módulo donde se
@@ -1647,8 +1652,9 @@
             honorarios_saldo: pagados.has('honorarios_saldo'),
           };
         })(),
-        // §H.8 (TAREA 21): plazo de subsanación (Art. 22 D.E. 27/2024) —
-        // solo tiene sentido mientras el caso está observado por DNFD.
+        // §H.8 (TAREA 21): plazo de subsanación — solo tiene sentido mientras
+        // el caso está observado por DNFD. (D5: la nota interna del Abreviado no
+        // llega al cliente; el tracker la quita.)
         fechaLimiteSubsanacion:     c.status === 'observado_dnfd' ? tsToISODate(c.fechaLimiteSubsanacion) : null,
         fechaLimiteSubsanacionNota: c.status === 'observado_dnfd' ? (c.fechaLimiteSubsanacionNota || null) : null,
         formularios: { aplicables: formLists[i].aplicables || [], porConfirmar: formLists[i].porConfirmar || [] },
@@ -2082,11 +2088,63 @@ async function loadCotizacion() {
   try {
     const { quotes } = await window.__fzApi.getQuotes();
     cotizacionQuotes = quotes.filter(q => q.estado !== 'borrador');
+    await cargarPagoDemo();
     renderCotizacion(cotizacionQuotes);
     cotizacionLoaded = true;
   } catch (err) {
     box.innerHTML = `<div class="alert alert-danger">${esc(err.message)}</div>`;
   }
+}
+
+// ── Pago de prueba (Rick, 14-nov-2026) ─────────────────────────────────────────────────────────
+// En demo/simulación con PayPal SANDBOX el checkout real pide iniciar sesión con una cuenta compradora de prueba.
+// El tracker la manda en /api/demo/estado → pagoDemo (solo a cuentas demo) y aquí se pinta con botones "Copiar";
+// PayPal se abre en OTRA pestaña para que esta siga mostrando los datos. Dinero ficticio siempre.
+let pagoDemoInfo; // undefined = no consultado; null = cuenta real o sin datos
+async function cargarPagoDemo() {
+  if (pagoDemoInfo !== undefined) return pagoDemoInfo;
+  pagoDemoInfo = null;
+  if (!document.body.classList.contains('fz-demo')) return null;
+  try { pagoDemoInfo = (await window.__fzApi.getEstadoDemo()).pagoDemo || null; } catch (e) { /* sin panel: se paga igual */ }
+  return pagoDemoInfo;
+}
+async function copiarTexto(texto, btn) {
+  try {
+    if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(texto);
+    else {
+      const ta = document.createElement('textarea');
+      ta.value = texto; ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove();
+    }
+    const antes = btn.textContent;
+    btn.textContent = t('Copiado'); btn.classList.add('fz-copiado');
+    setTimeout(() => { btn.textContent = antes; btn.classList.remove('fz-copiado'); }, 1500);
+  } catch (e) { await avisar(t('No se pudo copiar. Selecciona el texto y cópialo con Ctrl+C.')); }
+}
+function panelPagoDemoHtml(quotes) {
+  const comprador = pagoDemoInfo?.comprador;
+  const esTitular = window.__fzMyRole === 'cliente_titular';
+  const hayPagoPendiente = esTitular && quotes.some(q => q.estado === 'aceptada' && q.pagoPaypal?.estado !== 'capturada');
+  if (!comprador || !hayPagoPendiente) return '';
+  const fila = (rotulo, valor) => `<div class="d-flex align-items-center gap-2 flex-wrap"><span class="text-muted" style="min-width:6rem">${rotulo}</span>${valor
+    ? `<code class="fz-sandbox-valor">${esc(valor)}</code><button type="button" class="btn-fz btn-fz-sm btn-fz-outline btn-copiar-sandbox" data-copiar="${esc(valor)}">${t('Copiar')}</button>`
+    : `<span class="text-warning">${t('Sin configurar: ponla en PAYPAL_SANDBOX_COMPRADOR_PASSWORD del tracker.')}</span>`}</div>`;
+  return `
+    <div class="alert alert-info py-2 px-3 mb-3" id="fz-panel-sandbox">
+      <div class="fw-semibold mb-1"><i class="iconoir-coins"></i> ${t('Pago de prueba (PayPal sandbox): no es dinero real.')}</div>
+      <div class="small mb-2">${t('PayPal se abrirá en otra pestaña y te pedirá iniciar sesión. Usa esta cuenta compradora de prueba; copia cada dato con su botón.')}</div>
+      <div class="d-grid gap-1 small">${fila(t('Correo'), comprador.correo)}${fila(t('Contraseña'), comprador.clave)}</div>
+    </div>`;
+}
+let vigilandoVueltaPaypal = false;
+function vigilarVueltaDePayPal() {
+  if (vigilandoVueltaPaypal) return;
+  vigilandoVueltaPaypal = true;
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState !== 'visible') return;
+    cotizacionLoaded = false;
+    loadCotizacion();
+  });
 }
 
 function renderCotizacion(quotes) {
@@ -2095,7 +2153,7 @@ function renderCotizacion(quotes) {
     box.innerHTML = `<p class="text-muted small">${t('Todavía no tienes una cotización enviada.')}</p>`;
   } else {
     const esTitular = window.__fzMyRole === 'cliente_titular';
-    box.innerHTML = quotes.map(q => {
+    box.innerHTML = panelPagoDemoHtml(quotes) + quotes.map(q => {
       const lineasHtml = q.lineas.map(l => `
         <div class="d-flex justify-content-between align-items-start border-bottom py-2">
           <div class="small fw-semibold">${esc(l.caseCode)}${l.tipo === 'prioridad_innovadores' ? ` <span class="text-muted" style="font-size:.68rem;font-weight:400">${t('(prioridad innovadores)')}</span>` : ''}</div>
@@ -2169,20 +2227,33 @@ function renderCotizacion(quotes) {
     // credenciales reales, approveUrl trae el checkout hospedado de PayPal
     // y hay que ir ahí primero; dejamos la rama lista aunque no probada
     // contra PayPal de verdad.
+    box.querySelectorAll('.btn-copiar-sandbox').forEach(btn => btn.addEventListener('click', () => copiarTexto(btn.dataset.copiar, btn)));
     box.querySelectorAll('.btn-pagar-paypal').forEach(btn => btn.addEventListener('click', async () => {
       const quoteId = btn.dataset.quote;
+      // Pago de prueba con cuenta compradora: PayPal en OTRA pestaña (se abre DENTRO del clic para que el navegador no la
+      // bloquee) y esta se queda con el panel de credenciales; al volver (visibilitychange) se recarga la cotización.
+      const otraPestana = pagoDemoInfo?.comprador ? window.open('', '_blank') : null;
+      if (otraPestana) { try { otraPestana.document.body.innerHTML = `<p style="font-family:sans-serif;padding:2rem">${esc(t('Abriendo PayPal…'))}</p>`; } catch (e) { /* otro origen: da igual */ } }
       btn.disabled = true;
       btn.textContent = t('Procesando…');
       try {
         const orden = await window.__fzApi.crearOrdenPago(quoteId);
         if (orden.approveUrl) {
+          if (otraPestana) {
+            otraPestana.location.href = orden.approveUrl;
+            vigilarVueltaDePayPal();
+            btn.textContent = t('PayPal abierto en otra pestaña…');
+            return;
+          }
           window.location.href = orden.approveUrl;
           return;
         }
+        if (otraPestana) otraPestana.close();
         await window.__fzApi.capturarPago(quoteId, orden.orderId);
         cotizacionLoaded = false;
         loadCotizacion();
       } catch (e) {
+        if (otraPestana) otraPestana.close();
         await avisar(t('Error al pagar: {error}', { error: e.message }));
         btn.disabled = false;
         btn.textContent = t('Pagar con PayPal');
@@ -2544,8 +2615,8 @@ function expandedHTML(p) {
     honorarios: t('Honorarios'), tasa_dnfd: t('Tasa DNFD'), mef: t('MEF (producto extranjero)'),
     iea: t('IEA'), honorarios_saldo: t('Saldo de honorarios'),
   };
-  // §H.8 (TAREA 21): plazo de subsanación (Art. 22 D.E. 27/2024) — solo se
-  // muestra mientras el caso está observado por DNFD.
+  // §H.8 (TAREA 21): plazo de subsanación — solo se muestra mientras el caso
+  // está observado por DNFD.
   const plazoHtml = (p.fechaLimiteSubsanacion || p.fechaLimiteSubsanacionNota) ? `
     <div class="alert alert-warning py-2 px-3 mb-3" style="font-size:.78rem;">
       <strong>${t('DNFD solicitó correcciones.')}</strong>

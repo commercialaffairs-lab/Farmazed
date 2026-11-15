@@ -419,23 +419,27 @@ describe('fase_04 -> cerrado exige motivo', () => {
 });
 
 // ═══ §H.8/TAREA 21 — al entrar a observado_dnfd se calcula la fecha límite
-// de subsanación (Art. 22 D.E. 27/2024): Regular 3 meses, Abreviado 8 días
-// hábiles. ═══════════════════════════════════════════════════════════════════════
+// de subsanación: Regular 3 meses, Abreviado 8 días hábiles. D5 (14-nov-2026):
+// sin cita normativa; Abreviado lleva además una nota interna solo para el
+// back-office. ═════════════════════════════════════════════════════════════════
 describe('observado_dnfd — fecha límite de subsanación', () => {
-  test('Regular: fecha límite ~3 meses después, sin nota', async () => {
+  test('Regular: fecha límite ~3 meses después, sin nota ni nota interna', async () => {
     const { status, json } = await api('admin', 'PATCH', '/api/cases/case-observado-regular-test', { status: 'observado_dnfd' });
     assert.equal(status, 200);
     const c = await api('admin', 'GET', '/api/cases/case-observado-regular-test');
     assert.equal(c.json.fechaLimiteSubsanacionNota, null);
+    assert.equal(c.json.fechaLimiteSubsanacionNotaInterna, null);
     const dias = (new Date(c.json.fechaLimiteSubsanacion) - new Date()) / 86400000;
     assert.ok(dias > 85 && dias < 95, `esperaba ~90 días, dio ${dias}`);
   });
 
-  test('Abreviado: fecha límite ~8 días hábiles después, sin nota', async () => {
+  test('Abreviado: fecha límite ~8 días hábiles después, sin nota; con nota interna (D5) que ve el admin', async () => {
     const { status } = await api('admin', 'PATCH', '/api/cases/case-observado-abreviado-test', { status: 'observado_dnfd' });
     assert.equal(status, 200);
     const c = await api('admin', 'GET', '/api/cases/case-observado-abreviado-test');
     assert.equal(c.json.fechaLimiteSubsanacionNota, null);
+    assert.match(c.json.fechaLimiteSubsanacionNotaInterna, /^Plazo operativo de Farmazed/);
+    assert.doesNotMatch(c.json.fechaLimiteSubsanacionNotaInterna, /Art\. 22/);
     const dias = (new Date(c.json.fechaLimiteSubsanacion) - new Date()) / 86400000;
     assert.ok(dias >= 8 && dias <= 12, `esperaba entre 8 y 12 días corridos (8 hábiles), dio ${dias}`);
   });

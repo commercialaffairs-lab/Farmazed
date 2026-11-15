@@ -132,7 +132,7 @@ test.describe('D10/D11 — responsable del documento (TAREA 9/10)', () => {
     const tinyFile = { name: 'doc.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4 test') };
     for (const docId of ['poder', 'clv']) {
       await page.locator(`#doc-${docId} input[type=file]`).setInputFiles(tinyFile);
-      await expect(page.locator(`#doc-${docId}`)).toContainText('uploaded', { timeout: 10000 });
+      await expect(page.locator(`#doc-${docId}`)).toContainText('Subido', { timeout: 10000 });
     }
     await expect(page.locator('#btn-next')).toBeDisabled(); // aún faltan los otros 13
 

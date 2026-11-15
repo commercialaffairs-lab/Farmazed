@@ -22,8 +22,15 @@
     .doc-item:last-child { border-bottom:none; }
     .doc-code { font-size:.7rem; color:var(--fz-blue); font-weight:700; min-width:45px; }
     .doc-name { font-size:.82rem; flex:1; }
-    .cowork-btn { background:linear-gradient(135deg,#6B47DC,#3A7D44); color:#fff; border:none; border-radius:8px; padding:.5rem 1.25rem; font-weight:600; }
-    .cowork-btn:hover { opacity:.9; }
+    /* Cowork (Rick, 14-nov-2026): visible pero EN PAUSA hasta validar el acceso a FADDI — tono apagado sobre el topbar navy,
+       borde discontinuo (= temporal) y pastilla ámbar tenue; sin degradado morado. Para reactivar: COWORK_HABILITADO = true. */
+    .cowork-btn { display:inline-flex; align-items:center; gap:.45rem; background:rgba(255,255,255,.04); color:rgba(255,255,255,.62);
+      border:1px dashed rgba(255,255,255,.38); border-radius:8px; padding:.4rem 1rem; font-weight:600; white-space:nowrap; }
+    .btn.cowork-btn, .btn.cowork-btn:hover { cursor:not-allowed; }
+    .cowork-btn:hover { color:rgba(255,255,255,.8); border-color:rgba(255,255,255,.55); background:rgba(255,255,255,.08); }
+    .cowork-btn .bi { font-size:1rem; line-height:1; }
+    .cowork-btn .cowork-pausa { font-size:.6rem; font-weight:700; letter-spacing:.06em; text-transform:uppercase; background:rgba(255,193,7,.16);
+      color:#ffd166; border:1px solid rgba(255,209,102,.35); border-radius:999px; padding:.1rem .45rem; }
     .status-select { font-size:.82rem; }
   </style>
 </head>
@@ -40,7 +47,7 @@
       <label class="form-check-label small text-white-50" for="override-check" data-i18n>Forzar (override)</label>
     </div>
     <button class="btn btn-sm btn-outline-light" id="btn-save-status" data-i18n>Guardar estado</button>
-    <button class="cowork-btn btn btn-sm" id="btn-cowork">⚡ <span data-i18n>Abrir en Cowork</span></button>
+    <button class="cowork-btn btn btn-sm" id="btn-cowork" aria-disabled="true" title="Deshabilitado temporalmente: se activará cuando se valide el acceso a FADDI (sesión de MINSA)." data-i18n-attr="title"><i class="bi bi-robot"></i> <span data-i18n>Abrir en Cowork</span> <span class="cowork-pausa" data-i18n>En pausa</span></button>
   </div>
 </div>
 <div class="topbar d-flex align-items-center gap-2 d-none" id="override-reason-row" style="padding-top:0">
@@ -502,7 +509,9 @@
                 onclick="revisarDoc('${esc(doc.id)}','rejected')" title="${esc(t('Rechazar'))}">✗</button>` : '';
 
       return `<div class="doc-item" ${rowStyle}>
-        <span class="doc-code">${esc(item.faddiCode)}</span>
+        ${item.faddiCode === 'PENDIENTE_VERIFICAR'
+          ? `<span class="doc-code text-muted" title="${esc(t('Código FADDI pendiente de verificar'))}">s/n</span>`
+          : `<span class="doc-code">${esc(item.faddiCode)}</span>`}
         <span class="${getDocStatusColor(status)}">${getDocStatusIcon(status)}</span>
         <span class="doc-name">${esc(nombreDoc)}${!item.required ? ` <span class="text-muted" style="font-size:.7rem">${esc(t('(opcional)'))}</span>` : ''}${isFarmazedDoc ? ` <span class="badge bg-primary-subtle text-primary border border-primary-subtle" style="font-size:.65rem">${esc(t('Tarea interna Farmazed'))}</span>` : ''}${versionBadge}</span>
         ${doc ? `<a href="#" class="btn btn-xs btn-outline-primary btn-sm py-0 px-2 small"
@@ -711,9 +720,11 @@
   }
 
   // §H.8 (TAREA 21): al entrar a observado_dnfd se calcula y muestra la
-  // fecha límite de subsanación (Art. 22 D.E. 27/2024) — Regular 3 meses,
-  // Abreviado 8 días hábiles; otras vías quedan con una nota en vez de una
-  // fecha inventada (ver tracker/utils/plazo_subsanacion.js).
+  // fecha límite de subsanación — Regular 3 meses, Abreviado 8 días hábiles;
+  // otras vías quedan con una nota en vez de una fecha inventada (ver
+  // tracker/utils/plazo_subsanacion.js). D5 (14-nov-2026): sin cita normativa en el rótulo;
+  // en Abreviado el tracker manda además una nota interna que SOLO ve el
+  // back-office (al cliente no le llega el campo).
   // TAREA 41: si al entrar a fase_04 falló la línea del borrador de cotización (p. ej. falta
   // la fila del tarifario), el caso queda marcado y se ve aquí — antes solo quedaba en el log.
   function renderCotizacionError() {
@@ -738,9 +749,14 @@
     const dias  = Math.ceil((fecha - new Date()) / 86400000);
     const cls   = dias <= 15 ? 'alert-danger' : 'alert-warning';
     const restante = dias >= 0 ? t('{dias} días restantes', { dias }) : t('VENCIDO');
+    // D5: nota interna (solo back-office) — p. ej. en Abreviado, el origen operativo de los 8 días hábiles.
+    const notaInterna = caseData.fechaLimiteSubsanacionNotaInterna
+      ? `<div class="mt-1 text-muted"><i class="iconoir-info-circle"></i> ${esc(t(caseData.fechaLimiteSubsanacionNotaInterna))}</div>`
+      : '';
     box.innerHTML = `<div class="alert ${cls} py-2 px-3 mb-0 small">
-      <strong>${t('Observado por DNFD — plazo de subsanación (Art. 22 D.E. 27/2024):')}</strong>
+      <strong>${t('Observado por DNFD — plazo de subsanación:')}</strong>
       ${t('vence el {fecha} ({restante}).', { fecha: I18N.fecha(fecha, { day: '2-digit', month: 'long', year: 'numeric' }), restante })}
+      ${notaInterna}
     </div>`;
   }
 
@@ -868,7 +884,9 @@
     try {
       await api.requestDocument(caseId, faddiDocId, msg);
       await avisar(t('Solicitud enviada al cliente.'));
-      docsData = await api.listDocuments(caseId);
+      // El pedido mueve el expediente a "documentos pendientes" (services/document_requests.js): se relee el caso
+      // para que el selector de estado y la cabecera lo reflejen sin recargar (QA simulación, 14-nov-2026).
+      [caseData, docsData] = await Promise.all([api.getCase(caseId), api.listDocuments(caseId)]);
       render();
     } catch (e) {
       await avisar(t('Error: {error}', { error: e.message }));
@@ -968,7 +986,11 @@
     await avisar(t('Notas guardadas.'));
   });
 
-  document.getElementById('btn-cowork').addEventListener('click', () => {
+  // Cowork en pausa (Rick, 14-nov-2026): el botón sigue visible pero no abre el modal hasta validar el acceso a FADDI
+  // (sisregsan pide sesión de MINSA; nadie probó aún el flujo completo). El modal y buildCoworkContext() quedan intactos.
+  const COWORK_HABILITADO = false;
+  document.getElementById('btn-cowork').addEventListener('click', async () => {
+    if (!COWORK_HABILITADO) { await avisar(t('Abrir en Cowork está deshabilitado temporalmente: se activará cuando se valide el acceso a FADDI.')); return; }
     new bootstrap.Modal(document.getElementById('coworkModal')).show();
   });
 

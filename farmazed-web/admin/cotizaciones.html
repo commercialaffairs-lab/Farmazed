@@ -161,7 +161,7 @@
             </div>
             <div class="border rounded mb-2">${lineasHtml}</div>
             ${q.estado === 'rechazada' && q.motivoRechazo ? `<div class="text-danger small mb-2">Motivo de rechazo: ${esc(q.motivoRechazo)}</div>` : ''}
-            ${puedeEnviar && q.estado === 'borrador' ? `<button class="btn btn-sm btn-fz btn-enviar" data-quote="${esc(q.id)}">Enviar cotización</button>` : ''}
+            ${puedeEnviar && q.estado === 'borrador' ? `<button class="btn btn-sm btn-primary btn-enviar" data-quote="${esc(q.id)}">Enviar cotización</button>` : ''}
           </div>
         </div>`;
     }).join('');

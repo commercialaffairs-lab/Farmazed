@@ -8,7 +8,7 @@ const { serializeTimestamps } = require('../utils/serialize');
 const { applyTransition } = require('../services/transitions');
 const { getAcceptedQuoteLineForCase } = require('../services/quotes');
 const { effectiveRole, getCaseOrFail, canTransitionCase, requirePermission, can, PERMISSIONS, CLIENT_ROLES, STAFF_ROLES } = require('../middleware/permissions');
-const { DEMO_ORG_ID, esAdminDemo } = require('../utils/demo_scope');
+const { DEMO_ORG_ID, SIM_ORG_ID, esAdminDemo, esCuentaDemo, esSimulacion, ambitoDe } = require('../utils/demo_scope');
 const { AVISO: AVISO_DEMO } = require('../middleware/demo_admin');
 
 const router = Router();
@@ -51,7 +51,8 @@ async function generateCaseCode(tramiteType, tipoRegistro) {
 // cases.edit_faddi): al cliente no se le devuelven.
 function sinCamposInternos(data, role) {
   if (!CLIENT_ROLES.includes(role)) return data;
-  const { notes, faddi, ...publico } = data;
+  // D5: la nota interna del plazo de subsanación (Abreviado) es solo del back-office.
+  const { notes, faddi, fechaLimiteSubsanacionNotaInterna, ...publico } = data;
   return publico;
 }
 
@@ -77,16 +78,16 @@ router.get('/', requireAuth, requirePermission('cases.list'), async (req, res) =
     // migrar); staff (analista/abogado/regente) solo los que tiene asignados.
     const role = effectiveRole(req.user);
     if (role === 'admin') {
-      // sin filtro — salvo el admin demo (TAREA 64): solo la empresa demo
-      if (esAdminDemo(req.user)) query = query.where('orgId', '==', DEMO_ORG_ID);
+      // sin filtro — salvo el admin demo (TAREA 64): solo su ámbito (demo-org, o sim-org en la simulación)
+      if (esAdminDemo(req.user)) query = query.where('orgId', '==', ambitoDe(req.user));
     } else if (CLIENT_ROLES.includes(role)) {
       query = req.user.orgId
         ? query.where('orgId', '==', req.user.orgId)
         : query.where('clientId', '==', req.user.uid);
     } else if (STAFF_ROLES.includes(role)) {
-      // El personal demo ve los casos de ejemplo de la empresa demo (ver canAccessCase).
+      // El personal demo ve los casos de ejemplo de su ámbito (ver canAccessCase).
       query = req.user.demo === true
-        ? query.where('orgId', '==', DEMO_ORG_ID)
+        ? query.where('orgId', '==', ambitoDe(req.user))
         : query.where(`asignados.${role}`, '==', req.user.uid);
     }
 
@@ -98,7 +99,8 @@ router.get('/', requireAuth, requirePermission('cases.list'), async (req, res) =
     const snap  = await query.limit(200).get();
     // Personal demo: solo los casos de ejemplo (demo:true), no los que crea el cliente demo durante su recorrido
     // (el filtro va en memoria: en la consulta pediría otro índice compuesto).
-    const visibles = STAFF_ROLES.includes(role) && req.user.demo === true ? snap.docs.filter(d => d.data().demo === true) : snap.docs;
+    // (La simulación, en cambio, ve todos los de sim-org: también los que creó como cliente — continuidad A→Z.)
+    const visibles = STAFF_ROLES.includes(role) && req.user.demo === true && !esSimulacion(req.user) ? snap.docs.filter(d => d.data().demo === true) : snap.docs;
     const cases = visibles.map(d => {
       const data = d.data();
       return { id: d.id, ...sinCamposInternos(data, role), productName: data.product?.nombreComercial || '(sin nombre de producto)' };
@@ -123,9 +125,13 @@ router.post('/', requireAuth, requirePermission('cases.create'), async (req, res
     const now      = admin.firestore.Timestamp.now();
     // Admin demo: no consume el contador GLOBAL de códigos de expediente (los códigos reales no deben tener huecos por la demo):
     // código propio FZ-DEMO-<año>-<4 dígitos al azar>, y el caso nace en la empresa demo, marcado demo:true.
+    // La simulación (cualquier perfil) tampoco consume el contador: código FZ-SIM-<año>-A####, caso en sim-org, demo:true + sim:true.
     const adminDemo = esAdminDemo(req.user);
-    const caseCode = adminDemo
-      ? `FZ-DEMO-${new Date().getFullYear()}-A${String(Math.floor(Math.random() * 10000)).padStart(4, '0')}`
+    const simulacion = esSimulacion(req.user);
+    const aislado = adminDemo || simulacion;
+    const codigoAleatorio = (prefijo) => `${prefijo}-${new Date().getFullYear()}-A${String(Math.floor(Math.random() * 10000)).padStart(4, '0')}`;
+    const caseCode = aislado
+      ? codigoAleatorio(simulacion ? 'FZ-SIM' : 'FZ-DEMO')
       : await generateCaseCode(tramiteType, tipoRegistro || 'Regular');
     const caseData = {
       createdAt:      now,
@@ -147,8 +153,9 @@ router.post('/', requireAuth, requirePermission('cases.create'), async (req, res
       // — así un cliente_miembro y el cliente_titular de la misma empresa
       // ven el mismo caso. null en cuentas sin migrar (compat, ver
       // canAccessCase() en middleware/permissions.js).
-      orgId:          adminDemo ? DEMO_ORG_ID : (req.user.orgId || null),
-      ...(adminDemo ? { demo: true } : {}),
+      orgId:          simulacion ? SIM_ORG_ID : adminDemo ? DEMO_ORG_ID : (req.user.orgId || null),
+      ...(aislado ? { demo: true } : {}),
+      ...(simulacion ? { sim: true } : {}),
       assignedTo:     null,
       asignados:      { analista: null, abogado: null, regente: null },
       priority:       'normal',

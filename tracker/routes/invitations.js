@@ -21,7 +21,7 @@ const admin         = require('../utils/firebase_admin.js');
 const { requireAuth } = require('../middleware/auth');
 const { requirePermission, ROLES } = require('../middleware/permissions');
 const { esCuentaDemo } = require('../services/demo');
-const { esAdminDemo, esDocDemo } = require('../utils/demo_scope'); // modo demo: sin invitaciones desde la cuenta demo
+const { esAdminDemo, esDocDelAmbito } = require('../utils/demo_scope'); // modo demo: sin invitaciones desde la cuenta demo
 const { serializeTimestamps } = require('../utils/serialize');
 const { HttpError, responderError } = require('../utils/http_error');
 const { textoError, errorPassword, enmascararCorreo } = require('../utils/validar_texto');
@@ -307,7 +307,7 @@ router.post('/:token/accept', authOpcional, async (req, res) => {
 router.get('/', requireAuth, requirePermission('invitations.create_empleado'), async (req, res) => {
   try {
     const snap = await db().collection('invitations').orderBy('createdAt', 'desc').get();
-    const invitations = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(i => !esAdminDemo(req.user) || esDocDemo(i)); // admin demo: solo las de la empresa demo
+    const invitations = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(i => !esAdminDemo(req.user) || esDocDelAmbito(req.user, i)); // admin demo: solo las de su ámbito
     res.json(serializeTimestamps({ total: invitations.length, invitations }));
   } catch (e) {
     res.status(500).json({ error: e.message });

@@ -23,7 +23,7 @@ const { conceptosCobrados } = require('../utils/conceptos_fase05');
 const { createConceptPayment } = require('../services/payments_ledger');
 const { registrarPagoConfirmado } = require('../services/facturacion/facturas');
 
-const { esAdminDemo, esDocDemo } = require('../utils/demo_scope');
+const { esAdminDemo, esDocDelAmbito } = require('../utils/demo_scope');
 
 const router = Router({ mergeParams: true });
 const db     = () => admin.firestore();
@@ -42,7 +42,7 @@ async function cargarLinea(req, res) {
   const snap = await ref.get();
   if (!snap.exists) { res.status(404).json({ error: 'Cotización no encontrada' }); return null; }
   const data = snap.data();
-  if (esAdminDemo(req.user) && !esDocDemo(data)) { res.status(403).json({ error: 'Forbidden' }); return null; } // admin demo: solo cotizaciones de la empresa demo
+  if (esAdminDemo(req.user) && !esDocDelAmbito(req.user, data)) { res.status(403).json({ error: 'Forbidden' }); return null; } // admin demo: solo cotizaciones de su ámbito
   const idx = data.lineas.findIndex(l => l.caseId === req.params.caseId && (l.tipo || 'principal') === 'principal');
   if (idx === -1) { res.status(404).json({ error: 'Ese caso no está en esta cotización' }); return null; }
   return { ref, data, idx };

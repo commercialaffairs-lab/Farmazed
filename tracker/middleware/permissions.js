@@ -36,7 +36,7 @@
  */
 
 const admin = require('../utils/firebase_admin.js');
-const { esAdminDemo, esDocDemo } = require('../utils/demo_scope');
+const { esAdminDemo, esDocDelAmbito, esSimulacion } = require('../utils/demo_scope');
 
 const ROLES = ['cliente_titular', 'cliente_miembro', 'analista', 'abogado', 'regente', 'admin'];
 const CLIENT_ROLES = ['cliente_titular', 'cliente_miembro'];
@@ -207,8 +207,8 @@ function requirePermission(permissionName) {
  */
 function canAccessCase(user, caseData) {
   const role = effectiveRole(user);
-  // Admin demo (TAREA 64): solo los casos de la empresa demo; el admin real sigue viendo todo.
-  if (role === 'admin') return !esAdminDemo(user) || esDocDemo(caseData);
+  // Admin demo (TAREA 64): solo los casos de SU ámbito (demo-org, o sim-org para la simulación); el admin real sigue viendo todo.
+  if (role === 'admin') return !esAdminDemo(user) || esDocDelAmbito(user, caseData);
   if (CLIENT_ROLES.includes(role)) {
     // Cuenta migrada (tiene orgId): el caso debe ser de su empresa.
     if (user.orgId) return caseData.orgId === user.orgId;
@@ -216,8 +216,10 @@ function canAccessCase(user, caseData) {
     return caseData.clientId === user.uid;
   }
   if (STAFF_ROLES.includes(role)) {
-    // Personal demo (varias cuentas por rol comparten los mismos casos de ejemplo; asignados.<rol> guarda un solo uid).
-    if (user.demo === true) return caseData.demo === true;
+    // Personal demo (varias cuentas por rol comparten los mismos casos de ejemplo; asignados.<rol> guarda un solo uid):
+    // solo los casos de ejemplo (demo:true) de la empresa demo. La simulación (perfil regente/abogado) ve TODOS los casos
+    // de sim-org, también los que creó ella misma como cliente: así sigue el flujo de la A a la Z sobre el mismo expediente.
+    if (user.demo === true) return esDocDelAmbito(user, caseData) && (esSimulacion(user) || caseData.demo === true);
     return caseData.asignados?.[role] === user.uid;
   }
   return false;

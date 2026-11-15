@@ -2,7 +2,7 @@
  * Farmazed Portal — API client
  * Thin wrapper around fetch() that attaches the Firebase ID token.
  */
-import { getToken, API_BASE } from './auth.js';
+import { getToken, API_BASE, cabecerasPerfil } from './auth.js';
 
 async function apiFetch(path, options = {}) {
   // `anonimo`: no mandar el token de la sesión aunque haya una (TAREA 39b:
@@ -15,6 +15,8 @@ async function apiFetch(path, options = {}) {
       // multipart (FormData): el navegador pone el Content-Type con su boundary
       ...(fetchOptions.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }),
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      // Simulación (Rick, 14-nov-2026): el perfil elegido en el topbar (X-Fz-Perfil); el tracker solo lo honra en esa cuenta.
+      ...(token ? cabecerasPerfil() : {}),
       ...(options.headers || {}),
     },
   });
@@ -31,7 +33,7 @@ async function apiFetch(path, options = {}) {
  */
 async function fetchBlob(path) {
   const token = await getToken();
-  const res = await fetch(`${API_BASE}${path}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+  const res = await fetch(`${API_BASE}${path}`, { headers: token ? { Authorization: `Bearer ${token}`, ...cabecerasPerfil() } : {} });
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: res.statusText }));
     throw Object.assign(new Error(err.error || `HTTP ${res.status}`), { codigo: err.codigo });
@@ -161,6 +163,8 @@ const api = {
   getOrgMembers: (orgId) => apiFetch(`/api/orgs/${orgId}/members`),
 
   getEmployees: () => apiFetch('/api/employees'),
+  // ¿Demo/simulación? + cómo paga (pagoDemo: proveedor y cuenta compradora sandbox para el panel de pago de prueba).
+  getEstadoDemo: () => apiFetch('/api/demo/estado'),
   reiniciarDemo: () => apiFetch('/api/demo/reiniciar', { method: 'POST' }),
   // Panel "Recorrido demo" (solo cuentas demo), en el idioma pedido (es|en|fr|pt; el tracker cae al español).
   getRecorridoDemo: (idioma) => apiFetch(`/api/demo/recorrido${idioma ? `?idioma=${encodeURIComponent(idioma)}` : ''}`),

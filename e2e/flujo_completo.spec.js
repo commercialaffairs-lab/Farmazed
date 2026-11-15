@@ -150,7 +150,7 @@ test.describe('D16 — flujo completo E2E (medicamentos, Síntesis Química, Reg
     // ═══ 3. Sube los 15 documentos obligatorios (reales, uno por uno) ═══
     for (const docId of CLIENTE_REQUIRED_IDS) {
       await page.locator(`#doc-${docId} input[type=file]`).setInputFiles(docFile(docId));
-      await expect(page.locator(`#doc-${docId}`)).toContainText('uploaded', { timeout: 10000 });
+      await expect(page.locator(`#doc-${docId}`)).toContainText('Subido', { timeout: 10000 });
     }
     await expect(page.locator('#btn-next')).toBeEnabled({ timeout: 10000 });
     await shot(page, '04-wizard-paso4-15-docs-subidos');
@@ -355,7 +355,7 @@ test.describe('D16 — flujo completo E2E (medicamentos, Síntesis Química, Reg
     await shot(page, '17-fase13-pago-saldo-registrado');
 
     // ═══ 8. Ciclo observado_dnfd: DNFD pide correcciones, se calcula la
-    // fecha límite de subsanación (Art. 22 D.E. 27/2024, §H.8), y tras
+    // fecha límite de subsanación (§H.8; D5: sin cita normativa), y tras
     // subsanar reingresa a fase_13 ═══
     await advance('observado_dnfd');
     await expect(page.locator('#plazo-subsanacion-banner')).toContainText('plazo de subsanación', { timeout: 10000 });

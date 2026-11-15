@@ -1,5 +1,12 @@
 {
   "en": {
+    "Simulación": "Simulation",
+    "Perfil de la simulación": "Simulation profile",
+    "Administrador": "Administrator",
+    "Reiniciar simulación": "Reset simulation",
+    "Vuelve a dejar la simulación como al principio del recorrido": "Puts the simulation back to the start of the tour",
+    "Se borrarán los cambios que hiciste en la simulación y todo volverá al estado inicial. ¿Reiniciar?": "The changes you made in the simulation will be deleted and everything will return to the initial state. Reset?",
+    "Simulación reiniciada. Vuelve a iniciar sesión para empezar desde el principio.": "Simulation reset. Sign in again to start from the beginning.",
     "Guardando...": "Saving...",
     "Procesando...": "Processing...",
     "Documentos que subes tú": "Documents you upload",
@@ -166,6 +173,13 @@
     "Vietnam": "Vietnam"
   },
   "fr": {
+    "Simulación": "Simulation",
+    "Perfil de la simulación": "Profil de la simulation",
+    "Administrador": "Administrateur",
+    "Reiniciar simulación": "Réinitialiser la simulation",
+    "Vuelve a dejar la simulación como al principio del recorrido": "Remet la simulation au début du parcours",
+    "Se borrarán los cambios que hiciste en la simulación y todo volverá al estado inicial. ¿Reiniciar?": "Les modifications faites dans la simulation seront effacées et tout reviendra à l’état initial. Réinitialiser ?",
+    "Simulación reiniciada. Vuelve a iniciar sesión para empezar desde el principio.": "Simulation réinitialisée. Reconnectez-vous pour recommencer depuis le début.",
     "Guardando...": "Enregistrement...",
     "Procesando...": "Traitement en cours...",
     "Documentos que subes tú": "Documents que vous téléversez",
@@ -332,6 +346,13 @@
     "Vietnam": "Viêt Nam"
   },
   "pt": {
+    "Simulación": "Simulação",
+    "Perfil de la simulación": "Perfil da simulação",
+    "Administrador": "Administrador",
+    "Reiniciar simulación": "Reiniciar simulação",
+    "Vuelve a dejar la simulación como al principio del recorrido": "Volta a deixar a simulação como no início do percurso",
+    "Se borrarán los cambios que hiciste en la simulación y todo volverá al estado inicial. ¿Reiniciar?": "As alterações que fez na simulação serão apagadas e tudo voltará ao estado inicial. Reiniciar?",
+    "Simulación reiniciada. Vuelve a iniciar sesión para empezar desde el principio.": "Simulação reiniciada. Volte a iniciar sessão para começar do início.",
     "Guardando...": "A guardar...",
     "Procesando...": "A processar...",
     "Documentos que subes tú": "Documentos que carrega",

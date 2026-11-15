@@ -112,7 +112,7 @@ test.describe('R13 — conteo de páginas del paquete IEA', () => {
           ? await realPdf(docId, 70)
           : docFile(docId);
       await page.locator(`#doc-${docId} input[type=file]`).setInputFiles(file);
-      await expect(page.locator(`#doc-${docId}`)).toContainText('uploaded', { timeout: 10000 });
+      await expect(page.locator(`#doc-${docId}`)).toContainText('Subido', { timeout: 10000 });
 
       if (docId === 'formula') {
         // 90 páginas solas — todavía NO excede las 150.

@@ -14,6 +14,7 @@ que lo deja todo como al principio. Conviven con los datos reales de producción
 | `farmaceutico.demo@farmazed.com` | regente (Responsable Farmacéutico) | `DEMO_PASSWORD_FARMACEUTICO` | Los mismos casos y el mismo recorrido que `regente.demo` |
 | `legal.demo@farmazed.com` | abogado (Responsable Legal) | `DEMO_PASSWORD_LEGAL` | Los casos de ejemplo; recorrido propio (poder, pedido de documento, confirmación legal de la fase 8) |
 | `admin.demo@farmazed.com` | admin (+ `demo:true`) | `DEMO_PASSWORD_ADMIN` | Todas las pantallas del admin, **solo sobre lo de `demo-org`**; lo global se ve pero no se guarda (ver "Admin demo") |
+| `simulacion@farmazed.com` | **cambia de perfil** en el topbar: Cliente · Administrador · Responsable Farmacéutico · Responsable Legal (+ `demo:true`, `simulacion:true`) | `DEMO_PASSWORD_SIMULACION` | Ámbito propio `sim-org` (empresa "Laboratorio Simulación S.A."), aislado de la demo y de lo real; una sola cuenta genérica para entrenar al personal (ver "Simulación") |
 
 Rol visible (Rick, 08-nov-2026): `regente` se muestra como **Responsable Farmacéutico** y `abogado` como **Responsable Legal**; los identificadores internos (claims, `ROLES`, `manual/regente/`) no cambian. El personal demo ve los casos `demo:true` de `demo-org` (no por `asignados.<rol>`, que guarda un solo uid), así las dos cuentas de Responsable Farmacéutico comparten casos.
 
@@ -196,6 +197,51 @@ fases). Cada paso reproduce la pantalla real en HTML/CSS con los rótulos en esp
 traducida, salvo el panel, que el manual reproduce en su idioma); la explicación va en el idioma del
 lector. No trae claves. `tests/manual.test.js` regenera y compara: si cambias un texto del recorrido
 o del manual, corre el generador y commitea.
+
+## Simulación (`simulacion@farmazed.com`, TAREA 66 — Rick, 14-nov-2026)
+
+Una sola cuenta **genérica** para entrenar y evaluar al personal en sesión remota: todos entran con `simulacion@farmazed.com`
+(clave `DEMO_PASSWORD_SIMULACION`, la fija Rick; Secret Manager en producción, `tracker/.env` en local). Claims
+`demo:true + simulacion:true + orgId sim-org`.
+
+- **Perfiles**: el topbar muestra una barra ámbar con cuatro pestañas (Cliente · Administrador · Responsable Farmacéutico ·
+  Responsable Legal, `portal/js/auth.js montarPestanasSimulacion`). Al pulsar una, el perfil se guarda en `localStorage`
+  (`fzPerfilSim`), `api.js` lo manda en cada petición en la cabecera `X-Fz-Perfil` y el tracker (`middleware/auth.js`) lo
+  convierte en el rol efectivo del request **solo para esta cuenta**: permisos, filtros y el guard del admin demo se evalúan
+  con ese rol. Cliente → `client-dashboard.html`; los otros tres → `admin/bandeja.html` con el sidebar de ese rol.
+- **Mismos datos, flujo de la A a la Z**: ámbito `sim-org` sembrado igual que la demo (`services/demo.js AMBITOS`, ids
+  `sim-caso-2/3/4`, `sim-cotizacion-2/3/4`, `sim-lead-1`, códigos `FZ-SIM-…`, todo con `demo:true` y `sim:true`). El
+  expediente que la cuenta crea como Cliente lo ven después Administrador, Farmacéutico y Legal (`canAccessCase`: en la
+  simulación el personal ve TODOS los casos de `sim-org`, no solo los sembrados). Tras pagar NO hay avance automático
+  (`avanzarTrasPagoDemo` es solo de `demo-org`): el propio personal mueve el expediente cambiando de perfil.
+- **Secuencia sugerida**: Cliente (captación, producto, documentos, acepta y paga la cotización 2 en **PayPal sandbox**) →
+  Administrador (ajusta y envía la cotización 4, atiende el lead, ve el pago en Finanzas) → Responsable Farmacéutico
+  (revisa el documento 15.5, confirma el cotejo técnico de la fase 8) → Responsable Legal (revisa el poder, pide un
+  documento, confirma la parte legal) → Cliente (paga la cotización 4, escribe en Mensajes). El panel "Simulación"
+  (`services/demo_recorrido.js`, textos propios en `demo_recorrido_textos.js SIM_PASOS`) marca los pasos del perfil
+  activo y, al completarlos, ofrece "Seguir como <siguiente perfil> →".
+- **Pagos**: PayPal **sandbox** real cuando el servidor tiene `PAYPAL_SANDBOX_CLIENT_ID/SECRET` (o `PAYPAL_CLIENT_ID/SECRET`
+  con `PAYPAL_ENV=sandbox`); si no, el mock. Nunca la API live (misma regla que las cuentas demo). **Panel de pago de
+  prueba** (Rick, 14-nov-2026): con sandbox, el checkout real pide iniciar sesión con una cuenta compradora de prueba; si el
+  tracker tiene `PAYPAL_SANDBOX_COMPRADOR_EMAIL/_PASSWORD` (.env.example; cuenta Personal de developer.paypal.com → Sandbox
+  Accounts), `GET /api/demo/estado` las devuelve en `pagoDemo.comprador` **solo a cuentas demo** y la vista Cotización las
+  muestra con botones "Copiar"; "Pagar con PayPal" abre entonces PayPal en otra pestaña para que esta siga a la vista y, al
+  volver, recarga la cotización. Sin esas variables el botón se comporta como siempre. Facturas con el PAC
+  simulado y numeración `DEMO-`. Sin correos (`esCorreoDemo` incluye `simulacion@`).
+- **Aislamiento (mismo criterio duro del admin demo)**: `utils/demo_scope.js` `ambitoDe(user)` / `esDocDelAmbito(user, doc)`:
+  la simulación nunca ve `demo-org` ni lo real, y las cuentas demo nunca ven `sim-org` (los leads sin orgId se separan por
+  `sim:true`). Con el perfil Administrador, lo **global** (precios, configuración de facturación, planes, roles,
+  invitaciones a terceros, contraseñas) se ve pero no se guarda (`middleware/demo_admin.js`, 403 "En la demo no se
+  guarda"): en producción esas acciones cambiarían la plataforma real. Lo que sí guarda: casos, documentos, mensajes,
+  pagos, cotizaciones (ajustar, enviar, aceptar, pagar), leads y confirmaciones de la fase 8 de `sim-org`.
+- **Reinicio**: [Reiniciar simulación] (mismo botón del topbar, `POST /api/demo/reiniciar`) deja `sim-org` como al
+  principio sin tocar la demo; 1 vez por minuto. **Ojo**: revoca las sesiones abiertas de la cuenta (quien esté dentro vuelve al
+  login; `services/demo.js`). El admin **real** puede reiniciar un ámbito concreto con
+  `POST /api/demo/reiniciar { "ambito": "sim-org" }` — así se siembra la primera vez en producción (DEPLOY.md).
+- **CLI**: `node scripts/seed_demo.js --ambito=sim-org` (o `--todo` para demo y simulación).
+- **QA manual (14-nov-2026)**: los cuatro perfiles recorridos de la A a la Z en Chrome con pagos reales en PayPal sandbox; correcciones y hallazgos en `handover.md` (entrada "QA de la simulación").
+- **Pruebas**: `tests/simulacion.test.js` (claims, cambio de perfil, continuidad A→Z, aislamiento en ambos sentidos,
+  envío simulado de cotización, lo global no se guarda, recorrido por perfil, correos, proveedor de pago, reinicio por ámbito).
 
 ## Pendiente (fases siguientes del plan, `PENDIENTES.md`)
 

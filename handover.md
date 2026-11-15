@@ -6633,8 +6633,225 @@ Correcciones pedidas por la auditoría de seguridad (todas con prueba):
 
 **Pendiente / no hecho:** (a) restaurar los PNG de `sessions/` que no son de esta tarea (70 de `2026-09-29`, 15 de `2026-09-30`, 6 de `2026-10-03`, y 6 sin seguimiento de `2026-09-29`): el hook GateGuard rechazó 3 veces el comando destructivo (pide datos y no acepta la respuesta); no se tocaron. Orden manual: `git checkout -- sessions/2026-09-29 sessions/2026-09-30 sessions/2026-10-03` y borrar los 6 sin seguimiento de `2026-09-29` (`git clean -n sessions/2026-09-29` para verlos antes). (b) Checkout real en sandbox.paypal.com y deploy (ver TAREA 64 arriba y DEPLOY.md).
 
+## 2026-11-14 — TAREA 65: alinear checklist y wizard con las matrices de octubre (D1–D9; auditoría del PM sobre 13ab58c)
+Pedido de Rick (14-nov-2026): aplicar SOLO las nueve correcciones donde la matriz es explícita, patrón TAREA 25 (documento nuevo ⇒ `faddiCode: 'PENDIENTE_VERIFICAR'` + fundamento en `description`), sin tocar lo "FUERA DE ALCANCE", sin migraciones ni deploy, commit por bloques y push. Commits: `723fcb5` (D1–D3, D6–D8), `7402362` (D4), `dd95903` (D5), y el de D9 + esta entrada.
 
-### 2026-11-14 — TAREA 65 (fase 2: limpieza + seguridad), sin commit ni push
+### 1. Tabla D1–D9
+| # | Cambio | Estado | Detalle / motivo |
+|---|---|---|---|
+| D1 | Declaración jurada del Abreviado para TODOS los subtipos | **Hecho** | `getChecklist` la agrega en todo `tipoRegistro === 'Abreviado'`, cualquier `tipoMedicamento`. `description` cita D.E. 27/2024 Art. 24 núm. 2, filas SQ-07A, HOM-07, SUP-07A, RAD-05, GAS-05, CON-05 (y BIO-07 como una fila más, ya no exclusiva) y la plantilla Formulario 6. |
+| D2 | Gas Medicinal: sin estabilidad, muestra = envase vacío | **Hecho** | `estabilidad` se quita cuando el caso es Gas Medicinal (fila GAS-19, Art. 58). Variante `DOC_MUESTRA_GAS` (mismo id `muestra`, obligatoria): "Muestra Física (envase vacío)" — cilindro, termo o envase criogénico con su sistema de cierre; no se presenta el gas (fila GAS-21). Ver duda 5.a sobre casos con varias categorías. |
+| D3 | Radiofármaco: estabilidad condicional | **Hecho** | `DOC_ESTABILIDAD_RADIOFARMACO`: `required:false`, condición "Solo si la vida útil declarada es mayor a 24 meses" (Art. 127, fila RAD-19). Mismo mecanismo que Suplementos. |
+| D4 | Panel de países del Abreviado: fuera PIC/S | **Hecho** | Columna "Autoridades de alto estándar reconocidas por la OMS" / "Todas las categorías de medicamentos" con los 25 países del Anexo B, en `portal/nuevo.html` y `client-dashboard.html`. OMS Precalificados y OPS sin cambios. Texto de ayuda nuevo (D.E. 29/2023, Art. 2). `VIAS_REGISTRO`: Reconocimiento Mutuo `paisesARR:false`. i18n en/fr/pt. |
+| D5 | Plazo de subsanación: quitar "Art. 22" | **Hecho** | Cálculo intacto. Rótulo del back-office ahora "Observado por DNFD — plazo de subsanación:" (backoffice.json en/fr/pt). Abreviado devuelve `notaInterna` ("Plazo operativo de Farmazed (práctica de ventanilla)…"), guardada como `fechaLimiteSubsanacionNotaInterna`, pintada en `expediente.html` y **quitada al cliente** en `routes/cases.js` (`sinCamposInternos`). Comentarios sin la cita (también en permissions.test.js y e2e/flujo_completo.spec.js). |
+| D6 | Cosméticos: documento de etiquetas | **Hecho** | `cos_etiquetas` en `COS_DOCS`: obligatorio, paso 11, `PENDIENTE_VERIFICAR`, RTCA 71.03.36:21 (RTCA 71.03.35:21 núm. 6.6; filas COS-09/COS-10). |
+| D7 | Huérfanos: estudios clínicos e inserto obligatorios | **Hecho** | `estudios_clinicos_hue` → `required:true`, sin condición, "Resumen de estudios clínicos (Huérfanos)", Art. 108. `prospecto` → variante `DOC_PROSPECTO_HUERFANOS` obligatoria (Art. 109 núm. 8); la base común sigue condicional. |
+| D8 | Productos Naturales: contrato de fabricación | **Hecho** | `DOC_CONTRATO_FAB` agregado a 'Productos Naturales' (condicional, fila NAT-11); la frase "No aplica a Productos Naturales" salió de la `description`. |
+| D9 | process_map.md | **Hecho** | Aviso "REEMPLAZADO — v1.0 del 25-ago-2026…" al inicio; el resto intacto. |
+
+### 2. Archivos tocados y pruebas agregadas
+- **Checklist**: `tracker/data/faddi_checklists.js` (D1, D2, D3, D6, D7, D8). Constantes nuevas `DOC_MUESTRA_GAS`, `DOC_ESTABILIDAD_RADIOFARMACO`, `DOC_PROSPECTO_HUERFANOS`; `getChecklist` con la cadena de variantes de `estabilidad` (Suplementos → Naturales → Radiofármaco → solo-Gas) y la variante de `prospecto` para Huérfanos.
+- **Wizard / portal** (D4): `farmazed-web/portal/nuevo.html`, `farmazed-web/client-dashboard.html`, `farmazed-web/portal/js/wizard.js`.
+- **Plazo** (D5): `tracker/utils/plazo_subsanacion.js`, `tracker/services/transitions.js`, `tracker/routes/cases.js`, `farmazed-web/admin/expediente.html`, `farmazed-web/client-dashboard.html` (comentarios).
+- **i18n**: `_partes/datos.json` (textos nuevos del checklist + la nota interna), `_partes/portal.json` (panel de países y texto de ayuda), `_partes/backoffice.json` (rótulo del plazo) y los generados `en/fr/pt.json` (`npm run i18n`). Manuales regenerados (`npm run manual`): solo cambió la fecha "Manual generado el".
+- **Docs**: `process_map.md` (D9), este handover.
+- **Pruebas nuevas** (`tracker/tests/checklist_via_categoria.test.js`, +12 pruebas, una o más por regla): D1 (Abreviado presente/obligatoria en SQ, Homeopático, Medio de Contraste, Suplementos, Radiofármaco, Gas, Biológicos; Regular ausente en todas; descripción con Art. 24 núm. 2, las 6 filas y Formulario 6), D2 (sin estabilidad en Regular y Abreviado; muestra obligatoria con envase vacío/sistema de cierre/sin gas; se conserva si va combinado con SQ), D3 (condicional + Art. 127 + RAD-19; las demás categorías siguen obligatorias), D6, D7 (ambos documentos; la base de `prospecto` no cambia), D8.
+- **Pruebas ajustadas**: `tracker/tests/permissions.test.js` (bloque observado_dnfd: comentario sin la cita; Regular exige `fechaLimiteSubsanacionNotaInterna === null`; Abreviado exige la nota "Plazo operativo de Farmazed…" sin "Art. 22"). `checklist_base`, `checklist_vacuna`, `i18n`, `manual` y `e2e/checklist.spec.js` **no necesitaron cambios**: checklist_base ya probaba la declaración solo en Abreviado para BIO (sigue cierto), e2e/checklist.spec.js trabaja con Síntesis Química Regular (ninguna regla lo toca) y `flujo_completo.spec.js` busca el texto "plazo de subsanación", que el rótulo nuevo conserva.
+
+### 3. Resultado de la suite (backend completo, `run_permission_tests.sh` dentro del contenedor farmazed-demo, 14-nov-2026)
+`✅ Backend completo en verde` — 30 suites, **524 pruebas, 0 fallos**: permissions 99, acceso_basico 30, auth_acceso 21, caducidad_migracion 15, checklist_base 17, checklist_vacuna 3, checklist_via_categoria 17, config 19, configuracion 6, demo 29, estructura 15, facturacion 18, formularios 7, i18n 6, invitacion_squat 15, manual 6, pagos_atomicos 16, pagos_paypal 19, pagos_rapidpaypro 5, paquete_iea 4, payment_concepts 6, paypal_contrato 13, planes_y_leads 21, precios 4, registro_captacion 18, seed_roles_lista 8, transition_gates 12, webhook_paypal 24, xss 46, migration 5.
+**No corrido**: Playwright (e2e/). El contenedor de la demo no tiene Chromium de Playwright ni `e2e/node_modules`, y en la PC de Rick no hay JDK para `e2e/run.sh`. Ningún spec e2e asevera sobre los documentos cambiados (ver 2); queda para la próxima corrida de `verificar_local.sh`.
+
+### 4. "PIC/S" en el repo (`grep -ri "PIC/S"`, sin node_modules ni sessions/)
+| Dónde | Qué se hizo |
+|---|---|
+| `farmazed-web/portal/nuevo.html:109` | Reemplazado por la columna de autoridades de alto estándar (D4). |
+| `farmazed-web/client-dashboard.html:870` | Ídem (misma columna, con `data-i18n`). |
+| `farmazed-web/i18n/_partes/portal.json` (3 idiomas) y `i18n/{en,fr,pt}.json` | Claves "Miembros PIC/S", el subtítulo y la lista de 47 países retiradas; generados regenerados. |
+| `handover.md:1041` y `:1228` | Bitácora histórica (TAREA 16/17): **no se toca**, documenta lo que había entonces. |
+| `PM_INSTRUCTIONS.md:459` ("PIC/S members (47)") | Documento interno del PM, no visible al usuario: **no se tocó** (fuera de los 9 puntos); el PM debería actualizarlo al Anexo B. |
+| Manuales (`farmazed-web/manual/**`), `preguntas.html`, textos del recorrido | Sin apariciones. |
+
+### 5. Dudas y choques con el código (no resueltos por mi cuenta)
+a. **Gas Medicinal combinado** (`tipoMedicamento` es multi-selección en el wizard): quité `estabilidad` solo cuando TODAS las categorías del caso son Gas Medicinal; si va junto a otra que sí la exige (p. ej. Síntesis Química) se conserva, para no dejar de pedirla. La matriz no contempla combinaciones — confirmar criterio.
+b. **Precedencia de las variantes de `estabilidad`** con varias categorías: Suplementos → Productos Naturales → Radiofármaco → solo-Gas (seguí el orden ya existente para Suplementos/Naturales). La `muestra` de Gas (`DOC_MUESTRA_GAS`) se dedupe por id como el resto: en una combinación gana la primera categoría marcada.
+c. **D1 y BIO-07**: la instrucción pedía quitar la referencia *exclusiva* a BIO-07; dejé BIO-07 citada junto a las otras 6 filas (la prueba verifica que ya no queda la redacción "sección Abreviado"). Si el PM prefiere que no se mencione BIO, es un cambio de texto.
+d. **Nombre de la muestra de Gas**: la matriz no fija un nombre; usé "Muestra Física (envase vacío)". Mismo id `muestra`: los documentos ya subidos siguen enlazados.
+e. **Traducciones** (en/fr/pt) de los textos nuevos del checklist, del panel de países, del texto de ayuda, del rótulo del plazo y de la nota interna las escribí yo (la prueba i18n obliga a tenerlas); revisarlas en la siguiente pasada de idiomas.
+f. **D5 — alcance de "solo back-office"**: el campo nuevo `fechaLimiteSubsanacionNotaInterna` se quita a `CLIENT_ROLES` en `sinCamposInternos` (lista y detalle). Lo ven admin y personal (regente/abogado/analista) en `expediente.html`. Los casos ya en `observado_dnfd` en Firestore no tienen el campo (sin migración, por regla): la nota aparece solo en transiciones nuevas; el rótulo sin cita sí aplica a todos.
+g. **Hook de diseño** (impeccable) marcó en `nuevo.html` y `expediente.html` contrastes y tamaños de texto preexistentes (`text-muted`, 11.2px) ajenos a los 9 puntos: no se tocaron.
+h. Nada de lo FUERA DE ALCANCE se tocó: `bioequivalencia`, `aprobacion_arr`, base común, documentos específicos de Homeopático/Radiofármaco/Gas/Suplementos fuera de D2/D3, Reconocimiento Mutuo/WLA (solo el flag del panel, que era parte de D4), Tipo de Solicitud, vigencias, alerta 48 h, validación vía–categoría, Formulario 10.
+
+### 6. Borrador — cuenta de simulación `simulacion@farmazed.com` (pedido de Rick, 14-nov-2026; NO implementado)
+Objetivo: un ambiente aislado para entrenar y evaluar a todo el personal, que simula la plataforma completa; un topbar con pestañas grandes y llamativas por perfil (Cliente · Admin · Responsable Farmacéutico · Responsable Legal); al pulsar una pestaña el layout cambia al de ese perfil y el usuario sigue el mismo expediente de la A a la Z en la secuencia Cliente → Admin → Farmacéutico → Abogado → Cliente, con seeds conectados entre sí (misma base, mismos casos).
+
+**Clave**: Rick la indicó por chat; **no va en el repo** (es público). Irá como `DEMO_PASSWORD_SIMULACION` en `tracker/.env` (local) / Secret Manager (prod), como las 5 claves demo.
+
+**Propuesta técnica (reutiliza lo que ya pasó la auditoría de la TAREA 64):**
+1. **Cuenta y aislamiento**: usuario `simulacion@farmazed.com`, claims `{ role: 'admin', simulacion: true }`, empresa `sim-org` ("Laboratorio Simulación S.A."). Generalizar `utils/demo_scope.js` → `esDocDemo` pasa a `esDocAislado(doc, ambito)` con dos ámbitos (`demo-org`, `sim-org`); `middleware/demo_admin.js` (denegar-por-defecto para escrituras globales + `ESCRITURAS_PERMITIDAS`) se aplica igual a `simulacion:true`. Misma base Firestore, separada por `orgId`/flag, exactamente como la demo. *Alternativa* (más cara): una segunda base Firestore nombrada solo para simulación — aislamiento físico real, pero duplica reglas, índices y seeds; recomiendo empezar con el ámbito y dejar esto como opción.
+2. **Cambio de perfil sin cerrar sesión**: el front manda la pestaña elegida en una cabecera `X-Fz-Perfil` (cliente_titular | admin | regente | abogado), guardada en `localStorage`. En el tracker, `effectiveRole(req.user)` ya existe: si `user.simulacion === true` y la cabecera trae un perfil válido, el rol efectivo es ese perfil (nunca para cuentas reales). Los permisos siguen saliendo de `middleware/permissions.js` — nada de ifs de rol en el front. El topbar (componente compartido tipo `montarSidebar`) pinta las 4 pestañas con tipografía grande y color de marca y, al cambiar, redirige al layout del perfil: `client-dashboard.html` (Cliente) o `admin/bandeja.html` (Admin/Farmacéutico/Abogado, con el sidebar según permisos).
+3. **Seeds conectados (A→Z)**: `scripts/seed_simulacion.js` (idempotente, como `seed_demo.js`): 1 empresa, 1 titular virtual, 4 expedientes en fases distintas (fase_01 recién creado; fase_04 con cotización enviada; fase_08 pendiente de confirmaciones; fase_13 observado), 1 cotización por expediente, pagos con el **mock** (una cuenta de simulación nunca paga dinero real), facturas con el PAC mock, 2 leads, 1 invitación, mensajes del hilo. El guion "de la A a la Z" se hace sobre el expediente de fase_01.
+4. **Recorrido guiado y evaluación**: reutilizar `services/demo_recorrido.js`: una secuencia por perfil que marca cada paso al cumplirse en los datos (como hoy) y, al completar el tramo, muestra "Siguiente: cambia a la pestaña Admin →". Para **evaluar**, registrar en `sim_eventos/{uid-sesion}` qué pasos completó y en cuánto tiempo; como la cuenta es compartida, al entrar pedir "nombre del participante" (se guarda en la sesión del navegador y acompaña cada evento). Pantalla `admin/simulacion.html` (solo admin real) con el tablero de resultados por participante.
+5. **Reinicio**: `POST /api/simulacion/reiniciar` (solo `simulacion:true`, 1/min), igual que `/api/demo/reiniciar`, para dejar los seeds en cero entre participantes.
+6. **Textos**: i18n en 4 idiomas (README de i18n) y manual propio "Simulación" o una sección en los manuales existentes.
+
+**Decisiones que necesito de Rick antes de empezar:** (a) una cuenta compartida con "nombre del participante" vs. una cuenta por empleado (`nombre.sim@farmazed.com`) para evaluar sin ambigüedad; (b) aislamiento por ámbito (recomendado) vs. segunda base Firestore; (c) ¿existe en producción o solo en local/pruebas?; (d) la clave se fija por variable (no en chat ni repo) — confirmar que `DEMO_PASSWORD_SIMULACION` es el nombre; (e) si la pestaña "Admin" en simulación debe poder ejecutar las escrituras globales simuladas (hoy el admin demo las ve pero no guarda).
+**Estimación**: tracker (ámbito, perfil efectivo, seed, reinicio, eventos, pruebas) ≈ 3 días; front (topbar de perfiles, recorrido, tablero de evaluación, i18n) ≈ 3 días; manual y QA ≈ 1 día.
+
+## 2026-11-14 — TAREA 66: cuenta de SIMULACIÓN `simulacion@farmazed.com` (construida tras las decisiones de Rick)
+Decisiones de Rick (14-nov, chat): (1) **una cuenta genérica** para todo el personal, usada en sesión remota (sin registro por participante);
+(2) aislamiento por **ámbito** `sim-org` (como la demo); (3) **local y producción**; (4) clave fijada por Rick → variable
+`DEMO_PASSWORD_SIMULACION` (tracker/.env local; Secret Manager en prod; **nunca en el repo**); (5) el perfil Administrador
+**revisa, ajusta y envía cotizaciones** y guarda dentro de la simulación; (6) **pagos con PayPal sandbox** integrados.
+
+### Qué se construyó
+- **Ámbitos** (`utils/demo_scope.js`): `SIM_ORG_ID='sim-org'`, `ORGS_AISLADAS`, `PERFILES_SIMULACION`, `esCuentaDemo`, `esSimulacion`,
+  `ambitoDe(user)` (sim-org si la cuenta es de simulación; demo-org para las 5 cuentas demo) y `esDocDelAmbito(user, doc)` (por `orgId`;
+  los leads sin orgId por la marca `sim:true`). `esDocDemo` ahora cubre ambas empresas aisladas (webhook, facturación, correos).
+- **Cambio de perfil** (`middleware/auth.js aplicarPerfilSimulacion`): si el token trae `demo:true + simulacion:true`, la cabecera
+  `X-Fz-Perfil` (cliente_titular | admin | regente | abogado) pasa a ser `req.user.role` ANTES del guard del admin demo; otras
+  cuentas la ignoran; valor desconocido → el claim (cliente_titular). `perfilBase` conserva el claim.
+- **Filtros por ámbito** (antes `DEMO_ORG_ID`/`esDocDemo` fijos): `permissions.js canAccessCase` (admin demo → su ámbito; personal
+  demo → su ámbito, y en la simulación TODOS los casos de sim-org, también los creados como Cliente), `routes/cases.js` (lista por
+  `ambitoDe`; `POST /api/cases` de la simulación nace en sim-org con `demo:true`, `sim:true` y código `FZ-SIM-<año>-A####` sin consumir
+  `meta/counters`), `quotes.js` (acceso, lista, aviso de envío simulado propio), `facturas.js`, `revisiones_pago.js`, `invitations.js`,
+  `pago_externo.js`, `services/demo.js visibleParaDemo` (orgs, leads).
+- **Seed por ámbito** (`services/demo.js AMBITOS`, `idsDe`, `sembrarDemo(ambitoId)`, `borrarDatosDemo(ambitoId)`): mismos datos de
+  ejemplo que la demo con ids `sim-*`, empresa "Laboratorio Simulación S.A.", cliente/personal = la propia cuenta
+  (`demo-simulacion`), todo con `sim:true`. El borrado de leads separa por `sim`. `esCorreoDemo` incluye `simulacion@`.
+  `avanzarTrasPagoDemo` sigue SOLO para demo-org (en la simulación el personal mueve el expediente). `scripts/seed_demo.js
+  --ambito=sim-org | --todo`. `.env.example` documenta la variable.
+- **Rutas** (`routes/demo.js`): `/estado` devuelve `simulacion`, `perfil`, `perfiles`; `/reiniciar` reinicia el ámbito de quien llama y el
+  **admin real** puede reiniciar un ámbito concreto con `{ ambito }` (bootstrap en producción sin tener la cuenta).
+- **Recorrido** (`services/demo_recorrido.js`, `demo_recorrido_textos.js`): estado por ámbito (`idsDe`), rol = perfil elegido;
+  `SIM_PASOS` reescribe los pasos que hablaban de cliente.demo o del avance automático (cliente.pago, admin.cotizacion, admin.pago, en
+  4 idiomas); `ETIQUETAS_SIM` (título "Simulación", "[Reiniciar simulación]", "Seguir como {perfil} →"); la respuesta trae
+  `simulacion`, `perfil`, `siguientePerfil` (Cliente → Admin → Farmacéutico → Legal → Cliente) y `extra.ids` del ámbito.
+- **Front**: `portal/js/auth.js` — `PERFILES_SIM`, `esSimulacion`, `perfilSimulacion` (localStorage `fzPerfilSim`),
+  `cabecerasPerfil`, `cambiarPerfilSimulacion`, `montarPestanasSimulacion` (barra ámbar con 4 pestañas grandes; en el cliente va en
+  `#tb-simulacion`, en el back-office antes del nombre, montada por `initBackoffice`); `getRole`/`isAdmin` devuelven el perfil para esta
+  cuenta (login redirige por perfil; `hasBackofficeAccess` manda al portal si el perfil es Cliente); `montarBotonDemo` → "Reiniciar
+  simulación"; destinos del recorrido del back-office por `extra.ids`. `api.js` manda `X-Fz-Perfil` en cada petición (también
+  `fetchBlob` y la consulta de permisos). `recorrido.js`: botón "Seguir como <perfil> →" al completar el tramo.
+  `client-dashboard.html`: `<li id="tb-simulacion">`. i18n: 7 claves nuevas en `_partes/portal-js.json` (en/fr/pt).
+- **Pruebas**: `tests/simulacion.test.js` (8): claims y `/estado` por perfil; estado inicial de sim-org; continuidad A→Z (el caso creado
+  como Cliente lo abren Admin/Farmacéutico/Legal, código FZ-SIM, contador intacto); aislamiento en ambos sentidos y cabecera inocua en
+  cuentas reales; envío simulado de la cotización 4 y "lo global no se guarda" (403 `demoNoGuarda`); recorrido por perfil con
+  `siguientePerfil` y textos propios; correos/proveedor de pago; reinicio por ámbito (simulación, admin real) sin tocar el otro.
+  **Suite backend completa (contenedor farmazed-demo, 14-nov-2026): 31 suites, 532 pruebas, 0 fallos** (`✅ Backend completo en verde`).
+- **Docs**: `DEMO.md` (fila de la cuenta + sección "Simulación"), `DEPLOY.md` (paso 9c: secreto, variable, primer sembrado).
+
+### Decisiones mías que Rick debe conocer
+- **Lo global con el perfil Administrador se ve pero NO se guarda** (precios, configuración de facturación, planes, roles, invitaciones a
+  terceros, contraseñas, emitir/anular facturas). Rick pidió "poder verlas y guardar"; en producción esas acciones cambiarían la
+  plataforma real (los precios de los clientes reales, por ejemplo), así que mantuve el guard del admin demo. Todo lo de `sim-org` sí se
+  guarda: casos, documentos, mensajes, pagos, cotizaciones (ajustar, enviar, aceptar, pagar), leads, confirmaciones de fase 8. Si se
+  quiere "guardar" también lo global, la vía segura es una copia sombra por ámbito (`config/pricing_sim`…), no implementada.
+- El perfil por defecto al entrar es **Cliente** (claim `role: cliente_titular`); el panel propone el siguiente perfil al completar.
+- Tras pagar en la simulación **no hay avance automático** (sí en la demo): el personal en formación mueve el expediente.
+- "Empleados" (asignar personal) con el perfil Admin lista el personal demo (`demo:true`), no cuentas reales; la simulación no tiene
+  empleados propios (misma cuenta para todo).
+- La carga de documentos como Cliente sigue siendo la **simulada** del modo demo (aviso en vez del explorador de archivos).
+
+### Verificación en el navegador (local, Docker farmazed-demo, 14-nov-2026)
+Entrada como `simulacion@` → portal del cliente con la barra ámbar (Cliente activo) y el panel "Simulación" (6 pasos, 0 de 6);
+pestaña Administrador → `admin/bandeja.html` con sidebar completo (Precios, Finanzas), los 3 expedientes FZ-SIM y el recorrido del
+admin (3 pasos); pestaña Responsable Farmacéutico → sidebar de personal, rótulo del rol y recorrido del regente. Hallazgo corregido
+(`0ccc8cb`): la captación inicial del cliente (overlay z-index 2000) tapaba las pestañas; en la simulación el topbar sube a 2100.
+Captura: `sessions/2026-11-14/simulacion-01-admin-bandeja.png`.
+
+### Producción (14-nov-2026, autorizado por Rick: "Local y también en producción")
+1. Secret Manager: `demo-password-simulacion` (versión 1, valor tomado de `tracker/.env`, nunca impreso) + `secretAccessor` para
+   `farmazed-api-sa`. 2. Tracker: `farmazed-tracker-00012-zof` (`--source tracker`, candidata sin tráfico → health OK → 100 %
+   tráfico) con `DEMO_PASSWORD_SIMULACION` montada. 3. Web: imagen `gcr.io/farmazed/farmazed-web:sim-20261114` → revisión
+   `farmazed-web-00023-gjh`. 4. Cuenta `simulacion@farmazed.com` creada en el Auth de producción con sus claims (Admin SDK local con
+   ADC, script en scratchpad) y `sim-org` sembrada desde el propio tracker (`POST /api/demo/reiniciar` como la cuenta → 200,
+   `ambito: sim-org`). 5. Verificado en producción con la cabecera: los 4 perfiles ven FZ-SIM-2026-0002/0003/0004; recorrido admin
+   "Simulación", 3 pasos, siguiente "Responsable Farmacéutico". Este deploy lleva también todo lo de `13ab58c` (roles,
+   admin.demo, pago demo sandbox) y la TAREA 65 (checklist) que no estaban en producción.
+- Antes del deploy, `647ef0f`: el sembrado omite con aviso las cuentas sin clave (farmaceutico/legal/admin siguen sin secreto en
+  prod) en vez de fallar — así [Reiniciar cuenta demo] y el primer sembrado no se rompen.
+
+### Pendiente / siguiente
+- Secretos de las TAREAS 63/64 (`demo-password-farmaceutico/legal/admin`, `paypal-sandbox-client-id/secret`): sin crear; las 3
+  cuentas demo nuevas no existen en prod y la simulación paga con el **mock** hasta que haya credenciales sandbox.
+- e2e Playwright de la simulación (cambio de pestaña en el navegador) — no hay Chromium en el contenedor; verificación manual hecha.
+- Decidir si lo global del perfil Admin debe "guardarse" en una copia sombra por ámbito (hoy: se ve, no se guarda).
+
+## 2026-11-14 — Fix: "Rellenar con datos de ejemplo" daba 500 en la simulación (demo Docker)
+
+**Síntoma (Rick, 14-nov, perfil Cliente, paso 4 del asistente):** 27 × `POST /api/cases/wyGF…/documents` → 500 `Internal error`, uno por documento.
+
+**Causa:** no era la simulación ni `routes/documents.js`. El emulador de Storage (firebase-tools) guarda los blobs en `$(os.tmpdir())/firebase/storage/blobs` y **al apagarse borra esa carpeta**. Al correr `run_permission_tests.sh` dentro del contenedor `farmazed-demo` (07:22, misma máquina que la demo), `entorno_aislado.sh` levantó un segundo emulador de Storage con el mismo `/tmp`; al terminar la suite, le borró los blobs a la demo viva y toda subida pasó a `ENOENT` (visible solo en `/tmp/demo-local-emulators.log`; el tracker lo registra como `Internal error`, sin detalle).
+
+**Arreglo:**
+- `tracker/scripts/entorno_aislado.sh`: los emuladores de prueba arrancan con `TMPDIR="$FZ_LOGS/tmp"` (carpeta propia por corrida). Comprobado: corrida de la suite `simulacion` dentro del contenedor (8/8) y la carpeta `/tmp/firebase/storage/blobs` de la demo sigue existiendo y subiendo (201 + descarga 200).
+- Demo viva reparada en caliente con `mkdir -p /tmp/firebase/storage/blobs` (no hizo falta reiniciar). Memoria `demo-docker-operacion` actualizada con la causa y la reparación.
+
+**Efecto colateral:** en el expediente del asistente de Rick (`wyGFXtD8kcdhMwQZi4lq`, sim-org) quedó subido el 15.2 "Poder Original" de la verificación (v2, `poder-ejemplo.pdf`, 192 bytes). Al pulsar "Rellenar con datos de ejemplo" se reemplaza por el PDF de ejemplo; "Reiniciar simulación" también lo limpia.
+
+**Producción no afectada:** allí Storage es real (GCS), no hay emulador.
+
+**Sugerencia (no hecha):** el log `[500] … error: 'Internal error'` oculta `e.message`; convendría registrar el mensaje real del lado servidor para no tener que ir al log del emulador.
+
+## 2026-11-14 — Panel de pago de prueba: cuenta compradora PayPal sandbox con botones "Copiar" (Rick)
+
+**Pedido textual:** "ok para destrabar este bloqueo coloquemos las credenciales disponibles y un boton para copiarlas al clipboard y sea mas facil la etapa del pago." (Rick estaba en el login de sandbox.paypal.com al pagar la cotización FZ-SIM-2026-0002 como Cliente.)
+
+**Qué se hizo**
+- `services/payments/index.js` `infoPagoDemo(env)` → `{ proveedor: 'paypal-sandbox'|'mock', comprador: { correo, clave } | null }` a partir de `PAYPAL_SANDBOX_COMPRADOR_EMAIL/_PASSWORD` (nuevas en `.env.example`; solo cuentan si hay credenciales de app sandbox, porque el mock no abre PayPal). Clave vacía o `<…>` → `clave: null` (el panel avisa "Sin configurar").
+- `routes/demo.js` `GET /api/demo/estado` → campo `pagoDemo` **solo para cuentas demo/simulación**; las reales reciben `null` (prueba en `simulacion.test.js`).
+- `client-dashboard.html` (vista Cotización): si hay comprador y una cotización aceptada sin pagar, panel azul "Pago de prueba (PayPal sandbox): no es dinero real." con Correo y Contraseña, cada una con botón **Copiar** (`navigator.clipboard` con respaldo `execCommand`; el botón dice "Copiado" 1,5 s). "Pagar con PayPal" abre entonces PayPal en **otra pestaña** (abierta dentro del clic para que el navegador no la bloquee) y esta se queda con el panel; al volver (`visibilitychange`) recarga la cotización. Si el navegador bloquea la pestaña, cae al comportamiento de siempre (misma pestaña). `api.js getEstadoDemo()`.
+- i18n: 7 claves nuevas en `_partes/portal.json` (en/fr/pt), diccionarios regenerados (`npm run i18n`), `i18n.test.js` en verde.
+- Pruebas: `tests/pago_demo_info.test.js` (5, sin emuladores) + 3 aserciones en `simulacion.test.js`.
+- Docs: DEMO.md → Pagos, PAYPAL_SETUP.md (cuentas sandbox), DEPLOY.md 9c (secretos `paypal-sandbox-comprador-email/password`).
+
+**Credenciales:** Rick pasó por chat (14-nov, después) la contraseña de la cuenta compradora `sb-ncruf48829159@personal.example.com`; quedó en `tracker/.env` local (`PAYPAL_SANDBOX_COMPRADOR_EMAIL/_PASSWORD`, nunca en el repo ni en el chat de vuelta) y la demo Docker se reinició para leerla: el panel muestra correo y contraseña, cada una con "Copiar". En producción, mientras no existan los secretos sandbox de 9b(2) y los dos del comprador (9c), la simulación paga con el mock y el panel no aparece.
+
+## 2026-11-14 — Botón "Abrir en Cowork" del expediente: visible pero EN PAUSA (Rick)
+
+**Pedido textual:** "hagamos cambios en ese boton, esa funcion me gusta pero por ahora dejala visible pero con un color que se asocie con que esta deshabiitada temporalmente, y colocale un emblema mas sobrio y colorres que armonizen con el layout."
+
+**Por qué:** el botón arma un contexto FADDI para pegarlo en Claude Cowork (con Claude in Chrome rellenando sisregsan.minsa.gob.pa). Comprobado hoy: el formulario de FADDI responde 302 a `Default.aspx` sin sesión de MINSA, nadie probó el flujo completo, el plugin MCP apunta a `api.farmazed.com/mcp` (dominio inexistente; el tracker vive en Cloud Run) y la subida de archivos en FADDI exige el diálogo del sistema. Hasta validar eso, la función queda en pausa.
+
+**Cambios (`admin/expediente.html`):** icono `bi-robot` en vez de ⚡; estilo apagado sobre el topbar navy (texto blanco al 62 %, borde discontinuo blanco al 38 %, fondo casi transparente, `white-space:nowrap`, cursor `not-allowed`), pastilla "EN PAUSA" ámbar tenue (`#ffd166` sobre ámbar al 16 %); `aria-disabled` y `title` explicativo. Al pulsarlo muestra un aviso ("…deshabilitado temporalmente: se activará cuando se valide el acceso a FADDI.") y NO abre el modal; el modal y `buildCoworkContext()` siguen intactos: para reactivar, `COWORK_HABILITADO = true` y devolver el estilo. i18n: 3 claves nuevas en `_partes/backoffice.json` (en/fr/pt), `i18n.test.js` 6/6. Verificado en Chrome (perfil Administrador de la simulación): captura `sessions/2026-11-14/simulacion-04-boton-cowork-en-pausa.png`.
+
+**Pendiente para reactivarlo:** sesión real en FADDI con la cuenta de MINSA (la hace Rick o alguien autorizado), corregir la URL del plugin MCP en la configuración de Cowork y decidir cómo se adjuntan los archivos.
+
+## 2026-11-14 — QA de la simulación de la A a la Z (Rick: "revisa todos los workflows y córrelos tú mismo")
+
+**Síntoma reportado:** como Administrador, el paso 1 del panel dice "pulsa Enviar cotización" pero en Cotizaciones el botón parecía texto suelto. Causa: `admin/cotizaciones.html` usaba la clase `btn-fz`, que esa página no define. → `btn btn-sm btn-primary`.
+
+**Recorrido ejecutado** (pestaña aislada de Chrome con la cuenta de simulación, tras "Reiniciar simulación"; demo Docker local):
+- Cliente 6/6: captación → producto con "Rellenar con datos de ejemplo" → 24 documentos simulados → acepta cotización 2 → paga en PayPal **sandbox real** (login con la cuenta compradora del panel, "Completar compra", vuelta y captura: "Pagado con PayPal (orden 9JF…)") → mensaje. Panel: "¡Tramo completo!" + "Seguir como Administrador →".
+- Administrador 3/3: envía la cotización 4 (botón ya visible) → lead "Farmacia Ejemplo" a Contactado con nota → (como Cliente: acepta y paga la cotización 4 en sandbox, orden 0JR…) → el pago aparece en Finanzas (dos facturas `fac_pp_*`) y en el expediente (tarjeta Pagos D12 con honorarios/DNFD/MEF/IEA). "Seguir como Responsable Farmacéutico →".
+- Responsable Farmacéutico 3/3: aprueba el 15.5 del Producto 3 (✓) → confirma Técnica/matrices en "Fase 8 — Confirmaciones" → el lead ya constaba atendido. "Seguir como Responsable Legal →".
+- Responsable Legal 3/3: aprueba el 15.2 → confirma Legal → "Solicitar" una declaración jurada en el Producto 2 (diálogo de instrucciones → "Solicitud enviada al cliente"); el caso pasa a `pending_docs` y el Cliente lo ve en "Mis Documentos" como pendiente. "Seguir como Cliente →".
+
+**Inconsistencias encontradas y corregidas (además del botón):**
+1. `admin/expediente.html` `requestDoc`: tras "Solicitar" el selector de estado seguía en la fase anterior hasta recargar (el servidor sí había movido el caso a documentos pendientes). Ahora relee el caso y repinta: "Documentos pendientes (actual)" al instante.
+2. `portal/js/wizard.js`: la barra del paso 4 contaba los documentos internos de Farmazed (recibos de tasas), así que el cliente se quedaba en "24 de 27 · 89 %" con todo lo suyo subido. Nuevo `progresoCliente()` (solo `responsable !== 'farmazed'`) en la barra y en el resumen del paso 5: "24 de 24 · 100 %".
+3. `wizard.js`: el estado de cada casilla salía como clave interna en inglés ("pending", "uploaded") → `ETIQUETA_ESTADO_DOC` + `t()`: Pendiente / Subido / Aprobado / Rechazado / Solicitado.
+4. Código FADDI `PENDIENTE_VERIFICAR` (convención de la TAREA 65) se mostraba en crudo al cliente ("PENDIENTE_VERIFICAR — Otros Documentos Aclaratorios") y al personal. El cliente ya no ve código en esos documentos; el back-office muestra "s/n" con tooltip "Código FADDI pendiente de verificar" (clave nueva en `_partes/backoffice.json`, en/fr/pt). El dato no cambia.
+
+**Observaciones sin cambio (para decidir):**
+- "Reiniciar simulación" revoca las sesiones de la cuenta (`services/demo.js revokeRefreshTokens`, herencia de la demo): en una sesión remota con varios empleados dentro de la misma cuenta, un reinicio saca a todos al login. Si molesta, se puede no revocar en `sim-org`.
+- Las cuentas con la cabecera de perfil: todo lo anterior se hizo cambiando de pestaña en el topbar; cada cambio recarga la página del perfil, como está diseñado.
+- Capturas: `sessions/2026-11-14/simulacion-05-admin-cotizaciones-boton-enviar.png`, `-06-admin-finanzas-pagos.png`, `-07-wizard-paso4-progreso-cliente.png`. (No se guardan capturas con la contraseña sandbox a la vista.)
+- Pruebas: `i18n.test.js` 6/6 tras cada cambio; `node --check wizard.js` OK. Sin cambios en el tracker.
+
+## 2026-11-14 — Producción al día (Rick: "actualicemos los .md, subamos a git y pasa todo a producción")
+
+- **Secretos nuevos** (Secret Manager, `farmazed`, con `secretAccessor` para `farmazed-api-sa`): `paypal-sandbox-comprador-email`, `paypal-sandbox-comprador-password` (valores de `tracker/.env`, canalizados sin imprimir). No hacen falta `paypal-sandbox-client-id/secret`: producción corre con `PAYPAL_ENV=sandbox` y la app general, así que las cuentas demo ya pagaban en sandbox.
+- **Tracker**: `farmazed-tracker-00014-zop` (`--source tracker --no-traffic --tag candidata` + `--update-secrets` de los dos secretos → `/health` OK → humo como `simulacion@farmazed.com`: `/api/demo/estado` devuelve `pagoDemo.proveedor=paypal-sandbox` con comprador y clave → `update-traffic --to-latest`, 100 %).
+- **Web**: `farmazed-web-00024-66j`, imagen `gcr.io/farmazed/farmazed-web:qa-20261114` (`gcloud builds submit` 29 s + `run deploy --image`). Humo en https://farmazed.com: `wizard.js` con `progresoCliente`, `cotizaciones.html` con el botón `btn-primary btn-enviar`, `expediente.html` con `COWORK_HABILITADO`.
+- Incluye todo lo de hoy: fix TMPDIR del entorno de pruebas (solo scripts), panel de pago de prueba con botones Copiar, "Abrir en Cowork" en pausa, y las cuatro correcciones del QA de la simulación. `sim-org` en producción no se resembró (el reinicio lo hace cualquiera desde el topbar).
+- Docs tocados en esta sesión: `DEMO.md` (panel de pago, aviso de revocación al reiniciar, QA manual), `DEPLOY.md` (9c: secretos del comprador), `PAYPAL_SETUP.md`, `PENDIENTES.md` (sección "Simulación (TAREA 66) — pendientes" y nota de la TAREA 64), `tracker/.env.example`, memoria del agente.
+
+### 2026-11-15 — Nota del PM: numeración
+En Patch se trabajaron como "TAREA 65/66" la limpieza+seguridad y jQuery/SRI mientras en paralelo (14-nov, otra máquina) se subían otras TAREA 65 (checklist/matrices) y 66 (cuenta de simulación). Al integrar `origin/main` (merge, sin forzar) se renumeraron: limpieza+seguridad = **TAREA 67**, jQuery 3.7.1 + SRI = **TAREA 68**. La próxima es la 69.
+
+### 2026-11-14 — TAREA 67 (antes "65" en Patch; limpieza + seguridad), sin commit ni push
 **Borrado (lo confirmado por el cruce PM + developer):** 1.057 archivos de `farmazed-web/src/`: `approx/libs/*` salvo `bootstrap/js/bootstrap.bundle.min.js`; `approx/js/{pages/*,DynamicSelect,moment}.js`; `approx/css/{app,icons,bootstrap}.css` y los 3 `.map`; `approx/images/**` salvo los que pide `app.min.css` (`pet-bg.png` NO existe en el repo: `app.min.css` ya apuntaba a un archivo ausente); `approx/fonts/icofont.{eot,svg,ttf}`; `wecare/*.html`, `*.php`, `js/{jquery-1.9.0.min,custom,gmap3.min}.js`, `css/ie8-and-down.css`; **56 de 77** `wecare/images` (las 21 referenciadas por nombre en css/js/html cargados se quedan: active-header, anchor-info, anchor-search, back-top, bg_direction_nav, border, calendar(.gif/.png), clock, dropcap, home, inactive-header, mail, message, overlag, phone, phone2, search, test-rect, testimonial-arrow, user; `css/images` de bxslider intacto); `images/Object*.png`, `obj0.gif`, `Metod*.mp4`; `icons/Medicamentos Homeopáticos.svg`. Código: `NOMBRES_IDIOMA`, `MONTOS_REFERENCIA`, `copyField` (admin/expediente.html). Sin `git rm`: los borrados quedan como cambios sin stagear. **Tamaño de `farmazed-web`: 110,6 MB → 58,0 MB (1.266 → 209 archivos versionados).** No se tocó: `src/wecare/font/`, qr.png, testimonios.html, Propuesta, 404.html, migrate_status.js, exports sobrantes.
 **FontAwesome (revisado en navegador, sin arreglar):** `style.css` declara `@font-face 'arabical'` apuntando a `../fonts/` (no existe; la carpeta real es `src/wecare/font/`) y dos reglas `.side-blog .tab-links … :before { font-family:'FontAwesome' }` sin `@font-face`. Esos selectores no existen en ninguna página pública (probado con Playwright) y ninguna petición da 404: nada visible está roto hoy; el riesgo es latente.
 **Seguridad (una prueba por punto):**
@@ -6646,11 +6863,11 @@ Correcciones pedidas por la auditoría de seguridad (todas con prueba):
 **Verificación:** `./verificar_local.sh` exit 0 — Playwright 30/30 + 31 suites backend (`seguridad_t65` 7, `subida_archivos` 7; permissions 99, demo 29, paypal_contrato 13, webhook_paypal 24…). **Load al arrancar 10,82 (23:08), al terminar 8,51 (23:34).** Incluye `npm test` (es la misma suite backend). `docker compose build` + `up`: `/`, index, nosotros, blog, contacto, preguntas, 404, client-dashboard y login → 200 sin 404 de recursos ni errores nuevos; `.git/config`, `README.md`, `x.log` y `*.map` → 404; capturas `sessions/2026-11-14/65-{antes,borrado,contenedor}-*.png`.
 **Pendiente / no hecho:** (a) la corrida e2e vuelve a reescribir 91 PNG de `sessions/2026-09-29`, `-09-30`, `-10-03` (y 6 sin seguimiento de 2026-09-29): restaurar con `git checkout -- sessions/2026-09-29 sessions/2026-09-30 sessions/2026-10-03` y borrar los 6 sin seguimiento (el hook GateGuard me lo bloquea). (b) jQuery (ver 4). (c) FontAwesome latente, qr.png, testimonios.html, Propuesta, 404.html, migrate_status.js: los decide Rick. (d) CSP, SRI de CDN y `listUsers(1000)`: sin tocar.
 
-### 2026-11-14 — TAREA 65, ajuste: vista previa en "Ver archivo" (sin commit)
+### 2026-11-14 — TAREA 67, ajuste: vista previa en "Ver archivo" (sin commit)
 `services/storage.js`: `disposicionPara(nombreORuta, mime)` → **inline** solo si extensión saneada ∈ {pdf, png, jpg, jpeg, webp} Y el MIME guardado coincide con esa extensión; todo lo demás (office, zip, gif, MIME ausente o distinto) → **attachment**. Se usa al subir (`contentDisposition` del objeto y `responseDisposition` de la URL firmada) y en `getSignedUrl(storagePath, mimeType)`, ahora con el `mimeType` guardado en el documento (`routes/documents.js` x2, `routes/mcp.js`). Pruebas (`subida_archivos` 10/10): unitarias de `disposicionPara`, PDF servido `inline`, DOCX y ZIP `attachment`. Navegador (Chromium completo con visor PDF, entorno aislado): el PDF se muestra en la pestaña (`sessions/2026-11-14/65-vista-previa-pdf-chromium.png`) y el DOCX descarga; el headless-shell de Playwright no tiene visor y descarga todo PDF, por eso la prueba usa `channel: 'chromium'`. Corridas: `npm test` exit 0 (32 suites, load 16,8 → 7,6); e2e `document_versions` ver reporte. No se tocó `sessions/` salvo la captura nueva; la e2e vuelve a reescribir PNG de 09-29/09-30/10-03 (los restaura el PM).
 
 
-### 2026-11-15 — TAREA 66 (jQuery 3.7.1 sin migrate, selector de fecha, SRI), sin commit ni push
+### 2026-11-15 — TAREA 68 (antes "66" en Patch; jQuery 3.7.1 sin migrate, selector de fecha, SRI), sin commit ni push
 **A) jQuery 1.8.1 → 3.7.1, SIN jquery-migrate.** Archivo nuevo `src/wecare/js/jquery-3.7.1.min.js` (el viejo `jquery.min.js` se borró y las 6 páginas públicas apuntan al nuevo). `git grep` de `jquery-1.`/`jquery-2.`/`jquery.min.js` fuera de `References/` (no se sirve): 0. Qué se rompía y qué se hizo (todo se midió, no se supuso):
 - **Causa del error `serial`**: NO era el formulario. Superfish 1.4.8 llama a `$.browser` (eliminado en jQuery 1.9) al inicializarse, aborta dentro del `try` de `script.js` sin avisar y nunca queda inicializado; al hacer hover `getMenu()` no encuentra el `ul` y falla `menu.serial`. (Dato extra: con 1.8.1 el menú móvil ya estaba roto: la caja azul del submenú salía sin texto visible; ahora se ve. Capturas `66-antes-menu-movil-tras-toque.png` / `66-despues-…`.) → superfish **1.7.10** (`jquery.superfish.js`, mismo nombre) y `script.js`: `autoArrows` → `cssArrows`.
 - `.live()` (flexslider 2.1, 2 sitios, solo rama `manualControls`; `script.js`, pestañas) → `.on()` / delegado en `document`. Flexslider se queda en 2.1 (mismo aspecto/transiciones: antes y después son idénticos en autoplay, flecha y puntos).
@@ -6662,3 +6879,6 @@ Correcciones pedidas por la auditoría de seguridad (todas con prueba):
 **C) SRI:** 30 etiquetas / 4 URL (bootstrap 5.3.3 css y bundle, bootstrap-icons 1.11.3, y `cdn.tailwindcss.com` en `Propuesta_Farmazed_2026.html`, que estaba SIN versión y se fijó a `/3.4.17`) ahora con `integrity` sha384 + `crossorigin="anonymous"`, hash calculado sobre el archivo descargado (`openssl dgst -sha384 -binary | openssl base64 -A`). Script `tracker/scripts/verificar_sri.js` (`--descargar` baja cada recurso y compara el hash real; salida actual: limpio, hashes comprobados) y prueba `tracker/tests/sri.test.js` (falla si hay un recurso sin integrity/crossorigin o con versión sin fijar; incluye casos negativos). Excluido: Google Fonts (su CSS cambia por navegador). No cubierto (no admite integrity): los `import … from 'https://www.gstatic.com/firebasejs/10.11.0/…'` de módulos ES (login, registro, verificar-correo, `portal/js/auth.js`; versión fijada).
 **Verificación:** capturas antes/después en `sessions/2026-11-15/66-{antes,despues}-*.png` (index, nosotros, blog, contacto, 404 y servicios, escritorio y 390 px; slider en dos instantes, submenú, menú móvil, formularios enviados; calendario: n/a, ver B). Consola: los 12 recorridos (6 páginas × escritorio/móvil) sin NINGÚN error ni 4xx tanto en servidor estático como en el contenedor nginx; antes había 5 (Zebra x2 páginas, POST .php x3). Diferencias de píxel solo donde cambia la diapositiva del slider (animación) y en el menú móvil (arreglado). `./verificar_local.sh` exit 0 (Playwright 30/30 + 33 suites, incluye `sri` 3 y `npm test`): **load al arrancar 5,65 (00:55), al terminar 4,45 (01:14).** `docker compose` de la web: portada, nosotros, blog, contacto, preguntas, 404, login y client-dashboard → 200; `jquery.min.js` viejo → 404.
 **Pendiente:** la e2e vuelve a reescribir PNG de `sessions/2026-09-29`, `-09-30`, `-10-03` (los restaura el PM). `References/` conserva jQuery 1.x (no se sirve). Flexslider 2.1, bxslider 4.1.1 y accordion siguen viejos pero funcionan con jQuery 3 (probado).
+
+### 2026-11-15 — Integración de origin/main con las TAREAS 67 y 68 (PM)
+Merge sin forzar de los 15 commits del 14-nov (simulación, matrices D1–D9, panel sandbox, Cowork). Árbol integrado validado por el developer: `npm test` 35 suites verde; `verificar_sri.js` limpio (lo nuevo no trae CDN sin SRI); nada de origin usa lo borrado en la 67; `verificar_local.sh` backend 35/35 y Playwright 30/30 tras alinear 3 aserciones (`checklist.spec.js:135`, `paquete_iea.spec.js:115`, `flujo_completo.spec.js:153`) al texto "Subido" que introdujo `61db3d0` (antes `uploaded`); contenedor web con público, portal, admin, simulación y manuales en 200 sin errores de consola. Push a main por orden de Rick vía Dandy (15-nov). **Sin deploy**: producción sigue en lo desplegado el 14-nov (tracker 00014, web 00024), que no incluye las TAREAS 67 y 68. Los PNG de `sessions/2026-09-29`, `-09-30`, `-10-03` regenerados por la e2e quedan modificados sin subir (el hook GateGuard bloquea el `git checkout`): restaurarlos con `git checkout -- sessions/`.

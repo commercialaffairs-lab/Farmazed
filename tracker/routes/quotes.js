@@ -49,8 +49,9 @@ const { createConceptPayment } = require('../services/payments_ledger');
 const { recomputeTotal } = require('../services/quotes');
 const { HttpError, responderError } = require('../utils/http_error');
 const { esCuentaDemo, avanzarTrasPagoDemo } = require('../services/demo');
-const { DEMO_ORG_ID, esAdminDemo, esDocDemo } = require('../utils/demo_scope');
-const AVISO_ENVIO_DEMO = 'Envío simulado: en la demo no sale ningún correo. cliente.demo ya ve esta cotización en su portal y puede pagarla.'; // modo demo: avance automático tras el pago
+const { esAdminDemo, esDocDelAmbito, esSimulacion, ambitoDe } = require('../utils/demo_scope');
+const AVISO_ENVIO_DEMO = 'Envío simulado: en la demo no sale ningún correo. cliente.demo ya ve esta cotización en su portal y puede pagarla.';
+const AVISO_ENVIO_SIM = 'Envío simulado: en la simulación no sale ningún correo. Cambia a la pestaña Cliente para verla, aceptarla y pagarla en PayPal sandbox.'; // modo demo: avance automático tras el pago
 const { registrarPagoConfirmado } = require('../services/facturacion/facturas'); // factura electrónica tras el pago
 
 const router = Router();
@@ -72,7 +73,7 @@ function historialEntry(tipo, extra, req) {
  */
 function canAccessQuote(user, quoteData) {
   const role = effectiveRole(user);
-  if (role === 'admin') return !esAdminDemo(user) || esDocDemo(quoteData); // admin demo (TAREA 64): solo cotizaciones de la empresa demo
+  if (role === 'admin') return !esAdminDemo(user) || esDocDelAmbito(user, quoteData); // admin demo (TAREA 64): solo cotizaciones de su ámbito (demo-org / sim-org)
   if (CLIENT_ROLES.includes(role)) return quoteData.orgId && quoteData.orgId === user.orgId;
   return false;
 }
@@ -83,7 +84,7 @@ router.get('/', requireAuth, requirePermission('quotes.read'), async (req, res) 
     const role = effectiveRole(req.user);
     let query = db().collection('quotes').orderBy('createdAt', 'desc');
     if (role !== 'admin') query = query.where('orgId', '==', req.user.orgId || '__sin_org__');
-    else if (esAdminDemo(req.user)) query = query.where('orgId', '==', DEMO_ORG_ID);
+    else if (esAdminDemo(req.user)) query = query.where('orgId', '==', ambitoDe(req.user));
 
     const snap = await query.limit(200).get();
     const quotes = snap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -234,7 +235,7 @@ router.post('/:id/send', requireAuth, requirePermission('quotes.send'), async (r
 
     // Modo demo: el envío es simulado (esta ruta no manda correo en ningún caso, y a *.demo@ tampoco lo mandaría
     // services/correo.js); la pantalla muestra el aviso y cliente.demo ve la cotización en su portal.
-    res.json(serializeTimestamps({ id: ref.id, ...data, estado: 'enviada', ...(esCuentaDemo(req.user) ? { simulado: true, aviso: AVISO_ENVIO_DEMO } : {}) }));
+    res.json(serializeTimestamps({ id: ref.id, ...data, estado: 'enviada', ...(esCuentaDemo(req.user) ? { simulado: true, aviso: esSimulacion(req.user) ? AVISO_ENVIO_SIM : AVISO_ENVIO_DEMO } : {}) }));
   } catch (e) {
     res.status(500).json({ error: e.message });
   }

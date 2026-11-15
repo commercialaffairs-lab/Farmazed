@@ -244,6 +244,79 @@ const ETIQUETAS_PANEL = {
   },
 };
 
+// ─── SIMULACIÓN (Rick, 14-nov-2026) ────────────────────────────────────────────────────────────────
+// La cuenta simulacion@ recorre los MISMOS pasos de cada rol, pero cambiando de perfil en el topbar en vez de entrar con
+// otra cuenta. Solo se reescriben los pasos cuyo texto demo habla de "cliente.demo" o del avance automático; el resto
+// se reutiliza tal cual. Rótulos de los perfiles = los de la interfaz (diccionario i18n: Cliente, Administrador,
+// Responsable Farmacéutico, Responsable Legal).
+const SIM_PERFILES = {
+  es: { cliente_titular: 'Cliente', admin: 'Administrador', regente: 'Responsable Farmacéutico', abogado: 'Responsable Legal' },
+  en: { cliente_titular: 'Client', admin: 'Administrator', regente: 'Pharmacist in Charge', abogado: 'Legal Officer' },
+  fr: { cliente_titular: 'Client', admin: 'Administrateur', regente: 'Responsable pharmaceutique', abogado: 'Responsable juridique' },
+  pt: { cliente_titular: 'Cliente', admin: 'Administrador', regente: 'Responsável Farmacêutico', abogado: 'Responsável Jurídico' },
+};
+
+const SIM_PASOS = {
+  es: {
+    cliente: {
+      pago: { titulo: 'Paga con PayPal sandbox', descripcion: 'Pulsa "Pagar con PayPal": te lleva a PayPal sandbox (el entorno de pruebas). Entra con la cuenta de comprador de prueba y aprueba el pago: no se mueve dinero real. Al volver, el expediente queda pagado en la fase 4: en la simulación nadie lo mueve por ti — cambia a la pestaña "Administrador" para seguir el flujo.' },
+    },
+    admin: {
+      cotizacion: { titulo: 'Ajusta y envía la cotización del Producto Ejemplo 4', descripcion: 'En "Cotizaciones" abre la cotización en borrador del "Producto Ejemplo 4", revisa o ajusta los honorarios (con un motivo si te apartas del tarifario) y pulsa "Enviar cotización". El envío es simulado: no sale ningún correo, pero la pestaña "Cliente" ya la ve en su portal.' },
+      pago:       { titulo: 'Mira el pago de la cotización', descripcion: 'Cambia a la pestaña "Cliente", acepta la cotización del "Producto Ejemplo 4" y págala en PayPal sandbox. Vuelve a "Administrador": verás el pago en el expediente y en "Finanzas". Luego sigue como "Responsable Farmacéutico" y "Responsable Legal" para la fase 8.' },
+    },
+  },
+  en: {
+    cliente: {
+      pago: { titulo: 'Pay with PayPal sandbox', descripcion: 'Click "Pay with PayPal": it takes you to PayPal sandbox (the test environment). Sign in with the test buyer account and approve the payment: no real money moves. When you return, the file is paid and still in phase 4: in the simulation nobody moves it for you — switch to the "Administrator" tab to continue the flow.' },
+    },
+    admin: {
+      cotizacion: { titulo: 'Adjust and send the quote for Producto Ejemplo 4', descripcion: 'Under "Quotes" open the draft quote for "Producto Ejemplo 4", review or adjust the fees (with a reason if you depart from the price list) and click "Send quote". Sending is simulated: no email goes out, but the "Client" tab already sees it in its portal.' },
+      pago:       { titulo: 'Check the quote payment', descripcion: 'Switch to the "Client" tab, accept the quote for "Producto Ejemplo 4" and pay it in PayPal sandbox. Come back to "Administrator": you will see the payment in the file and under "Finance". Then continue as "Pharmacist in Charge" and "Legal Officer" for phase 8.' },
+    },
+  },
+  fr: {
+    cliente: {
+      pago: { titulo: 'Payez avec PayPal sandbox', descripcion: 'Cliquez sur « Payer avec PayPal » : vous arrivez sur PayPal sandbox (l\'environnement de test). Connectez-vous avec le compte acheteur de test et approuvez le paiement : aucun argent réel ne bouge. Au retour, le dossier est payé et reste en phase 4 : dans la simulation personne ne le fait avancer pour vous — passez à l\'onglet « Administrateur » pour poursuivre le flux.' },
+    },
+    admin: {
+      cotizacion: { titulo: 'Ajustez et envoyez le devis du Producto Ejemplo 4', descripcion: 'Dans « Devis », ouvrez le devis en brouillon du « Producto Ejemplo 4 », vérifiez ou ajustez les honoraires (avec un motif si vous vous écartez du tarif) et cliquez sur « Envoyer le devis ». L\'envoi est simulé : aucun e-mail ne part, mais l\'onglet « Client » le voit déjà dans son portail.' },
+      pago:       { titulo: 'Vérifiez le paiement du devis', descripcion: 'Passez à l\'onglet « Client », acceptez le devis du « Producto Ejemplo 4 » et payez-le sur PayPal sandbox. Revenez à « Administrateur » : vous verrez le paiement dans le dossier et dans « Finances ». Poursuivez ensuite comme « Responsable pharmaceutique » et « Responsable juridique » pour la phase 8.' },
+    },
+  },
+  pt: {
+    cliente: {
+      pago: { titulo: 'Pague com PayPal sandbox', descripcion: 'Carregue em "Pagar com PayPal": leva-o ao PayPal sandbox (o ambiente de testes). Entre com a conta de comprador de teste e aprove o pagamento: não se move dinheiro real. Ao voltar, o processo fica pago e ainda na fase 4: na simulação ninguém o move por si — mude para o separador "Administrador" para continuar o fluxo.' },
+    },
+    admin: {
+      cotizacion: { titulo: 'Ajuste e envie o orçamento do Producto Ejemplo 4', descripcion: 'Em "Orçamentos" abra o orçamento em rascunho do "Producto Ejemplo 4", reveja ou ajuste os honorários (com um motivo se se afastar da tabela) e carregue em "Enviar orçamento". O envio é simulado: não sai nenhum e-mail, mas o separador "Cliente" já o vê no seu portal.' },
+      pago:       { titulo: 'Veja o pagamento do orçamento', descripcion: 'Mude para o separador "Cliente", aceite o orçamento do "Producto Ejemplo 4" e pague-o no PayPal sandbox. Volte a "Administrador": verá o pagamento no processo e em "Finanças". Depois continue como "Responsável Farmacêutico" e "Responsável Jurídico" para a fase 8.' },
+    },
+  },
+};
+
+// Rótulos del panel que cambian en la simulación (se mezclan sobre ETIQUETAS_PANEL del idioma). `{perfil}` = el siguiente.
+const ETIQUETAS_SIM = {
+  es: { titulo: 'Simulación', pildora: 'Simulación · paso {n} de {total}', completoPildora: 'Tramo completo', completoTitulo: '¡Tramo completo!',
+    completoTexto: 'Terminaste los pasos de este perfil. Cambia de pestaña en el topbar para seguir el flujo con el siguiente perfil, o pulsa [Reiniciar simulación] para empezar de cero.',
+    siguientePerfil: 'Seguir como {perfil} →', error: 'No se pudo cargar la simulación' },
+  en: { titulo: 'Simulation', pildora: 'Simulation · step {n} of {total}', completoPildora: 'Section complete', completoTitulo: 'Section complete!',
+    completoTexto: 'You finished the steps of this profile. Switch tabs in the top bar to continue the flow with the next profile, or click [Reset simulation] to start over.',
+    siguientePerfil: 'Continue as {perfil} →', error: 'The simulation could not be loaded' },
+  fr: { titulo: 'Simulation', pildora: 'Simulation · étape {n} sur {total}', completoPildora: 'Partie terminée', completoTitulo: 'Partie terminée !',
+    completoTexto: 'Vous avez terminé les étapes de ce profil. Changez d\'onglet dans la barre du haut pour poursuivre le flux avec le profil suivant, ou cliquez sur [Réinitialiser la simulation] pour repartir de zéro.',
+    siguientePerfil: 'Continuer comme {perfil} →', error: 'Impossible de charger la simulation' },
+  pt: { titulo: 'Simulação', pildora: 'Simulação · passo {n} de {total}', completoPildora: 'Parte concluída', completoTitulo: 'Parte concluída!',
+    completoTexto: 'Terminou os passos deste perfil. Mude de separador na barra superior para continuar o fluxo com o perfil seguinte, ou carregue em [Reiniciar simulação] para recomeçar.',
+    siguientePerfil: 'Continuar como {perfil} →', error: 'Não foi possível carregar a simulação' },
+};
+
+/** Rótulos del panel para la simulación en un idioma: los del recorrido demo con los de ETIQUETAS_SIM encima. */
+function etiquetasSimulacion(idioma) {
+  const i = normalizarIdioma(idioma);
+  return { ...ETIQUETAS_PANEL[i], ...ETIQUETAS_SIM[i] };
+}
+
 /** Idioma válido o el español. Acepta 'en-US' → 'en'. */
 function normalizarIdioma(valor) {
   const base = String(valor || '').toLowerCase().slice(0, 2);
@@ -256,14 +329,18 @@ const LISTAS = { cliente: PASOS_CLIENTE, clienteReal: PASOS_CLIENTE_REAL, regent
  * Pasos de una variante en el idioma pedido (nuevos objetos; el español es la lista de referencia).
  * `variante`: 'cliente' (cuenta demo), 'clienteReal' (cliente de verdad, desde "Mi cuenta'), 'regente' o 'legal'.
  */
-function pasosEnIdioma(variante, idioma) {
+function pasosEnIdioma(variante, idioma, { simulacion = false } = {}) {
   const base = LISTAS[variante] || PASOS_CLIENTE;
-  const trad = TRADUCCIONES[normalizarIdioma(idioma)]?.[variante];
-  return base.map(p => (trad?.[p.id] ? { ...p, ...trad[p.id] } : { ...p }));
+  const i = normalizarIdioma(idioma);
+  const trad = TRADUCCIONES[i]?.[variante];
+  // Simulación: encima de la traducción, los pasos reescritos para la cuenta que cambia de perfil (SIM_PASOS).
+  const sim = simulacion ? SIM_PASOS[i]?.[variante] : null;
+  return base.map(p => ({ ...p, ...(trad?.[p.id] || {}), ...(sim?.[p.id] || {}) }));
 }
 
 module.exports = {
   IDIOMAS, IDIOMA_POR_DEFECTO,
   PASOS_CLIENTE, PASOS_CLIENTE_REAL, PASOS_REGENTE, PASOS_LEGAL, PASOS_ADMIN, TRADUCCIONES, NOTAS, ETIQUETAS_PANEL,
+  SIM_PERFILES, SIM_PASOS, ETIQUETAS_SIM, etiquetasSimulacion,
   normalizarIdioma, pasosEnIdioma,
 };

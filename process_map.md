@@ -1,3 +1,5 @@
+> **REEMPLAZADO — v1.0 del 25-ago-2026. No refleja el código actual. Fuente vigente: tracker/data/case_status.js y tracker/data/faddi_checklists.js.**
+
 # Farmazed — Mapa de Proceso: Solicitar Nuevo Registro
 **Versión:** 1.0 | **Fecha:** 2026-08-25 | **Autor:** PM Farmazed (Claude)
 **Base regulatoria:** D.E. 27/2024 (medicamentos), D.E. 178/2001 (cosméticos), RTCA 71.03.35:21, D.E. 29/2023 (Abreviado)

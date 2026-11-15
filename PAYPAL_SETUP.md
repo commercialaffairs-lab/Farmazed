@@ -32,6 +32,10 @@ Entrar a <https://developer.paypal.com> con la cuenta Business de Farmazed.
 
       En el checkout de sandbox NO entra una cuenta PayPal real: solo estas.
 
+      Para no teclearlas: pon `PAYPAL_SANDBOX_COMPRADOR_EMAIL` y `PAYPAL_SANDBOX_COMPRADOR_PASSWORD` en
+      `tracker/.env` (14-nov-2026) y las cuentas demo/simulación ven la cuenta compradora con botones
+      "Copiar" junto a "Pagar con PayPal" (DEMO.md → Pagos). Dinero ficticio, pero fuera del repo igual.
+
 **Probado el 05-oct-2026 con la demo en Docker:** pago de una cotización de punta a punta
 (orden → aprobación en PayPal sandbox → vuelta al portal → captura y pagos registrados).
 

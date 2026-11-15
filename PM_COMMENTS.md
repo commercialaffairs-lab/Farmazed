@@ -960,7 +960,7 @@ Sin deploy.
 
 Rick: "hagamos una revision del codigo, de que no haya codigo basura ni inutilizable hagan cross check entre
 el dev y tu para garantizar que no borren codigo util, de paso revisen ciberseguridad tambien".
-Se hizo en dos listas independientes, una del developer y otra del PM, cruzadas después (TAREA 65). El cruce
+Se hizo en dos listas independientes, una del developer y otra del PM, cruzadas después (TAREA 67). El cruce
 atrapó dos errores, uno de cada lado:
 - El developer marcaba todas las imágenes de `src/approx/images`, pero `app.min.css` pide 6. Se quedan.
 - El PM marcaba todas las de `src/wecare/images`, pero los css cargados nombran 21 de 77. Se borran solo las
@@ -968,18 +968,18 @@ atrapó dos errores, uno de cada lado:
 Solo se borra lo confirmado por los dos con evidencia. `tracker/` está limpio (rutas, módulos y deps en uso).
 Decisión de Rick: se MANTIENEN `testimonios.html`, `Propuesta_Farmazed_2026.html`, `qr.png`, `404.html` y
 `tracker/scripts/migrate_status.js` (este último como histórico).
-Seguridad que se corrige en la TAREA 65: `npm audit fix` (body-parser, nodemailer), lista blanca en la subida
+Seguridad que se corrige en la TAREA 67: `npm audit fix` (body-parser, nodemailer), lista blanca en la subida
 de documentos, nginx sin servir .map/.log/.md, jQuery 1.8.1 → 3.7.1 + migrate y cuerpo crudo en el webhook
 de PayPal. Siguen abiertos: CSP, OIDC del Scheduler, listUsers(1000) y el receptor fiscal (decisión de Rick).
 
 ## H.24 — 15-nov-2026: rehacer los componentes de jQuery, reparar el selector de fecha y SRI (Rick)
 
 Rick: "ok rehacerlo y que no rompa el slider, puedes reparar el selector, colocale comprobacion SRI, el
-receptor fiscal sigue pendiente." Se asigna como TAREA 66, sobre el árbol de la TAREA 65 (aún sin commit):
+receptor fiscal sigue pendiente." Se asigna como TAREA 68, sobre el árbol de la TAREA 67 (aún sin commit):
 jQuery 1.8.1 → 3.7.1 en las páginas públicas, con slider, submenú y formulario funcionando; selector de fecha
 reparado en `contacto.html` y `404.html`; `integrity` + `crossorigin` en todos los recursos de CDN. El receptor
 fiscal sigue pendiente de Rick.
 
-**Cierre H.23/H.24 (15-nov-2026):** TAREAS 65 y 66 aceptadas. Commit y push a main por orden de Rick vía Dandy
+**Cierre H.23/H.24 (15-nov-2026):** TAREAS 67 y 68 aceptadas (en Patch se llamaron 65/66; renumeradas al integrar origin/main, que ya traía otras 65/66). Commit y push a main por orden de Rick vía Dandy
 (15-nov 15:10, recibo verificado con pm-order-check). El deploy a producción NO se hace: espera orden explícita
 de Rick. El receptor fiscal sigue pendiente de Rick.
