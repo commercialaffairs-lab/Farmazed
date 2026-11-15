@@ -620,17 +620,15 @@
 
 
 <!-- ── WeCare JS — exact same load order as wecare/index.html ── -->
-<script type="text/javascript" src="src/wecare/js/jquery.min.js"></script>
+<script type="text/javascript" src="src/wecare/js/jquery-3.7.1.min.js"></script>
 <script src="src/wecare/js/jquery.flexslider.js"></script>
 <script type="text/javascript">
-    $(window).load(function () {
+    $(window).on('load', function () {
         $('.flexslider').flexslider();
     });
 </script>
 <script type="text/javascript" src="src/wecare/js/jquery.superfish.js"></script>
 <script type="text/javascript" src="src/wecare/js/script.js"></script>
-<script type="text/javascript" src="src/wecare/js/zebra_datepicker.js"></script>
-<script type="text/javascript" src="src/wecare/js/core.js"></script>
 
 <!-- Farmazed JS -->
 <script src="js/main.js"></script>

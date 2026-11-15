@@ -8,7 +8,7 @@ $(document).ready(function($) {
 	try {
 		$('ul.sf-menu').superfish({
 			delay: 400,
-			autoArrows: false,
+			cssArrows: false,
 			speed: 'fast',
 			animation: {opacity:'show', height:'show'}
 		});
@@ -74,7 +74,7 @@ $(document).ready(function($) {
        /*-------------------------------------------------*/
 	/* =  Tabs Widget - { Popular, Recent and Comments }
 	/*-------------------------------------------------*/
-	$('.tab-links li a').live('click', function(e){
+	$(document).on('click', '.tab-links li a', function(e){
 		e.preventDefault();
 		if (!$(this).parent('li').hasClass('active')){
 			var link = $(this).attr('href');
@@ -102,85 +102,8 @@ $(document).ready(function($) {
 
 	}
 
-	/* ---------------------------------------------------------------------- */
-	/*	Contact Map
-	/* ---------------------------------------------------------------------- */
-	var contact = {"lat":"40.714623", "lon":"-74.006605"}; //Change a map coordinate here!
-
-	try {
-		$('#map').gmap3({
-		    action: 'addMarker',
-		    latLng: [contact.lat, contact.lon],
-		    map:{
-		    	center: [contact.lat, contact.lon],
-		    	zoom: 14
-		   		},
-		    },
-		    {action: 'setOptions', args:[{scrollwheel:false}]}
-		);
-	} catch(err) {
-
-	}
-
-	/* ---------------------------------------------------------------------- */
-	/*	Contact Form
-	/* ---------------------------------------------------------------------- */
-
-	var submitContact = $('#submit_contact'),
-		message = $('#msg');
-
-	submitContact.on('click', function(e){
-		e.preventDefault();
-
-		var $this = $(this);
-		
-		$.ajax({
-			type: "POST",
-			url: 'contact.php',
-			dataType: 'json',
-			cache: false,
-			data: $('#contact-form').serialize(),
-			success: function(data) {
-
-				if(data.info !== 'error'){
-					$this.parents('form').find('input[type=text],textarea,select').filter(':visible').val('');
-					message.hide().removeClass('success').removeClass('error').addClass('success').html(data.msg).fadeIn('slow').delay(5000).fadeOut('slow');
-				} else {
-					message.hide().removeClass('success').removeClass('error').addClass('error').html(data.msg).fadeIn('slow').delay(5000).fadeOut('slow');
-				}
-			}
-		});
-	});
-
-	/* ---------------------------------------------------------------------- */
-	/*	Appointment Form
-	/* ---------------------------------------------------------------------- */
-
-	var submitContact = $('#submit_contact2'),
-		message = $('#msg2');
-
-	submitContact.on('click', function(e){
-		e.preventDefault();
-
-		var $this = $(this);
-		
-		$.ajax({
-			type: "POST",
-			url: 'appointment.php',
-			dataType: 'json',
-			cache: false,
-			data: $('#contact-form2').serialize(),
-			success: function(data) {
-
-				if(data.info !== 'error'){
-					$this.parents('form').find('input[type=text],textarea,select').filter(':visible').val('');
-					message.hide().removeClass('success').removeClass('error').addClass('success').html(data.msg).fadeIn('slow').delay(5000).fadeOut('slow');
-				} else {
-					message.hide().removeClass('success').removeClass('error').addClass('error').html(data.msg).fadeIn('slow').delay(5000).fadeOut('slow');
-				}
-			}
-		});
-	});
+	// TAREA 66: se quitaron de aquí el mapa (gmap3) y los envíos a contact.php / appointment.php de la plantilla:
+	// esos archivos ya no existen (TAREA 65); el envío real lo hace el listener de cada página (/api/contact-leads).
 
 	/* ---------------------------------------------------------------------- */
 	/*	Portfolio

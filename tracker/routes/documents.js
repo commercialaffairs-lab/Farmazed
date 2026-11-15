@@ -2,7 +2,7 @@ const { Router }   = require('express');
 const multer        = require('multer');
 const admin         = require('../utils/firebase_admin.js');
 const { requireAuth } = require('../middleware/auth');
-const { uploadFile, getSignedUrl, deleteFile } = require('../services/storage');
+const { uploadFile, getSignedUrl, deleteFile, archivoNoPermitido } = require('../services/storage');
 const { isValidDocStatus, DOC_STATUSES, PENDING_DOCS } = require('../data/case_status');
 const { serializeTimestamps } = require('../utils/serialize');
 const { solicitarDocumento } = require('../services/document_requests');
@@ -63,6 +63,8 @@ router.post('/', requireAuth, requirePermission('documents.upload'), upload.sing
     if (!caseData) return;
 
     if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+    const noPermitido = archivoNoPermitido(req.file.originalname, req.file.mimetype);
+    if (noPermitido) return res.status(415).json({ error: noPermitido });
 
     const { faddiDocId, faddiCode, faddiDocName, faddiStep } = req.body;
     if (!faddiDocId) return res.status(400).json({ error: 'faddiDocId is required' });
@@ -238,7 +240,7 @@ router.get('/:docId', requireAuth, requirePermission('documents.read'), async (r
     if (!snap.exists) return res.status(404).json({ error: 'Document not found' });
 
     const data      = snap.data();
-    const signedUrl = await getSignedUrl(data.storagePath);
+    const signedUrl = await getSignedUrl(data.storagePath, data.mimeType);
 
     res.json(serializeTimestamps({
       id: snap.id,
@@ -267,7 +269,7 @@ router.get('/:docId/versions', requireAuth, requirePermission('documents.read'),
 
     const versions = await Promise.all(snap.docs.map(async d => {
       const data = d.data();
-      const signedUrl = data.storagePath ? await getSignedUrl(data.storagePath) : null;
+      const signedUrl = data.storagePath ? await getSignedUrl(data.storagePath, data.mimeType) : null;
       return { id: d.id, ...data, signedUrl };
     }));
 

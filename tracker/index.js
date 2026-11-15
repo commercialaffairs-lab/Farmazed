@@ -55,6 +55,8 @@ app.use(cors({
 // TAREA 39: Cloud Run pone UN balanceador delante — con trust proxy 1, req.ip es la
 // IP que ese balanceador agregó (la real), no el x-forwarded-for que mande el cliente.
 app.set('trust proxy', config.trustProxy); // TRUST_PROXY (default 1); si delante hay más saltos (LB/CDN), 2...
+// TAREA 65: el webhook de PayPal necesita los bytes originales para verificar la firma (antes que express.json).
+app.use('/api/webhooks/paypal', express.raw({ type: '*/*', limit: '1mb' }));
 app.use(express.json({ limit: '1mb' }));
 
 // TAREA 40 — errores 500 genéricos. Las rutas atrapan sus errores y responden

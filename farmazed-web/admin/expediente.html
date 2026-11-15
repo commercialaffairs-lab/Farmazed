@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <script src="/portal/js/i18n.js"></script>
   <title data-i18n>Farmazed Admin — Expediente</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet" integrity="sha384-XGjxtQfXaH2tnPFa9x+ruJTuLE3Aa6LhHSWRr1XeTyhezb4abCG4ccI5AkVDxqC+" crossorigin="anonymous">
   <style>
     :root { --fz-blue:#1B4F8A; --fz-navy:#0F3260; --fz-green:#3A7D44; }
     body  { background:#f0f4fa; }
@@ -284,7 +284,7 @@
   </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
 <script type="module">
   import { initBackoffice, esc } from '../portal/js/auth.js';
   import { avisar, confirmar, preguntar } from '../portal/js/dialogos.js';
@@ -322,16 +322,6 @@
   const etiquetaTramite = (v) => TRAMITE_LABEL[v] ? t(TRAMITE_LABEL[v]) : (v || '—');
   const etiquetaEstado  = (s) => t(statusMeta?.meta?.[s]?.label || s);
 
-  function copyField(val) {
-    navigator.clipboard.writeText(val).then(() => {
-      const toast = document.createElement('div');
-      toast.className = 'position-fixed bottom-0 end-0 m-3 alert alert-success py-1 px-3 small shadow';
-      toast.textContent = t('📋 Copiado');
-      toast.style.zIndex = 9999;
-      document.body.appendChild(toast);
-      setTimeout(() => toast.remove(), 1500);
-    });
-  }
 
   function fieldRow(label, value, faddiField = '') {
     if (!value || value === '—') return '';

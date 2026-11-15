@@ -37,7 +37,9 @@ $(document).ready(function () {
 
     /* ── SMOOTH SCROLL for all anchor links ── */
     $('a[href^="#"]').on('click', function (e) {
-        var target = $(this.getAttribute('href'));
+        var href = this.getAttribute('href');
+        if (href.length < 2) return; // href="#" a secas: jQuery 3 lanza error de sintaxis (jQuery 1.8 devolvía un conjunto vacío)
+        var target = $(href);
         if (!target.length) return;
         e.preventDefault();
         $('html, body').animate({

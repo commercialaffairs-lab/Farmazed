@@ -7,9 +7,8 @@
  *
  * Público (PayPal llama esto, no hay sesión de usuario) — la seguridad es
  * la verificación de firma (`verifyWebhookSignature`), no un token.
- * `getRawBody`/el parseo normal de Express alcanza: la verificación de
- * PayPal es una llamada A SU PROPIA API con el evento ya parseado, no un
- * cálculo criptográfico local sobre bytes crudos (ver services/payments/paypal.js).
+ * TAREA 65: esta ruta recibe el cuerpo CRUDO (index.js monta `express.raw` antes de `express.json`);
+ * se parsea aquí y los bytes originales se pasan a la verificación, que PayPal calcula sobre ellos.
  *
  * Mounts on the main Express app (index.js):
  *   app.use('/api/webhooks/paypal', webhooksRouter);
@@ -29,9 +28,19 @@ const limitador = crearLimitador({ ventanaMs: 60 * 1000, max: 300 });
 
 router.post('/', async (req, res) => {
   if (limitador.estaLimitado(req.ip)) return res.status(429).json({ error: 'Demasiadas solicitudes.' });
+  // En producción llega un Buffer (express.raw); si alguien monta la ruta con express.json ya viene parseado
+  // (sin bytes originales: se verifica con el objeto, como antes).
+  const cuerpoCrudo = Buffer.isBuffer(req.body) ? req.body.toString('utf8') : null;
+  let evento;
+  if (cuerpoCrudo === null) evento = req.body;
+  else { try { evento = JSON.parse(cuerpoCrudo); } catch { evento = null; } }
+  if (!evento || typeof evento !== 'object' || Array.isArray(evento)) {
+    return res.status(400).json({ error: 'Cuerpo del webhook inválido (se espera JSON).' });
+  }
+  req.body = evento; // el resto del handler (y los logs) trabajan con el evento parseado
   try {
     const provider = getProvider();
-    const valido = await provider.verifyWebhookSignature(req.headers, req.body);
+    const valido = await provider.verifyWebhookSignature(req.headers, evento, cuerpoCrudo);
     if (!valido) {
       // 400, no 401/403 — no es un intento de auth, es un webhook que no se
       // pudo verificar (firma mala, o `PAYPAL_WEBHOOK_ID` sin configurar).

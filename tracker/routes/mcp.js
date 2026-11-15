@@ -224,7 +224,7 @@ async function handleGetDocument({ caseId, docId }) {
   if (!snap.exists) throw new Error(`Document ${docId} not found`);
 
   const data      = snap.data();
-  const signedUrl = await getSignedUrl(data.storagePath);
+  const signedUrl = await getSignedUrl(data.storagePath, data.mimeType);
 
   return {
     id:           docId,

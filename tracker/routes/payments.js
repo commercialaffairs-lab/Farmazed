@@ -38,7 +38,7 @@ const multer        = require('multer');
 const { randomUUID: uuid } = require('node:crypto');
 const admin         = require('../utils/firebase_admin.js');
 const { requireAuth } = require('../middleware/auth');
-const { uploadFile, deleteFile } = require('../services/storage');
+const { uploadFile, deleteFile, archivoNoPermitido } = require('../services/storage');
 const { serializeTimestamps } = require('../utils/serialize');
 const { getCaseOrFail, requirePermission } = require('../middleware/permissions');
 const { TIPOS_PAGO, AUTORIDADES, CONCEPTOS_CLIENTE } = require('../services/payments_ledger');
@@ -115,6 +115,9 @@ router.post('/', requireAuth, requirePermission('payments.create'), upload.singl
     if (!req.file) {
       return res.status(400).json({ error: 'comprobante (archivo) es obligatorio — registro manual, sin pasarela' });
     }
+
+    const noPermitido = archivoNoPermitido(req.file.originalname, req.file.mimetype);
+    if (noPermitido) return res.status(415).json({ error: noPermitido });
 
     const paymentId = uuid();
     const { storagePath, signedUrl } = await uploadFile(

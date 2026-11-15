@@ -16,6 +16,12 @@
  */
 
 
+/** JSON de verify-webhook-signature; con `cuerpoCrudo` el evento va literal (bytes originales). */
+function armarVerificacion(campos, evento, cuerpoCrudo) {
+  if (typeof cuerpoCrudo !== 'string') return JSON.stringify({ ...campos, webhook_event: evento });
+  return JSON.stringify(campos).slice(0, -1) + ',"webhook_event":' + cuerpoCrudo + '}';
+}
+
 /**
  * Fábrica del adaptador: `baseUrl` (live o sandbox) y las credenciales son por instancia, así el adaptador de
  * las cuentas demo (siempre sandbox) y el de producción conviven en el mismo proceso sin mezclar tokens ni URL.
@@ -242,21 +248,23 @@ function crearAdaptador(cfg) {
   // manda PayPal (PayPal-Transmission-Id, PayPal-Cert-Url, PayPal-Auth-Algo,
   // PayPal-Transmission-Sig, PayPal-Transmission-Time); `body` es el
   // webhook_event ya parseado (JSON), tal cual lo manda PayPal.
-  async function verifyWebhookSignature(headers, body) {
+  // TAREA 65: `cuerpoCrudo` (string, los bytes tal cual llegaron) se inserta SIN volver a serializar:
+  // PayPal verifica la firma contra el cuerpo original, y JSON.stringify(JSON.parse(x)) puede cambiar
+  // espacios, orden de números o escapes. Sin `cuerpoCrudo` (pruebas, otros llamadores) usa `body`.
+  async function verifyWebhookSignature(headers, body, cuerpoCrudo) {
     const webhookId = process.env.PAYPAL_WEBHOOK_ID;
     if (!webhookId) return false; // sin el ID configurado no hay nada que verificar — falla cerrado, nunca abierto.
 
     const data = await paypalFetch('/v1/notifications/verify-webhook-signature', {
       method: 'POST',
-      body: JSON.stringify({
+      body: armarVerificacion({
         auth_algo:         headers['paypal-auth-algo'],
         cert_url:          headers['paypal-cert-url'],
         transmission_id:   headers['paypal-transmission-id'],
         transmission_sig:  headers['paypal-transmission-sig'],
         transmission_time: headers['paypal-transmission-time'],
         webhook_id:        webhookId,
-        webhook_event:     body,
-      }),
+      }, body, cuerpoCrudo),
     });
     return data.verification_status === 'SUCCESS';
   }

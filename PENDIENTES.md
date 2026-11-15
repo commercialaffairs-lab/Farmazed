@@ -211,6 +211,14 @@ Estimación: 4–5 sesiones (datos+reinicio · recorrido cliente · recorrido pe
 - Claves web de Firebase (`portal/js/config.js`): confirmar en la consola de Google Cloud que están restringidas por referente HTTP.
 - `.tools/adc-farmazed-pruebas.json` (local, ignorado por git) contiene un refresh token de OAuth: rotarlo si la carpeta se comparte.
 
+### TAREA 65 (limpieza + seguridad, 14-nov-2026) — lo que quedó abierto
+
+- ~~jQuery 1.8.1~~ RESUELTO en TAREA 66 (15-nov): 3.7.1 sin migrate, superfish 1.7.10, slider igual. Antes: con 3.7.1 + migrate se rompen `.live()` (flexslider/script.js), el submenú superfish y el envío del formulario. Para quitarlo hay que rehacer esos componentes (prueba en el scratchpad del dev, `jq3_probado/`). Riesgo hoy bajo: páginas estáticas sin datos de usuario.
+- ~~Zebra_DatePicker roto~~ RESUELTO en TAREA 66: no había campo de fecha; el error venía de core.js (demo de plantilla), retirado.
+- ~~SRI~~ HECHO en TAREA 66: 30 recursos con sha384 + `tracker/scripts/verificar_sri.js` y `tests/sri.test.js` (Google Fonts y los import ES de Firebase no admiten SRI). Falta la CSP.
+- npm audit: quedan 10 moderadas (`uuid`, `@google-cloud/storage` v9, major).
+- Se mantienen por decisión de Rick: `testimonios.html`, `Propuesta_Farmazed_2026.html`, `qr.png`, `404.html`, `tracker/scripts/migrate_status.js` (histórico).
+
 ### TAREA 64 (admin.demo + pago demo con PayPal sandbox) — en main, SIN desplegar (13-nov-2026)
 
 - Rick: crear en developer.paypal.com una app Sandbox (`PAYPAL_SANDBOX_CLIENT_ID/SECRET` en `tracker/.env`) y un comprador Personal; probar en local el pago de cliente.demo en sandbox.paypal.com (nadie lo ha probado contra la sandbox real).

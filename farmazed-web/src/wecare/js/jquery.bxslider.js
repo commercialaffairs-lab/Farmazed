@@ -273,7 +273,7 @@
 			var count = 0;
 			selector.find('img, iframe').each(function(){
 				if($(this).is('img')) $(this).attr('src', $(this).attr('src') + '?timestamp=' + new Date().getTime());
-				$(this).load(function(){
+				$(this).on('load', function(){
 					setTimeout(function(){
 						if(++count == total) callback();
 					}, 0)

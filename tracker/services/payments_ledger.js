@@ -22,17 +22,6 @@ const AUTORIDADES = ['DNFD', 'IEA', 'CNF', 'MEF'];
 // saldo de honorarios se registra ... pero NO bloquea").
 const CONCEPTOS_CLIENTE = ['honorarios', 'tasa_dnfd', 'mef', 'iea', 'honorarios_saldo'];
 
-// Montos oficiales — solo de referencia para la UI (el admin registra el
-// monto real del cheque, que puede diferir; nunca se valida contra esto).
-// `iea` depende de la modalidad (regular/expedita) de la línea de
-// cotización del caso, así que no tiene un solo monto fijo aquí.
-const MONTOS_REFERENCIA = {
-  tasa_dnfd: 200,
-  mef: 25,
-  iea_regular: 1500,
-  iea_expedita: 2250,
-};
-
 /**
  * ¿Este caso tiene al menos un pago cliente_a_farmazed con este `concepto`
  * registrado? Bloque mínimo que usa `transitions.js` para armar el gate de
@@ -92,4 +81,4 @@ async function createConceptPayment(caseId, { concepto, monto, origen, paypalOrd
   return { id: paymentId, ...paymentData };
 }
 
-module.exports = { TIPOS_PAGO, AUTORIDADES, CONCEPTOS_CLIENTE, MONTOS_REFERENCIA, hasConceptPayment, createConceptPayment };
+module.exports = { TIPOS_PAGO, AUTORIDADES, CONCEPTOS_CLIENTE, hasConceptPayment, createConceptPayment };

@@ -18,7 +18,6 @@
 
 const IDIOMAS = ['es', 'en', 'fr', 'pt'];
 const IDIOMA_POR_DEFECTO = 'es';
-const NOMBRES_IDIOMA = { es: 'Español', en: 'English', fr: 'Français', pt: 'Português' };
 
 const PASOS_CLIENTE = [
   { id: 'captacion',  titulo: 'Confirma los datos de tu empresa',
@@ -264,7 +263,7 @@ function pasosEnIdioma(variante, idioma) {
 }
 
 module.exports = {
-  IDIOMAS, IDIOMA_POR_DEFECTO, NOMBRES_IDIOMA,
+  IDIOMAS, IDIOMA_POR_DEFECTO,
   PASOS_CLIENTE, PASOS_CLIENTE_REAL, PASOS_REGENTE, PASOS_LEGAL, PASOS_ADMIN, TRADUCCIONES, NOTAS, ETIQUETAS_PANEL,
   normalizarIdioma, pasosEnIdioma,
 };
